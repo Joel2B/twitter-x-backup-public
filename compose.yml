@@ -1,0 +1,15 @@
+services:
+  twitter-x-backup:
+    image: 192.168.2.141:5000/twitter-x-backup:latest
+    pull_policy: always
+    container_name: twitter-x-backup
+    env_file:
+      - .env
+    environment:
+      Data__Aliases__I: /mnt/i
+      # Data__Aliases__K: /mnt/k
+      Data__Aliases__L: /mnt/l
+      # Data__Aliases__Q: /mnt/q
+      # Data__Aliases__R: /mnt/r
+      Data__Aliases__S: /mnt/s
+      Data__Aliases__J: /mnt/j

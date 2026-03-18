@@ -1,0 +1,64 @@
+services:
+  twitter-x-backup:
+    volumes:
+      - smb_i:/mnt/i
+      # - smb_k:/mnt/k
+      - smb_l:/mnt/l
+      # - smb_q:/mnt/q
+      # - smb_r:/mnt/r
+      - smb_s:/mnt/s
+      - smb_j:/mnt/j
+    
+      - "C:/data/dev/c#/twitter-x-backup/bin/Debug/net10.0/config:/app/config"
+      - "C:/data/dev/c#/twitter-x-backup/bin/Debug/net10.0/data:/app/data"
+      - "C:/data/dev/c#/twitter-x-backup/bin/Debug/net10.0/debug:/app/debug"
+
+volumes:
+  smb_i:
+    driver: local
+    driver_opts:
+      type: cifs
+      device: "//192.168.2.170/232-p9"
+      o: "username=${SMB_DATA_USER},password=${SMB_DATA_PASS},vers=3.1.1,uid=0,gid=0,file_mode=0777,dir_mode=0777"
+
+  # smb_k:
+  #   driver: local
+  #   driver_opts:
+  #     type: cifs
+  #     device: "//192.168.2.170/apps-10"
+  #     o: "username=${SMB_APPS_USER},password=${SMB_APPS_PASS},vers=3.1.1,uid=0,gid=0,file_mode=0777,dir_mode=0777"
+
+  smb_l:
+    driver: local
+    driver_opts:
+      type: cifs
+      device: "//192.168.2.170/apps-9"
+      o: "username=${SMB_APPS_USER},password=${SMB_APPS_PASS},vers=3.1.1,uid=0,gid=0,file_mode=0777,dir_mode=0777"
+
+  # smb_q:
+  #   driver: local
+  #   driver_opts:
+  #     type: cifs
+  #     device: "//192.168.2.207/apps-7"
+  #     o: "username=${SMB_APPS_USER},password=${SMB_APPS_PASS},vers=3.1.1,uid=0,gid=0,file_mode=0777,dir_mode=0777"
+
+  # smb_r:
+  #   driver: local
+  #   driver_opts:
+  #     type: cifs
+  #     device: "//192.168.2.170/apps-8"
+  #     o: "username=${SMB_APPS_USER},password=${SMB_APPS_PASS},vers=3.1.1,uid=0,gid=0,file_mode=0777,dir_mode=0777"
+
+  smb_j:
+    driver: local
+    driver_opts:
+      type: cifs
+      device: "//192.168.2.170/apps-11"
+      o: "username=${SMB_APPS_USER},password=${SMB_APPS_PASS},vers=3.1.1,uid=0,gid=0,file_mode=0777,dir_mode=0777"
+
+  smb_s:
+    driver: local
+    driver_opts:
+      type: cifs
+      device: "//192.168.2.170/backups-1-p8"
+      o: "username=${SMB_BACKUPS_USER},password=${SMB_BACKUPS_PASS},vers=3.1.1,uid=0,gid=0,file_mode=0777,dir_mode=0777"
