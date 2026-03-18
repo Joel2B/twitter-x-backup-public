@@ -302,7 +302,232 @@
   "Post": {
     "Recovery": false
   },
-
+  "Data": {
+    "Aliases": {
+      "L": "L:",
+      "Q": "Q:",
+      "R": "R:",
+      "K": "K:",
+      "I": "I:",
+      "S": "S:",
+      "J": "J:"
+    },
+    "Partitions": [
+      {
+        "Id": 6,
+        "Name": "local",
+        "Type": "primary",
+        "Size": 400,
+        "UsableSpace": 80,
+        "Paths": ["#Abs"]
+      },
+      {
+        "Id": 0,
+        "Name": "nas L:",
+        "Type": "primary",
+        "Size": 3300,
+        "UsableSpace": 80,
+        "Paths": ["@L", "apps", "twitter-x-backup"]
+      },
+      {
+        "Id": 1,
+        "Enabled": false,
+        "Name": "nas Q:",
+        "Type": "extension",
+        "Tags": ["cache"],
+        "Size": 700,
+        "UsableSpace": 80,
+        "Paths": ["@Q"]
+      },
+      {
+        "Id": 2,
+        "Enabled": false,
+        "Name": "nas R:",
+        "Type": "extension",
+        "Size": 700,
+        "UsableSpace": 80,
+        "Paths": ["@R"]
+      },
+      {
+        "Id": 3,
+        "Enabled": false,
+        "Name": "nas K:",
+        "Type": "extension",
+        "Size": 900,
+        "UsableSpace": 80,
+        "Paths": ["@K"]
+      },
+      {
+        "Id": 4,
+        "Name": "nas I:",
+        "Type": "heavy",
+        "Size": 13000,
+        "UsableSpace": 80,
+        "Paths": ["@I"]
+      },
+      {
+        "Id": 5,
+        "Name": "backup S:",
+        "Type": "backup",
+        "Size": 16000,
+        "UsableSpace": 80,
+        "Paths": ["@S"]
+      },
+      {
+        "Id": 7,
+        "Name": "nas J:",
+        "Type": "extension",
+        "Tags": ["cache"],
+        "Size": 3300,
+        "UsableSpace": 80,
+        "Paths": ["@J"]
+      }
+    ],
+    "Post": [
+      {
+        "Id": "local post",
+        "Type": "local",
+        "Enabled": false,
+        "Paths": {
+          "Paths": ["data"],
+          "Post": {
+            "Paths": ["post"],
+            "File": "posts.json"
+          }
+        },
+        "Partitions": [6],
+        "Tasks": {
+          "Prune": true
+        }
+      },
+      {
+        "Id": "nas post",
+        "Type": "local",
+        "Enabled": true,
+        "Paths": {
+          "Paths": ["data"],
+          "Post": {
+            "Paths": ["post"],
+            "File": "posts.json"
+          }
+        },
+        "Partitions": [0, 7],
+        "Tasks": {
+          "Prune": true,
+          "Verify": true,
+          "Fix": false
+        }
+      }
+    ],
+    "Dump": [
+      {
+        "Id": "nas dump",
+        "Type": "local",
+        "Enabled": true,
+        "Paths": {
+          "Paths": ["data"],
+          "Dumps": {
+            "Paths": ["dumps"],
+            "File": "data.json",
+            "Dump": {
+              "File": "data.json",
+              "Api": {
+                "Paths": ["api"]
+              }
+            }
+          }
+        },
+        "Partitions": [0, 7],
+        "Tasks": {
+          "Prune": true
+        }
+      }
+    ],
+    "Bulk": [
+      {
+        "Id": "nas bulk",
+        "Type": "local",
+        "Enabled": true,
+        "Paths": {
+          "Paths": ["data"],
+          "Bulk": {
+            "Paths": ["bulk"],
+            "File": "bulk.json"
+          },
+          "Sources": {
+            "Paths": ["sources"]
+          }
+        },
+        "Partitions": [0, 7],
+        "Tasks": {
+          "Prune": true
+        }
+      }
+    ],
+    "Media": [
+      {
+        "Id": "nas media",
+        "Type": "local",
+        "Enabled": true,
+        "SizeHeavy": 10485760,
+        "Paths": {
+          "Media": {
+            "Paths": ["media"]
+          },
+          "Cache": {
+            "Paths": ["cache"],
+            "File": "media.cache.json"
+          },
+          "Tmp": {
+            "Paths": ["tmp"],
+            "Downloader": {
+              "Paths": ["downloader"]
+            },
+            "Downloaded": {
+              "Paths": ["downloaded"]
+            }
+          }
+        },
+        "Partitions": [0, 4, 7],
+        "Tasks": {
+          "Prune": false
+        }
+      }
+    ],
+    "Backup": [
+      {
+        "Id": "backup nas",
+        "Type": "local",
+        "Enabled": true,
+        "Paths": {
+          "Paths": ["backup"],
+          "Cache": {
+            "Paths": ["cache"],
+            "File": "media.cache.json"
+          }
+        },
+        "Chunk": {
+          "Count": 300,
+          "Path": {
+            "Increase": 3000,
+            "Size": 10485760
+          },
+          "Paths": ["chunks"],
+          "File": "chunks.json",
+          "Data": {
+            "File": "chunk.json"
+          },
+          "Zip": {
+            "File": "chunk.zip"
+          }
+        },
+        "Direct": {
+          "Paths": ["direct"]
+        },
+        "Partitions": [0, 5]
+      }
+    ]
+  },
   "Downloads": {
     "Enabled": true,
     "Threads": {
