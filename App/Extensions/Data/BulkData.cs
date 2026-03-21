@@ -12,11 +12,10 @@ public static class BulkDataCollectionExtensions
 {
     public static IServiceCollection AddBulkData(this IServiceCollection services)
     {
-        using ServiceProvider provider = services.BuildServiceProvider();
         Dictionary<string, Type> types = new() { { "local", typeof(LocalBulkData) } };
 
-        List<Storage> config = provider
-            .GetRequiredService<Models.Config.App>()
+        List<Storage> config = services
+            .GetAppConfig()
             .Data.Bulk.Where(o => o.Enabled && types.Keys.ToList().Contains(o.Type))
             .ToList();
 

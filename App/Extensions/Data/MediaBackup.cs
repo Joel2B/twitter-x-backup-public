@@ -12,11 +12,10 @@ public static class MediaBackupCollectionExtensions
 {
     public static IServiceCollection AddMediaBackup(this IServiceCollection services)
     {
-        using ServiceProvider provider = services.BuildServiceProvider();
         Dictionary<string, Type> types = new() { { "local", typeof(MediaBackup) } };
 
-        List<Models.Config.Data.Backup.Storage> config = provider
-            .GetRequiredService<Models.Config.App>()
+        List<Models.Config.Data.Backup.Storage> config = services
+            .GetAppConfig()
             .Data.Backup.Where(o => o.Enabled && types.Keys.ToList().Contains(o.Type))
             .ToList();
 

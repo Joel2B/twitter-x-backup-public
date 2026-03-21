@@ -46,27 +46,7 @@ public class LocalPartition(
     private void SetupPaths()
     {
         foreach (Models.Config.Data.Partition partition in _appConfig.Data.Partitions)
-        {
-            List<string> paths = [];
-
-            foreach (string path in partition.Paths)
-            {
-                if (!path.StartsWith('@'))
-                {
-                    paths.Add(path);
-                    continue;
-                }
-
-                _appConfig.Data.Aliases.TryGetValue(path.Replace("@", ""), out string? value);
-
-                if (value is null)
-                    throw new Exception($"alias '{path}' is not set");
-
-                paths.Add(value);
-            }
-
-            partition.Paths = [Utils.Path.GetPath(paths)];
-        }
+            partition.Paths = [Utils.Path.GetPartitionPath(_appConfig, partition)];
     }
 
     private void Print()

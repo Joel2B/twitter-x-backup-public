@@ -12,11 +12,10 @@ public static class PostDataCollectionExtensions
 {
     public static IServiceCollection AddPostData(this IServiceCollection services)
     {
-        using ServiceProvider provider = services.BuildServiceProvider();
         Dictionary<string, Type> types = new() { { "local", typeof(LocalPostData) } };
 
-        List<Storage> config = provider
-            .GetRequiredService<Models.Config.App>()
+        List<Storage> config = services
+            .GetAppConfig()
             .Data.Post.Where(o => o.Enabled && types.Keys.ToList().Contains(o.Type))
             .ToList();
 

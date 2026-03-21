@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using Backup.App.Interfaces.Partition;
 using Backup.App.Models.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -15,16 +14,16 @@ public static class LoggingCollectionExtensions
 {
     public static IServiceCollection AddSerilog(this IServiceCollection services)
     {
-        using ServiceProvider provider = services.BuildServiceProvider();
-        Models.Config.App config = provider.GetRequiredService<Models.Config.App>();
-        IPartition partitionService = provider.GetRequiredService<IPartition>();
+        Models.Config.App config = services.GetAppConfig();
+        int partitionId = config.Debug.Partitions.First();
+        Models.Config.Data.Partition partition = config.Data.Partitions.First(o =>
+            o.Id == partitionId
+        );
 
-        Models.Config.Data.Partition partition = partitionService
-            .GetPartitions(config.Debug.Partitions)
-            .First();
+        string basePath = Utils.Path.GetPartitionPath(config, partition);
 
         string directory = Path.Combine(
-            [.. partition.Paths, .. config.Debug.Paths, .. config.Debug.Log.Paths]
+            [basePath, .. config.Debug.Paths, .. config.Debug.Log.Paths]
         );
 
         Directory.CreateDirectory(directory);

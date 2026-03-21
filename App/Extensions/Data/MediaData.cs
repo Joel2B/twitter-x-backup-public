@@ -12,11 +12,10 @@ public static class MediaDataCollectionExtensions
 {
     public static IServiceCollection AddMediaData(this IServiceCollection services)
     {
-        using ServiceProvider provider = services.BuildServiceProvider();
         Dictionary<string, Type> types = new() { { "local", typeof(LocalMediaData) } };
 
-        List<Storage> config = provider
-            .GetRequiredService<Models.Config.App>()
+        List<Storage> config = services
+            .GetAppConfig()
             .Data.Media.Where(o => o.Enabled && types.Keys.ToList().Contains(o.Type))
             .ToList();
 

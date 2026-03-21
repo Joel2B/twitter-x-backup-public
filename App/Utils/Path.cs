@@ -82,4 +82,30 @@ public class Path
 
         throw new Exception();
     }
+
+    public static string GetPartitionPath(
+        Models.Config.App config,
+        Models.Config.Data.Partition partition
+    )
+    {
+        List<string> paths = [];
+
+        foreach (string path in partition.Paths)
+        {
+            if (!path.StartsWith('@'))
+            {
+                paths.Add(path);
+                continue;
+            }
+
+            string alias = path.Replace("@", "");
+
+            if (!config.Data.Aliases.TryGetValue(alias, out string? value))
+                throw new Exception($"alias '{path}' is not set");
+
+            paths.Add(value);
+        }
+
+        return GetPath(paths);
+    }
 }

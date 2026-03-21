@@ -12,11 +12,10 @@ public static class DumpsDataCollectionExtensions
 {
     public static IServiceCollection AddDumpData(this IServiceCollection services)
     {
-        using ServiceProvider provider = services.BuildServiceProvider();
         Dictionary<string, Type> types = new() { { "local", typeof(LocalDumpData) } };
 
-        List<Storage> config = provider
-            .GetRequiredService<Models.Config.App>()
+        List<Storage> config = services
+            .GetAppConfig()
             .Data.Dump.Where(o => o.Enabled && types.Keys.ToList().Contains(o.Type))
             .ToList();
 
