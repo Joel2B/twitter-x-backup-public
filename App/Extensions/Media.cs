@@ -19,7 +19,6 @@ public static class MediaCollectionExtensions
 
         services.AddScoped<IMediaDownloader, MediaDownloaderHttp>();
         services.AddScoped<IMediaLogger, LocalMediaLogger>();
-        services.AddScoped<IMediaDownloadControl, MediaDownloadControl>();
 
         return services;
     }

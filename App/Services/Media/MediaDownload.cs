@@ -12,7 +12,6 @@ class MediaDownload(
     Models.Config.App _config,
     IMediaDownloader _downloader,
     IMediaLogger _mediaLogger,
-    IMediaDownloadControl _mediaDownloadControl,
     IProxyProvider proxyProvider
 ) : IMediaDownload
 {
@@ -20,7 +19,6 @@ class MediaDownload(
     private readonly Models.Config.App _config = _config;
     private readonly IMediaDownloader _downloader = _downloader;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
-    private readonly IMediaDownloadControl _mediaDownloadControl = _mediaDownloadControl;
     private readonly IProxyProvider _proxyProvider = proxyProvider;
 
     private IMediaData? _mediaData;
@@ -39,6 +37,8 @@ class MediaDownload(
 
     private async Task ProcessDownloads(List<Download> downloads)
     {
+        using CancellationTokenSource cts = new();
+
         DynamicParallelOptions options = new()
         {
             MinDegreeOfParallelism = _config.Downloads.Threads.Min,
@@ -48,7 +48,7 @@ class MediaDownload(
             JumpToMaxOnFastAverage = false,
             EnableHeavyCut = true,
             HeavyThreshold = TimeSpan.FromSeconds(30),
-            CancellationToken = _mediaDownloadControl.Token,
+            CancellationToken = cts.Token,
             EnableDebug = true,
             DebugSink = msg => _logger.LogInformation("{msg}", msg),
             StrictDecreaseGate = true,
@@ -59,6 +59,9 @@ class MediaDownload(
         HashSet<string> videoExtensions = new(StringComparer.OrdinalIgnoreCase) { ".mp4", ".webm" };
         data = data.OrderBy(o => videoExtensions.Contains(Path.GetExtension(o.data.Path)) ? 1 : 0);
 
+        if (_config.Downloads.Count >= 0)
+            data = data.Take(_config.Downloads.Count);
+
         try
         {
             await DynamicParallel.ForEachAsync(
@@ -66,7 +69,7 @@ class MediaDownload(
                 options,
                 async (data, token) =>
                 {
-                    await ProcessDownload(data.data, data.download, token);
+                    await ProcessDownload(data.data, data.download, token, cts);
                 }
             );
         }
@@ -84,7 +87,8 @@ class MediaDownload(
     private async Task ProcessDownload(
         DataDownload data,
         Download download,
-        CancellationToken token
+        CancellationToken token,
+        CancellationTokenSource cts
     )
     {
         Logs logs = new()
@@ -99,11 +103,11 @@ class MediaDownload(
             await Data.Save(stream, data.Path, token);
 
             _mediaLogger.Log(logs);
-            _mediaDownloadControl.Check();
         }
         catch (ProxyException)
         {
-            _mediaDownloadControl.Cancel();
+            if (!cts.IsCancellationRequested)
+                cts.Cancel();
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
