@@ -4,7 +4,7 @@ using Serilog;
 
 ServiceCollection services = new();
 
-await services.AddCore();
+services.AddCore();
 services.AddTasks();
 services.AddSerilog();
 
@@ -23,7 +23,8 @@ services.AddSetup();
 services.AddApp();
 
 using ServiceProvider provider = services.BuildServiceProvider();
-await provider.RunSetup();
+using IServiceScope scope = provider.CreateScope();
+await scope.ServiceProvider.RunSetup();
 
-Backup.App.App app = provider.GetRequiredService<Backup.App.App>();
+Backup.App.App app = scope.ServiceProvider.GetRequiredService<Backup.App.App>();
 await app.Backup();
