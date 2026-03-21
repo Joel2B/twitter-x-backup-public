@@ -81,7 +81,7 @@ public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, Models.Conf
 
     public async Task<bool> Verify()
     {
-        if (_request is null || _headers is null)
+        if (!_config.RateLimit.Enabled || _request is null || _headers is null)
             return true;
 
         if (!_config.Bulk.Enabled)

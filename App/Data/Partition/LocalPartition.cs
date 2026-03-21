@@ -51,12 +51,21 @@ public class LocalPartition(
 
     private void Print()
     {
-        _logger.LogInformation("{partition,-9} {size,-10} {path}", "Partition", "Size", "Path");
+        _logger.LogInformation(
+            "{id,-5} {enabled,-5} {partition,-9} {size,-10} {path}",
+            "Id",
+            "Enabled",
+            "Partition",
+            "Size",
+            "Path"
+        );
 
         foreach (var kvp in _partitions)
         {
             _logger.LogInformation(
-                "{partition,-9} {size,-10} {path}",
+                "{id,-5} {enabled,-5} {partition,-9} {size,-10} {path}",
+                kvp.Value.Partition.Id,
+                kvp.Value.Partition.Enabled,
                 kvp.Value.Partition.Name,
                 Utils.Storage.FormatBytes(kvp.Value.Size),
                 Path.Combine([.. kvp.Value.Partition.Paths])
@@ -141,12 +150,14 @@ public class LocalPartition(
     public List<Models.Config.Data.Partition> GetPartitions(List<int>? ids = null)
     {
         List<int>? selectedIds = ids ?? _config?.Partitions;
+        HashSet<int>? idSet = selectedIds is null ? null : [.. selectedIds];
 
-        if (selectedIds is null)
-            return [.. _appConfig.Data.Partitions];
-
-        HashSet<int> idSet = [.. selectedIds];
-        return [.. _appConfig.Data.Partitions.Where(o => idSet.Contains(o.Id))];
+        return
+        [
+            .. _appConfig.Data.Partitions.Where(o =>
+                o.Enabled && (idSet is null || idSet.Contains(o.Id))
+            ),
+        ];
     }
 
     public Models.Config.Data.Partition GetPath(int? id = null, long size = 0)

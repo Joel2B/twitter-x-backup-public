@@ -55,6 +55,9 @@ public partial class BulkService
 
         foreach (Models.Bulk.Bulk bulk in bulksFiltered)
         {
+            if (bulk.User.Id is null)
+                continue;
+
             _logger.LogInformation(
                 "progress: {progress}/{total}",
                 progress,
@@ -74,12 +77,6 @@ public partial class BulkService
             while (_config.Bulk.ApiPerCycle <= 0 || index < _config.Bulk.ApiPerCycle)
             {
                 _logger.LogInformation("index: {index}, count: {count}", index, count);
-
-                if (bulk.User.Id is null)
-                {
-                    _logger.LogInformation("id is null for the user {user}", bulk.User.Name);
-                    continue;
-                }
 
                 bool valid = await _downloader.Verify();
 

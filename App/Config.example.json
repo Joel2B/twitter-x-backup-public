@@ -315,6 +315,7 @@
     "Partitions": [
       {
         "Id": 6,
+        "Enabled": false,
         "Name": "local",
         "Type": "primary",
         "Size": 400,
