@@ -31,10 +31,8 @@ public static class PostDataCollectionExtensions
             services.AddKeyedScoped(
                 id,
                 (sp, _) =>
-                {
-                    return (IPartition)
-                        ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage);
-                }
+                    (IPartition)
+                        ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
             );
 
             services.AddKeyedScoped(
