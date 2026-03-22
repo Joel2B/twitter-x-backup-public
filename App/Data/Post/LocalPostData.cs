@@ -21,6 +21,8 @@ public class LocalPostData(
     private readonly Storage _config = _config;
     private readonly IPartition _partition = _partition;
 
+    private Dictionary<string, Models.Post.Post>? _postsCache = null;
+
     public Task Setup()
     {
         SetupDirectory();
@@ -50,8 +52,11 @@ public class LocalPostData(
         return path;
     }
 
-    public async Task<List<Models.Post.Post>?> GetAll()
+    private async Task<Dictionary<string, Models.Post.Post>?> GetCache()
     {
+        if (_postsCache is not null)
+            return _postsCache;
+
         string path = GetPathFile();
 
         if (!File.Exists(path))
@@ -65,7 +70,25 @@ public class LocalPostData(
             JsonConvert.DeserializeObject<List<Models.Post.Post>>(content)
             ?? throw new Exception("Error deserializing the file.");
 
-        return posts;
+        SetCache(posts);
+        return _postsCache;
+    }
+
+    private void SetCache(List<Models.Post.Post>? posts)
+    {
+        if (posts is null)
+        {
+            _postsCache = null;
+            return;
+        }
+
+        _postsCache = posts.ToDictionary(o => o.Id);
+    }
+
+    public async Task<List<Models.Post.Post>?> GetAll()
+    {
+        Dictionary<string, Models.Post.Post>? posts = await GetCache();
+        return posts is null ? null : [.. posts.Values];
     }
 
     private async Task Verify()
@@ -163,12 +186,8 @@ public class LocalPostData(
         _logger.LogInformation("added: {added}, edited: {edited}", added, edited);
     }
 
-    public async Task<Dictionary<string, Models.Post.Post>?> GetAllAsDictionary()
-    {
-        List<Models.Post.Post>? posts = await GetAll();
-
-        return posts?.ToDictionary(post => post.Id);
-    }
+    public async Task<Dictionary<string, Models.Post.Post>?> GetAllAsDictionary() =>
+        await GetCache();
 
     public async Task Save(List<Models.Post.Post> posts)
     {
@@ -181,6 +200,8 @@ public class LocalPostData(
 
         await SaveFormatted(posts);
         Replicate();
+
+        SetCache(posts);
     }
 
     private async Task SaveFormatted(List<Models.Post.Post> posts)
