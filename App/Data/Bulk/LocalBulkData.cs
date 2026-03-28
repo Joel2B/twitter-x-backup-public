@@ -114,7 +114,8 @@ public class LocalBulkData(
 
         var pathsDate = pathsFiles
             .Where(o => Utils.Path.ToDate(o) is not null)
-            .Select(o => new { Path = o, Date = Utils.Path.ToDate(o) });
+            .Select(o => new { Path = o, Date = Utils.Path.ToDate(o) })
+            .OrderBy(o => o.Date);
 
         if (!pathsDate.Any())
             return Task.CompletedTask;
