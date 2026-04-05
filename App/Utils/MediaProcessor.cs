@@ -32,6 +32,15 @@ public class MediaProcessor
             url = QueryHelpers.AddQueryString(image.Url, query);
         }
 
+        try
+        {
+            Uri uri = new(url);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"url: {url}, error: {ex.Message}");
+        }
+
         return new() { Url = url, Path = path };
     }
 }

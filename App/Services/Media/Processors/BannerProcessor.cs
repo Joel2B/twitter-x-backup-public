@@ -4,10 +4,8 @@ using Backup.App.Models.Media.Processors;
 
 namespace Backup.App.Services.Media.Processors;
 
-public class BannerProcessor(
-    Models.Config.Medias.Banner config,
-    MediaProcessorContext context
-) : MediaProcessor(context)
+public class BannerProcessor(Models.Config.Medias.Banner config, MediaProcessorContext context)
+    : MediaProcessor(context)
 {
     public override void Process()
     {
@@ -18,7 +16,7 @@ public class BannerProcessor(
         {
             string? url = post.Profile.BannerUrl;
 
-            if (url is null)
+            if (string.IsNullOrEmpty(url))
                 continue;
 
             string id = Path.GetFileName(url);
