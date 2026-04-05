@@ -12,7 +12,11 @@ public class Change
         {
             UserId = UserId,
             Date = Date,
-            Data = Data,
-            Index = Index,
+            Data = Data?.Clone(),
+            Index = Index?.ToDictionary(
+                entry => entry.Key,
+                entry => entry.Value.Clone(),
+                StringComparer.Ordinal
+            ),
         };
 }

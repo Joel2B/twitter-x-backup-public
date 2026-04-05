@@ -17,14 +17,14 @@ public class Data
         new()
         {
             Id = Id,
-            Profile = Profile,
+            Profile = Profile.Clone(),
             Description = Description,
             Retweeted = Retweeted,
             Favorited = Favorited,
             Bookmarked = Bookmarked,
             CreatedAt = CreatedAt,
-            Hashtags = Hashtags,
-            Medias = Medias,
+            Hashtags = Hashtags is null ? null : [.. Hashtags],
+            Medias = Medias?.Select(media => media.Clone()).ToList(),
             Deleted = Deleted,
         };
 }
