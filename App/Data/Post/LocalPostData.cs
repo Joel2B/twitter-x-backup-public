@@ -2,12 +2,12 @@ using Backup.App.Interfaces;
 using Backup.App.Interfaces.Data.Post;
 using Backup.App.Interfaces.Partition;
 using Backup.App.Models.Config.Data.Post;
+using Backup.App.Models.Data.Json;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Backup.App.Data.Post;
 
-public class LocalPostData(
+public partial class LocalPostData(
     ILogger<LocalPostData> _logger,
     Models.Config.App _appConfig,
     Storage _config,
@@ -41,34 +41,21 @@ public class LocalPostData(
             [.. partition.Paths, .. _config.Paths.Paths, .. _config.Paths.Post.Paths]
         );
 
-    private string GetPathFile(Models.Config.Data.Partition? partition = null)
-    {
-        if (_config.Paths.Post.File is null)
-            throw new Exception("file not configured");
-
-        Models.Config.Data.Partition primary = partition ?? _partition.GetPrimary();
-        string path = Path.Combine(GetPath(primary), _config.Paths.Post.File);
-
-        return path;
-    }
-
     private async Task<Dictionary<string, Models.Post.Post>?> GetCache()
     {
         if (_postsCache is not null)
             return _postsCache;
 
-        string path = GetPathFile();
+        PrepareTablesDirectories();
+        string normalizedPostsPath = GetCurrentTablesFilePath(NormalizedPostsFileName);
 
-        if (!File.Exists(path))
+        if (!File.Exists(normalizedPostsPath))
             return null;
 
         await Verify();
 
-        string content = await File.ReadAllTextAsync(path);
-
-        List<Models.Post.Post>? posts =
-            JsonConvert.DeserializeObject<List<Models.Post.Post>>(content)
-            ?? throw new Exception("Error deserializing the file.");
+        LocalPostTables tables = await LoadTables();
+        List<Models.Post.Post> posts = BuildPosts(tables);
 
         SetCache(posts);
         return _postsCache;
@@ -91,139 +78,60 @@ public class LocalPostData(
         return posts is null ? null : [.. posts.Values];
     }
 
-    private async Task Verify()
-    {
-        if (!_config.Tasks.Verify)
-            return;
-
-        string basePath = GetPath(_partition.GetPrimary());
-
-        var fileLarger = Directory
-            .GetFiles(basePath, "*.json", SearchOption.TopDirectoryOnly)
-            .Where(o => Utils.Path.ToDate(o) is not null)
-            .Select(o => new { Path = o, new FileInfo(o).Length })
-            .MaxBy(o => o.Length);
-
-        if (fileLarger is null)
-            throw new Exception();
-
-        string path = GetPathFile();
-        long length = new FileInfo(path).Length;
-
-        if (length < fileLarger.Length)
-            if (_config.Tasks.Fix)
-                _logger.LogWarning("files of different sizes");
-            else
-                throw new Exception("files of different sizes");
-
-        if (!_config.Tasks.Fix)
-            return;
-
-        string content = await File.ReadAllTextAsync(path);
-
-        List<Models.Post.Post>? posts =
-            JsonConvert.DeserializeObject<List<Models.Post.Post>>(content)
-            ?? throw new Exception("Error deserializing the file.");
-
-        string contentLarger = await File.ReadAllTextAsync(fileLarger.Path);
-
-        List<Models.Post.Post>? postsLarger =
-            JsonConvert.DeserializeObject<List<Models.Post.Post>>(contentLarger)
-            ?? throw new Exception("Error deserializing the file.");
-
-        Dictionary<string, Models.Post.Post> dictPosts = new(
-            capacity: postsLarger.Count,
-            comparer: StringComparer.Ordinal
-        );
-
-        HashSet<string> dups = [];
-
-        foreach (Models.Post.Post post in postsLarger)
-            if (!dictPosts.TryAdd(post.Id, post))
-                dups.Add(post.Id);
-
-        _logger.LogInformation("repeated posts: {count}", dups.Count);
-
-        if (dups.Count > 0)
-            throw new Exception();
-
-        int added = 0;
-        int edited = 0;
-
-        foreach (Models.Post.Post post in posts)
-        {
-            if (dictPosts.TryAdd(post.Id, post))
-            {
-                postsLarger.Add(post);
-                added++;
-            }
-            else
-            {
-                bool indexEdited = false;
-
-                foreach (var kvp in post.Index)
-                    if (!dictPosts[post.Id].Index.ContainsKey(kvp.Key))
-                    {
-                        dictPosts[post.Id].Index[kvp.Key] = kvp.Value;
-                        indexEdited = true;
-
-                        _logger.LogInformation(
-                            "index: {key}, value: {value}",
-                            kvp.Key,
-                            JsonConvert.SerializeObject(kvp.Value)
-                        );
-                    }
-
-                if (indexEdited)
-                {
-                    _logger.LogInformation("post: {id}", post.Id);
-                    edited++;
-                }
-            }
-        }
-
-        await Save([.. dictPosts.Values]);
-        _logger.LogInformation("added: {added}, edited: {edited}", added, edited);
-    }
-
     public async Task<Dictionary<string, Models.Post.Post>?> GetAllAsDictionary() =>
         await GetCache();
 
+    private Task Verify()
+    {
+        if (!_config.Tasks.Verify)
+            return Task.CompletedTask;
+
+        string currentPath = GetCurrentTablesFilePath(NormalizedPostsFileName);
+
+        if (!File.Exists(currentPath))
+            return Task.CompletedTask;
+
+        string basePath = GetPath(_partition.GetPrimary());
+
+        var latestHistory = Directory
+            .GetDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
+            .Select(path => new { Path = path, Date = Utils.Path.ToDate(path, isDir: true) })
+            .Where(o => o.Date is not null)
+            .OrderByDescending(o => o.Date)
+            .FirstOrDefault();
+
+        if (latestHistory is null)
+            return Task.CompletedTask;
+
+        string historyPath = Path.Combine(
+            latestHistory.Path,
+            Path.GetFileName(NormalizedPostsFileName)
+        );
+
+        if (!File.Exists(historyPath))
+            return Task.CompletedTask;
+
+        long currentLength = new FileInfo(currentPath).Length;
+        long historyLength = new FileInfo(historyPath).Length;
+        long diff = historyLength - currentLength;
+        long threshold = Math.Max(0, _config.Tasks.VerifyMaxSizeDiffBytes);
+
+        if (diff > threshold)
+            throw new Exception(
+                $"current '{NormalizedPostsFileName}' is smaller than latest history beyond threshold: current={currentLength}, history={historyLength}, shrink={diff}, threshold={threshold}, historyDir='{Path.GetFileName(latestHistory.Path)}'"
+            );
+
+        return Task.CompletedTask;
+    }
+
     public async Task Save(List<Models.Post.Post> posts)
     {
-        string path = GetPathFile();
+        LocalPostTables tables = BuildTables(posts);
 
-        RenameFile();
-
-        string data = JsonConvert.SerializeObject(posts);
-        await File.WriteAllTextAsync(path, data);
-
-        await SaveFormatted(posts);
+        await SaveTables(tables);
         Replicate();
 
         SetCache(posts);
-    }
-
-    private async Task SaveFormatted(List<Models.Post.Post> posts)
-    {
-        string path = Utils.Path.GetPathFormatted(GetPathFile());
-        string json = JsonConvert.SerializeObject(posts, Formatting.Indented);
-
-        await File.WriteAllTextAsync(path, json);
-    }
-
-    private void RenameFile()
-    {
-        string path = GetPathFile();
-
-        if (!File.Exists(path))
-            return;
-
-        string date = DateTime.Now.ToString("yyyy.MM.dd-HH.mm.ss");
-        string fileName = $"{date}.json";
-        string newPath = path.Replace(Path.GetFileName(path), fileName);
-
-        File.Move(path, newPath);
     }
 
     public async Task Prune()
@@ -243,12 +151,12 @@ public class LocalPostData(
         _logger.LogInformation("prunning partition: {value}", partition.Id);
 
         string basePath = GetPath(partition);
-        string[] pathsFiles = Directory.GetFiles(basePath, "*.json", SearchOption.TopDirectoryOnly);
         _logger.LogInformation("base path: {path}", Path.GetFileName(basePath));
 
-        var pathsDate = pathsFiles
-            .Where(o => Utils.Path.ToDate(o) is not null)
-            .Select(o => new { Path = o, Date = Utils.Path.ToDate(o) })
+        var pathsDate = Directory
+            .GetDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
+            .Select(o => new { Path = o, Date = Utils.Path.ToDate(o, isDir: true) })
+            .Where(o => o.Date is not null)
             .GroupBy(o => Convert.ToDateTime(o.Date?.ToString("yyyy-MM-dd")))
             .OrderBy(o => o.Key)
             .ToList();
@@ -298,7 +206,7 @@ public class LocalPostData(
 
         foreach (string path in remove)
         {
-            File.Delete(path);
+            Directory.Delete(path, recursive: true);
             _logger.LogInformation("{path} removed", Path.GetFileName(path));
         }
 
@@ -312,19 +220,31 @@ public class LocalPostData(
             .Except([_partition.GetPrimary()])
             .ToList();
 
-        string mainPath = GetPathFile();
-        string mainPathFormatted = Utils.Path.GetPathFormatted(mainPath);
+        List<string> mainPaths = [.. GetDataFilePaths()];
+        List<string> mainPathsFormatted = [.. mainPaths.Select(Utils.Path.GetPathFormatted)];
 
         foreach (Models.Config.Data.Partition partition in partitions)
         {
-            string path = GetPathFile(partition);
-            string pathFormatted = Utils.Path.GetPathFormatted(path);
+            List<string> paths = [.. GetDataFilePaths(partition)];
+            List<string> pathsFormatted = [.. paths.Select(Utils.Path.GetPathFormatted)];
 
-            File.Delete(path);
-            File.Copy(mainPath, path);
+            for (int i = 0; i < paths.Count; i++)
+            {
+                string? pathDirectory = Path.GetDirectoryName(paths[i]);
+                if (!string.IsNullOrWhiteSpace(pathDirectory))
+                    Directory.CreateDirectory(pathDirectory);
 
-            File.Delete(pathFormatted);
-            File.Copy(mainPathFormatted, pathFormatted);
+                File.Delete(paths[i]);
+                File.Copy(mainPaths[i], paths[i]);
+
+                string? formattedPathDirectory = Path.GetDirectoryName(pathsFormatted[i]);
+
+                if (!string.IsNullOrWhiteSpace(formattedPathDirectory))
+                    Directory.CreateDirectory(formattedPathDirectory);
+
+                File.Delete(pathsFormatted[i]);
+                File.Copy(mainPathsFormatted[i], pathsFormatted[i]);
+            }
         }
     }
 }
