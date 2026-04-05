@@ -34,8 +34,13 @@ public class MediaProcessing(
 
         foreach (MediaProcessor processor in processors)
         {
+            _logger.LogInformation("Media processing: {Processor}", processor.GetType().Name);
             processor.Process();
+
+            _logger.LogInformation("Filter duplicates");
             processor.FilterDuplicates();
+
+            _logger.LogInformation("Save log");
             await processor.SaveLog();
         }
 
