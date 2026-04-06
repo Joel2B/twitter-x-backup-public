@@ -69,7 +69,7 @@ class MediaDownload(
                 options,
                 async (data, token) =>
                 {
-                    await ProcessDownload(data.data, data.download, token, cts);
+                    await ProcessDownload(data.data, data.download, cts, token);
                 }
             );
         }
@@ -87,8 +87,8 @@ class MediaDownload(
     private async Task ProcessDownload(
         DataDownload data,
         Download download,
-        CancellationToken token,
-        CancellationTokenSource cts
+        CancellationTokenSource cts,
+        CancellationToken token
     )
     {
         Logs logs = new()
