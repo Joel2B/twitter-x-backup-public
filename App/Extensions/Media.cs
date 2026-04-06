@@ -10,7 +10,6 @@ public static class MediaCollectionExtensions
     public static IServiceCollection AddMedia(this IServiceCollection services)
     {
         services.AddScoped<IMediaProcessing, MediaProcessing>();
-        services.AddScoped<IMediaProcessingLogger, LocalMediaProcessingLogger>();
         services.AddScoped<IMediaPrune, MediaPrune>();
         services.AddScoped<IMediaIntegrity, MediaIntegrity>();
         services.AddScoped<IMediaFilter, MediaFilter>();

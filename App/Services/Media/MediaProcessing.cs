@@ -6,22 +6,18 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.App.Services.Media;
 
-public class MediaProcessing(
-    ILogger<MediaProcessing> _logger,
-    Models.Config.App _config,
-    IMediaProcessingLogger _mediaProcessingLogger
-) : IMediaProcessing
+public class MediaProcessing(ILogger<MediaProcessing> _logger, Models.Config.App _config)
+    : IMediaProcessing
 {
     private readonly ILogger<MediaProcessing> _logger = _logger;
     private readonly Models.Config.App _config = _config;
-    private readonly IMediaProcessingLogger _mediaProcessingLogger = _mediaProcessingLogger;
 
     private readonly Dictionary<string, Download> _all = [];
     private readonly Dictionary<string, Download> _filtered = [];
 
-    public async Task Process(List<Models.Post.Post> posts)
+    public Task Process(List<Models.Post.Post> posts)
     {
-        MediaProcessorContext context = new(posts, _all, _filtered, _mediaProcessingLogger);
+        MediaProcessorContext context = new(posts, _all, _filtered);
 
         List<MediaProcessor> processors =
         [
@@ -39,12 +35,9 @@ public class MediaProcessing(
 
             _logger.LogInformation("Filter duplicates");
             processor.FilterDuplicates();
-
-            _logger.LogInformation("Save log");
-            await processor.SaveLog();
         }
 
-        await _mediaProcessingLogger.Prune();
+        return Task.CompletedTask;
     }
 
     public List<Download> GetMedia() => [.. _all.Values];

@@ -637,13 +637,6 @@
     },
     "Media": {
       "Paths": ["media"],
-      "Url": {
-        "Prune": {
-          "Enabled": true,
-          "RetainedCountLimit": 1
-        },
-        "Paths": ["url"]
-      },
       "Log": {
         "Paths": ["log"]
       },

@@ -16,13 +16,7 @@ public class DebugApi : Downloads.Path
 public class MediaDebug : Downloads.Path
 {
     public required Downloads.Path Log { get; set; }
-    public required MediaDebugUrl Url { get; set; }
     public required Downloads.Path Error { get; set; }
-}
-
-public class MediaDebugUrl : Downloads.Path
-{
-    public required DebugPrune Prune { get; set; }
 }
 
 public class DebugPrune
