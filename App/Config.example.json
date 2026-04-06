@@ -543,6 +543,16 @@
     "NoDataTimeout": 10000,
     "Prune": {
       "Filters": ["jpg:png:*"]
+    },
+    "Media": {
+      "Partitions": [0],
+      "Paths": ["data", "media"],
+      "Log": {
+        "Paths": ["log"]
+      },
+      "Error": {
+        "Paths": ["error"]
+      }
     }
   },
   "Medias": {
@@ -634,15 +644,6 @@
         "RetainedCountLimit": 10
       },
       "Paths": ["api"]
-    },
-    "Media": {
-      "Paths": ["media"],
-      "Log": {
-        "Paths": ["log"]
-      },
-      "Error": {
-        "Paths": ["error"]
-      }
     }
   },
   "Tasks": {

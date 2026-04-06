@@ -39,17 +39,16 @@ public class LocalMediaLogger(
     private string GetPath()
     {
         Models.Config.Data.Partition partition = _partition
-            .GetPartitions(_config.Debug.Partitions)
+            .GetPartitions(_config.Downloads.Media.Partitions)
             .First();
 
-        return Path.Combine(
-            [.. partition.Paths, .. _config.Debug.Paths, .. _config.Debug.Media.Paths]
-        );
+        return Path.Combine([.. partition.Paths, .. _config.Downloads.Media.Paths]);
     }
 
-    private string GetPathLog() => Path.Combine([GetPath(), .. _config.Debug.Media.Log.Paths]);
+    private string GetPathLog() => Path.Combine([GetPath(), .. _config.Downloads.Media.Log.Paths]);
 
-    private string GetPathError() => Path.Combine([GetPath(), .. _config.Debug.Media.Error.Paths]);
+    private string GetPathError() =>
+        Path.Combine([GetPath(), .. _config.Downloads.Media.Error.Paths]);
 
     public void Log(Logs log)
     {

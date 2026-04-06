@@ -10,6 +10,7 @@ public class Downloads
     public int Timeout { get; set; }
     public int NoDataTimeout { get; set; }
     public required Filter Prune { get; set; }
+    public required MediaDebug Media { get; set; }
 }
 
 public class Threads
@@ -17,4 +18,11 @@ public class Threads
     public required int Start { get; set; }
     public required int Min { get; set; }
     public required int Max { get; set; }
+}
+
+public class MediaDebug : Path
+{
+    public required List<int> Partitions { get; set; }
+    public required Path Log { get; set; }
+    public required Path Error { get; set; }
 }
