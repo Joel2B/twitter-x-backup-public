@@ -119,29 +119,7 @@ class MediaDownload(
 
     private async Task SaveLogs()
     {
-        await GetErrors();
-
         _logger.LogInformation("saving logs");
         await _mediaLogger.Save();
-    }
-
-    private async Task GetErrors()
-    {
-        List<Logs>? errors = await _mediaLogger.GetErrors();
-
-        if (errors is null)
-            return;
-
-        List<Logs> memoryErrors = await _mediaLogger.GetMemoryErrors();
-
-        if (memoryErrors.Count == 0)
-            return;
-
-        foreach (Logs logs in errors)
-        foreach (Log log in logs.Messages)
-        {
-            Logs _logs = new() { Id = logs.Id, Messages = [log] };
-            _mediaLogger.Error(_logs, false);
-        }
     }
 }

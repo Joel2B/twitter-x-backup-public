@@ -15,7 +15,7 @@ public static class PostCollectionExtensions
         services.AddScoped<IPostDownloader, PostDownloaderHttp>();
         services.AddScoped<IPostParser, PostParser>();
         services.AddScoped<IPostMerger, PostMerger>();
-        services.AddSingleton<IPostRecovery, PostRecovery>();
+        services.AddScoped<IPostRecovery, PostRecovery>();
         services.AddScoped<IPostDownload, PostDownload>();
         services.AddScoped<IPostReplication, PostReplication>();
 

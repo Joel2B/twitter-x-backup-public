@@ -108,7 +108,7 @@ public class PostRecovery(
                 continue;
 
             _postsCache.Add(result.Posts[0]);
-            logs.RemoveAll(log => log.Id == result.Posts[0].Id);
+            await _mediaLogger.RemoveErrors([.. logs.Where(o => o.Id == result.Posts[0].Id)]);
 
             _logger.LogInformation("post {post} downloaded", id);
             await Task.Delay(5 * 1000);
@@ -121,8 +121,6 @@ public class PostRecovery(
 
         if (_postsCache.Count == 0)
             return;
-
-        await _mediaLogger.SaveErrors(logs);
     }
 
     private async Task Save(Dictionary<string, Models.Post.Post> posts)

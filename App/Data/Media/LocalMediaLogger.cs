@@ -22,18 +22,26 @@ public class LocalMediaLogger(
     private readonly ConcurrentDictionary<string, Logs> _errors = new();
     private readonly ConcurrentDictionary<string, Logs> _logs = new();
 
-    public Task Setup()
+    public async Task Setup()
     {
         SetupDirectory();
-
-        return Task.CompletedTask;
+        await LoadErrors();
     }
 
-    public void SetupDirectory()
+    private void SetupDirectory()
     {
         Directory.CreateDirectory(GetPath());
         Directory.CreateDirectory(GetPathLog());
         Directory.CreateDirectory(GetPathError());
+    }
+
+    private async Task LoadErrors()
+    {
+        List<Logs> lstLogs = await ReadErrors() ?? [];
+
+        foreach (Logs logs in lstLogs)
+            if (!_errors.TryAdd(logs.Id, logs))
+                throw new Exception();
     }
 
     private string GetPath()
@@ -50,52 +58,9 @@ public class LocalMediaLogger(
     private string GetPathError() =>
         Path.Combine([GetPath(), .. _config.Downloads.Media.Error.Paths]);
 
-    public void Log(Logs log)
+    private static async Task SaveFile(List<Logs> logs, string path)
     {
-        Logs UpdateFunc(string key, Logs _log)
-        {
-            lock (_log.Messages)
-                _log.Messages.Add(log.Messages[0]);
-
-            return _log;
-        }
-
-        _logs.AddOrUpdate(log.Id, log, UpdateFunc);
-
-        _logger.LogInformation(
-            "{logId}, {messageId}, {message}",
-            log.Id,
-            log.Messages[0].Id,
-            log.Messages[0].Message
-        );
-    }
-
-    public void Error(Logs log, bool logger = true)
-    {
-        Logs UpdateFunc(string key, Logs _log)
-        {
-            lock (_log.Messages)
-                _log.Messages.Add(log.Messages[0]);
-
-            return _log;
-        }
-
-        _errors.AddOrUpdate(log.Id, log, UpdateFunc);
-
-        if (!logger)
-            return;
-
-        _logger.LogError(
-            "{logId}, {messageId}, {message}",
-            log.Id,
-            log.Messages[0].Id,
-            log.Messages[0].Message
-        );
-    }
-
-    private static async Task SaveFile(List<Logs> logs, string path, bool force = false)
-    {
-        if (logs.Count == 0 && !force)
+        if (logs.Count == 0)
             return;
 
         string date = DateTime.Now.ToString("yyyy.MM.dd-HH.mm.ss");
@@ -106,18 +71,7 @@ public class LocalMediaLogger(
         await File.WriteAllTextAsync(_path, log);
     }
 
-    public async Task Save()
-    {
-        await SaveFile([.. _logs.Values], GetPathLog());
-        await SaveFile([.. _errors.Values], GetPathError());
-    }
-
-    public async Task SaveErrors(List<Logs> logs)
-    {
-        await SaveFile(logs, GetPathError(), true);
-    }
-
-    public async Task<List<Logs>?> GetErrors()
+    private async Task<List<Logs>?> ReadErrors()
     {
         string[] paths = Directory.GetFiles(GetPathError(), "*.json");
 
@@ -149,5 +103,62 @@ public class LocalMediaLogger(
         return errors;
     }
 
-    public Task<List<Logs>> GetMemoryErrors() => Task.FromResult<List<Logs>>([.. _errors.Values]);
+    private async Task SaveErrors() => await SaveFile([.. _errors.Values], GetPathError());
+
+    public Task<List<Logs>?> GetErrors() => Task.FromResult<List<Logs>?>([.. _errors.Values]);
+
+    public async Task RemoveErrors(List<Logs> lstLogs)
+    {
+        foreach (Logs logs in lstLogs)
+            if (!_errors.TryRemove(logs.Id, out _))
+                throw new Exception();
+
+        await SaveErrors();
+    }
+
+    public void Log(Logs log)
+    {
+        Logs UpdateFunc(string key, Logs _log)
+        {
+            lock (_log.Messages)
+                _log.Messages.Add(log.Messages[0]);
+
+            return _log;
+        }
+
+        _logs.AddOrUpdate(log.Id, log, UpdateFunc);
+
+        _logger.LogInformation(
+            "{logId}, {messageId}, {message}",
+            log.Id,
+            log.Messages[0].Id,
+            log.Messages[0].Message
+        );
+    }
+
+    public void Error(Logs log)
+    {
+        Logs UpdateFunc(string key, Logs _log)
+        {
+            lock (_log.Messages)
+                _log.Messages.Add(log.Messages[0]);
+
+            return _log;
+        }
+
+        _errors.AddOrUpdate(log.Id, log, UpdateFunc);
+
+        _logger.LogError(
+            "{logId}, {messageId}, {message}",
+            log.Id,
+            log.Messages[0].Id,
+            log.Messages[0].Message
+        );
+    }
+
+    public async Task Save()
+    {
+        await SaveFile([.. _logs.Values], GetPathLog());
+        await SaveErrors();
+    }
 }
