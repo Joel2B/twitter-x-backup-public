@@ -6,6 +6,9 @@ public interface IPostData
     public Task<List<Models.Post.Post>?> GetAll();
     public Task<List<Models.Post.MediaInput>?> GetMediaInputs();
     public Task<Dictionary<string, Models.Post.Post>?> GetAllAsDictionary();
+    public Task<Dictionary<string, int>> GetPostCountsByProfileIds(
+        IReadOnlyCollection<string> profileIds
+    );
     public Task<Dictionary<string, Models.Post.Post>> AddPosts(
         string userId,
         string origin,

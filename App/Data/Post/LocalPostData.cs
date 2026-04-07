@@ -95,6 +95,36 @@ public partial class LocalPostData(
     public async Task<Dictionary<string, Models.Post.Post>?> GetAllAsDictionary() =>
         await GetCache();
 
+    public async Task<Dictionary<string, int>> GetPostCountsByProfileIds(
+        IReadOnlyCollection<string> profileIds
+    )
+    {
+        if (profileIds.Count == 0)
+            return [];
+
+        HashSet<string> filter = profileIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (filter.Count == 0)
+            return [];
+
+        PrepareTablesDirectories();
+        string normalizedPostsPath = GetCurrentTablesFilePath(NormalizedPostsFileName);
+
+        if (!File.Exists(normalizedPostsPath))
+            return [];
+
+        await Verify();
+
+        List<PostRow> posts = await ReadList<PostRow>(normalizedPostsPath);
+
+        return posts
+            .Where(post => filter.Contains(post.ProfileId))
+            .GroupBy(post => post.ProfileId, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+    }
+
     private Task Verify()
     {
         if (!_config.Tasks.Verify)

@@ -9,9 +9,7 @@ public partial class BulkService
     private async Task Verify()
     {
         _logger.LogInformation("running verify");
-        _logger.LogInformation("getting posts");
         IPostData postData = _postData.First();
-        Dictionary<string, Models.Post.Post> posts = await postData.GetAllAsDictionary() ?? [];
 
         _logger.LogInformation("getting bulks");
         List<Models.Bulk.Bulk>? bulks = await _bulkData.GetBulks();
@@ -26,18 +24,25 @@ public partial class BulkService
             .Where(o => o.User.Status == StatusUser.Active && o.Order.Phase1 is null)
             .ToList();
 
-        var query =
-            from u in bulksFiltered
-            join p in posts on u.User.Id equals p.Value.Profile.Id into gp
-            select new
-            {
-                UserId = u.User.Id,
-                UserName = u.User.Name,
-                TotalBulk = u.Total,
-                TotalPost = gp.Count(),
-            };
+        List<string> userIds = bulksFiltered
+            .Select(o => o.User.Id ?? "")
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
 
-        var data = query.ToList();
+        _logger.LogInformation("getting post counts by profile ids: {count}", userIds.Count);
+        Dictionary<string, int> postCounts = await postData.GetPostCountsByProfileIds(userIds);
+
+        var data = bulksFiltered.Select(bulk => new
+        {
+            UserId = bulk.User.Id,
+            UserName = bulk.User.Name,
+            TotalBulk = bulk.Total,
+            TotalPost = !string.IsNullOrWhiteSpace(bulk.User.Id)
+            && postCounts.TryGetValue(bulk.User.Id, out int totalPost)
+                ? totalPost
+                : 0,
+        });
 
         foreach (var item in data)
         {
