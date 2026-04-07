@@ -182,7 +182,7 @@ public class LocalDumpData(
         await File.WriteAllTextAsync(path, content);
     }
 
-    public async Task Flush(string userId, Dictionary<string, Models.Post.Post> posts)
+    public async Task<Dictionary<string, Models.Post.Post>> Flush(string userId)
     {
         _logger.LogInformation("dumping data");
 
@@ -222,16 +222,11 @@ public class LocalDumpData(
             dumpPosts
         );
 
-        posts.Clear();
-
-        foreach ((string id, Models.Post.Post post) in merged)
-            posts[id] = post;
-
         _logger.LogInformation("{posts} posts loaded from dump", dumpPosts.Count);
 
         HashSet<string> newIds = [.. dumpPosts.Select(post => post.Id)];
 
-        List<Models.Post.Post> deleted = posts
+        List<Models.Post.Post> deleted = merged
             .Where(kvp => !newIds.Contains(kvp.Key))
             .Select(kvp => kvp.Value)
             .ToList();
@@ -245,6 +240,8 @@ public class LocalDumpData(
         dumpsData.Current = null;
 
         await _dumps.Save(dumpsData);
+
+        return merged;
     }
 
     private async Task Replicate()

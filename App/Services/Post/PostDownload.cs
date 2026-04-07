@@ -79,7 +79,7 @@ public class PostDownload(
                     if (attemptCount == attempts)
                     {
                         if (data is not null)
-                            await _dump.Flush(UserId, Posts);
+                            _posts = await _dump.Flush(UserId);
 
                         return;
                     }
