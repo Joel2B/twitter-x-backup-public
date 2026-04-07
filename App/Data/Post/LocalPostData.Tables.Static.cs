@@ -1,4 +1,5 @@
 using Backup.App.Models.Data.Json;
+using Backup.App.Models.Post;
 using Newtonsoft.Json;
 
 namespace Backup.App.Data.Post;
@@ -98,7 +99,7 @@ public partial class LocalPostData
 
                     for (int j = 0; j < media.VideoInfo.Variants.Count; j++)
                     {
-                        Models.Post.Variant variant = media.VideoInfo.Variants[j];
+                        Variant variant = media.VideoInfo.Variants[j];
 
                         tables.MediaVariants.Add(
                             new()
@@ -141,9 +142,9 @@ public partial class LocalPostData
 
     private static List<Models.Post.Post> BuildPosts(LocalPostTables tables)
     {
-        Dictionary<string, Models.Post.Profile> profiles = tables.Profiles.ToDictionary(
+        Dictionary<string, Profile> profiles = tables.Profiles.ToDictionary(
             o => o.Id,
-            o => new Models.Post.Profile
+            o => new Profile
             {
                 Id = o.Id,
                 UserName = o.UserName,
@@ -151,9 +152,7 @@ public partial class LocalPostData
                 BannerUrl = o.BannerUrl,
                 ImageUrl = o.ImageUrl,
                 Following = o.Following,
-                Count = o.CountMedia.HasValue
-                    ? new Models.Post.Count { Media = o.CountMedia }
-                    : null,
+                Count = o.CountMedia.HasValue ? new Count { Media = o.CountMedia } : null,
             },
             StringComparer.Ordinal
         );
@@ -166,21 +165,20 @@ public partial class LocalPostData
                 StringComparer.Ordinal
             );
 
-        Dictionary<(string PostId, int MediaOrdinal), List<Models.Post.Variant>> variantsByMedia =
-            tables
-                .MediaVariants.GroupBy(o => (o.PostId, o.MediaOrdinal))
-                .ToDictionary(
-                    g => g.Key,
-                    g =>
-                        g.OrderBy(o => o.Ordinal)
-                            .Select(o => new Models.Post.Variant
-                            {
-                                ContentType = o.ContentType,
-                                Bitrate = o.Bitrate,
-                                Url = o.Url,
-                            })
-                            .ToList()
-                );
+        Dictionary<(string PostId, int MediaOrdinal), List<Variant>> variantsByMedia = tables
+            .MediaVariants.GroupBy(o => (o.PostId, o.MediaOrdinal))
+            .ToDictionary(
+                g => g.Key,
+                g =>
+                    g.OrderBy(o => o.Ordinal)
+                        .Select(o => new Variant
+                        {
+                            ContentType = o.ContentType,
+                            Bitrate = o.Bitrate,
+                            Url = o.Url,
+                        })
+                        .ToList()
+            );
 
         Dictionary<string, List<Models.Post.Media>> mediasByPost = tables
             .Medias.GroupBy(o => o.PostId, StringComparer.Ordinal)
@@ -201,7 +199,7 @@ public partial class LocalPostData
                                     o.VideoDurationMilis is null
                                     && (variants is null || variants.Count == 0)
                                         ? null
-                                        : new Models.Post.VideoInfo
+                                        : new VideoInfo
                                         {
                                             DurationMilis = o.VideoDurationMilis,
                                             Variants = variants,
@@ -212,10 +210,7 @@ public partial class LocalPostData
                 StringComparer.Ordinal
             );
 
-        Dictionary<
-            string,
-            Dictionary<string, Dictionary<string, Models.Post.IndexData>>
-        > indexByPost = tables
+        Dictionary<string, Dictionary<string, Dictionary<string, IndexData>>> indexByPost = tables
             .IndexEntries.GroupBy(o => o.PostId, StringComparer.Ordinal)
             .ToDictionary(
                 g => g.Key,
@@ -226,11 +221,7 @@ public partial class LocalPostData
                             ug =>
                                 ug.ToDictionary(
                                     o => o.Origin,
-                                    o => new Models.Post.IndexData
-                                    {
-                                        Previous = o.Previous,
-                                        Next = o.Next,
-                                    },
+                                    o => new IndexData { Previous = o.Previous, Next = o.Next },
                                     StringComparer.Ordinal
                                 ),
                             StringComparer.Ordinal
@@ -255,19 +246,16 @@ public partial class LocalPostData
 
         foreach (PostRow row in tables.Posts)
         {
-            Models.Post.Profile profile = profiles.TryGetValue(
-                row.ProfileId,
-                out Models.Post.Profile? value
-            )
+            Profile profile = profiles.TryGetValue(row.ProfileId, out Profile? value)
                 ? value
-                : new Models.Post.Profile { Id = row.ProfileId };
+                : new Profile { Id = row.ProfileId };
 
             hashtagsByPost.TryGetValue(row.Id, out List<string>? hashtags);
             mediasByPost.TryGetValue(row.Id, out List<Models.Post.Media>? medias);
 
             indexByPost.TryGetValue(
                 row.Id,
-                out Dictionary<string, Dictionary<string, Models.Post.IndexData>>? index
+                out Dictionary<string, Dictionary<string, IndexData>>? index
             );
 
             changesByPost.TryGetValue(row.Id, out List<PostChangeRow>? postChanges);
