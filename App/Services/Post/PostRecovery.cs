@@ -6,6 +6,7 @@ using Backup.App.Models.Config.Request;
 using Backup.App.Models.Media.Logging;
 using Backup.App.Models.Post;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Backup.App.Services.Post;
 
@@ -27,21 +28,14 @@ public class PostRecovery(
     private readonly IPostParser _parser = _parser;
     private readonly IPostMerger _merger = _merger;
 
-    private IPostData? _postData;
-    private IPostData PostData => _postData ?? throw new Exception("media data not initialized");
-
     private readonly CancellationTokenSource _tokenSource = new();
     private readonly List<Models.Post.Post> _postsCache = [];
-
-    private int _count = 0;
 
     private string UserId =>
         _config.Source.Request.Query.Variables["userId"]?.ToString() ?? throw new Exception();
 
     public async Task Recovery(Dictionary<string, Models.Post.Post> posts, IPostData postData)
     {
-        _postData = postData;
-
         try
         {
             await Download();
@@ -49,11 +43,15 @@ public class PostRecovery(
             _merger.Merge(UserId, _config.Source.Id, posts, _postsCache, new() { Index = false });
             _logger.LogInformation("post {post} merged", _postsCache.Count);
 
-            await Save(posts);
+            if (_postsCache.Count == 0)
+                return;
+
+            _logger.LogInformation("Saving {data} data", posts.Values.Count);
+            await postData.Save([.. posts.Values]);
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex.Message);
+            _logger.LogError("Error: {error}", JsonConvert.SerializeObject(ex));
         }
     }
 
@@ -62,7 +60,6 @@ public class PostRecovery(
         if (_postsCache.Count > 0)
         {
             _logger.LogInformation("using the cache");
-
             return;
         }
 
@@ -97,6 +94,8 @@ public class PostRecovery(
         _mapper.Map(request, baseRequest);
         request.Headers = baseRequest.Headers;
 
+        int _count = 0;
+
         foreach (string id in ids)
         {
             request.Query.Variables["focalTweetId"] = id;
@@ -118,17 +117,5 @@ public class PostRecovery(
             if (_count >= 10)
                 break;
         }
-
-        if (_postsCache.Count == 0)
-            return;
-    }
-
-    private async Task Save(Dictionary<string, Models.Post.Post> posts)
-    {
-        if (_postsCache.Count == 0)
-            return;
-
-        _logger.LogInformation("Saving {data} data", posts.Values.Count);
-        await PostData.Save([.. posts.Values]);
     }
 }
