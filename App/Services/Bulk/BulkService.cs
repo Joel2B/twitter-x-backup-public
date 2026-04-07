@@ -19,7 +19,6 @@ public partial class BulkService(
     IEnumerable<IBulkData> _bulkData,
     IPostDownloader _downloader,
     IPostParser _parser,
-    IPostMerger _merger,
     IPostReplication _postReplication
 ) : IBulkService
 {
@@ -32,7 +31,6 @@ public partial class BulkService(
     private readonly IBulkData _bulkData = _bulkData.First();
     private readonly IPostDownloader _downloader = _downloader;
     private readonly IPostParser _parser = _parser;
-    private readonly IPostMerger _merger = _merger;
     private readonly IPostReplication _postReplication = _postReplication;
 
     private readonly CancellationTokenSource _tokenSource = new();

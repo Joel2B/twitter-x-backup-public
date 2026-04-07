@@ -12,7 +12,6 @@ public class PostDownload(
     IPostDownloader _downloader,
     IPostLogger _postLogger,
     IPostParser _parser,
-    IPostMerger _merger,
     IDumpData _dump
 ) : IPostDownload
 {
@@ -22,7 +21,6 @@ public class PostDownload(
 
     private readonly IPostLogger _postLogger = _postLogger;
     private readonly IPostParser _parser = _parser;
-    private readonly IPostMerger _merger = _merger;
 
     private IPostData? _postData;
     private IPostData PostData => _postData ?? throw new Exception("media data not initialized");
@@ -36,10 +34,11 @@ public class PostDownload(
 
     private readonly CancellationTokenSource _tokenSource = new();
 
-    public async Task Download(Dictionary<string, Models.Post.Post> posts, IPostData postData)
+    public async Task Download(IPostData postData)
     {
         _postData = postData;
-        _posts = posts;
+        _posts = await postData.GetAllAsDictionary() ?? [];
+        _logger.LogInformation("download loaded {count} posts", _posts.Count);
 
         await ProcessDownloads();
         await Save();
@@ -120,7 +119,7 @@ public class PostDownload(
                     break;
                 }
 
-                _merger.Merge(UserId, _config.Source.Id, Posts, result.Posts);
+                _posts = await PostData.AddPosts(UserId, _config.Source.Id, result.Posts);
 
                 count += queryCount;
                 _config.Source.Request.Query.Variables["cursor"] = result.NextCursor;

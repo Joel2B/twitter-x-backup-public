@@ -1,7 +1,6 @@
 using System.Text.RegularExpressions;
 using Backup.App.Interfaces.Data.Post;
 using Backup.App.Interfaces.Partition;
-using Backup.App.Interfaces.Services.Post;
 using Backup.App.Models.Config.Data.Dump;
 using Backup.App.Models.Dump;
 using Microsoft.Extensions.Logging;
@@ -13,7 +12,7 @@ public class LocalDumpData(
     ILogger<LocalDumpData> _logger,
     Models.Config.App _appConfig,
     IDumpsData _dumps,
-    IPostMerger _merger,
+    IEnumerable<IPostData> _postData,
     Storage _config,
     IPartition _partition
 ) : IDumpData
@@ -24,6 +23,7 @@ public class LocalDumpData(
     private readonly Models.Config.App _appConfig = _appConfig;
     private readonly Storage _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly IEnumerable<IPostData> _postData = _postData;
 
     private DumpData? _dumpData;
     private DumpData Data => _dumpData ?? throw new Exception("Dump data not initialized");
@@ -211,12 +211,21 @@ public class LocalDumpData(
             if (_posts is null)
                 throw new Exception("Error in deserialize");
 
-            if (Data.Type is null)
-                _logger.LogInformation("error in Data.Type");
-
             dumpPosts.AddRange(_posts);
-            _merger.Merge(userId, Data.Type ?? "errorData.Type", posts, _posts);
         }
+
+        IPostData postData = _postData.First();
+
+        Dictionary<string, Models.Post.Post> merged = await postData.AddPosts(
+            userId,
+            Data.Type ?? "errorData.Type",
+            dumpPosts
+        );
+
+        posts.Clear();
+
+        foreach ((string id, Models.Post.Post post) in merged)
+            posts[id] = post;
 
         _logger.LogInformation("{posts} posts loaded from dump", dumpPosts.Count);
 

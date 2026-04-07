@@ -1,41 +1,48 @@
-using Backup.App.Interfaces.Services.Post;
 using Backup.App.Models.Post;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Post;
+namespace Backup.App.Data.Post;
 
-public class PostMerger(ILogger<PostMerger> _logger) : IPostMerger
+public partial class LocalPostData
 {
-    private readonly ILogger<PostMerger> _logger = _logger;
-
-    public void Merge(
+    public async Task<Dictionary<string, Models.Post.Post>> AddPosts(
         string userId,
         string origin,
-        Dictionary<string, Models.Post.Post> posts,
-        List<Models.Post.Post> results,
+        List<Models.Post.Post> incoming,
         MergeOptions? options = null
     )
     {
         options ??= new();
 
-        foreach (Models.Post.Post result in results)
-        {
-            Models.Post.Post? post = posts.FirstOrDefault(post => post.Value.Id == result.Id).Value;
+        Dictionary<string, Models.Post.Post> posts = await GetCache() ?? [];
+        _postsCache ??= posts;
 
-            if (post is null)
+        foreach (Models.Post.Post result in incoming)
+        {
+            if (!posts.TryGetValue(result.Id, out Models.Post.Post? post))
             {
-                posts.Add(result.Id, result);
+                posts[result.Id] = result;
                 continue;
             }
 
             Change change = new() { UserId = userId };
+            MergeData(post, result, change);
 
-            ChangeData(post, result, change);
+            if (
+                !result.Index.TryGetValue(
+                    userId,
+                    out Dictionary<string, IndexData>? incomingUserIndex
+                )
+            )
+            {
+                incomingUserIndex = [];
+                result.Index[userId] = incomingUserIndex;
+            }
 
-            if (!result.Index[userId].ContainsKey(origin))
-                result.Index[userId][origin] = new();
+            if (!incomingUserIndex.ContainsKey(origin))
+                incomingUserIndex[origin] = new();
 
-            IndexData newIndexData = result.Index[userId][origin].Clone();
+            IndexData newIndexData = incomingUserIndex[origin].Clone();
             result.Index = post.CloneIndex();
 
             if (options.Index)
@@ -44,7 +51,7 @@ public class PostMerger(ILogger<PostMerger> _logger) : IPostMerger
                     result.Index[userId] = [];
 
                 result.Index[userId][origin] = newIndexData;
-                ChangeIndex(post, result, change, origin);
+                MergeIndex(post, result, change, origin);
             }
 
             result.Changes = post.CloneChanges();
@@ -54,9 +61,11 @@ public class PostMerger(ILogger<PostMerger> _logger) : IPostMerger
 
             posts[post.Id] = result;
         }
+
+        return posts;
     }
 
-    private void ChangeData(Models.Post.Post post, Models.Post.Post result, Change change)
+    private void MergeData(Models.Post.Post post, Models.Post.Post result, Change change)
     {
         result.Profile.UserName ??= post.Profile.UserName;
         result.Profile.Name ??= post.Profile.Name;
@@ -85,7 +94,7 @@ public class PostMerger(ILogger<PostMerger> _logger) : IPostMerger
         );
     }
 
-    private void ChangeIndex(
+    private void MergeIndex(
         Models.Post.Post post,
         Models.Post.Post result,
         Change change,

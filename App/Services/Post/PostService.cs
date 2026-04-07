@@ -26,14 +26,11 @@ public class PostService(
 
         _logger.LogInformation(data.Id, "post data: {name}", data.GetType().Name);
 
-        Dictionary<string, Models.Post.Post> posts = await data.GetAllAsDictionary() ?? [];
-        _logger.LogInformation(data.Id, "total posts loaded: {count}", posts.Count);
-
         _logger.LogInformation(data.Id, "recovering posts in {data} ", data.GetType().Name);
-        await _postRecovery.Recovery(posts, data);
+        await _postRecovery.Recovery(data);
 
         _logger.LogInformation(data.Id, "downloading posts");
-        await _postDownload.Download(posts, data);
+        await _postDownload.Download(data);
 
         _logger.LogInformation(data.Id, "pruning posts");
         await data.Prune();

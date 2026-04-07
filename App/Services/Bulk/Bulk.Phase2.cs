@@ -134,7 +134,7 @@ public partial class BulkService
                 }
 
                 _logger.LogInformation("ParseResult return {count} posts", result.Posts.Count);
-                _merger.Merge(bulk.User.Id, origin, posts, result.Posts);
+                posts = await postData.AddPosts(bulk.User.Id, origin, result.Posts);
 
                 index++;
                 count += result.Posts.Count;

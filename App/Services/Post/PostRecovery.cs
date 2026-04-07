@@ -16,8 +16,7 @@ public class PostRecovery(
     IMapper _mapper,
     IMediaLogger _mediaLogger,
     IPostDownloader _downloader,
-    IPostParser _parser,
-    IPostMerger _merger
+    IPostParser _parser
 ) : IPostRecovery
 {
     private readonly ILogger<PostRecovery> _logger = _logger;
@@ -26,7 +25,6 @@ public class PostRecovery(
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
     private readonly IPostDownloader _downloader = _downloader;
     private readonly IPostParser _parser = _parser;
-    private readonly IPostMerger _merger = _merger;
 
     private readonly CancellationTokenSource _tokenSource = new();
     private readonly List<Models.Post.Post> _postsCache = [];
@@ -34,13 +32,22 @@ public class PostRecovery(
     private string UserId =>
         _config.Source.Request.Query.Variables["userId"]?.ToString() ?? throw new Exception();
 
-    public async Task Recovery(Dictionary<string, Models.Post.Post> posts, IPostData postData)
+    public async Task Recovery(IPostData postData)
     {
         try
         {
             await Download();
 
-            _merger.Merge(UserId, _config.Source.Id, posts, _postsCache, new() { Index = false });
+            Dictionary<string, Models.Post.Post> posts = await postData.GetAllAsDictionary() ?? [];
+            _logger.LogInformation("recovery loaded {count} posts", posts.Count);
+
+            posts = await postData.AddPosts(
+                UserId,
+                _config.Source.Id,
+                _postsCache,
+                new() { Index = false }
+            );
+
             _logger.LogInformation("post {post} merged", _postsCache.Count);
 
             if (_postsCache.Count == 0)

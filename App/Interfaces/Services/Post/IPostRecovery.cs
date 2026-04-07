@@ -4,5 +4,5 @@ namespace Backup.App.Interfaces.Services.Post;
 
 public interface IPostRecovery
 {
-    public Task Recovery(Dictionary<string, Models.Post.Post> posts, IPostData postData);
+    public Task Recovery(IPostData postData);
 }
