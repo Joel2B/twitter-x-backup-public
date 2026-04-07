@@ -12,7 +12,7 @@ public class BannerProcessor(Models.Config.Medias.Banner config, MediaProcessorC
         if (config.Dimensions is null || config.Sizes is null)
             return;
 
-        foreach (Models.Post.Post post in Context.Posts)
+        foreach (Models.Post.MediaInput post in Context.Posts)
         {
             string? url = post.Profile.BannerUrl;
 

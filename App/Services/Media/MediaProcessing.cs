@@ -15,7 +15,7 @@ public class MediaProcessing(ILogger<MediaProcessing> _logger, Models.Config.App
     private readonly Dictionary<string, Download> _all = [];
     private readonly Dictionary<string, Download> _filtered = [];
 
-    public Task Process(List<Models.Post.Post> posts)
+    public Task Process(List<Models.Post.MediaInput> posts)
     {
         MediaProcessorContext context = new(posts, _all, _filtered);
 

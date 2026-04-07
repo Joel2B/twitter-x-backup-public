@@ -22,7 +22,7 @@ public class ProfileProcessor(Models.Config.Medias.Profile config, MediaProcesso
 
         List<Resolution> resolutions = [.. dimensions, .. sizes];
 
-        foreach (Models.Post.Post post in Context.Posts)
+        foreach (Models.Post.MediaInput post in Context.Posts)
         {
             string? url = post.Profile.ImageUrl;
 

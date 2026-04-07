@@ -32,40 +32,15 @@ public class MediaService(
 
     public async Task Download()
     {
-        List<Models.Post.Post>? posts;
+        List<Models.Post.MediaInput>? posts;
 
         using (_logger.LogTimer("getting posts"))
-            posts = await _data.First().GetAll();
+            posts = await _data.First().GetMediaInputs();
 
         if (posts is null)
             return;
 
         _logger.LogInformation("processing {posts} posts", posts.Count);
-
-        List<Models.Post.Data> changes = posts
-            .SelectMany(o => o.Changes)
-            .Where(o => o.Data is not null)
-            .Select(o => o.Data?.Clone())
-            .Cast<Models.Post.Data>()
-            .ToList();
-
-        List<Models.Post.Post> posts1 = changes
-            .Select(o => new Models.Post.Post()
-            {
-                Id = o.Id,
-                Profile = o.Profile,
-                Description = o.Description,
-                Retweeted = o.Retweeted,
-                Favorited = o.Favorited,
-                Bookmarked = o.Bookmarked,
-                CreatedAt = o.CreatedAt,
-                Hashtags = o.Hashtags,
-                Medias = o.Medias,
-                Deleted = o.Deleted,
-            })
-            .ToList();
-
-        posts.AddRange(posts1);
 
         await _mediaProcessing.Process(posts);
 

@@ -78,6 +78,20 @@ public partial class LocalPostData(
         return posts is null ? null : [.. posts.Values];
     }
 
+    public async Task<List<Models.Post.MediaInput>?> GetMediaInputs()
+    {
+        PrepareTablesDirectories();
+        string normalizedPostsPath = GetCurrentTablesFilePath(NormalizedPostsFileName);
+
+        if (!File.Exists(normalizedPostsPath))
+            return null;
+
+        await Verify();
+
+        LocalPostTables tables = await LoadTables();
+        return BuildMediaInputs(tables);
+    }
+
     public async Task<Dictionary<string, Models.Post.Post>?> GetAllAsDictionary() =>
         await GetCache();
 
