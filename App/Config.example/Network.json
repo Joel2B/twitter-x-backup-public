@@ -1,0 +1,11 @@
+{
+  "RateLimit": {
+    "Enabled": true,
+    "ThresholdRemaining": 50,
+    "Wait": {
+      "Min": 5,
+      "Max": 10,
+      "Reset": true
+    }
+  }
+}

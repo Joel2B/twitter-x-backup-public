@@ -1,0 +1,42 @@
+{
+  "Enabled": false,
+  "Check": false,
+  "Partitions": [0],
+  "Data": {
+    "Paths": ["data"],
+    "Proxy": {
+      "Paths": ["proxy"],
+      "File": "proxy.json"
+    }
+  },
+  "Threshold": {
+    "ErrorsToInactive": 1,
+    "ErrorsToStop": 50
+  },
+  "Providers": [
+    {
+      "Type": "config",
+      "Format": "ipport",
+      "Resources": [
+        {
+          "Type": "http",
+          "Value": "{REPLACE_THIS}"
+        }
+      ]
+    },
+    {
+      "Type": "http",
+      "Format": "ipport",
+      "Resources": [
+        {
+          "Type": "http",
+          "Value": "{REPLACE_THIS}"
+        },
+        {
+          "Type": "https",
+          "Value": "{REPLACE_THIS}"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "Recovery": {
+    "Enabled": false
+  },
+  "Dump": {
+    "Count": 5000
+  }
+}

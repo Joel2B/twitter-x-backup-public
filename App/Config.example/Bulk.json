@@ -1,0 +1,11 @@
+{
+  "Enabled": true,
+  "UsersPerCycle": 20,
+  "SavePerAction": 5,
+  "UsersPerPhase2": 100,
+  "MaxCountPostPhase2": 100,
+  "ApiPerCycle": 0,
+  "MediaPerApi": 20,
+  "MaxCountPost": 1000,
+  "ApiRetryCount": 2
+}

@@ -1,0 +1,10 @@
+{
+  "Prune": {
+    "Data": {
+      "Post": {
+        "KeepDays": 2,
+        "KeepCount": 3
+      }
+    }
+  }
+}

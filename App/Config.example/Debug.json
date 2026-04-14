@@ -1,0 +1,14 @@
+{
+  "Partitions": [0],
+  "Paths": ["debug"],
+  "Log": {
+    "Paths": ["log"]
+  },
+  "Api": {
+    "Prune": {
+      "Enabled": true,
+      "RetainedCountLimit": 10
+    },
+    "Paths": ["api"]
+  }
+}

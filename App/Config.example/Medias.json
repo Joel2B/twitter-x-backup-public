@@ -1,0 +1,35 @@
+{
+  "Enabled": true,
+  "Banner": {
+    "Dimensions": ["1500x500", "600x200", "300x100"],
+    "Sizes": ["web", "web_retina", "ipad", "ipad_retina", "mobile", "mobile_retina"]
+  },
+  "Profile": {
+    "Dimensions": ["400x400", "200x200"],
+    "Sizes": ["bigger", "normal", "mini"]
+  },
+  "Photo": {
+    "Types": ["jpg", "png"],
+    "Dimensions": ["4096x4096", "360x360", "240x240", "120x120"],
+    "Sizes": ["orig", "large", "medium", "small", "thumb"],
+    "Filters": ["jpg:png:*", "png:jpg:orig"]
+  },
+  "Video": {
+    "Thumb": {
+      "Types": ["jpg", "png"],
+      "Dimensions": ["360x360", "240x240", "120x120"],
+      "Sizes": ["orig", "large", "medium", "small"],
+      "Filters": ["jpg:png:*", "png:jpg:orig"]
+    },
+    "Types": ["video/mp4"]
+  },
+  "Gif": {
+    "Thumb": {
+      "Types": ["jpg", "png"],
+      "Dimensions": ["360x360", "240x240", "120x120"],
+      "Sizes": ["orig", "large", "medium", "small"],
+      "Filters": ["jpg:png:*", "png:jpg:orig"]
+    },
+    "Types": ["video/mp4"]
+  }
+}
