@@ -5,7 +5,6 @@ using Serilog;
 ServiceCollection services = new();
 
 services.AddCore();
-services.AddTasks();
 services.AddSerilog();
 
 services.AddPostData();
