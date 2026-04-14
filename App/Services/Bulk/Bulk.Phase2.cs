@@ -83,7 +83,10 @@ public partial class BulkService
             int? mediaCount = result.Posts[0].Profile.Count?.Media;
 
             if (mediaCount is null || bulk.Total is null)
-                throw new Exception();
+            {
+                _logger.LogWarning("no media");
+                continue;
+            }
 
             if (mediaCount <= bulk.Total)
             {
