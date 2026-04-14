@@ -11,6 +11,21 @@ public static class RequestMerge
 
     public static void MergeInto(Request current, Request source)
     {
+        current.Query ??= new Query
+        {
+            Variables = [],
+            Features = [],
+            FieldToggles = [],
+        };
+        source.Query ??= new Query
+        {
+            Variables = [],
+            Features = [],
+            FieldToggles = [],
+        };
+        current.Headers ??= [];
+        source.Headers ??= [];
+
         if (!string.IsNullOrWhiteSpace(source.Url))
             current.Url = source.Url;
 
@@ -20,6 +35,13 @@ public static class RequestMerge
 
     private static void MergeQuery(Query current, Query source)
     {
+        current.Variables ??= [];
+        source.Variables ??= [];
+        current.Features ??= [];
+        source.Features ??= [];
+        current.FieldToggles ??= [];
+        source.FieldToggles ??= [];
+
         NormalizeVariables(current.Variables);
 
         foreach (var kvp in source.Variables)

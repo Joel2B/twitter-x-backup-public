@@ -1,5 +1,6 @@
 using Backup.App.Models.Config;
 using Backup.App.Models.Config.Request;
+using Microsoft.Extensions.Configuration;
 
 namespace Backup.Tests;
 
@@ -229,5 +230,78 @@ public class ConfigSourceMergeTests
         Assert.Equal(currentSnapshot.Url, current.Url);
         Assert.Equal(currentSnapshot.Query.Variables["count"], current.Query.Variables["count"]);
         Assert.Equal(sourceSnapshot.Query.Variables["count"], source.Query.Variables["count"]);
+    }
+
+    [Fact]
+    public void Create_UsesFetchSources_PostsLikesBookmarks_FromProdAndExampleConfig()
+    {
+        string root = FindRepositoryRoot();
+        string[] fetchPaths =
+        [
+            Path.Combine(root, "App", "Config", "Fetch.json"),
+            Path.Combine(root, "App", "Config.example", "Fetch.json"),
+        ];
+
+        var expectedBySource = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["posts"] = "/UserTweets",
+            ["likes"] = "/Likes",
+            ["bookmarks"] = "/Bookmarks",
+        };
+
+        int validatedConfigs = 0;
+
+        foreach (string fetchPath in fetchPaths.Where(File.Exists))
+        {
+            IConfigurationRoot config = new ConfigurationBuilder().AddJsonFile(fetchPath).Build();
+            Fetch fetch =
+                config.Get<Fetch>() ?? throw new Exception($"Unable to load '{fetchPath}'");
+
+            foreach (Source source in fetch.Sources.Where(s => expectedBySource.ContainsKey(s.Id)))
+            {
+                FetchContext context = FetchContextFactory.Create(fetch.Current, source);
+                Source merged = context.Source;
+
+                Assert.Equal(source.Id, merged.Id);
+                Assert.Equal(source.Count, merged.Count);
+
+                Assert.EndsWith(
+                    expectedBySource[source.Id],
+                    merged.Request.Url,
+                    StringComparison.Ordinal
+                );
+
+                Assert.True(merged.Request.Query.Variables.ContainsKey("userId"));
+                Assert.True(merged.Request.Query.Variables.ContainsKey("count"));
+                Assert.True(merged.Request.Query.Variables.ContainsKey("cursor"));
+
+                Assert.True(merged.Request.Headers.ContainsKey("authorization"));
+                Assert.True(merged.Request.Headers.ContainsKey("cookie"));
+                Assert.True(merged.Request.Headers.ContainsKey("x-client-transaction-id"));
+                Assert.True(merged.Request.Headers.ContainsKey("Referer"));
+            }
+
+            validatedConfigs++;
+        }
+
+        Assert.True(
+            validatedConfigs > 0,
+            "No Fetch.json found in App/Config or App/Config.example."
+        );
+    }
+
+    private static string FindRepositoryRoot()
+    {
+        DirectoryInfo? current = new(AppContext.BaseDirectory);
+
+        while (current is not null)
+        {
+            if (File.Exists(Path.Combine(current.FullName, "Backup.sln")))
+                return current.FullName;
+
+            current = current.Parent;
+        }
+
+        throw new Exception("Repository root not found.");
     }
 }
