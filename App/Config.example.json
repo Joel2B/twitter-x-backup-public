@@ -301,8 +301,13 @@
       }
     }
   },
-  "Post": {
-    "Recovery": false
+  "Services": {
+    "Recovery": {
+      "Enabled": false
+    },
+    "Dump": {
+      "Count": 5000
+    }
   },
   "Data": {
     "Aliases": {
@@ -657,9 +662,6 @@
         }
       }
     }
-  },
-  "Dump": {
-    "Count": 5000
   },
   "Bulk": {
     "Enabled": true,

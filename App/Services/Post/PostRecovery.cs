@@ -86,7 +86,7 @@ public class PostRecovery(
 
         _logger.LogInformation("{count} posts with errors", ids.Count);
 
-        if (!_config.Post.Recovery)
+        if (!_config.Services.Recovery.Enabled)
         {
             _logger.LogInformation("post recovery disabled");
             return;

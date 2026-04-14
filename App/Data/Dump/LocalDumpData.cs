@@ -91,7 +91,7 @@ public class LocalDumpData(
 
         DumpData dump = new()
         {
-            Count = _appConfig.Dump.Count,
+            Count = _appConfig.Services.Dump.Count,
             QueryCount = Convert.ToInt32(count),
         };
 
