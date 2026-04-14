@@ -400,3 +400,6 @@ FodyWeavers.xsd
 
 **/Config.json
 .env
+
+# Local split runtime config
+App/Config/*.json
