@@ -7,26 +7,7 @@ public static class ConfigLoader
     public static App Load()
     {
         string configDirectory = Path.Combine(AppContext.BaseDirectory, "config");
-
-        if (HasSplitConfig(configDirectory))
-            return LoadSplit(configDirectory);
-
-        return LoadLegacy(configDirectory);
-    }
-
-    private static bool HasSplitConfig(string configDirectory) =>
-        File.Exists(Path.Combine(configDirectory, "Fetch.json"));
-
-    private static App LoadLegacy(string configDirectory)
-    {
-        string path = Path.Combine(configDirectory, "twitter.json");
-
-        IConfigurationRoot config = new ConfigurationBuilder()
-            .AddJsonFile(path, optional: false, reloadOnChange: false)
-            .AddEnvironmentVariables()
-            .Build();
-
-        return config.Get<App>() ?? throw new Exception("error deserializing config file");
+        return LoadSplit(configDirectory);
     }
 
     private static App LoadSplit(string configDirectory) =>
@@ -54,6 +35,7 @@ public static class ConfigLoader
             .AddEnvironmentVariables()
             .Build();
 
-        return config.Get<T>() ?? throw new Exception($"error deserializing config file '{fileName}'");
+        return config.Get<T>()
+            ?? throw new Exception($"error deserializing config file '{fileName}'");
     }
 }

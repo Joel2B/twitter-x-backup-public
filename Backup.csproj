@@ -24,12 +24,6 @@
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
       <TargetPath>config/%(Filename)%(Extension)</TargetPath>
     </None>
-
-    <None Update="App\Config.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-      <TargetPath>config/twitter.json</TargetPath>
-    </None>
   </ItemGroup>
 
 </Project>
