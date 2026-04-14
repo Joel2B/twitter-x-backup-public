@@ -6,10 +6,10 @@ services:
     env_file:
       - .env
     environment:
-      Data__Aliases__I: /mnt/i
-      # Data__Aliases__K: /mnt/k
-      Data__Aliases__L: /mnt/l
-      # Data__Aliases__Q: /mnt/q
-      # Data__Aliases__R: /mnt/r
-      Data__Aliases__S: /mnt/s
-      Data__Aliases__J: /mnt/j
+      Aliases__I: /mnt/i
+      # Aliases__K: /mnt/k
+      Aliases__L: /mnt/l
+      # Aliases__Q: /mnt/q
+      # Aliases__R: /mnt/r
+      Aliases__S: /mnt/s
+      Aliases__J: /mnt/j
