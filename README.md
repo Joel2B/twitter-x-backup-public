@@ -12,15 +12,15 @@ This project is under active personal development. Structure and configuration f
 
 - .NET SDK 10 (`net10.0`)
 - Docker and Docker Compose (optional)
-- Valid configuration in `App/Config.json`
+- Valid split configuration files in `App/Config/`
 
 ## Configuration
 
-1. Use `App/Config.example.json` as a starting point.
-2. Create `App/Config.json` and replace all fields marked as `{REPLACE_THIS}`.
+1. Use files in `App/Config.example/` as a starting point.
+2. Copy them to `App/Config/` and replace all fields marked as `{REPLACE_THIS}`.
 3. Adjust data/debug paths and download settings for your environment.
 
-Note: `App/Config.json` is intended for local use and should not be committed.
+Note: files in `App/Config/` are intended for local use and should not be committed.
 
 ## Run Locally
 
@@ -61,8 +61,8 @@ For Windows CIFS volumes, create `.env` from `.env.example` and set your credent
 ## Security
 
 - Do not commit real tokens/cookies/sessions.
-- Keep `App/Config.json` out of version control.
-- Keep only sanitized sample values in `App/Config.example.json`.
+- Keep `App/Config/*.json` out of version control.
+- Keep only sanitized sample values in `App/Config.example/*.json`.
 
 ## License
 
