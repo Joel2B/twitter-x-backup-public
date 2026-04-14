@@ -476,11 +476,11 @@
             "Paths": ["media"]
           },
           "Cache": {
-            "Paths": ["cache"],
+            "Paths": ["data", "cache"],
             "File": "media.cache.json"
           },
           "Tmp": {
-            "Paths": ["tmp"],
+            "Paths": ["data", "cache", "tmp"],
             "Downloader": {
               "Paths": ["downloader"]
             },
