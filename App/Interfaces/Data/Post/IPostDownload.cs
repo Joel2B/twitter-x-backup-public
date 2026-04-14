@@ -4,5 +4,5 @@ namespace Backup.App.Models.Post;
 
 public interface IPostDownload
 {
-    public Task Download(IPostData postData);
+    public Task Download(IPostData postData, Config.FetchContext fetchContext);
 }

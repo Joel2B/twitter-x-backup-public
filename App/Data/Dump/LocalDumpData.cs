@@ -28,11 +28,7 @@ public class LocalDumpData(
     private DumpData? _dumpData;
     private DumpData Data => _dumpData ?? throw new Exception("Dump data not initialized");
 
-    public async Task Setup()
-    {
-        await CreateData();
-        await SetupData();
-    }
+    public Task Setup() => Task.CompletedTask;
 
     private string GetPath(Models.Config.Data.Partition partition) =>
         Path.Combine([.. partition.Paths, .. _config.Paths.Paths, .. _config.Paths.Dumps.Paths]);
@@ -77,14 +73,14 @@ public class LocalDumpData(
         return Path.Combine([path, .. _config.Paths.Dumps.Dump.Api.Paths]);
     }
 
-    private async Task CreateData()
+    private async Task CreateData(Models.Config.FetchContext fetchContext)
     {
         string path = await GetPathData();
 
         if (File.Exists(path))
             return;
 
-        string? count = _appConfig.Source.Request.Query.Variables["count"]?.ToString();
+        string? count = fetchContext.Source.Request.Query.Variables["count"]?.ToString();
 
         if (count is null)
             throw new Exception("Count not configured");
@@ -132,23 +128,29 @@ public class LocalDumpData(
         Directory.CreateDirectory(apiPath);
     }
 
-    public async Task<DumpData?> GetData()
+    public async Task<DumpData?> GetData(Models.Config.FetchContext fetchContext)
     {
-        if (_appConfig.Source.Count != -1)
+        if (fetchContext.Source.Count != -1)
             return null;
 
         DumpsData dumpsData = await _dumps.GetData();
-        await Setup();
+        await CreateData(fetchContext);
+        await SetupData();
 
-        if (dumpsData.Current is not null && _appConfig.Source.Id != Data.Type)
+        if (dumpsData.Current is not null && fetchContext.Source.Id != Data.Type)
             throw new Exception();
 
-        Data.Type = _appConfig.Source.Id;
+        Data.Type = fetchContext.Source.Id;
 
         return Data;
     }
 
-    public async Task Save(string response, List<Models.Post.Post> posts, string cursor)
+    public async Task Save(
+        string response,
+        List<Models.Post.Post> posts,
+        string cursor,
+        Models.Config.FetchContext _
+    )
     {
         await SetupDirectory();
 
@@ -182,7 +184,10 @@ public class LocalDumpData(
         await File.WriteAllTextAsync(path, content);
     }
 
-    public async Task<Dictionary<string, Models.Post.Post>> Flush(string userId)
+    public async Task<Dictionary<string, Models.Post.Post>> Flush(
+        string userId,
+        Models.Config.FetchContext fetchContext
+    )
     {
         _logger.LogInformation("dumping data");
 
@@ -215,10 +220,11 @@ public class LocalDumpData(
         }
 
         IPostData postData = _postData.First();
+        string sourceId = Data.Type ?? fetchContext.Source.Id;
 
         Dictionary<string, Models.Post.Post> merged = await postData.AddPosts(
             userId,
-            Data.Type ?? "errorData.Type",
+            sourceId,
             dumpPosts
         );
 

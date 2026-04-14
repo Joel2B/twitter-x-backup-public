@@ -1,6 +1,4 @@
-using AutoMapper;
 using Backup.App.Extensions;
-using Backup.App.Interfaces.Services;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Interfaces.Services.Post;
 using Microsoft.Extensions.Logging;
@@ -10,14 +8,16 @@ namespace Backup.App;
 public class App(
     ILogger<App> _logger,
     Models.Config.App _config,
-    IMapper _mapper,
-    IEnumerable<IService> _services
+    IEnumerable<IPostService> _postServices,
+    IEnumerable<IBulkService> _bulkServices,
+    IEnumerable<IMediaService> _mediaServices
 )
 {
     private readonly ILogger<App> _logger = _logger;
     private readonly Models.Config.App _config = _config;
-    private readonly IMapper _mapper = _mapper;
-    private readonly IEnumerable<IService> _services = _services;
+    private readonly IEnumerable<IPostService> _postServices = _postServices;
+    private readonly IEnumerable<IBulkService> _bulkServices = _bulkServices;
+    private readonly IEnumerable<IMediaService> _mediaServices = _mediaServices;
 
     public async Task Backup()
     {
@@ -29,17 +29,21 @@ public class App(
             if (!source.Enabled)
                 continue;
 
-            _mapper.Map(source, _config.Source);
-            _logger.LogInfo("source: {source}", _config.Source.Id);
+            Models.Config.FetchContext fetchContext = Models.Config.FetchContextFactory.Create(
+                _config.Source,
+                source
+            );
 
-            foreach (IService service in _services.OfType<IPostService>())
+            _logger.LogInfo("source: {source}", fetchContext.Source.Id);
+
+            foreach (IPostService service in _postServices)
             {
                 using (_logger.LogTimer($"post service: {service.GetType().Name}"))
-                    await service.Download();
+                    await service.Download(fetchContext);
             }
         }
 
-        foreach (IService service in _services.OfType<IBulkService>())
+        foreach (IBulkService service in _bulkServices)
         {
             if (!_config.Bulk.Enabled)
                 break;
@@ -48,7 +52,7 @@ public class App(
                 await service.Download();
         }
 
-        foreach (IService service in _services.OfType<IMediaService>())
+        foreach (IMediaService service in _mediaServices)
         {
             if (!_config.Medias.Enabled)
                 break;

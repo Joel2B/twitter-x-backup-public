@@ -1,4 +1,3 @@
-using AutoMapper;
 using Backup.App.Interfaces.Data.Bulk;
 using Backup.App.Interfaces.Data.Post;
 using Backup.App.Interfaces.Services.Media;
@@ -13,7 +12,6 @@ namespace Backup.App.Services.Bulk;
 public partial class BulkService(
     ILogger<BulkService> _logger,
     Models.Config.App _config,
-    IMapper _mapper,
     IEnumerable<IPostData> _postData,
     IEnumerable<IBulkSourceData> _bulkSourceData,
     IEnumerable<IBulkData> _bulkData,
@@ -25,7 +23,6 @@ public partial class BulkService(
     private readonly ILogger<BulkService> _logger = _logger;
 
     private readonly Models.Config.App _config = _config;
-    private readonly IMapper _mapper = _mapper;
     private readonly IEnumerable<IPostData> _postData = _postData;
     private readonly IBulkSourceData _bulkSourceData = _bulkSourceData.First();
     private readonly IBulkData _bulkData = _bulkData.First();
@@ -48,11 +45,10 @@ public partial class BulkService(
 
     private async Task<ParseUser?> GetUserByUser(string userName)
     {
-        Request baseRequest = _config.Source.Request.Clone();
-        Request request = _config.Api["UserByScreenName"].Clone();
-
-        _mapper.Map(request, baseRequest);
-        request.Headers = baseRequest.Headers;
+        Request request = RequestMerge.Build(
+            _config.Source.Request,
+            _config.Api["UserByScreenName"]
+        );
 
         request.Query.Variables["screen_name"] = userName;
         request.Headers["Referer"] = GetReferer(SourceType.Notifications);
@@ -79,11 +75,7 @@ public partial class BulkService(
         string? cursor
     )
     {
-        Request baseRequest = _config.Source.Request.Clone();
-        Request request = _config.Api["UserMedia"].Clone();
-
-        _mapper.Map(request, baseRequest);
-        request.Headers = baseRequest.Headers;
+        Request request = RequestMerge.Build(_config.Source.Request, _config.Api["UserMedia"]);
 
         request.Query.Variables["userId"] = id;
         request.Query.Variables["count"] = count;

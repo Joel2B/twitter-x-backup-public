@@ -1,3 +1,6 @@
 namespace Backup.App.Interfaces.Services.Post;
 
-public interface IPostService : IService { }
+public interface IPostService
+{
+    public Task Download(Models.Config.FetchContext fetchContext);
+}

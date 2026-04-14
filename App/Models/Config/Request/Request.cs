@@ -11,6 +11,6 @@ public class Request
         {
             Url = Url,
             Query = Query.Clone(),
-            Headers = Headers,
+            Headers = Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
         };
 }

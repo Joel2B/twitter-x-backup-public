@@ -8,7 +8,6 @@ namespace Backup.App.Services.Post;
 
 public class PostDownload(
     ILogger<PostDownload> _logger,
-    Models.Config.App _config,
     IPostDownloader _downloader,
     IPostLogger _postLogger,
     IPostParser _parser,
@@ -16,7 +15,6 @@ public class PostDownload(
 ) : IPostDownload
 {
     private readonly ILogger<PostDownload> _logger = _logger;
-    private readonly Models.Config.App _config = _config;
     private readonly IPostDownloader _downloader = _downloader;
 
     private readonly IPostLogger _postLogger = _postLogger;
@@ -29,14 +27,19 @@ public class PostDownload(
     private Dictionary<string, Models.Post.Post> Posts =>
         _posts ?? throw new Exception("Posts not initialized");
 
-    private string UserId =>
-        _config.Source.Request.Query.Variables["userId"]?.ToString() ?? throw new Exception();
+    private Models.Config.FetchContext? _fetchContext;
+
+    private Models.Config.FetchContext FetchContext =>
+        _fetchContext ?? throw new Exception("FetchContext not initialized");
+
+    private string UserId => FetchContext.UserId;
 
     private readonly CancellationTokenSource _tokenSource = new();
 
-    public async Task Download(IPostData postData)
+    public async Task Download(IPostData postData, Models.Config.FetchContext fetchContext)
     {
         _postData = postData;
+        _fetchContext = fetchContext;
         _posts = await postData.GetAllAsDictionary() ?? [];
         _logger.LogInformation("download loaded {count} posts", _posts.Count);
 
@@ -48,25 +51,25 @@ public class PostDownload(
     {
         try
         {
-            DumpData? data = await _dump.GetData();
+            DumpData? data = await _dump.GetData(FetchContext);
 
             if (data is not null)
             {
-                _config.Source.Request.Query.Variables["count"] = data.QueryCount.ToString();
-                _config.Source.Count = data.Count;
-                _config.Source.Request.Query.Variables["cursor"] = data.Cursor;
+                FetchContext.Source.Request.Query.Variables["count"] = data.QueryCount.ToString();
+                FetchContext.Source.Count = data.Count;
+                FetchContext.Source.Request.Query.Variables["cursor"] = data.Cursor;
             }
 
-            int queryCount = Convert.ToInt32(_config.Source.Request.Query.Variables["count"]);
+            int queryCount = Convert.ToInt32(FetchContext.Source.Request.Query.Variables["count"]);
             int count = 0;
 
-            while (count < _config.Source.Count)
+            while (count < FetchContext.Source.Count)
             {
                 _logger.LogInformation(
                     "Downloading {posts}:{count}:{total} posts",
                     queryCount,
                     count,
-                    _config.Source.Count
+                    FetchContext.Source.Count
                 );
 
                 int attempts = 3;
@@ -79,7 +82,7 @@ public class PostDownload(
                     if (attemptCount == attempts)
                     {
                         if (data is not null)
-                            _posts = await _dump.Flush(UserId);
+                            _posts = await _dump.Flush(UserId, FetchContext);
 
                         return;
                     }
@@ -91,7 +94,7 @@ public class PostDownload(
                     try
                     {
                         response = await _downloader.Download(
-                            _config.Source.Request,
+                            FetchContext.Source.Request,
                             _tokenSource.Token
                         );
                     }
@@ -103,7 +106,7 @@ public class PostDownload(
                     if (!string.IsNullOrEmpty(response))
                     {
                         await _postLogger.Save(response, _tokenSource.Token);
-                        result = _parser.Parse(UserId, _config.Source.Id, response);
+                        result = _parser.Parse(UserId, FetchContext.Source.Id, response);
                     }
 
                     if (result.Posts.Count == 0 || result.NextCursor is null)
@@ -114,15 +117,15 @@ public class PostDownload(
                     }
 
                     if (data is not null)
-                        await _dump.Save(response, result.Posts, result.NextCursor);
+                        await _dump.Save(response, result.Posts, result.NextCursor, FetchContext);
 
                     break;
                 }
 
-                _posts = await PostData.AddPosts(UserId, _config.Source.Id, result.Posts);
+                _posts = await PostData.AddPosts(UserId, FetchContext.Source.Id, result.Posts);
 
                 count += queryCount;
-                _config.Source.Request.Query.Variables["cursor"] = result.NextCursor;
+                FetchContext.Source.Request.Query.Variables["cursor"] = result.NextCursor;
 
                 await Task.Delay(5 * 1000);
             }

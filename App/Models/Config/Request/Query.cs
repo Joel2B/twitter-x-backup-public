@@ -9,8 +9,8 @@ public class Query
     public Query Clone() =>
         new()
         {
-            Variables = Variables,
-            Features = Features,
-            FieldToggles = FieldToggles,
+            Variables = Variables.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            Features = Features.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            FieldToggles = FieldToggles.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
         };
 }

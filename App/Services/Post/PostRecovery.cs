@@ -1,4 +1,3 @@
-using AutoMapper;
 using Backup.App.Interfaces.Data.Post;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Interfaces.Services.Post;
@@ -13,7 +12,6 @@ namespace Backup.App.Services.Post;
 public class PostRecovery(
     ILogger<PostRecovery> _logger,
     Models.Config.App _config,
-    IMapper _mapper,
     IMediaLogger _mediaLogger,
     IPostDownloader _downloader,
     IPostParser _parser
@@ -21,7 +19,6 @@ public class PostRecovery(
 {
     private readonly ILogger<PostRecovery> _logger = _logger;
     private readonly Models.Config.App _config = _config;
-    private readonly IMapper _mapper = _mapper;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
     private readonly IPostDownloader _downloader = _downloader;
     private readonly IPostParser _parser = _parser;
@@ -29,21 +26,27 @@ public class PostRecovery(
     private readonly CancellationTokenSource _tokenSource = new();
     private readonly List<Models.Post.Post> _postsCache = [];
 
-    private string UserId =>
-        _config.Source.Request.Query.Variables["userId"]?.ToString() ?? throw new Exception();
+    private Models.Config.FetchContext? _fetchContext;
 
-    public async Task Recovery(IPostData postData)
+    private Models.Config.FetchContext FetchContext =>
+        _fetchContext ?? throw new Exception("FetchContext not initialized");
+
+    private string UserId => FetchContext.UserId;
+
+    public async Task Recovery(IPostData postData, Models.Config.FetchContext fetchContext)
     {
+        _fetchContext = fetchContext;
+
         try
         {
-            await Download();
+            await Download(fetchContext);
 
             Dictionary<string, Models.Post.Post> posts = await postData.GetAllAsDictionary() ?? [];
             _logger.LogInformation("recovery loaded {count} posts", posts.Count);
 
             posts = await postData.AddPosts(
                 UserId,
-                _config.Source.Id,
+                fetchContext.Source.Id,
                 _postsCache,
                 new() { Index = false }
             );
@@ -62,7 +65,7 @@ public class PostRecovery(
         }
     }
 
-    private async Task Download()
+    private async Task Download(Models.Config.FetchContext fetchContext)
     {
         if (_postsCache.Count > 0)
         {
@@ -95,11 +98,10 @@ public class PostRecovery(
         if (ids.Count == 0)
             return;
 
-        Request baseRequest = _config.Source.Request.Clone();
-        Request request = _config.Api["TweetDetail"].Clone();
-
-        _mapper.Map(request, baseRequest);
-        request.Headers = baseRequest.Headers;
+        Request request = RequestMerge.Build(
+            fetchContext.Source.Request,
+            _config.Api["TweetDetail"]
+        );
 
         int _count = 0;
 
@@ -108,7 +110,7 @@ public class PostRecovery(
             request.Query.Variables["focalTweetId"] = id;
 
             string response = await _downloader.Download(request, _tokenSource.Token);
-            ParseResult result = _parser.Parse(UserId, _config.Source.Id, response);
+            ParseResult result = _parser.Parse(UserId, fetchContext.Source.Id, response);
 
             if (result.Posts.Count == 0)
                 continue;

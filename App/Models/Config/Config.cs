@@ -6,4 +6,13 @@ public class Source
     public required bool Enabled { get; set; }
     public required Request.Request Request { get; set; }
     public required int Count { get; set; }
+
+    public Source Clone() =>
+        new()
+        {
+            Id = Id,
+            Enabled = Enabled,
+            Request = Request.Clone(),
+            Count = Count,
+        };
 }
