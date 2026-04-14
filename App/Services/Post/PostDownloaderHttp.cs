@@ -81,7 +81,7 @@ public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, Models.Conf
 
     public async Task<bool> Verify()
     {
-        if (!_config.RateLimit.Enabled || _request is null || _headers is null)
+        if (!_config.Network.RateLimit.Enabled || _request is null || _headers is null)
             return true;
 
         if (!_config.Bulk.Enabled)
@@ -104,7 +104,7 @@ public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, Models.Conf
             throw new Exception("no reset");
 
         TimeSpan diff = DateTimeOffset.FromUnixTimeSeconds(reset) - DateTimeOffset.Now;
-        int threshold = _config.RateLimit.ThresholdRemaining * limit / 100;
+        int threshold = _config.Network.RateLimit.ThresholdRemaining * limit / 100;
 
         _logger.LogInformation("URL: {url}", _request.Url);
         _logger.LogInformation("limit: {limit}", limit);
@@ -118,7 +118,7 @@ public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, Models.Conf
 
         if (remaining <= threshold)
         {
-            if (_config.RateLimit.Wait.Reset)
+            if (_config.Network.RateLimit.Wait.Reset)
             {
                 await Task.Delay((int)Math.Max(0, diff.TotalSeconds) * 1000);
                 return true;
@@ -133,8 +133,8 @@ public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, Models.Conf
 
     private async Task Delay()
     {
-        int min = Math.Max(1, _config.RateLimit.Wait.Min);
-        int max = Math.Max(min, _config.RateLimit.Wait.Max);
+        int min = Math.Max(1, _config.Network.RateLimit.Wait.Min);
+        int max = Math.Max(min, _config.Network.RateLimit.Wait.Max);
 
         int ms = Random.Shared.Next(min * 1000, max * 1000 + 1);
         _logger.LogInformation("delay: {delay} ms", ms);
