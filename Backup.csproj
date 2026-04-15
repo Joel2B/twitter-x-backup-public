@@ -9,8 +9,11 @@
 
   <ItemGroup>
     <Compile Remove="Backup.Tests\**\*.cs" />
+    <Compile Remove="Backup.IntegrationTests\**\*.cs" />
     <EmbeddedResource Remove="Backup.Tests\**\*" />
+    <EmbeddedResource Remove="Backup.IntegrationTests\**\*" />
     <None Remove="Backup.Tests\**\*" />
+    <None Remove="Backup.IntegrationTests\**\*" />
   </ItemGroup>
 
   <ItemGroup>
