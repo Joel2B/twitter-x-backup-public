@@ -1,112 +1,53 @@
-﻿using Backup.App.Models.Post;
+using Backup.App.Models.Post;
 using Backup.App.Models.Post.Response;
 
 namespace Backup.App.Mapper;
 
-public class Posts : AutoMapper.Profile
+public static class Posts
 {
-    public Posts()
+    public static Post Map(Entry entry)
     {
-        AllowNullCollections = true;
+        NormalizeResult(entry);
 
-        RegisterMaps();
+        Legacy legacy =
+            entry.Content.ItemContent.TweetResults?.Result.Legacy ?? throw new Exception("Legacy");
+
+        return new()
+        {
+            Id = legacy.IdStr ?? throw new Exception("Id"),
+            Profile = Profile.GetProfile(entry),
+            Description = legacy.FullText ?? throw new Exception("Description"),
+            Retweeted = legacy.Retweeted,
+            Favorited = legacy.Favorited,
+            Bookmarked = legacy.Bookmarked ?? false,
+            CreatedAt = legacy.CreatedAt ?? throw new Exception("CreatedAt"),
+            Hashtags = Hashtag.GetHashtags(entry),
+            Medias = Media.GetMedias(entry),
+        };
     }
 
-    public void RegisterMaps()
+    private static void NormalizeResult(Entry entry)
     {
-        CreateMap<Entry, Post>()
-            .BeforeMap(
-                (src, dest) =>
-                {
-                    TweetResults? tweetResults = src.Content.ItemContent.TweetResults;
+        TweetResults? tweetResults = entry.Content.ItemContent.TweetResults;
 
-                    if (tweetResults is null)
-                        return;
+        if (tweetResults is null)
+            throw new Exception("TweetResults");
 
-                    Result result = tweetResults.Result;
+        Result result = tweetResults.Result;
 
-                    if (result.Tweet is not null)
-                        tweetResults.Result = result.Tweet;
+        if (result.Tweet is not null)
+            tweetResults.Result = result.Tweet;
 
-                    Result? retweeted = result.Legacy?.RetweetedStatusResult?.Result;
+        Result? retweeted = result.Legacy?.RetweetedStatusResult?.Result;
 
-                    if (retweeted is not null)
-                    {
-                        tweetResults.Result = retweeted;
+        if (retweeted is null)
+            return;
 
-                        // "__typename": "Tweet" => Core
-                        // "__typename": "TweetWithVisibilityResults" => Tweet?.Core
+        tweetResults.Result = retweeted;
 
-                        if (tweetResults.Result.Tweet is not null)
-                            tweetResults.Result = tweetResults.Result.Tweet;
-                    }
-                }
-            )
-            .ForMember(
-                dest => dest.Id,
-                opt =>
-                    opt.MapFrom(
-                        (src, dest) =>
-                        {
-                            return src.Content.ItemContent.TweetResults!.Result.Legacy!.IdStr
-                                ?? throw new Exception("Id");
-                        }
-                    )
-            )
-            .ForMember(
-                dest => dest.Profile,
-                opt => opt.MapFrom((src, dest) => Profile.GetProfile(src))
-            )
-            .ForMember(
-                dest => dest.Description,
-                static opt =>
-                    opt.MapFrom<string>(
-                        (src, dest) =>
-                        {
-                            return src.Content.ItemContent.TweetResults!.Result.Legacy!.FullText
-                                ?? throw new Exception("Description");
-                        }
-                    )
-            )
-            .ForMember(
-                dest => dest.Retweeted,
-                opt =>
-                    opt.MapFrom(src =>
-                        src.Content.ItemContent.TweetResults!.Result.Legacy!.Retweeted
-                    )
-            )
-            .ForMember(
-                dest => dest.Favorited,
-                opt =>
-                    opt.MapFrom(src =>
-                        src.Content.ItemContent.TweetResults!.Result.Legacy!.Favorited
-                    )
-            )
-            .ForMember(
-                dest => dest.Bookmarked,
-                opt =>
-                    opt.MapFrom(src =>
-                        src.Content.ItemContent.TweetResults!.Result.Legacy!.Bookmarked
-                    )
-            )
-            .ForMember(
-                dest => dest.CreatedAt,
-                opt =>
-                    opt.MapFrom(
-                        (src, dest) =>
-                        {
-                            return src.Content.ItemContent.TweetResults!.Result.Legacy!.CreatedAt
-                                ?? throw new Exception("CreatedAt");
-                        }
-                    )
-            )
-            .ForMember(
-                dest => dest.Hashtags,
-                opt => opt.MapFrom((src, dest) => Hashtag.GetHashtags(src))
-            )
-            .ForMember(
-                dest => dest.Medias,
-                opt => opt.MapFrom((src, dest) => Media.GetMedias(src))
-            );
+        // "__typename": "Tweet" => Core
+        // "__typename": "TweetWithVisibilityResults" => Tweet?.Core
+        if (tweetResults.Result.Tweet is not null)
+            tweetResults.Result = tweetResults.Result.Tweet;
     }
 }

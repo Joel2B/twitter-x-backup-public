@@ -1,5 +1,5 @@
-using AutoMapper;
 using Backup.App.Interfaces.Services.Post;
+using Backup.App.Mapper;
 using Backup.App.Models.Post;
 using Backup.App.Models.Post.Response;
 using Microsoft.Extensions.Logging;
@@ -8,10 +8,9 @@ using Newtonsoft.Json.Linq;
 
 namespace Backup.App.Services.Post;
 
-public class PostParser(ILogger<PostParser> _logger, IMapper _mapper) : IPostParser
+public class PostParser(ILogger<PostParser> _logger) : IPostParser
 {
     private readonly ILogger<PostParser> _logger = _logger;
-    private readonly IMapper _mapper = _mapper;
 
     public ParseResult Parse(string userId, string origin, string response)
     {
@@ -32,7 +31,7 @@ public class PostParser(ILogger<PostParser> _logger, IMapper _mapper) : IPostPar
         foreach (Entry entry in entries)
             try
             {
-                Models.Post.Post post = _mapper.Map<Models.Post.Post>(entry);
+                Models.Post.Post post = Posts.Map(entry);
                 tweets.Add(post);
             }
             catch (Exception ex)

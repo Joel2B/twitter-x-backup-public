@@ -15,7 +15,6 @@ public static class CoreCollectionExtensions
         services.AddSingleton(config);
 
         services.AddLogging();
-        services.AddMapper();
 
         services.AddSingleton<LocalPartition>();
         services.AddSingleton<IPartition>(sp => sp.GetRequiredService<LocalPartition>());
