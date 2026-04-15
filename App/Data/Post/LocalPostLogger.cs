@@ -18,12 +18,15 @@ public class LocalPostLogger(
     private string _path = "";
     private int _index = 0;
 
-    private void SetupDirectory()
+    private void SetupDirectory(string sourceId)
     {
-        if (_id != "" && _id == _config.Source.Id)
+        if (string.IsNullOrWhiteSpace(sourceId))
+            sourceId = "unknown";
+
+        if (_id != "" && _id == sourceId)
             return;
 
-        _id = _config.Source.Id;
+        _id = sourceId;
 
         string date = DateTime.Now.ToString("yyyy.MM.dd-HH.mm.ss");
 
@@ -44,9 +47,9 @@ public class LocalPostLogger(
         );
     }
 
-    public async Task Save(string data, CancellationToken token)
+    public async Task Save(string sourceId, string data, CancellationToken token)
     {
-        SetupDirectory();
+        SetupDirectory(sourceId);
 
         string fileName = $"{_index}.json";
         string path = Path.Combine(_path, fileName);
