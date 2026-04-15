@@ -98,10 +98,17 @@ public class PostRecovery(
         if (ids.Count == 0)
             return;
 
-        Request request = RequestMerge.Build(
+        Request? request = RequestMerge.Build(
             fetchContext.Source.Request,
-            _config.Api["TweetDetail"]
+            _config.Api,
+            "TweetDetail"
         );
+
+        if (request is null)
+        {
+            _logger.LogWarning("api 'TweetDetail' is disabled or not configured");
+            return;
+        }
 
         int _count = 0;
 

@@ -1,5 +1,6 @@
 {
   "TweetDetail": {
+    "Enabled": true,
     "Url": "https://x.com/i/api/graphql/{REPLACE_THIS}/TweetDetail",
     "Query": {
       "Variables": {
@@ -57,6 +58,7 @@
     }
   },
   "UserByScreenName": {
+    "Enabled": true,
     "Url": "https://x.com/i/api/graphql/{REPLACE_THIS}/UserByScreenName",
     "Query": {
       "Variables": {
@@ -88,6 +90,7 @@
     }
   },
   "UserMedia": {
+    "Enabled": true,
     "Url": "https://x.com/i/api/graphql/{REPLACE_THIS}/UserMedia",
     "Query": {
       "Variables": {
@@ -145,6 +148,7 @@
     }
   },
   "UsersByRestIds": {
+    "Enabled": false,
     "Url": "https://x.com/i/api/graphql/{REPLACE_THIS}/UsersByRestIds",
     "Query": {
       "Variables": {

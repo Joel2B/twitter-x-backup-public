@@ -9,6 +9,18 @@ public static class RequestMerge
         return merged;
     }
 
+    public static Request? Build(
+        Request current,
+        IReadOnlyDictionary<string, Request> requests,
+        string key
+    )
+    {
+        if (!requests.TryGetValue(key, out Request? source) || !source.Enabled)
+            return null;
+
+        return Build(current, source);
+    }
+
     public static void MergeInto(Request current, Request source)
     {
         current.Query ??= new Query

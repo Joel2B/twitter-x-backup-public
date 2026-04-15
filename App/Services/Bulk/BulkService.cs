@@ -45,10 +45,17 @@ public partial class BulkService(
 
     private async Task<ParseUser?> GetUserByUser(string userName)
     {
-        Request request = RequestMerge.Build(
+        Request? request = RequestMerge.Build(
             _config.Source.Request,
-            _config.Api["UserByScreenName"]
+            _config.Api,
+            "UserByScreenName"
         );
+
+        if (request is null)
+        {
+            _logger.LogWarning("api 'UserByScreenName' is disabled or not configured");
+            return null;
+        }
 
         request.Query.Variables["screen_name"] = userName;
         request.Headers["Referer"] = GetReferer(SourceType.Notifications);
@@ -75,7 +82,13 @@ public partial class BulkService(
         string? cursor
     )
     {
-        Request request = RequestMerge.Build(_config.Source.Request, _config.Api["UserMedia"]);
+        Request? request = RequestMerge.Build(_config.Source.Request, _config.Api, "UserMedia");
+
+        if (request is null)
+        {
+            _logger.LogWarning("api 'UserMedia' is disabled or not configured");
+            return null;
+        }
 
         request.Query.Variables["userId"] = id;
         request.Query.Variables["count"] = count;
