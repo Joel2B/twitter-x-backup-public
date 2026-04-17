@@ -1,5 +1,8 @@
+**/bin
+**/obj
 bin
 obj
+
 .git
 .vs
 .vscode
@@ -9,3 +12,5 @@ obj
 *.zip
 *.tar
 *.gz
+TestResults
+**/TestResults
