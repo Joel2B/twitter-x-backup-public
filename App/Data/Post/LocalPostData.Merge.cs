@@ -98,8 +98,8 @@ public partial class LocalPostData
             _logger,
             "old data",
             "new data",
-            post.Clone(),
-            result.Clone()
+            ((Models.Post.Data)post).Clone(),
+            ((Models.Post.Data)result).Clone()
         );
     }
 

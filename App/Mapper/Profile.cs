@@ -28,7 +28,9 @@ public class Profile()
             Id = id,
             UserName = userName,
             Name = name,
-            BannerUrl = userResults?.Legacy?.ProfileBannerUrl,
+            BannerUrl = string.IsNullOrWhiteSpace(userResults?.Legacy?.ProfileBannerUrl)
+                ? null
+                : userResults.Legacy.ProfileBannerUrl,
             ImageUrl = imageUrl,
             Following = following,
         };
