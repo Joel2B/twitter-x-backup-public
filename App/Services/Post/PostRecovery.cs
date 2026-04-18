@@ -41,6 +41,12 @@ public class PostRecovery(
         {
             await Download(fetchContext);
 
+            if (_postsCache.Count == 0)
+            {
+                _logger.LogInformation("recovery has no posts to merge");
+                return;
+            }
+
             Dictionary<string, Models.Post.Post> posts = await postData.GetAllAsDictionary() ?? [];
             _logger.LogInformation("recovery loaded {count} posts", posts.Count);
 
@@ -52,9 +58,6 @@ public class PostRecovery(
             );
 
             _logger.LogInformation("post {post} merged", _postsCache.Count);
-
-            if (_postsCache.Count == 0)
-                return;
 
             _logger.LogInformation("Saving {data} data", posts.Values.Count);
             await postData.Save([.. posts.Values]);
