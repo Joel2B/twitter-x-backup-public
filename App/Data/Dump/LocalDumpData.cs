@@ -182,7 +182,7 @@ public class LocalDumpData(
         await File.WriteAllTextAsync(path, content);
     }
 
-    public async Task<Dictionary<string, Models.Post.Post>> Flush(
+    public async Task Flush(
         IPostData postData,
         string userId,
         Models.Config.FetchContext fetchContext
@@ -221,28 +221,16 @@ public class LocalDumpData(
         string sourceId = Data.Type ?? fetchContext.Source.Id;
 
         await postData.AddPosts(userId, sourceId, dumpPosts);
-        Dictionary<string, Models.Post.Post> merged = await postData.GetAllAsDictionary() ?? [];
-
         _logger.LogInformation("{posts} posts loaded from dump", dumpPosts.Count);
 
         HashSet<string> newIds = [.. dumpPosts.Select(post => post.Id)];
-
-        List<Models.Post.Post> deleted = merged
-            .Where(kvp => !newIds.Contains(kvp.Key))
-            .Select(kvp => kvp.Value)
-            .ToList();
-
-        _logger.LogInformation("{posts} posts deleted", deleted.Count);
-
-        foreach (Models.Post.Post post in deleted)
-            post.Deleted = true;
+        int deletedCount = await postData.MarkDeletedExcept(newIds);
+        _logger.LogInformation("{posts} posts deleted", deletedCount);
 
         DumpsData dumpsData = await _dumps.GetData();
         dumpsData.Current = null;
 
         await _dumps.Save(dumpsData);
-
-        return merged;
     }
 
     private async Task Replicate()

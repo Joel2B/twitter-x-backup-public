@@ -80,6 +80,31 @@ public partial class LocalPostData(
 
     public async Task<int> GetCount() => (await GetCache())?.Count ?? 0;
 
+    public async Task<int> MarkDeletedExcept(IReadOnlyCollection<string> keepPostIds)
+    {
+        await GetCache();
+
+        if (_postsCache is null)
+            return 0;
+
+        HashSet<string> keep = keepPostIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.Ordinal);
+
+        int deletedCount = 0;
+
+        foreach (Models.Post.Post post in _postsCache.Values)
+        {
+            if (keep.Contains(post.Id) || post.Deleted)
+                continue;
+
+            post.Deleted = true;
+            deletedCount++;
+        }
+
+        return deletedCount;
+    }
+
     public async Task<List<Models.Post.MediaInput>?> GetMediaInputs()
     {
         PrepareTablesDirectories();
