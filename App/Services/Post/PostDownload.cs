@@ -23,10 +23,6 @@ public class PostDownload(
     private IPostData? _postData;
     private IPostData PostData => _postData ?? throw new Exception("media data not initialized");
 
-    private Dictionary<string, Models.Post.Post>? _posts;
-    private Dictionary<string, Models.Post.Post> Posts =>
-        _posts ?? throw new Exception("Posts not initialized");
-
     private Models.Config.FetchContext? _fetchContext;
 
     private Models.Config.FetchContext FetchContext =>
@@ -40,8 +36,7 @@ public class PostDownload(
     {
         _postData = postData;
         _fetchContext = fetchContext;
-        _posts = await postData.GetAllAsDictionary() ?? [];
-        _logger.LogInformation("download loaded {count} posts", _posts.Count);
+        _logger.LogInformation("download loaded {count} posts", await postData.GetCount());
 
         await ProcessDownloads();
         await Save();
@@ -82,7 +77,7 @@ public class PostDownload(
                     if (attemptCount == attempts)
                     {
                         if (data is not null)
-                            _posts = await _dump.Flush(UserId, FetchContext);
+                            await _dump.Flush(PostData, UserId, FetchContext);
 
                         return;
                     }
@@ -127,7 +122,7 @@ public class PostDownload(
                     break;
                 }
 
-                _posts = await PostData.AddPosts(UserId, FetchContext.Source.Id, result.Posts);
+                await PostData.AddPosts(UserId, FetchContext.Source.Id, result.Posts);
 
                 count += queryCount;
                 FetchContext.Source.Request.Query.Variables["cursor"] = result.NextCursor;
@@ -147,7 +142,7 @@ public class PostDownload(
 
     private async Task Save()
     {
-        _logger.LogInformation("Saving {data} data", Posts.Values.Count);
-        await PostData.Save([.. Posts.Values]);
+        _logger.LogInformation("saving posts");
+        await PostData.Save();
     }
 }

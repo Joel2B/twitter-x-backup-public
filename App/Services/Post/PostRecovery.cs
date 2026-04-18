@@ -47,10 +47,9 @@ public class PostRecovery(
                 return;
             }
 
-            Dictionary<string, Models.Post.Post> posts = await postData.GetAllAsDictionary() ?? [];
-            _logger.LogInformation("recovery loaded {count} posts", posts.Count);
+            _logger.LogInformation("recovery loaded {count} posts", await postData.GetCount());
 
-            posts = await postData.AddPosts(
+            await postData.AddPosts(
                 UserId,
                 fetchContext.Source.Id,
                 _postsCache,
@@ -59,8 +58,8 @@ public class PostRecovery(
 
             _logger.LogInformation("post {post} merged", _postsCache.Count);
 
-            _logger.LogInformation("Saving {data} data", posts.Values.Count);
-            await postData.Save([.. posts.Values]);
+            _logger.LogInformation("saving posts");
+            await postData.Save();
         }
         catch (Exception ex)
         {

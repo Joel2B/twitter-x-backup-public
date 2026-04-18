@@ -78,6 +78,8 @@ public partial class LocalPostData(
         return posts is null ? null : [.. posts.Values];
     }
 
+    public async Task<int> GetCount() => (await GetCache())?.Count ?? 0;
+
     public async Task<List<Models.Post.MediaInput>?> GetMediaInputs()
     {
         PrepareTablesDirectories();
@@ -168,8 +170,12 @@ public partial class LocalPostData(
         return Task.CompletedTask;
     }
 
-    public async Task Save(List<Models.Post.Post> posts)
+    public async Task Save()
     {
+        if (_postsCache is null)
+            return;
+
+        List<Models.Post.Post> posts = [.. _postsCache.Values];
         LocalPostTables tables = BuildTables(posts);
 
         await SaveTables(tables);

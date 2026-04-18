@@ -12,8 +12,9 @@ public partial class BulkService
         _logger.LogInformation("running phase 1");
 
         IPostData postData = _postData.First();
-        Dictionary<string, Models.Post.Post> posts = await postData.GetAllAsDictionary() ?? [];
-        _logger.LogInformation("post count: {count}", posts.Count);
+        int postCount = await postData.GetCount();
+
+        _logger.LogInformation("post count: {count}", postCount);
 
         List<Models.Bulk.Bulk>? bulks = await _bulkData.GetBulks();
 
@@ -114,8 +115,7 @@ public partial class BulkService
                 }
 
                 _logger.LogInformation("ParseResult return {count} posts", result.Posts.Count);
-
-                posts = await postData.AddPosts(bulk.User.Id, origin, result.Posts);
+                await postData.AddPosts(bulk.User.Id, origin, result.Posts);
 
                 if (result.Posts.Count == 0 || result.NextCursor is null)
                 {
@@ -139,7 +139,7 @@ public partial class BulkService
             if (progress % _config.Bulk.SavePerAction == 0)
             {
                 _logger.LogInformation("saving posts");
-                await postData.Save([.. posts.Values]);
+                await postData.Save();
 
                 _logger.LogInformation("saving bulks");
                 await _bulkData.Save(bulks);
@@ -149,7 +149,7 @@ public partial class BulkService
         }
 
         _logger.LogInformation("saving posts");
-        await postData.Save([.. posts.Values]);
+        await postData.Save();
 
         _logger.LogInformation("saving bulks");
         await _bulkData.Save(bulks);

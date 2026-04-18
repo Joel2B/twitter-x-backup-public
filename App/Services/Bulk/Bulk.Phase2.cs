@@ -30,7 +30,6 @@ public partial class BulkService
         }
 
         IPostData postData = _postData.First();
-        Dictionary<string, Models.Post.Post> posts = await postData.GetAllAsDictionary() ?? [];
 
         int progress = 1;
 
@@ -137,7 +136,7 @@ public partial class BulkService
                 }
 
                 _logger.LogInformation("ParseResult return {count} posts", result.Posts.Count);
-                posts = await postData.AddPosts(bulk.User.Id, origin, result.Posts);
+                await postData.AddPosts(bulk.User.Id, origin, result.Posts);
 
                 index++;
                 count += result.Posts.Count;
@@ -159,14 +158,14 @@ public partial class BulkService
 
             if (progress % _config.Bulk.SavePerAction == 0)
             {
-                await postData.Save([.. posts.Values]);
+                await postData.Save();
                 await _bulkData.Save(data);
             }
 
             progress++;
         }
 
-        await postData.Save([.. posts.Values]);
+        await postData.Save();
         await _bulkData.Save(data);
 
         _logger.LogInformation("replicating posts");

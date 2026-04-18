@@ -5,7 +5,7 @@ namespace Backup.App.Data.Post;
 
 public partial class LocalPostData
 {
-    public async Task<Dictionary<string, Models.Post.Post>> AddPosts(
+    public async Task AddPosts(
         string userId,
         string origin,
         List<Models.Post.Post> incoming,
@@ -21,48 +21,57 @@ public partial class LocalPostData
         {
             if (!posts.TryGetValue(result.Id, out Models.Post.Post? post))
             {
-                posts[result.Id] = result;
+                posts[result.Id] = result.Clone();
                 continue;
             }
 
             Change change = new() { UserId = userId };
             MergeData(post, result, change);
 
-            if (
-                !result.Index.TryGetValue(
-                    userId,
-                    out Dictionary<string, IndexData>? incomingUserIndex
-                )
-            )
+            IndexData? incomingIndexData = null;
+
+            if (options.Index)
             {
-                incomingUserIndex = [];
-                result.Index[userId] = incomingUserIndex;
+                Dictionary<string, IndexData> incomingUserIndex = result.Index.TryGetValue(
+                    userId,
+                    out Dictionary<string, IndexData>? userIndex
+                )
+                    ? userIndex
+                    : [];
+
+                incomingIndexData = incomingUserIndex.TryGetValue(origin, out IndexData? indexData)
+                    ? indexData.Clone()
+                    : new();
             }
 
-            if (!incomingUserIndex.ContainsKey(origin))
-                incomingUserIndex[origin] = new();
-
-            IndexData newIndexData = incomingUserIndex[origin].Clone();
             result.Index = post.CloneIndex();
+            result.Changes = post.CloneChanges();
 
             if (options.Index)
             {
                 if (!result.Index.ContainsKey(userId))
                     result.Index[userId] = [];
 
-                result.Index[userId][origin] = newIndexData;
+                result.Index[userId][origin] = incomingIndexData ?? new();
                 MergeIndex(post, result, change, origin);
             }
-
-            result.Changes = post.CloneChanges();
 
             if (change.Data is not null || change.Index is not null)
                 result.Changes.Add(change);
 
-            posts[post.Id] = result;
+            posts[result.Id] = result.Clone();
         }
+    }
 
-        return posts;
+    public Task Reset(List<Models.Post.Post> posts)
+    {
+        _postsCache = posts
+            .Where(post => !string.IsNullOrWhiteSpace(post.Id))
+            .GroupBy(post => post.Id, StringComparer.Ordinal)
+            .Select(group => group.Last())
+            .ToDictionary(post => post.Id, post => post.Clone(), StringComparer.Ordinal);
+
+        return Task.CompletedTask;
     }
 
     private void MergeData(Models.Post.Post post, Models.Post.Post result, Change change)
@@ -101,23 +110,29 @@ public partial class LocalPostData
         string origin
     )
     {
-        if (!post.Index.ContainsKey(change.UserId))
-            post.Index[change.UserId] = [];
+        if (!post.Index.TryGetValue(change.UserId, out Dictionary<string, IndexData>? oldUserIndex))
+            return;
 
-        if (!post.Index[change.UserId].TryGetValue(origin, out IndexData? indexPost))
-        {
-            indexPost = new();
-            post.Index[change.UserId][origin] = indexPost;
-        }
-
-        IndexData indexResult = result.Index[change.UserId][origin];
+        if (!oldUserIndex.TryGetValue(origin, out IndexData? oldIndex))
+            return;
 
         if (
-            indexPost.Previous is null
-            || indexPost.Next is null
-            || indexResult.Previous is null
-            || indexResult.Next is null
-            || indexPost.Equals(indexResult)
+            !result.Index.TryGetValue(
+                change.UserId,
+                out Dictionary<string, IndexData>? newUserIndex
+            )
+        )
+            return;
+
+        if (!newUserIndex.TryGetValue(origin, out IndexData? newIndex))
+            return;
+
+        if (
+            oldIndex.Previous is null
+            || oldIndex.Next is null
+            || newIndex.Previous is null
+            || newIndex.Next is null
+            || oldIndex.Equals(newIndex)
         )
             return;
 
@@ -134,8 +149,8 @@ public partial class LocalPostData
             _logger,
             "old index",
             "new index",
-            post.Index[change.UserId],
-            result.Index[change.UserId]
+            oldUserIndex,
+            newUserIndex
         );
     }
 }

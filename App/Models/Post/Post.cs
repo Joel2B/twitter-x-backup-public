@@ -44,6 +44,23 @@ public class Post : Data
         return dataEquals && profileEquals && hastagEquals && mediaEquals;
     }
 
+    public new Post Clone() =>
+        new()
+        {
+            Id = Id,
+            Profile = Profile.Clone(),
+            Description = Description,
+            Retweeted = Retweeted,
+            Favorited = Favorited,
+            Bookmarked = Bookmarked,
+            CreatedAt = CreatedAt,
+            Hashtags = Hashtags is null ? null : [.. Hashtags],
+            Medias = Medias?.Select(media => media.Clone()).ToList(),
+            Deleted = Deleted,
+            Changes = CloneChanges(),
+            Index = CloneIndex(),
+        };
+
     public List<Change> CloneChanges() => [.. Changes.Select(change => change.Clone())];
 
     public Dictionary<string, Dictionary<string, IndexData>> CloneIndex() =>

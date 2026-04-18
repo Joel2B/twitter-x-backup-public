@@ -12,7 +12,6 @@ public class LocalDumpData(
     ILogger<LocalDumpData> _logger,
     Models.Config.App _appConfig,
     IDumpsData _dumps,
-    IEnumerable<IPostData> _postData,
     Storage _config,
     IPartition _partition
 ) : IDumpData
@@ -23,7 +22,6 @@ public class LocalDumpData(
     private readonly Models.Config.App _appConfig = _appConfig;
     private readonly Storage _config = _config;
     private readonly IPartition _partition = _partition;
-    private readonly IEnumerable<IPostData> _postData = _postData;
 
     private DumpData? _dumpData;
     private DumpData Data => _dumpData ?? throw new Exception("Dump data not initialized");
@@ -185,6 +183,7 @@ public class LocalDumpData(
     }
 
     public async Task<Dictionary<string, Models.Post.Post>> Flush(
+        IPostData postData,
         string userId,
         Models.Config.FetchContext fetchContext
     )
@@ -219,14 +218,10 @@ public class LocalDumpData(
             dumpPosts.AddRange(_posts);
         }
 
-        IPostData postData = _postData.First();
         string sourceId = Data.Type ?? fetchContext.Source.Id;
 
-        Dictionary<string, Models.Post.Post> merged = await postData.AddPosts(
-            userId,
-            sourceId,
-            dumpPosts
-        );
+        await postData.AddPosts(userId, sourceId, dumpPosts);
+        Dictionary<string, Models.Post.Post> merged = await postData.GetAllAsDictionary() ?? [];
 
         _logger.LogInformation("{posts} posts loaded from dump", dumpPosts.Count);
 

@@ -15,6 +15,7 @@ public interface IDumpData
     );
 
     public Task<Dictionary<string, Models.Post.Post>> Flush(
+        IPostData postData,
         string userId,
         Models.Config.FetchContext fetchContext
     );

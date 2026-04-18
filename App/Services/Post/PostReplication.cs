@@ -23,7 +23,8 @@ public class PostReplication(ILogger<PostReplication> _logger) : IPostReplicatio
                 if (posts is null)
                     throw new Exception();
 
-                await postData.Save(posts);
+                await postData.Reset(posts);
+                await postData.Save();
                 await postData.Prune();
             }
         }
