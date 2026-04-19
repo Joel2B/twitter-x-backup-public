@@ -6,7 +6,6 @@ public interface IPostData
     public Task<int> GetCount();
     public Task<List<Models.Post.Post>?> GetAll();
     public Task<List<Models.Post.MediaInput>?> GetMediaInputs();
-    public Task<Dictionary<string, Models.Post.Post>?> GetAllAsDictionary();
 
     public Task<Dictionary<string, int>> GetPostCountsByProfileIds(
         IReadOnlyCollection<string> profileIds
@@ -25,7 +24,7 @@ public interface IPostData
         IReadOnlyCollection<string> keepPostIds
     )
     {
-        Dictionary<string, Models.Post.Post> posts = await GetAllAsDictionary() ?? [];
+        List<Models.Post.Post> posts = await GetAll() ?? [];
 
         HashSet<string> keep = keepPostIds
             .Where(id => !string.IsNullOrWhiteSpace(id))
@@ -33,7 +32,7 @@ public interface IPostData
 
         int deletedCount = 0;
 
-        foreach (Models.Post.Post post in posts.Values)
+        foreach (Models.Post.Post post in posts)
         {
             bool hasScope =
                 post.Index.TryGetValue(userId, out Dictionary<string, Models.Post.IndexData>? index)

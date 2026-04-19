@@ -135,9 +135,6 @@ public partial class LocalPostData(
         return BuildMediaInputs(tables);
     }
 
-    public async Task<Dictionary<string, Models.Post.Post>?> GetAllAsDictionary() =>
-        await GetCache();
-
     public async Task<Dictionary<string, int>> GetPostCountsByProfileIds(
         IReadOnlyCollection<string> profileIds
     )
@@ -279,7 +276,8 @@ public partial class LocalPostData(
             .Select(o => new
             {
                 o.Key,
-                Paths = o.Take(o.Count() - _appConfig.Tasks.Prune.Data.Post.KeepCount),
+                Paths = o.OrderBy(x => x.Date)
+                    .Take(Math.Max(0, o.Count() - _appConfig.Tasks.Prune.Data.Post.KeepCount)),
             })
             .ToList();
 
