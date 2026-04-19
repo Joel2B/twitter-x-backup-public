@@ -224,7 +224,7 @@ public class LocalDumpData(
         _logger.LogInformation("{posts} posts loaded from dump", dumpPosts.Count);
 
         HashSet<string> newIds = [.. dumpPosts.Select(post => post.Id)];
-        int deletedCount = await postData.MarkDeletedExcept(newIds);
+        int deletedCount = await postData.MarkDeletedExcept(userId, sourceId, newIds);
         _logger.LogInformation("{posts} posts deleted", deletedCount);
 
         DumpsData dumpsData = await _dumps.GetData();

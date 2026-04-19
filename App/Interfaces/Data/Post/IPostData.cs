@@ -19,7 +19,11 @@ public interface IPostData
         Models.Post.MergeOptions? options = null
     );
 
-    public async Task<int> MarkDeletedExcept(IReadOnlyCollection<string> keepPostIds)
+    public async Task<int> MarkDeletedExcept(
+        string userId,
+        string origin,
+        IReadOnlyCollection<string> keepPostIds
+    )
     {
         Dictionary<string, Models.Post.Post> posts = await GetAllAsDictionary() ?? [];
 
@@ -31,6 +35,13 @@ public interface IPostData
 
         foreach (Models.Post.Post post in posts.Values)
         {
+            bool hasScope =
+                post.Index.TryGetValue(userId, out Dictionary<string, Models.Post.IndexData>? index)
+                && index.ContainsKey(origin);
+
+            if (!hasScope)
+                continue;
+
             if (keep.Contains(post.Id) || post.Deleted)
                 continue;
 

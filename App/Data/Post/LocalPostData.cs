@@ -80,7 +80,11 @@ public partial class LocalPostData(
 
     public async Task<int> GetCount() => (await GetCache())?.Count ?? 0;
 
-    public async Task<int> MarkDeletedExcept(IReadOnlyCollection<string> keepPostIds)
+    public async Task<int> MarkDeletedExcept(
+        string userId,
+        string origin,
+        IReadOnlyCollection<string> keepPostIds
+    )
     {
         await GetCache();
 
@@ -91,18 +95,30 @@ public partial class LocalPostData(
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .ToHashSet(StringComparer.Ordinal);
 
-        int deletedCount = 0;
+        List<Models.Post.Post> deletedPosts = [];
 
         foreach (Models.Post.Post post in _postsCache.Values)
         {
+            bool hasScope =
+                post.Index.TryGetValue(userId, out Dictionary<string, Models.Post.IndexData>? index)
+                && index.ContainsKey(origin);
+
+            if (!hasScope)
+                continue;
+
             if (keep.Contains(post.Id) || post.Deleted)
                 continue;
 
-            post.Deleted = true;
-            deletedCount++;
+            Models.Post.Post deletedPost = post.Clone();
+            deletedPost.Deleted = true;
+            deletedPosts.Add(deletedPost);
         }
 
-        return deletedCount;
+        if (deletedPosts.Count == 0)
+            return 0;
+
+        await AddPosts(userId, origin, deletedPosts, new() { Index = false });
+        return deletedPosts.Count;
     }
 
     public async Task<List<Models.Post.MediaInput>?> GetMediaInputs()
