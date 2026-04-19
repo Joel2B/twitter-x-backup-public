@@ -80,6 +80,46 @@ public partial class LocalPostData(
         return posts is null ? null : [.. posts.Values];
     }
 
+    public async Task<Dictionary<string, string>> GetHashesById()
+    {
+        Dictionary<string, PostMetaRow> postMeta = await GetPostMetaCache();
+
+        return postMeta.ToDictionary(
+            entry => entry.Key,
+            entry => entry.Value.Hash,
+            StringComparer.Ordinal
+        );
+    }
+
+    public async Task<List<Models.Post.Post>> GetByIds(IReadOnlyCollection<string> ids)
+    {
+        if (ids.Count == 0)
+            return [];
+
+        HashSet<string> filter = ids.Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (filter.Count == 0)
+            return [];
+
+        Dictionary<string, Models.Post.Post>? posts = await GetCache();
+
+        if (posts is null)
+            return [];
+
+        List<Models.Post.Post> result = new(filter.Count);
+
+        foreach (string id in filter)
+        {
+            if (!posts.TryGetValue(id, out Models.Post.Post? post))
+                continue;
+
+            result.Add(post.Clone());
+        }
+
+        return result;
+    }
+
     public async Task<int> GetCount() => (await GetCache())?.Count ?? 0;
 
     public async Task<int> MarkDeletedExcept(

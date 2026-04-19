@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using Backup.App.Models.Data.Json;
 using Newtonsoft.Json;
 
@@ -75,10 +73,6 @@ public partial class LocalPostData
 
     private static string ComputePostHash(Models.Post.Post post)
     {
-        string json = JsonConvert.SerializeObject(post);
-        byte[] bytes = Encoding.UTF8.GetBytes(json);
-        byte[] hash = SHA256.HashData(bytes);
-
-        return Convert.ToHexString(hash);
+        return Utils.PostHash.Compute(post);
     }
 }

@@ -14,16 +14,62 @@ public class PostReplication(ILogger<PostReplication> _logger) : IPostReplicatio
 
         try
         {
-            List<Models.Post.Post>? posts = null;
+            Dictionary<string, string> sourceHashes = await source.GetHashesById();
+            _logger.LogInformation("replication source hashes: {count}", sourceHashes.Count);
 
             foreach (IPostData postData in data.Except([source]))
             {
-                posts ??= await source.GetAll();
+                Dictionary<string, string> targetHashes = await postData.GetHashesById();
 
-                if (posts is null)
-                    throw new Exception();
+                _logger.LogInformation(
+                    "replication target '{target}' hashes: {count}",
+                    postData.Id ?? postData.GetType().Name,
+                    targetHashes.Count
+                );
 
-                await postData.Reset(posts);
+                bool hasExtraIds = targetHashes.Keys.Any(id => !sourceHashes.ContainsKey(id));
+
+                if (hasExtraIds)
+                {
+                    _logger.LogWarning(
+                        "target '{target}' has ids not present in source; falling back to full reset",
+                        postData.Id ?? postData.GetType().Name
+                    );
+
+                    List<Models.Post.Post>? allPosts = await source.GetAll();
+
+                    if (allPosts is null)
+                        throw new Exception("replication source returned no posts for full reset");
+
+                    await postData.Reset(allPosts);
+                    await postData.Save();
+                    await postData.Prune();
+                    continue;
+                }
+
+                List<string> changedIds = sourceHashes
+                    .Where(entry =>
+                        !targetHashes.TryGetValue(entry.Key, out string? targetHash)
+                        || !string.Equals(targetHash, entry.Value, StringComparison.Ordinal)
+                    )
+                    .Select(entry => entry.Key)
+                    .ToList();
+
+                _logger.LogInformation(
+                    "replication target '{target}' changed ids: {count}",
+                    postData.Id ?? postData.GetType().Name,
+                    changedIds.Count
+                );
+
+                if (changedIds.Count == 0)
+                    continue;
+
+                List<Models.Post.Post> changedPosts = await source.GetByIds(changedIds);
+
+                if (changedPosts.Count == 0)
+                    continue;
+
+                await postData.UpsertPosts(changedPosts);
                 await postData.Save();
                 await postData.Prune();
             }

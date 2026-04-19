@@ -103,6 +103,33 @@ public partial class LocalPostData
         return Task.CompletedTask;
     }
 
+    public async Task UpsertPosts(List<Models.Post.Post> posts)
+    {
+        if (posts.Count == 0)
+            return;
+
+        Dictionary<string, Models.Post.Post> cache = await GetCache() ?? [];
+        Dictionary<string, PostMetaRow> postMeta = await GetPostMetaCache();
+        _postsCache ??= cache;
+
+        foreach (Models.Post.Post post in posts)
+        {
+            if (string.IsNullOrWhiteSpace(post.Id))
+                continue;
+
+            Models.Post.Post clone = post.Clone();
+            cache[clone.Id] = clone;
+            postMeta[clone.Id] = new()
+            {
+                Id = clone.Id,
+                Hash = ComputePostHash(clone),
+                Deleted = clone.Deleted,
+            };
+        }
+
+        _postMetaCache = postMeta;
+    }
+
     private void MergeData(Models.Post.Post post, Models.Post.Post result, Change change)
     {
         result.Profile.UserName ??= post.Profile.UserName;
