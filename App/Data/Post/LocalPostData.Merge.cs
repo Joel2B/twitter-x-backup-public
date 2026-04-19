@@ -82,7 +82,7 @@ public partial class LocalPostData
         result.Profile.ImageUrl ??= post.Profile.ImageUrl;
         result.Profile.Following ??= post.Profile.Following;
 
-        if (post.Equals(result) && post.Deleted == result.Deleted)
+        if (post.Equals(result))
             return;
 
         change.Data = post.Clone();

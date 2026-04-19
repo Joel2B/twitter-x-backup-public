@@ -15,7 +15,8 @@ public class Post : Data
             Description == post.Description
             && Retweeted == post.Retweeted
             && Favorited == post.Favorited
-            && Bookmarked == post.Bookmarked;
+            && Bookmarked == post.Bookmarked
+            && Deleted == post.Deleted;
 
         bool profileEquals =
             Profile.UserName == post.Profile.UserName
