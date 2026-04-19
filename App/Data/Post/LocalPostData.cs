@@ -22,6 +22,7 @@ public partial class LocalPostData(
     private readonly IPartition _partition = _partition;
 
     private Dictionary<string, Models.Post.Post>? _postsCache = null;
+    private Dictionary<string, PostMetaRow>? _postMetaCache = null;
 
     public Task Setup()
     {
@@ -66,6 +67,7 @@ public partial class LocalPostData(
         if (posts is null)
         {
             _postsCache = null;
+            _postMetaCache = null;
             return;
         }
 
@@ -215,11 +217,13 @@ public partial class LocalPostData(
 
         List<Models.Post.Post> posts = [.. _postsCache.Values];
         LocalPostTables tables = BuildTables(posts);
+        Dictionary<string, PostMetaRow> postMeta = await EnsurePostMetaCache(posts);
 
-        await SaveTables(tables);
+        await SaveTables(tables, postMeta);
         Replicate();
 
         SetCache(posts);
+        _postMetaCache = postMeta;
     }
 
     public async Task Prune()

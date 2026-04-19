@@ -19,6 +19,7 @@ public partial class LocalPostData
     private const string IndexEntriesFileName = "index_entries.json";
     private const string PostChangesFileName = "post_changes.json";
     private const string PostChangeFieldsFileName = "post_change_fields.json";
+    private const string PostMetaFileName = "post_meta.json";
 
     private sealed record TableManifestEntry(
         string FileName,
@@ -70,6 +71,8 @@ public partial class LocalPostData
     {
         foreach (TableManifestEntry table in TableManifest)
             yield return GetCurrentTablesFilePath(table.FileName, partition);
+
+        yield return GetCurrentTablesFilePath(PostMetaFileName, partition);
     }
 
     private async Task<LocalPostTables> LoadTables()
@@ -98,7 +101,39 @@ public partial class LocalPostData
         foreach (TableManifestEntry table in TableManifest)
             await LoadTable(tables, table.FileName);
 
+        string postMetaPath = GetCurrentTablesFilePath(PostMetaFileName);
+
+        if (!File.Exists(postMetaPath))
+            throw new Exception(
+                "Normalized current tables are incomplete. Missing file: post_meta.json"
+            );
+
+        tables.PostMeta = await ReadList<PostMetaRow>(postMetaPath);
+        ValidatePostMetaConsistency(tables);
+
         return tables;
+    }
+
+    private static void ValidatePostMetaConsistency(LocalPostTables tables)
+    {
+        HashSet<string> postIds = tables
+            .Posts.Select(row => row.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
+        HashSet<string> metaIds = tables
+            .PostMeta.Where(row => !string.IsNullOrWhiteSpace(row.Id))
+            .Select(row => row.Id)
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (postIds.SetEquals(metaIds))
+            return;
+
+        int missingInMeta = postIds.Count(id => !metaIds.Contains(id));
+        int missingInPosts = metaIds.Count(id => !postIds.Contains(id));
+
+        throw new Exception(
+            $"post_meta is out of sync with posts. missingInMeta={missingInMeta}, missingInPosts={missingInPosts}"
+        );
     }
 
     private async Task LoadTable(LocalPostTables tables, string fileName)
@@ -141,7 +176,10 @@ public partial class LocalPostData
         }
     }
 
-    private async Task SaveTables(LocalPostTables tables)
+    private async Task SaveTables(
+        LocalPostTables tables,
+        IReadOnlyDictionary<string, PostMetaRow> postMeta
+    )
     {
         PrepareTablesDirectories();
         ArchiveCurrentOldDirectory();
@@ -151,7 +189,7 @@ public partial class LocalPostData
         string currentOldPath = GetTablesDirectoryPath(TablesCurrentOldDirectoryName);
 
         Directory.CreateDirectory(tmpPath);
-        await WriteTablesSnapshot(tables, tmpPath);
+        await WriteTablesSnapshot(tables, postMeta, tmpPath);
 
         if (Directory.Exists(currentPath))
             Directory.Move(currentPath, currentOldPath);
@@ -171,7 +209,11 @@ public partial class LocalPostData
         ArchiveCurrentOldDirectory();
     }
 
-    private async Task WriteTablesSnapshot(LocalPostTables tables, string targetDirectoryPath)
+    private async Task WriteTablesSnapshot(
+        LocalPostTables tables,
+        IReadOnlyDictionary<string, PostMetaRow> postMeta,
+        string targetDirectoryPath
+    )
     {
         string GetTargetFilePath(string fileName) => Path.Combine(targetDirectoryPath, fileName);
 
@@ -190,6 +232,13 @@ public partial class LocalPostData
         {
             foreach (TableManifestEntry table in TableManifest)
                 await WriteTable(table.FileName, table.GetRows(tables), formatted);
+
+            List<PostMetaRow> postMetaRows = postMeta
+                .OrderBy(entry => entry.Key, StringComparer.Ordinal)
+                .Select(entry => entry.Value)
+                .ToList();
+
+            await WriteTable(PostMetaFileName, postMetaRows, formatted);
         }
     }
 }

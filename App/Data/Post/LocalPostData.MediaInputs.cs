@@ -75,6 +75,12 @@ public partial class LocalPostData
                 StringComparer.Ordinal
             );
 
+        Dictionary<string, PostMetaRow> postMetaById = tables.PostMeta.ToDictionary(
+            row => row.Id,
+            row => row,
+            StringComparer.Ordinal
+        );
+
         Dictionary<string, MediaInputState> stateByPost = tables.Posts.ToDictionary(
             row => row.Id,
             row =>
@@ -85,12 +91,15 @@ public partial class LocalPostData
 
                 mediasByPost.TryGetValue(row.Id, out List<Models.Post.Media>? medias);
 
+                if (!postMetaById.TryGetValue(row.Id, out PostMetaRow? meta))
+                    throw new Exception($"Missing post_meta row for post '{row.Id}'.");
+
                 return new MediaInputState
                 {
                     PostId = row.Id,
                     Profile = profile,
                     Medias = medias?.Select(media => media.Clone()).ToList(),
-                    Deleted = row.Deleted,
+                    Deleted = meta.Deleted,
                 };
             },
             StringComparer.Ordinal

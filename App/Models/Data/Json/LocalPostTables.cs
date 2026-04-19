@@ -10,6 +10,14 @@ internal sealed class LocalPostTables
     public List<IndexEntryRow> IndexEntries { get; set; } = [];
     public List<PostChangeRow> PostChanges { get; set; } = [];
     public List<PostChangeFieldRow> PostChangeFields { get; set; } = [];
+    public List<PostMetaRow> PostMeta { get; set; } = [];
+}
+
+internal sealed class PostMetaRow
+{
+    public string Id { get; set; } = string.Empty;
+    public string Hash { get; set; } = string.Empty;
+    public bool Deleted { get; set; }
 }
 
 internal sealed class PostRow
@@ -21,7 +29,6 @@ internal sealed class PostRow
     public bool Favorited { get; set; }
     public bool Bookmarked { get; set; }
     public string CreatedAt { get; set; } = string.Empty;
-    public bool Deleted { get; set; }
 }
 
 internal sealed class ProfileRow

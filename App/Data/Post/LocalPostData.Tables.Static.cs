@@ -61,7 +61,6 @@ public partial class LocalPostData
                     Favorited = post.Favorited,
                     Bookmarked = post.Bookmarked,
                     CreatedAt = post.CreatedAt,
-                    Deleted = post.Deleted,
                 }
             );
 
@@ -237,6 +236,12 @@ public partial class LocalPostData
                 StringComparer.Ordinal
             );
 
+        Dictionary<string, PostMetaRow> postMetaById = tables.PostMeta.ToDictionary(
+            row => row.Id,
+            row => row,
+            StringComparer.Ordinal
+        );
+
         Dictionary<(string PostId, int ChangeOrdinal), List<PostChangeFieldRow>> fieldsByChange =
             tables
                 .PostChangeFields.GroupBy(o => (o.PostId, o.ChangeOrdinal))
@@ -260,6 +265,9 @@ public partial class LocalPostData
 
             changesByPost.TryGetValue(row.Id, out List<PostChangeRow>? postChanges);
 
+            if (!postMetaById.TryGetValue(row.Id, out PostMetaRow? meta))
+                throw new Exception($"Missing post_meta row for post '{row.Id}'.");
+
             Models.Post.Post post = new()
             {
                 Id = row.Id,
@@ -269,7 +277,7 @@ public partial class LocalPostData
                 Favorited = row.Favorited,
                 Bookmarked = row.Bookmarked,
                 CreatedAt = row.CreatedAt,
-                Deleted = row.Deleted,
+                Deleted = meta.Deleted,
                 Hashtags = hashtags is not null && hashtags.Count > 0 ? hashtags : null,
                 Medias = medias is not null && medias.Count > 0 ? medias : null,
                 Index = index ?? [],

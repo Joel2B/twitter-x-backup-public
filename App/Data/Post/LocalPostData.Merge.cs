@@ -1,3 +1,4 @@
+using Backup.App.Models.Data.Json;
 using Backup.App.Models.Post;
 using Microsoft.Extensions.Logging;
 
@@ -15,13 +16,21 @@ public partial class LocalPostData
         options ??= new();
 
         Dictionary<string, Models.Post.Post> posts = await GetCache() ?? [];
+        Dictionary<string, PostMetaRow> postMeta = await GetPostMetaCache();
         _postsCache ??= posts;
 
         foreach (Models.Post.Post result in incoming)
         {
             if (!posts.TryGetValue(result.Id, out Models.Post.Post? post))
             {
-                posts[result.Id] = result.Clone();
+                Models.Post.Post clone = result.Clone();
+                posts[result.Id] = clone;
+                postMeta[result.Id] = new()
+                {
+                    Id = result.Id,
+                    Hash = ComputePostHash(clone),
+                    Deleted = clone.Deleted,
+                };
                 continue;
             }
 
@@ -59,8 +68,17 @@ public partial class LocalPostData
             if (change.Data is not null || change.Index is not null)
                 result.Changes.Add(change);
 
-            posts[result.Id] = result.Clone();
+            Models.Post.Post merged = result.Clone();
+            posts[result.Id] = merged;
+            postMeta[result.Id] = new()
+            {
+                Id = result.Id,
+                Hash = ComputePostHash(merged),
+                Deleted = merged.Deleted,
+            };
         }
+
+        _postMetaCache = postMeta;
     }
 
     public Task Reset(List<Models.Post.Post> posts)
@@ -70,6 +88,17 @@ public partial class LocalPostData
             .GroupBy(post => post.Id, StringComparer.Ordinal)
             .Select(group => group.Last())
             .ToDictionary(post => post.Id, post => post.Clone(), StringComparer.Ordinal);
+
+        _postMetaCache = _postsCache.ToDictionary(
+            entry => entry.Key,
+            entry => new PostMetaRow
+            {
+                Id = entry.Key,
+                Hash = ComputePostHash(entry.Value),
+                Deleted = entry.Value.Deleted,
+            },
+            StringComparer.Ordinal
+        );
 
         return Task.CompletedTask;
     }
