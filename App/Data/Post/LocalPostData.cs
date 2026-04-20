@@ -165,16 +165,20 @@ public partial class LocalPostData(
 
     public async Task<List<Models.Post.MediaInput>?> GetMediaInputs()
     {
-        PrepareTablesDirectories();
-        string normalizedPostsPath = GetCurrentTablesFilePath(NormalizedPostsFileName);
-
-        if (!File.Exists(normalizedPostsPath))
+        Dictionary<string, Models.Post.Post>? posts = await GetCache();
+        if (posts is null)
             return null;
 
-        await Verify();
+        List<Models.Post.MediaInput> current = [.. posts.Values.Select(ToMediaInput)];
 
-        LocalPostTables tables = await LoadTables();
-        return BuildMediaInputs(tables);
+        List<Models.Post.MediaInput> history = posts
+            .Values.SelectMany(post => post.Changes)
+            .Where(change => change.Data is not null)
+            .Select(change => ToMediaInput(change.Data!))
+            .ToList();
+
+        current.AddRange(history);
+        return current;
     }
 
     public async Task<Dictionary<string, int>> GetPostCountsByProfileIds(
@@ -191,20 +195,20 @@ public partial class LocalPostData(
         if (filter.Count == 0)
             return [];
 
-        PrepareTablesDirectories();
-        string normalizedPostsPath = GetCurrentTablesFilePath(NormalizedPostsFileName);
+        static Dictionary<string, int> CountByProfileIds(
+            IEnumerable<string> profileIds,
+            HashSet<string> filter
+        ) =>
+            profileIds
+                .Where(filter.Contains)
+                .GroupBy(profileId => profileId, StringComparer.Ordinal)
+                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
 
-        if (!File.Exists(normalizedPostsPath))
+        Dictionary<string, Models.Post.Post>? cache = await GetCache();
+        if (cache is null)
             return [];
 
-        await Verify();
-
-        List<PostRow> posts = await ReadList<PostRow>(normalizedPostsPath);
-
-        return posts
-            .Where(post => filter.Contains(post.ProfileId))
-            .GroupBy(post => post.ProfileId, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
+        return CountByProfileIds(cache.Values.Select(post => post.Profile.Id), filter);
     }
 
     private Task Verify()
