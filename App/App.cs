@@ -21,42 +21,72 @@ public class App(
 
     public async Task Backup()
     {
-        foreach (Models.Config.Source source in _config.Sources)
+        await RunPostRecoveryServices();
+        await RunPostSources();
+        await RunBulkServices();
+        await RunMediaServices();
+    }
+
+    private async Task RunPostRecoveryServices()
+    {
+        Models.Config.FetchContext context = new() { Source = _config.Source.Clone() };
+
+        foreach (IPostService service in _postServices)
         {
-            if (!_config.Source.Enabled)
-                break;
+            using (_logger.LogTimer($"post recovery service: {service.GetType().Name}"))
+                await service.Recover(context);
+        }
+    }
 
-            if (!source.Enabled)
-                continue;
+    private async Task RunPostSources()
+    {
+        if (!_config.Source.Enabled)
+            return;
 
-            Models.Config.FetchContext fetchContext = Models.Config.FetchContextFactory.Create(
+        List<Models.Config.Source> sources = _config
+            .Sources.Where(source => source.Enabled)
+            .ToList();
+
+        foreach (Models.Config.Source source in sources)
+        {
+            Models.Config.FetchContext context = Models.Config.FetchContextFactory.Create(
                 _config.Source,
                 source
             );
 
-            _logger.LogInfo("source: {source}", fetchContext.Source.Id);
-
-            foreach (IPostService service in _postServices)
-            {
-                using (_logger.LogTimer($"post service: {service.GetType().Name}"))
-                    await service.Download(fetchContext);
-            }
+            _logger.LogInfo("source: {source}", context.Source.Id);
+            await RunPostServices(context);
         }
+    }
+
+    private async Task RunPostServices(Models.Config.FetchContext fetchContext)
+    {
+        foreach (IPostService service in _postServices)
+        {
+            using (_logger.LogTimer($"post service: {service.GetType().Name}"))
+                await service.Download(fetchContext);
+        }
+    }
+
+    private async Task RunBulkServices()
+    {
+        if (!_config.Bulk.Enabled)
+            return;
 
         foreach (IBulkService service in _bulkServices)
         {
-            if (!_config.Bulk.Enabled)
-                break;
-
             using (_logger.LogTimer($"bulk service: {service.GetType().Name}"))
                 await service.Download();
         }
+    }
+
+    private async Task RunMediaServices()
+    {
+        if (!_config.Medias.Enabled)
+            return;
 
         foreach (IMediaService service in _mediaServices)
         {
-            if (!_config.Medias.Enabled)
-                break;
-
             using (_logger.LogTimer($"media service: {service.GetType().Name}"))
                 await service.Download();
         }

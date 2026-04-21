@@ -20,14 +20,18 @@ public class PostService(
     private readonly IPostDownload _postDownload = _postDownload;
     private readonly IPostReplication _postReplication = _postReplication;
 
-    public async Task Download(Models.Config.FetchContext fetchContext)
+    public async Task Recover(Models.Config.FetchContext fetchContext)
     {
         IPostData data = _postData.First();
 
         _logger.LogInformation(data.Id, "post data: {name}", data.GetType().Name);
-
-        _logger.LogInformation(data.Id, "recovering posts in {data} ", data.GetType().Name);
+        _logger.LogInformation(data.Id, "recovering posts in {data}", data.GetType().Name);
         await _postRecovery.Recovery(data, fetchContext);
+    }
+
+    public async Task Download(Models.Config.FetchContext fetchContext)
+    {
+        IPostData data = _postData.First();
 
         _logger.LogInformation(data.Id, "downloading posts");
         await _postDownload.Download(data, fetchContext);

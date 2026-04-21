@@ -17,6 +17,8 @@ public class PostRecovery(
     IPostParser _parser
 ) : IPostRecovery
 {
+    private const string RecoveryOrigin = "recovery";
+
     private readonly ILogger<PostRecovery> _logger = _logger;
     private readonly Models.Config.App _config = _config;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
@@ -24,7 +26,6 @@ public class PostRecovery(
     private readonly IPostParser _parser = _parser;
 
     private readonly CancellationTokenSource _tokenSource = new();
-    private readonly List<Models.Post.Post> _postsCache = [];
 
     private Models.Config.FetchContext? _fetchContext;
 
@@ -39,24 +40,16 @@ public class PostRecovery(
 
         try
         {
-            await Download(fetchContext);
+            List<Models.Post.Post> posts = await Download(fetchContext);
 
-            if (_postsCache.Count == 0)
+            if (posts.Count == 0)
             {
                 _logger.LogInformation("recovery has no posts to merge");
                 return;
             }
 
-            _logger.LogInformation("recovery loaded {count} posts", await postData.GetCount());
-
-            await postData.AddPosts(
-                UserId,
-                fetchContext.Source.Id,
-                _postsCache,
-                new() { Index = false }
-            );
-
-            _logger.LogInformation("post {post} merged", _postsCache.Count);
+            await postData.AddPosts(UserId, RecoveryOrigin, posts, new() { Index = false });
+            _logger.LogInformation("post {post} merged", posts.Count);
 
             _logger.LogInformation("saving posts");
             await postData.Save();
@@ -67,20 +60,15 @@ public class PostRecovery(
         }
     }
 
-    private async Task Download(Models.Config.FetchContext fetchContext)
+    private async Task<List<Models.Post.Post>> Download(Models.Config.FetchContext fetchContext)
     {
-        if (_postsCache.Count > 0)
-        {
-            _logger.LogInformation("using the cache");
-            return;
-        }
-
+        List<Models.Post.Post> posts = [];
         List<Logs>? logs = await _mediaLogger.GetErrors();
 
         if (logs is null)
         {
             _logger.LogInformation("no posts errores");
-            return;
+            return posts;
         }
 
         List<string> ids = logs.Where(log =>
@@ -94,11 +82,11 @@ public class PostRecovery(
         if (!_config.Services.Recovery.Enabled)
         {
             _logger.LogInformation("post recovery disabled");
-            return;
+            return posts;
         }
 
         if (ids.Count == 0)
-            return;
+            return posts;
 
         Request? request = RequestMerge.Build(
             fetchContext.Source.Request,
@@ -109,7 +97,7 @@ public class PostRecovery(
         if (request is null)
         {
             _logger.LogWarning("api 'TweetDetail' is disabled or not configured");
-            return;
+            return posts;
         }
 
         int _count = 0;
@@ -119,12 +107,12 @@ public class PostRecovery(
             request.Query.Variables["focalTweetId"] = id;
 
             string response = await _downloader.Download(request, _tokenSource.Token);
-            ParseResult result = _parser.Parse(UserId, fetchContext.Source.Id, response);
+            ParseResult result = _parser.Parse(UserId, RecoveryOrigin, response);
 
             if (result.Posts.Count == 0)
                 continue;
 
-            _postsCache.Add(result.Posts[0]);
+            posts.Add(result.Posts[0]);
             await _mediaLogger.RemoveErrors([.. logs.Where(o => o.Id == result.Posts[0].Id)]);
 
             _logger.LogInformation("post {post} downloaded", id);
@@ -135,5 +123,7 @@ public class PostRecovery(
             if (_count >= 10)
                 break;
         }
+
+        return posts;
     }
 }
