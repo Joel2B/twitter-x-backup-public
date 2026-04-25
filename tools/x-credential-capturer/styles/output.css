@@ -1,0 +1,17 @@
+.output label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.output textarea {
+  min-height: 220px;
+  max-height: 320px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: #fbfcfd;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 11px;
+  line-height: 1.4;
+}

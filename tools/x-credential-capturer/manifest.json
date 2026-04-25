@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "X Credential Capturer (Local)",
+  "version": "0.1.0",
+  "description": "Captures X GraphQL requests to update Fetch.json and Api.json in twitter-x-backup.",
+  "minimum_chrome_version": "120",
+  "permissions": ["storage", "tabs", "webRequest", "cookies"],
+  "host_permissions": ["https://x.com/*", "https://*.x.com/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "X Credential Capturer",
+    "default_popup": "popup.html"
+  }
+}

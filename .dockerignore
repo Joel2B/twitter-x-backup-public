@@ -14,3 +14,4 @@ obj
 *.gz
 TestResults
 **/TestResults
+tools/x-credential-capturer

@@ -1,0 +1,35 @@
+.grid {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.grid th,
+.grid td {
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  padding: 8px;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.grid td {
+  word-break: break-word;
+}
+
+.grid th {
+  background: #eef3f6;
+  color: #2f3b45;
+}
+
+.grid tr:last-child td {
+  border-bottom: 0;
+}
+
+.missing {
+  color: #8c3a00;
+  font-size: 11px;
+}

@@ -1,0 +1,8 @@
+dist/
+node_modules/
+.eslintcache
+*.tsbuildinfo
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+.DS_Store

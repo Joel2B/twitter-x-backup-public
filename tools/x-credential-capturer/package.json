@@ -1,0 +1,32 @@
+{
+  "name": "x-credential-capturer",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "node ./scripts/clean.mjs",
+    "build:js": "node ./scripts/build.mjs",
+    "build": "npm run clean && npm run build:js && node ./scripts/copy-assets.mjs",
+    "typecheck": "npx tsc -p tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/chrome": "^0.1.30",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "esbuild": "^0.25.12",
+    "eslint": "^10.2.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.5.0",
+    "prettier": "^3.8.3",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.0"
+  }
+}
