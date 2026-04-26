@@ -2,8 +2,8 @@ namespace Backup.App.Models.Config;
 
 public class App
 {
-    public required Fetch Fetch { get; set; }
-    public required Dictionary<string, Request.Request> Api { get; set; }
+    public required Dictionary<string, Api.Api> Api { get; set; }
+    public required Dictionary<string, FetchItem> Fetch { get; set; }
     public required Services Services { get; set; }
     public required Data.Data Data { get; set; }
     public required Downloads.Downloads Downloads { get; set; }
@@ -13,7 +13,4 @@ public class App
     public required Tasks.Tasks Tasks { get; set; }
     public required Bulk Bulk { get; set; }
     public required Network Network { get; set; }
-
-    public Source Source => Fetch.Current;
-    public List<Source> Sources => Fetch.Sources;
 }

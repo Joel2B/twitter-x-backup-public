@@ -36,6 +36,50 @@
                 "${workspaceFolder}/Backup.csproj"
             ],
             "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "build-tests",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/Backup.sln",
+                "-c",
+                "Debug",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+            ],
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "test-live-wait-debugger",
+            "dependsOn": [
+                "build-tests"
+            ],
+            "dependsOrder": "sequence",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "$ws='${workspaceFolder}'; Get-CimInstance Win32_Process -Filter \"Name='testhost.exe'\" | Where-Object { $_.CommandLine -like \"*$ws*Backup.IntegrationTests*\" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; $env:RUN_LIVE_X_API_TESTS='1'; $env:VSTEST_HOST_DEBUG='1'; $p = Start-Process -FilePath dotnet -ArgumentList @('test', '${workspaceFolder}/Backup.IntegrationTests/Backup.IntegrationTests.csproj', '-c', 'Debug', '--no-build', '--filter', 'Category=LiveApi') -WindowStyle Hidden -PassThru; $deadline=(Get-Date).AddSeconds(20); do { $th = Get-CimInstance Win32_Process -Filter \"Name='testhost.exe'\" | Where-Object { $_.CommandLine -like \"*$ws*Backup.IntegrationTests*\" } | Select-Object -First 1; if($th){ break }; Start-Sleep -Milliseconds 200 } while((Get-Date) -lt $deadline); if(-not $th){ throw 'testhost for Backup.IntegrationTests not found'; }; Write-Host \"Started dotnet test (LiveApi). PID=$($p.Id). testhost PID=$($th.ProcessId).\""
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "test-all-wait-debugger",
+            "dependsOn": [
+                "build-tests"
+            ],
+            "dependsOrder": "sequence",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "$ws='${workspaceFolder}'; Get-CimInstance Win32_Process -Filter \"Name='testhost.exe'\" | Where-Object { $_.CommandLine -like \"*$ws*Backup.IntegrationTests*\" } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }; $env:VSTEST_HOST_DEBUG='1'; $p = Start-Process -FilePath dotnet -ArgumentList @('test', '${workspaceFolder}/Backup.IntegrationTests/Backup.IntegrationTests.csproj', '-c', 'Debug', '--no-build') -WindowStyle Hidden -PassThru; $deadline=(Get-Date).AddSeconds(20); do { $th = Get-CimInstance Win32_Process -Filter \"Name='testhost.exe'\" | Where-Object { $_.CommandLine -like \"*$ws*Backup.IntegrationTests*\" } | Select-Object -First 1; if($th){ break }; Start-Sleep -Milliseconds 200 } while((Get-Date) -lt $deadline); if(-not $th){ throw 'testhost for Backup.IntegrationTests not found'; }; Write-Host \"Started dotnet test (All Integration). PID=$($p.Id). testhost PID=$($th.ProcessId).\""
+            ],
+            "problemMatcher": []
         }
     ]
 }

@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Backup.App.Interfaces.Data.Post;
 using Backup.App.Interfaces.Partition;
+using Backup.App.Models.Config.Api;
 using Backup.App.Models.Config.Data.Dump;
 using Backup.App.Models.Dump;
 using Microsoft.Extensions.Logging;
@@ -71,14 +72,14 @@ public class LocalDumpData(
         return Path.Combine([path, .. _config.Paths.Dumps.Dump.Api.Paths]);
     }
 
-    private async Task CreateData(Models.Config.FetchContext fetchContext)
+    private async Task CreateData(ApiContext context)
     {
         string path = await GetPathData();
 
         if (File.Exists(path))
             return;
 
-        string? count = fetchContext.Source.Request.Query.Variables["count"]?.ToString();
+        string? count = context.Request.Query.Variables["count"]?.ToString();
 
         if (count is null)
             throw new Exception("Count not configured");
@@ -126,19 +127,19 @@ public class LocalDumpData(
         Directory.CreateDirectory(apiPath);
     }
 
-    public async Task<DumpData?> GetData(Models.Config.FetchContext fetchContext)
+    public async Task<DumpData?> GetData(ApiContext context)
     {
-        if (fetchContext.Source.Count != -1)
+        if (context.Count != -1)
             return null;
 
         DumpsData dumpsData = await _dumps.GetData();
-        await CreateData(fetchContext);
+        await CreateData(context);
         await SetupData();
 
-        if (dumpsData.Current is not null && fetchContext.Source.Id != Data.Type)
+        if (dumpsData.Current is not null && context.Id != Data.Type)
             throw new Exception();
 
-        Data.Type = fetchContext.Source.Id;
+        Data.Type = context.Id;
 
         return Data;
     }
@@ -147,7 +148,7 @@ public class LocalDumpData(
         string response,
         List<Models.Post.Post> posts,
         string cursor,
-        Models.Config.FetchContext _
+        ApiContext _
     )
     {
         await SetupDirectory();
@@ -182,11 +183,7 @@ public class LocalDumpData(
         await File.WriteAllTextAsync(path, content);
     }
 
-    public async Task Flush(
-        IPostData postData,
-        string userId,
-        Models.Config.FetchContext fetchContext
-    )
+    public async Task Flush(IPostData postData, string userId, ApiContext context)
     {
         _logger.LogInformation("dumping data");
 
@@ -218,7 +215,7 @@ public class LocalDumpData(
             dumpPosts.AddRange(_posts);
         }
 
-        string sourceId = Data.Type ?? fetchContext.Source.Id;
+        string sourceId = Data.Type ?? context.Id;
 
         await postData.AddPosts(userId, sourceId, dumpPosts);
         _logger.LogInformation("{posts} posts loaded from dump", dumpPosts.Count);

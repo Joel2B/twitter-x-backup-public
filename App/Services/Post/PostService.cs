@@ -1,6 +1,7 @@
 using Backup.App.Extensions;
 using Backup.App.Interfaces.Data.Post;
 using Backup.App.Interfaces.Services.Post;
+using Backup.App.Models.Config.Api;
 using Backup.App.Models.Post;
 using Microsoft.Extensions.Logging;
 
@@ -20,21 +21,21 @@ public class PostService(
     private readonly IPostDownload _postDownload = _postDownload;
     private readonly IPostReplication _postReplication = _postReplication;
 
-    public async Task Recover(Models.Config.FetchContext fetchContext)
+    public async Task Recover(string userId)
     {
         IPostData data = _postData.First();
 
         _logger.LogInformation(data.Id, "post data: {name}", data.GetType().Name);
         _logger.LogInformation(data.Id, "recovering posts in {data}", data.GetType().Name);
-        await _postRecovery.Recovery(data, fetchContext);
+        await _postRecovery.Recovery(data, userId);
     }
 
-    public async Task Download(Models.Config.FetchContext fetchContext)
+    public async Task Download(ApiContext context)
     {
         IPostData data = _postData.First();
 
         _logger.LogInformation(data.Id, "downloading posts");
-        await _postDownload.Download(data, fetchContext);
+        await _postDownload.Download(data, context);
 
         _logger.LogInformation(data.Id, "pruning posts");
         await data.Prune();

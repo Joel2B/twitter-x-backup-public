@@ -9,97 +9,86 @@ public static class RequestMerge
         return merged;
     }
 
-    public static Request? Build(
-        Request current,
-        IReadOnlyDictionary<string, Request> requests,
-        string key
-    )
+    public static Request? Build(IReadOnlyDictionary<string, Api.Api> requests, string key)
     {
-        if (!requests.TryGetValue(key, out Request? source) || !source.Enabled)
+        if (!requests.TryGetValue(key, out Api.Api? source) || !source.Enabled)
             return null;
 
-        return Build(current, source);
+        Request request = source.Request.Clone();
+        Query query = RequestMergeUtils.EnsureQuery(request);
+        RequestMergeUtils.NormalizeVariables(query.Variables);
+
+        return request;
     }
 
     public static void MergeInto(Request current, Request source)
     {
-        current.Query ??= new Query
-        {
-            Variables = [],
-            Features = [],
-            FieldToggles = [],
-        };
-        source.Query ??= new Query
-        {
-            Variables = [],
-            Features = [],
-            FieldToggles = [],
-        };
+        Query currentQuery = RequestMergeUtils.EnsureQuery(current);
+        Query sourceQuery = RequestMergeUtils.EnsureQuery(source);
         current.Headers ??= [];
         source.Headers ??= [];
 
         if (!string.IsNullOrWhiteSpace(source.Url))
             current.Url = source.Url;
 
-        MergeQuery(current.Query, source.Query);
-        MergeStringMap(current.Headers, source.Headers);
+        MergeQuery(
+            currentQuery,
+            sourceQuery.Variables,
+            sourceQuery.Features,
+            sourceQuery.FieldToggles
+        );
+
+        RequestMergeUtils.MergeStringMap(current.Headers, source.Headers);
     }
 
-    private static void MergeQuery(Query current, Query source)
+    public static void MergeInto(Request current, Api.ApiRequestOverride source)
     {
-        current.Variables ??= [];
-        source.Variables ??= [];
-        current.Features ??= [];
-        source.Features ??= [];
-        current.FieldToggles ??= [];
-        source.FieldToggles ??= [];
+        Query currentQuery = RequestMergeUtils.EnsureQuery(current);
+        current.Headers ??= [];
 
-        NormalizeVariables(current.Variables);
+        if (!string.IsNullOrWhiteSpace(source.Url))
+            current.Url = source.Url;
 
-        foreach (var kvp in source.Variables)
-            current.Variables[kvp.Key] = Coerce(kvp.Value);
+        MergeQuery(
+            currentQuery,
+            source.Query?.Variables,
+            source.Query?.Features,
+            source.Query?.FieldToggles
+        );
 
-        foreach (var kvp in source.Features)
-            current.Features[kvp.Key] = kvp.Value;
-
-        foreach (var kvp in source.FieldToggles)
-            current.FieldToggles[kvp.Key] = kvp.Value;
+        if (source.Headers is not null)
+            RequestMergeUtils.MergeStringMap(current.Headers, source.Headers);
     }
 
-    private static void MergeStringMap(
-        Dictionary<string, string> current,
-        Dictionary<string, string> source
+    private static void MergeQuery(
+        Query current,
+        IReadOnlyDictionary<string, object?>? sourceVariables,
+        IReadOnlyDictionary<string, bool>? sourceFeatures,
+        IReadOnlyDictionary<string, bool>? sourceFieldToggles
     )
     {
-        foreach (var kvp in source)
-            current[kvp.Key] = kvp.Value;
-    }
+        current.Variables ??= [];
+        current.Features ??= [];
+        current.FieldToggles ??= [];
 
-    private static void NormalizeVariables(Dictionary<string, object?> variables)
-    {
-        List<string> keys = [.. variables.Keys];
+        RequestMergeUtils.NormalizeVariables(current.Variables);
 
-        foreach (string key in keys)
-            variables[key] = Coerce(variables[key]);
-    }
+        if (sourceVariables is not null)
+        {
+            foreach (var kvp in sourceVariables)
+                current.Variables[kvp.Key] = RequestMergeUtils.Coerce(kvp.Value);
+        }
 
-    private static object? Coerce(object? value)
-    {
-        if (value is not string text)
-            return value;
+        if (sourceFeatures is not null)
+        {
+            foreach (var kvp in sourceFeatures)
+                current.Features[kvp.Key] = kvp.Value;
+        }
 
-        if (bool.TryParse(text, out bool boolValue))
-            return boolValue;
-
-        if (int.TryParse(text, out int intValue))
-            return intValue;
-
-        if (long.TryParse(text, out long longValue))
-            return longValue;
-
-        if (double.TryParse(text, out double doubleValue))
-            return doubleValue;
-
-        return text;
+        if (sourceFieldToggles is not null)
+        {
+            foreach (var kvp in sourceFieldToggles)
+                current.FieldToggles[kvp.Key] = kvp.Value;
+        }
     }
 }

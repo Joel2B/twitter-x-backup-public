@@ -27,20 +27,11 @@ public class PostRecovery(
 
     private readonly CancellationTokenSource _tokenSource = new();
 
-    private Models.Config.FetchContext? _fetchContext;
-
-    private Models.Config.FetchContext FetchContext =>
-        _fetchContext ?? throw new Exception("FetchContext not initialized");
-
-    private string UserId => FetchContext.UserId;
-
-    public async Task Recovery(IPostData postData, Models.Config.FetchContext fetchContext)
+    public async Task Recovery(IPostData postData, string userId)
     {
-        _fetchContext = fetchContext;
-
         try
         {
-            List<Models.Post.Post> posts = await Download(fetchContext);
+            List<Models.Post.Post> posts = await Download(userId);
 
             if (posts.Count == 0)
             {
@@ -48,7 +39,7 @@ public class PostRecovery(
                 return;
             }
 
-            await postData.AddPosts(UserId, RecoveryOrigin, posts, new() { Index = false });
+            await postData.AddPosts(userId, RecoveryOrigin, posts, new() { Index = false });
             _logger.LogInformation("post {post} merged", posts.Count);
 
             _logger.LogInformation("saving posts");
@@ -60,7 +51,7 @@ public class PostRecovery(
         }
     }
 
-    private async Task<List<Models.Post.Post>> Download(Models.Config.FetchContext fetchContext)
+    private async Task<List<Models.Post.Post>> Download(string userId)
     {
         List<Models.Post.Post> posts = [];
         List<Logs>? logs = await _mediaLogger.GetErrors();
@@ -88,11 +79,7 @@ public class PostRecovery(
         if (ids.Count == 0)
             return posts;
 
-        Request? request = RequestMerge.Build(
-            fetchContext.Source.Request,
-            _config.Api,
-            "TweetDetail"
-        );
+        Request? request = RequestMerge.Build(_config.Api, "TweetDetail");
 
         if (request is null)
         {
@@ -107,7 +94,7 @@ public class PostRecovery(
             request.Query.Variables["focalTweetId"] = id;
 
             string response = await _downloader.Download(request, _tokenSource.Token);
-            ParseResult result = _parser.Parse(UserId, RecoveryOrigin, response);
+            ParseResult result = _parser.Parse(userId, RecoveryOrigin, response);
 
             if (result.Posts.Count == 0)
                 continue;

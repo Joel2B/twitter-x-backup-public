@@ -45,11 +45,7 @@ public partial class BulkService(
 
     private async Task<ParseUser?> GetUserByUser(string userName)
     {
-        Request? request = RequestMerge.Build(
-            _config.Source.Request,
-            _config.Api,
-            "UserByScreenName"
-        );
+        Request? request = RequestMerge.Build(_config.Api, "UserByScreenName");
 
         if (request is null)
         {
@@ -82,7 +78,7 @@ public partial class BulkService(
         string? cursor
     )
     {
-        Request? request = RequestMerge.Build(_config.Source.Request, _config.Api, "UserMedia");
+        Request? request = RequestMerge.Build(_config.Api, "UserMedia");
 
         if (request is null)
         {

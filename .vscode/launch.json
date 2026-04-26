@@ -24,6 +24,43 @@
       "name": ".NET Core Attach",
       "type": "coreclr",
       "request": "attach"
+    },
+    {
+      "name": "Debug Integration Tests (LiveApi)",
+      "type": "coreclr",
+      "request": "attach",
+      "preLaunchTask": "test-live-wait-debugger",
+      "processName": "testhost",
+      "justMyCode": false,
+      "requireExactSource": false
+    },
+    {
+      "name": "Debug Integration Tests (All)",
+      "type": "coreclr",
+      "request": "attach",
+      "preLaunchTask": "test-all-wait-debugger",
+      "processName": "testhost",
+      "justMyCode": false,
+      "requireExactSource": false
+    },
+    {
+      "name": "Debug Unit Tests (All)",
+      "type": "coreclr",
+      "request": "launch",
+      "preLaunchTask": "build-tests",
+      "program": "dotnet",
+      "args": [
+        "test",
+        "${workspaceFolder}/Backup.Tests/Backup.Tests.csproj",
+        "-c",
+        "Debug",
+        "--no-build"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "stopAtEntry": false,
+      "justMyCode": false,
+      "requireExactSource": false
     }
   ]
 }

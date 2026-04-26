@@ -1,6 +1,7 @@
 using Backup.App.Extensions;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Interfaces.Services.Post;
+using Backup.App.Models.Config.Api;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.App;
@@ -18,6 +19,7 @@ public class App(
     private readonly IEnumerable<IPostService> _postServices = _postServices;
     private readonly IEnumerable<IBulkService> _bulkServices = _bulkServices;
     private readonly IEnumerable<IMediaService> _mediaServices = _mediaServices;
+    private string UserId => _config.Services.User.Id;
 
     public async Task Backup()
     {
@@ -29,42 +31,47 @@ public class App(
 
     private async Task RunPostRecoveryServices()
     {
-        Models.Config.FetchContext context = new() { Source = _config.Source.Clone() };
-
         foreach (IPostService service in _postServices)
         {
             using (_logger.LogTimer($"post recovery service: {service.GetType().Name}"))
-                await service.Recover(context);
+                await service.Recover(UserId);
         }
     }
 
     private async Task RunPostSources()
     {
-        if (!_config.Source.Enabled)
-            return;
-
-        List<Models.Config.Source> sources = _config
-            .Sources.Where(source => source.Enabled)
-            .ToList();
-
-        foreach (Models.Config.Source source in sources)
+        foreach (var kvp in _config.Fetch)
         {
-            Models.Config.FetchContext context = Models.Config.FetchContextFactory.Create(
-                _config.Source,
-                source
-            );
+            string apiId = kvp.Key;
 
-            _logger.LogInfo("source: {source}", context.Source.Id);
+            if (!_config.Api.TryGetValue(apiId, out Api? api))
+                continue;
+
+            if (!api.Enabled)
+                continue;
+
+            Models.Config.Request.Request request = api.Request.Clone();
+            int count = kvp.Value.Count;
+
+            ApiContext context = new()
+            {
+                Id = api.Id,
+                Request = request,
+                Count = count,
+                UserId = UserId,
+            };
+
+            _logger.LogInfo("source: {source}", context.Id);
             await RunPostServices(context);
         }
     }
 
-    private async Task RunPostServices(Models.Config.FetchContext fetchContext)
+    private async Task RunPostServices(ApiContext context)
     {
         foreach (IPostService service in _postServices)
         {
             using (_logger.LogTimer($"post service: {service.GetType().Name}"))
-                await service.Download(fetchContext);
+                await service.Download(context);
         }
     }
 

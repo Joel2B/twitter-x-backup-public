@@ -4,5 +4,5 @@ namespace Backup.App.Interfaces.Services.Post;
 
 public interface IPostRecovery
 {
-    public Task Recovery(IPostData postData, Models.Config.FetchContext fetchContext);
+    public Task Recovery(IPostData postData, string userId);
 }

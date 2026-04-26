@@ -1,7 +1,7 @@
 namespace Backup.App.Models.Config;
 
-public class Fetch
+public sealed class FetchItem
 {
-    public required Source Current { get; set; }
-    public required List<Source> Sources { get; set; }
+    public required int Count { get; set; }
+    public required int Api { get; set; }
 }

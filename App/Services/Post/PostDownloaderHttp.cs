@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Mime;
 using Backup.App.Interfaces.Services.Post;
 using Backup.App.Models.Config.Request;
+using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -14,7 +14,16 @@ public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, Models.Conf
     private readonly ILogger<PostDownloaderHttp> _logger = _logger;
 
     private readonly Models.Config.App _config = _config;
-    private readonly HttpClient _client = new();
+    private readonly HttpClient _client = new(
+        new HttpClientHandler
+        {
+            UseCookies = false,
+            AutomaticDecompression =
+                DecompressionMethods.GZip
+                | DecompressionMethods.Deflate
+                | DecompressionMethods.Brotli,
+        }
+    );
 
     private Request? _request;
     private HttpResponseHeaders? _headers;
@@ -34,18 +43,9 @@ public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, Models.Conf
 
         Dictionary<string, string> queryBuilder = new()
         {
-            {
-                nameof(Request.Query.Variables).ToLower(),
-                JsonConvert.SerializeObject(request.Query.Variables)
-            },
-            {
-                nameof(Request.Query.Features).ToLower(),
-                JsonConvert.SerializeObject(request.Query.Features)
-            },
-            {
-                nameof(Request.Query.FieldToggles).ToLower(),
-                JsonConvert.SerializeObject(request.Query.FieldToggles)
-            },
+            { "variables", JsonConvert.SerializeObject(request.Query.Variables) },
+            { "features", JsonConvert.SerializeObject(request.Query.Features) },
+            { "fieldToggles", JsonConvert.SerializeObject(request.Query.FieldToggles) },
         };
 
         string queryUri = queryBuilder.Aggregate(
@@ -59,11 +59,9 @@ public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, Models.Conf
         {
             Method = HttpMethod.Get,
             RequestUri = new Uri(url),
-            Content = new StringContent("", null, MediaTypeNames.Application.Json),
         };
 
-        foreach (KeyValuePair<string, string> kvp in request.Headers)
-            requestHttp.Headers.Add(kvp.Key, kvp.Value);
+        Http.ApplyHeaders(requestHttp, request.Headers);
 
         using HttpResponseMessage response = await _client.SendAsync(requestHttp, token);
         HttpStatusCode code = response.StatusCode;

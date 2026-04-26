@@ -1,7 +1,9 @@
+using Backup.App.Models.Config.Api;
+
 namespace Backup.App.Interfaces.Services.Post;
 
 public interface IPostService
 {
-    public Task Recover(Models.Config.FetchContext fetchContext);
-    public Task Download(Models.Config.FetchContext fetchContext);
+    public Task Recover(string userId);
+    public Task Download(ApiContext context);
 }
