@@ -4,7 +4,7 @@ export const OPERATION_TO_ENDPOINT = {
   UserTweets: "posts",
   Likes: "likes",
   Bookmarks: "bookmarks",
-  UserMedia: "UserMedia",
+  UserMedia: "media",
   UserByScreenName: "UserByScreenName",
   TweetDetail: "TweetDetail",
   UsersByRestIds: "UsersByRestIds"

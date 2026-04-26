@@ -57,7 +57,7 @@ Local Chrome MV3 extension to capture X GraphQL requests and generate a JSON pat
 - `Api.posts (UserTweets)` -> `https://x.com/{username}`
 - `Api.likes (Likes)` -> `https://x.com/{username}/likes`
 - `Api.bookmarks (Bookmarks)` -> `https://x.com/i/bookmarks`
-- `Api.UserMedia` -> `https://x.com/{username}/media`
+- `Api.media (UserMedia)` -> `https://x.com/{username}/media`
 - `Api.UserByScreenName` -> `https://x.com/{username}/media`
 - `Api.TweetDetail` -> `https://x.com/AmeDollVT/status/2047352297571725658`
 - `Api.UsersByRestIds` -> currently unused (no button)

@@ -171,7 +171,7 @@ export function createPatch(state: CaptureState | null): ApiPatch {
     }
 
     patch.Api[endpoint.jsonKey] = {
-      Id: endpoint.jsonKey,
+      Id: endpoint.id || model.endpoint.jsonKey,
       Enabled: endpoint.enabledByDefault,
       Request: model.request
     };
@@ -190,7 +190,7 @@ export function createSingleEndpointPatch(model: EndpointModel): SingleApiPatch 
   };
 
   patch.Api[model.endpoint.jsonKey] = {
-    Id: model.endpoint.jsonKey,
+    Id: model.endpoint.id || model.endpoint.jsonKey,
     Enabled: model.endpoint.enabledByDefault,
     Request: model.request
   };

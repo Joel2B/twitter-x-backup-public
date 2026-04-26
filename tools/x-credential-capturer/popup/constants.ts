@@ -26,8 +26,8 @@ export const ENDPOINTS: EndpointDefinition[] = [
     enabledByDefault: true
   },
   {
-    id: "UserMedia",
-    title: "Api.UserMedia",
+    id: "media",
+    title: "Api.media (UserMedia)",
     type: "api",
     jsonKey: "UserMedia",
     pageUrlTemplate: "https://x.com/{username}/media",
