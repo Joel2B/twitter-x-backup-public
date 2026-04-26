@@ -80,7 +80,6 @@ export type EndpointDefinition = {
   id: string;
   title: string;
   type: "api";
-  jsonId?: string;
   jsonKey: string;
   pageUrlTemplate?: string;
   pageUrl?: string | null;
