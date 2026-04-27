@@ -72,7 +72,9 @@ public class LocalPostLogger(
 
             var pathsDate = subPaths
                 .Where(o => Utils.Path.ToDate(o, true) is not null)
-                .Select(o => new { Path = o, Date = Utils.Path.ToDate(o, true) });
+                .Select(o => new { Path = o, Date = Utils.Path.ToDate(o, true) })
+                .OrderBy(o => o.Date)
+                .ToList();
 
             DateTime? date = pathsDate
                 .SkipLast(_config.Debug.Api.Prune.RetainedCountLimit)
@@ -80,7 +82,7 @@ public class LocalPostLogger(
                 ?.Date;
 
             if (date is null)
-                return Task.CompletedTask;
+                continue;
 
             List<string> pathsToRemove = pathsDate
                 .Where(o => o.Date <= date)
@@ -88,7 +90,7 @@ public class LocalPostLogger(
                 .ToList();
 
             if (pathsToRemove.Count == 0)
-                return Task.CompletedTask;
+                continue;
 
             _logger.LogInformation("base path: {path}", Path.GetFileName(path));
 

@@ -294,7 +294,12 @@ public partial class LocalPostData(
             .Select(o => new { Path = o, Date = Utils.Path.ToDate(o, isDir: true) })
             .Where(o => o.Date is not null)
             .GroupBy(o => Convert.ToDateTime(o.Date?.ToString("yyyy-MM-dd")))
-            .OrderBy(o => o.Key)
+            .Select(o => new
+            {
+                Date = o.Key,
+                Paths = o.OrderBy(o => o.Date).Select(o => o.Path).ToList(),
+            })
+            .OrderBy(o => o.Date)
             .ToList();
 
         _logger.LogInformation("paths: {value}", pathsDate.Count);
@@ -302,39 +307,33 @@ public partial class LocalPostData(
         if (pathsDate.Count == 0)
             return Task.CompletedTask;
 
-        DateTime? date = pathsDate
-            .Last()
-            .Last()
-            .Date?.AddDays(-_appConfig.Tasks.Prune.Data.Post.KeepDays)
-            .Date;
+        int keepDays = Math.Max(1, _appConfig.Tasks.Prune.Data.Post.KeepDays);
+        int keepCount = Math.Max(0, _appConfig.Tasks.Prune.Data.Post.KeepCount);
+
+        HashSet<DateTime> keepDates =
+        [
+            .. pathsDate.OrderByDescending(o => o.Date).Take(keepDays).Select(o => o.Date),
+        ];
 
         _logger.LogInformation(
-            "prunning date: {date}, KeepDays: {keepDays}",
-            date,
-            _appConfig.Tasks.Prune.Data.Post.KeepDays
+            "prunning keep policy: keeping last {keepDays} stored days, found {kept} days",
+            keepDays,
+            keepDates.Count
         );
 
-        if (date is null)
-            return Task.CompletedTask;
-
-        var groupBefore = pathsDate.Where(o => o.Key < date).ToList();
-
-        var groupAfter = pathsDate
-            .Where(o => o.Key >= date)
-            .Select(o => new
-            {
-                o.Key,
-                Paths = o.OrderBy(x => x.Date)
-                    .Take(Math.Max(0, o.Count() - _appConfig.Tasks.Prune.Data.Post.KeepCount)),
-            })
-            .ToList();
-
         List<string> remove = [];
-        List<string> removeBefore = groupBefore.SelectMany(o => o.Select(o => o.Path)).ToList();
-        List<string> removeAfter = groupAfter.SelectMany(o => o.Paths.Select(o => o.Path)).ToList();
 
-        remove.AddRange(removeBefore);
-        remove.AddRange(removeAfter);
+        foreach (var day in pathsDate)
+        {
+            if (!keepDates.Contains(day.Date))
+            {
+                remove.AddRange(day.Paths);
+                continue;
+            }
+
+            int removeCount = Math.Max(0, day.Paths.Count - keepCount);
+            remove.AddRange(day.Paths.Take(removeCount));
+        }
 
         _logger.LogInformation("prunning {value} paths", remove.Count);
 
