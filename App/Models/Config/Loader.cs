@@ -28,7 +28,7 @@ public static class ConfigLoader
             Api = api,
             Fetch = fetch,
             Services = services,
-            Data = LoadFile<Data.Data>(configDirectory, "Data.json"),
+            Data = LoadFile<Data.Data>(configDirectory, "Data.json", prefix: "BACKUP__"),
             Downloads = LoadFile<Downloads.Downloads>(configDirectory, "Downloads.json"),
             Medias = LoadFile<Medias.Medias>(configDirectory, "Medias.json"),
             Proxy = LoadFile<Proxy.Proxy>(configDirectory, "Proxy.json"),
@@ -191,14 +191,17 @@ public static class ConfigLoader
         services.User.Id = userId;
     }
 
-    private static T LoadFile<T>(string configDirectory, string fileName)
+    private static T LoadFile<T>(string configDirectory, string fileName, string? prefix = null)
     {
         string path = Path.Combine(configDirectory, fileName);
 
-        IConfigurationRoot config = new ConfigurationBuilder()
-            .AddJsonFile(path, optional: false, reloadOnChange: false)
-            .AddEnvironmentVariables(prefix: "BACKUP__")
-            .Build();
+        ConfigurationBuilder builder = new();
+        builder.AddJsonFile(path, optional: false, reloadOnChange: false);
+
+        if (prefix is not null)
+            builder.AddEnvironmentVariables(prefix: prefix);
+
+        IConfigurationRoot config = builder.Build();
 
         return config.Get<T>()
             ?? throw new Exception($"error deserializing config file '{fileName}'");
