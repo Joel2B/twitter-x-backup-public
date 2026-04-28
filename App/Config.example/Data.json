@@ -98,13 +98,13 @@
       }
     },
     {
-      "Id": "nas post",
+      "Id": "nas post json",
       "Type": "local",
       "Enabled": true,
       "Paths": {
         "Paths": ["data"],
         "Post": {
-          "Paths": ["post"],
+          "Paths": ["post", "json"],
           "File": "posts.json"
         }
       },
