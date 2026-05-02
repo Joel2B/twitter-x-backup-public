@@ -26,7 +26,7 @@ public class ProfileProcessor(Models.Config.Medias.Profile config, MediaProcesso
         {
             string? url = post.Profile.ImageUrl;
 
-            if (url is null)
+            if (string.IsNullOrWhiteSpace(url))
                 continue;
 
             string? fileName = Path.GetFileName(url);
