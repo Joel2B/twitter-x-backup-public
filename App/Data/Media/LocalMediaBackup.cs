@@ -121,10 +121,10 @@ public class LocalMediaBackup(
         return [.. chunks];
     }
 
-    public async Task<Stream?> GetChunk(Chunk chunk)
+    public Task<Stream?> GetChunk(Chunk chunk)
     {
         if (_config.Chunk.Zip.File is null)
-            return null;
+            return Task.FromResult<Stream?>(null);
 
         string fileName = $"{chunk.Id}.{_config.Chunk.Zip.File}";
         string path = System.IO.Path.Combine(GetPathChunks(), fileName);
@@ -144,8 +144,7 @@ public class LocalMediaBackup(
             bufferSize: 128 * 1024,
             options: FileOptions.Asynchronous | FileOptions.SequentialScan
         );
-
-        return fs;
+        return Task.FromResult<Stream?>(fs);
     }
 
     public async Task<string?> GetHash(string path)

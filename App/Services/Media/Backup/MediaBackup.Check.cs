@@ -18,21 +18,16 @@ public partial class MediaBackup : IMediaBackup
                 continue;
 
             _logger.LogInformation("processing chunk {chunk}", kvp.Key);
-            Stream? zipFile = await _mediaBackup.GetChunk(kvp.Value);
-
-            if (zipFile is null)
-            {
-                _logger.LogError("error in GetChunk");
-                continue;
-            }
-
             IZipWriter? zip = null;
             IEnumerable<string> storage = [];
 
             try
             {
                 _logger.LogInfo("read zip");
-                zip = _zipWriterFactory.Open(zipFile);
+                zip = await OpenChunkZipRead(kvp.Value, "check-duplicates");
+
+                if (zip is null)
+                    continue;
 
                 _logger.LogInfo("reading entries");
                 storage = [.. zip.GetEntries().Select(o => o.FullName)];
@@ -45,7 +40,6 @@ public partial class MediaBackup : IMediaBackup
             {
                 _logger.LogInfo("disposing");
                 zip?.Dispose();
-                zipFile?.Dispose();
             }
 
             if (zip is null)
@@ -105,25 +99,27 @@ public partial class MediaBackup : IMediaBackup
                 );
 
                 _logger.LogInformation("processing chunk {chunk}", kvp.Key);
-                zipFile = await _mediaBackup.GetChunk(kvp.Value);
 
-                if (zipFile is null)
-                {
-                    _logger.LogError("error in GetChunk");
+                IZipWriter? writeZip = await OpenChunkZipWrite(
+                    kvp.Value,
+                    "check-duplicates-remove"
+                );
+
+                if (writeZip is null)
                     continue;
+
+                try
+                {
+                    _logger.LogInfo("removing entries");
+
+                    foreach (var item in storageDuplicates)
+                        writeZip.RemoveEntry(item.Entries[0], true);
                 }
-
-                _logger.LogInfo("update zip");
-                zip = _zipWriterFactory.Create(zipFile);
-
-                _logger.LogInfo("removing entries");
-
-                foreach (var item in storageDuplicates)
-                    zip.RemoveEntry(item.Entries[0], true);
-
-                _logger.LogInfo("disposing");
-                zip?.Dispose();
-                zipFile?.Dispose();
+                finally
+                {
+                    _logger.LogInfo("disposing");
+                    writeZip.Dispose();
+                }
 
                 _logger.LogInformation(
                     "{paths} duplicate paths removed",
@@ -163,28 +159,30 @@ public partial class MediaBackup : IMediaBackup
                     _logger.LogInfo("{path}", item);
 
                 _logger.LogInformation("processing chunk {chunk}", kvp.Key);
-                zipFile = await _mediaBackup.GetChunk(kvp.Value);
 
-                if (zipFile is null)
-                {
-                    _logger.LogError("error in GetChunk");
+                IZipWriter? writeZip = await OpenChunkZipWrite(
+                    kvp.Value,
+                    "check-duplicates-extras"
+                );
+
+                if (writeZip is null)
                     continue;
-                }
 
-                _logger.LogInfo("update zip");
-                zip = _zipWriterFactory.Create(zipFile);
-
-                _logger.LogInformation("removing paths extras");
-
-                foreach (var item in extras)
+                try
                 {
-                    zip.RemoveEntry(item);
-                    _logger.LogInfo("{path} removed", item);
-                }
+                    _logger.LogInformation("removing paths extras");
 
-                _logger.LogInfo("disposing");
-                zip?.Dispose();
-                zipFile?.Dispose();
+                    foreach (var item in extras)
+                    {
+                        writeZip.RemoveEntry(item);
+                        _logger.LogInfo("{path} removed", item);
+                    }
+                }
+                finally
+                {
+                    _logger.LogInfo("disposing");
+                    writeZip.Dispose();
+                }
 
                 storageCount -= extras.Count();
 

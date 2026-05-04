@@ -22,19 +22,24 @@ public partial class MediaBackup : IMediaBackup
                 continue;
 
             _logger.LogInformation("processing chunk {chunk}", kvp.Key);
-            Stream? zipFile = await _mediaBackup.GetChunk(_chunks[kvp.Key]);
+            IZipWriter? zip = await OpenChunkZipRead(_chunks[kvp.Key], "check-integrity");
 
-            if (zipFile is null)
-            {
-                _logger.LogError("error in GetChunk");
+            if (zip is null)
                 continue;
+
+            Dictionary<string, ZipEntry> entries;
+
+            try
+            {
+                _logger.LogInfo("read zip");
+                _logger.LogInfo("reading entries");
+                entries = zip.GetEntries().ToDictionary(o => o.FullName);
             }
-
-            _logger.LogInfo("read zip");
-            IZipWriter zip = _zipWriterFactory.Open(zipFile);
-
-            _logger.LogInfo("reading entries");
-            Dictionary<string, ZipEntry> entries = zip.GetEntries().ToDictionary(o => o.FullName);
+            finally
+            {
+                _logger.LogInfo("disposing");
+                zip.Dispose();
+            }
 
             _logger.LogInfo("checking changes");
 
@@ -59,10 +64,6 @@ public partial class MediaBackup : IMediaBackup
 
                 _changes.Add(change);
             }
-
-            _logger.LogInfo("disposing");
-            zip.Dispose();
-            zipFile.Dispose();
 
             _logger.LogInformation("chunk {chunk} processed", kvp.Key);
         }
@@ -102,33 +103,31 @@ public partial class MediaBackup : IMediaBackup
         foreach (var change in changes)
         {
             _logger.LogInformation("processing chunk {chunk}", change.Key);
-            Stream? zipFile = await _mediaBackup.GetChunk(_chunks[change.Key]);
+            IZipWriter? zip = await OpenChunkZipWrite(_chunks[change.Key], "fix-integrity");
 
-            if (zipFile is null)
-            {
-                _logger.LogError("error in GetChunk");
+            if (zip is null)
                 continue;
-            }
 
-            _logger.LogInfo("read zip");
-            IZipWriter zip = _zipWriterFactory.Create(zipFile);
-
-            _logger.LogInfo("applying fixes");
-
-            foreach (IntegrityChange integrityChange in change.Value.Paths)
+            try
             {
-                using Stream read = await _mediaData.Read(integrityChange.Path);
-                string path = integrityChange.Path.Replace('\\', '/');
+                _logger.LogInfo("applying fixes");
 
-                zip.RemoveEntry(path);
-                await zip.AddEntry(path, read);
+                foreach (IntegrityChange integrityChange in change.Value.Paths)
+                {
+                    using Stream read = await _mediaData.Read(integrityChange.Path);
+                    string path = integrityChange.Path.Replace('\\', '/');
 
-                _logger.LogInfo("{path} processed", path);
+                    zip.RemoveEntry(path);
+                    await zip.AddEntry(path, read);
+
+                    _logger.LogInfo("{path} processed", path);
+                }
             }
-
-            _logger.LogInfo("disposing");
-            zip.Dispose();
-            zipFile.Dispose();
+            finally
+            {
+                _logger.LogInfo("disposing");
+                zip.Dispose();
+            }
         }
 
         _logger.LogInformation("set new file sizes");
@@ -136,19 +135,27 @@ public partial class MediaBackup : IMediaBackup
         foreach (var change in changes)
         {
             _logger.LogInformation("processing chunk {chunk}", change.Key);
-            Stream? zipFile = await _mediaBackup.GetChunk(_chunks[change.Key]);
 
-            if (zipFile is null)
-            {
-                _logger.LogError("error in GetChunk");
+            IZipWriter? zip = await OpenChunkZipRead(
+                _chunks[change.Key],
+                "set-new-file-sizes-after-fix"
+            );
+
+            if (zip is null)
                 continue;
+
+            Dictionary<string, ZipEntry> entries;
+
+            try
+            {
+                _logger.LogInfo("reading entries");
+                entries = zip.GetEntries().ToDictionary(o => o.FullName);
             }
-
-            _logger.LogInfo("read zip");
-            IZipWriter zip = _zipWriterFactory.Open(zipFile);
-
-            _logger.LogInfo("reading entries");
-            Dictionary<string, ZipEntry> entries = zip.GetEntries().ToDictionary(o => o.FullName);
+            finally
+            {
+                _logger.LogInfo("disposing");
+                zip.Dispose();
+            }
 
             _logger.LogInfo("expanding chunk");
 
@@ -174,10 +181,6 @@ public partial class MediaBackup : IMediaBackup
 
             _logger.LogInfo("saving chunk");
             await _mediaBackup.Save([_chunks[change.Key]]);
-
-            _logger.LogInfo("disposing");
-            zip.Dispose();
-            zipFile.Dispose();
         }
     }
 }

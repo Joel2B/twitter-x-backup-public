@@ -13,7 +13,6 @@ public partial class MediaBackup : IMediaBackup
     {
         foreach (var kvp in _chunks)
         {
-            Stream? zipFile = null;
             IZipWriter? zip = null;
 
             try
@@ -38,22 +37,14 @@ public partial class MediaBackup : IMediaBackup
                         continue;
                     }
 
-                    if (zipFile is null)
-                    {
-                        _logger.LogInformation("processing chunk {chunk}", kvp.Key);
-                        zipFile = await _mediaBackup.GetChunk(kvp.Value);
-                    }
-
-                    if (zipFile is null)
-                    {
-                        _logger.LogError("error in GetChunk");
-                        continue;
-                    }
-
                     if (zip is null)
                     {
+                        _logger.LogInformation("processing chunk {chunk}", kvp.Key);
                         _logger.LogInfo("update zip");
-                        zip = _zipWriterFactory.Create(zipFile);
+                        zip = await OpenChunkZipWrite(kvp.Value, "apply");
+
+                        if (zip is null)
+                            break;
                     }
 
                     if (storagePaths is null)
@@ -115,7 +106,6 @@ public partial class MediaBackup : IMediaBackup
                 _logger.LogError("Error: {error}", JsonConvert.SerializeObject(ex));
 
                 zip?.Dispose();
-                zipFile?.Dispose();
 
                 await _mediaBackup.DeleteChunk(kvp.Value);
 
@@ -129,7 +119,6 @@ public partial class MediaBackup : IMediaBackup
             finally
             {
                 zip?.Dispose();
-                zipFile?.Dispose();
             }
         }
 
@@ -154,7 +143,6 @@ public partial class MediaBackup : IMediaBackup
 
         foreach (Chunk chunk in chunks)
         {
-            Stream? zipFile = null;
             IZipWriter? zip = null;
 
             try
@@ -164,22 +152,14 @@ public partial class MediaBackup : IMediaBackup
 
                 foreach (ChunkData chunkData in chunk.Data)
                 {
-                    if (zipFile is null)
-                    {
-                        _logger.LogInformation("processing chunk {chunk}", chunk.Id);
-                        zipFile = await _mediaBackup.GetChunk(chunk);
-                    }
-
-                    if (zipFile is null)
-                    {
-                        _logger.LogError("error in GetChunk");
-                        continue;
-                    }
-
                     if (zip is null)
                     {
+                        _logger.LogInformation("processing chunk {chunk}", chunk.Id);
                         _logger.LogInfo("update zip");
-                        zip = _zipWriterFactory.Create(zipFile);
+                        zip = await OpenChunkZipWrite(chunk, "sync-chunks");
+
+                        if (zip is null)
+                            break;
                     }
 
                     _logger.LogInfo("removing entry", chunkData.Path);
@@ -201,14 +181,12 @@ public partial class MediaBackup : IMediaBackup
                 _logger.LogError("Error: {error}", JsonConvert.SerializeObject(ex));
 
                 zip?.Dispose();
-                zipFile?.Dispose();
 
                 break;
             }
             finally
             {
                 zip?.Dispose();
-                zipFile?.Dispose();
             }
         }
     }

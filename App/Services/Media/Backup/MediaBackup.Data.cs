@@ -23,23 +23,24 @@ public partial class MediaBackup : IMediaBackup
                 continue;
 
             _logger.LogInformation("processing chunk {chunk}", kvp.Key);
-            Stream? zipFile = await _mediaBackup.GetChunk(kvp.Value);
+            IZipWriter? zip = await OpenChunkZipRead(kvp.Value, "set-file-sizes");
 
-            if (zipFile is null)
-            {
-                _logger.LogError("error in GetChunk");
+            if (zip is null)
                 continue;
+
+            Dictionary<string, ZipEntry> entries;
+
+            try
+            {
+                _logger.LogInfo("read zip");
+                _logger.LogInfo("reading entries");
+                entries = zip.GetEntries().ToDictionary(o => o.FullName);
             }
-
-            _logger.LogInfo("read zip");
-            IZipWriter zip = _zipWriterFactory.Open(zipFile);
-
-            _logger.LogInfo("reading entries");
-            Dictionary<string, ZipEntry> entries = zip.GetEntries().ToDictionary(o => o.FullName);
-
-            _logger.LogInfo("disposing");
-            zip?.Dispose();
-            zipFile?.Dispose();
+            finally
+            {
+                _logger.LogInfo("disposing");
+                zip.Dispose();
+            }
 
             _logger.LogInfo("updating data");
 
