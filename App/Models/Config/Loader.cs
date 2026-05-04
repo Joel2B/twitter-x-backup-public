@@ -25,11 +25,11 @@ public static class ConfigLoader
         foreach (Dictionary<string, ApiConfig.Api> api in apiByUser.Values)
             ValidateAndNormalizeApi(api);
 
-        Dictionary<string, ApiConfig.Api> firstUserApi = apiByUser[services.Users[0].Id];
-        Dictionary<string, FetchItem> fetch = LoadFetchFile(configDirectory, firstUserApi);
+        Dictionary<string, FetchItem> fetch = LoadFetchFile(configDirectory);
+        ValidateFetchKeys(apiByUser, fetch);
 
-        foreach (Dictionary<string, ApiConfig.Api> api in apiByUser.Values)
-            ApplyFetchToApi(api, fetch);
+        foreach (var api in apiByUser)
+            ApplyFetchToApi(api.Key, api.Value, fetch);
 
         List<ApiConfig.UsersContext> contexts = services
             .Users.Select(user => new ApiConfig.UsersContext
@@ -118,10 +118,7 @@ public static class ConfigLoader
         return api;
     }
 
-    private static Dictionary<string, FetchItem> LoadFetchFile(
-        string configDirectory,
-        IReadOnlyDictionary<string, ApiConfig.Api> api
-    )
+    private static Dictionary<string, FetchItem> LoadFetchFile(string configDirectory)
     {
         Dictionary<string, FetchItem> fetch = LoadFile<Dictionary<string, FetchItem>>(
             configDirectory,
@@ -132,11 +129,6 @@ public static class ConfigLoader
         {
             string key = kvp.Key;
             FetchItem value = kvp.Value;
-
-            if (!api.ContainsKey(key))
-                throw new Exception(
-                    $"error deserializing config file 'Fetch.json': key '{key}' does not exist in api files"
-                );
 
             if (value is null)
                 throw new Exception(
@@ -160,14 +152,40 @@ public static class ConfigLoader
         return fetch;
     }
 
+    private static void ValidateFetchKeys(
+        IReadOnlyDictionary<string, Dictionary<string, ApiConfig.Api>> apiByUser,
+        IReadOnlyDictionary<string, FetchItem> fetch
+    )
+    {
+        foreach (string key in fetch.Keys)
+        {
+            List<string> missingUsers = apiByUser
+                .Where(user => !user.Value.ContainsKey(key))
+                .Select(user => user.Key)
+                .ToList();
+
+            if (missingUsers.Count == 0)
+                continue;
+
+            throw new Exception(
+                $"error deserializing config file 'Fetch.json': key '{key}' does not exist in api files for users: {string.Join(", ", missingUsers)}"
+            );
+        }
+    }
+
     private static void ApplyFetchToApi(
+        string userId,
         IReadOnlyDictionary<string, ApiConfig.Api> api,
         IReadOnlyDictionary<string, FetchItem> fetch
     )
     {
         foreach (var kvp in fetch)
         {
-            ApiConfig.Api entry = api[kvp.Key];
+            if (!api.TryGetValue(kvp.Key, out ApiConfig.Api? entry))
+                throw new Exception(
+                    $"error deserializing config file 'Fetch.json': key '{kvp.Key}' does not exist in api file for user '{userId}'"
+                );
+
             Request.Request request = entry.Request;
 
             if (!request.Query.Variables.ContainsKey("count"))
