@@ -27,10 +27,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="App\Config\*.json">
+    <None Include="App\Config\**\*.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-      <TargetPath>config/%(Filename)%(Extension)</TargetPath>
+      <TargetPath>config/%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
     </None>
   </ItemGroup>
 

@@ -2,7 +2,7 @@ namespace Backup.App.Models.Config;
 
 public class App
 {
-    public required Dictionary<string, Api.Api> Api { get; set; }
+    public required List<Api.UsersContext> UsersContext { get; set; }
     public required Dictionary<string, FetchItem> Fetch { get; set; }
     public required Services Services { get; set; }
     public required Data.Data Data { get; set; }

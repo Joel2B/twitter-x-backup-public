@@ -3,6 +3,7 @@ using Backup.App.Interfaces.Data.Post;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Interfaces.Services.Post;
 using Backup.App.Models.Bulk;
+using Backup.App.Models.Config.Api;
 using Backup.App.Models.Config.Request;
 using Backup.App.Models.Post;
 using Microsoft.Extensions.Logging;
@@ -31,9 +32,15 @@ public partial class BulkService(
     private readonly IPostReplication _postReplication = _postReplication;
 
     private readonly CancellationTokenSource _tokenSource = new();
+    private UsersContext? _context;
 
-    public async Task Download()
+    private Dictionary<string, Api> Api =>
+        _context?.Api ?? throw new Exception("bulk context not initialized");
+
+    public async Task Download(UsersContext context)
     {
+        _context = context;
+
         await Import();
         await Verify();
         await Phase1();
@@ -45,7 +52,7 @@ public partial class BulkService(
 
     private async Task<ParseUser?> GetUserByUser(string userName)
     {
-        Request? request = RequestMerge.Build(_config.Api, "UserByScreenName");
+        Request? request = RequestMerge.Build(Api, "UserByScreenName");
 
         if (request is null)
         {
@@ -78,7 +85,7 @@ public partial class BulkService(
         string? cursor
     )
     {
-        Request? request = RequestMerge.Build(_config.Api, "UserMedia");
+        Request? request = RequestMerge.Build(Api, "UserMedia");
 
         if (request is null)
         {

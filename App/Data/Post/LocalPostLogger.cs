@@ -20,9 +20,6 @@ public class LocalPostLogger(
 
     private void SetupDirectory(string sourceId)
     {
-        if (string.IsNullOrWhiteSpace(sourceId))
-            sourceId = "unknown";
-
         if (_id != "" && _id == sourceId)
             return;
 

@@ -21,13 +21,13 @@ public class PostService(
     private readonly IPostDownload _postDownload = _postDownload;
     private readonly IPostReplication _postReplication = _postReplication;
 
-    public async Task Recover(string userId)
+    public async Task Recover(UsersContext context)
     {
         IPostData data = _postData.First();
 
         _logger.LogInformation(data.Id, "post data: {name}", data.GetType().Name);
         _logger.LogInformation(data.Id, "recovering posts in {data}", data.GetType().Name);
-        await _postRecovery.Recovery(data, userId);
+        await _postRecovery.Recovery(data, context);
     }
 
     public async Task Download(ApiContext context)

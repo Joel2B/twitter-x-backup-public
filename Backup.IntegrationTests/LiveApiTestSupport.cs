@@ -12,7 +12,8 @@ internal static class LiveApiTestSupport
     internal static async Task PrepareVariables(App.Models.Config.App config, Request request)
     {
         string userId =
-            ResolveUserId(config) ?? throw new Exception("userId not found in Services.User.Id");
+            ResolveUserId(config) ?? throw new Exception("userId not found in Services.Users");
+        IReadOnlyDictionary<string, Api> primaryApi = config.UsersContext[0].Api;
 
         if (
             request.Query.Variables.TryGetValue("userId", out object? userIdValue)
@@ -34,7 +35,7 @@ internal static class LiveApiTestSupport
             object? currentValue = request.Query.Variables["screen_name"];
             if (IsMissingOrPlaceholder(currentValue))
             {
-                string? screenName = TryExtractScreenName(config.Api.Values);
+                string? screenName = TryExtractScreenName(primaryApi.Values);
 
                 if (!string.IsNullOrWhiteSpace(screenName))
                     request.Query.Variables["screen_name"] = screenName;
@@ -50,7 +51,7 @@ internal static class LiveApiTestSupport
 
     internal static string? ResolveUserId(App.Models.Config.App config)
     {
-        string? configuredUserId = config.Services.User.Id?.Trim();
+        string? configuredUserId = config.Services.Users.FirstOrDefault()?.Id?.Trim();
 
         if (!string.IsNullOrWhiteSpace(configuredUserId))
             return configuredUserId;
@@ -108,8 +109,9 @@ internal static class LiveApiTestSupport
 
     private static async Task<string> GetAnyTweetId(App.Models.Config.App config, string userId)
     {
+        IReadOnlyDictionary<string, Api> primaryApi = config.UsersContext[0].Api;
         Request postsRequest =
-            RequestMerge.Build(config.Api, "posts")
+            RequestMerge.Build(primaryApi, "posts")
             ?? throw new Exception("Api 'posts' not found or disabled");
 
         postsRequest.Query.Variables["count"] = 5;

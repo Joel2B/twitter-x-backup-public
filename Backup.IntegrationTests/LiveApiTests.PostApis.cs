@@ -31,9 +31,10 @@ public partial class LiveApiTests
     private static async Task AssertPostApiRequestWorks(string apiId)
     {
         App.Models.Config.App config = LiveApiTestSupport.LoadAppConfig();
+        IReadOnlyDictionary<string, Api> primaryApi = config.UsersContext[0].Api;
 
-        if (!config.Api.TryGetValue(apiId, out Api? apiEntry))
-            throw new Exception($"Api '{apiId}' not found in App/Config/Api.json");
+        if (!primaryApi.TryGetValue(apiId, out Api? apiEntry))
+            throw new Exception($"Api '{apiId}' not found in configured api map");
 
         if (!apiEntry.Enabled)
             return;
@@ -51,7 +52,7 @@ public partial class LiveApiTests
         string userId =
             requestUserId
             ?? LiveApiTestSupport.ResolveUserId(config)
-            ?? throw new Exception("Unable to resolve userId from Services.User.Id");
+            ?? throw new Exception("Unable to resolve userId from Services.Users");
 
         request.Query.Variables["userId"] = userId;
 

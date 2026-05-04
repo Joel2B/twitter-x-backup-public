@@ -61,16 +61,16 @@ public partial class ConfigApiTests
 
         foreach (string directory in directories)
         {
-            string apiPath = Path.Combine(directory, "Api.json");
             string fetchPath = Path.Combine(directory, "Fetch.json");
 
-            if (!File.Exists(apiPath) || !File.Exists(fetchPath))
+            if (!HasApiConfig(directory) || !File.Exists(fetchPath))
                 continue;
 
             Dictionary<string, FetchItem> expectedFetch = ConfigApiTestSupport.LoadFile<
                 Dictionary<string, FetchItem>
             >(fetchPath);
             App.Models.Config.App loaded = ConfigApiTestSupport.LoadSplit(directory);
+            IReadOnlyDictionary<string, Api> primaryApi = loaded.UsersContext[0].Api;
 
             foreach (var kvp in expectedFetch)
             {
@@ -78,7 +78,7 @@ public partial class ConfigApiTests
                 FetchItem expected = kvp.Value;
 
                 Assert.True(
-                    loaded.Api.ContainsKey(apiId),
+                    primaryApi.ContainsKey(apiId),
                     $"{directory}: Api '{apiId}' not found in loaded config"
                 );
                 Assert.True(
@@ -90,7 +90,7 @@ public partial class ConfigApiTests
                 Assert.Equal(expected.Count, actualFetch.Count);
                 Assert.Equal(expected.Api, actualFetch.Api);
 
-                Api api = loaded.Api[apiId];
+                Api api = primaryApi[apiId];
                 Assert.True(
                     api.Request.Query.Variables.ContainsKey("count"),
                     $"{directory}: api '{apiId}' missing query.variables.count"
@@ -109,7 +109,7 @@ public partial class ConfigApiTests
 
         Assert.True(
             validatedConfigs > 0,
-            "No config directories with Api.json + Fetch.json were found."
+            "No config directories with api config + Fetch.json were found."
         );
     }
 
@@ -128,14 +128,13 @@ public partial class ConfigApiTests
 
         foreach (string directory in directories)
         {
-            string apiPath = Path.Combine(directory, "Api.json");
-
-            if (!File.Exists(apiPath))
+            if (!HasApiConfig(directory))
                 continue;
 
             App.Models.Config.App loaded = ConfigApiTestSupport.LoadSplit(directory);
+            IReadOnlyDictionary<string, Api> primaryApi = loaded.UsersContext[0].Api;
 
-            foreach (var kvp in loaded.Api)
+            foreach (var kvp in primaryApi)
             {
                 Api api = kvp.Value;
 
@@ -177,7 +176,7 @@ public partial class ConfigApiTests
             validatedConfigs++;
         }
 
-        Assert.True(validatedConfigs > 0, "No config directories with Api.json were found.");
+        Assert.True(validatedConfigs > 0, "No config directories with api config were found.");
     }
 
     [Fact]
@@ -195,14 +194,13 @@ public partial class ConfigApiTests
 
         foreach (string directory in directories)
         {
-            string apiPath = Path.Combine(directory, "Api.json");
-
-            if (!File.Exists(apiPath))
+            if (!HasApiConfig(directory))
                 continue;
 
             App.Models.Config.App loaded = ConfigApiTestSupport.LoadSplit(directory);
+            IReadOnlyDictionary<string, Api> primaryApi = loaded.UsersContext[0].Api;
 
-            foreach (Api api in loaded.Api.Values)
+            foreach (Api api in primaryApi.Values)
             {
                 if (
                     api.Request.Query.Variables.TryGetValue(
@@ -234,6 +232,16 @@ public partial class ConfigApiTests
             validatedConfigs++;
         }
 
-        Assert.True(validatedConfigs > 0, "No config directories with Api.json were found.");
+        Assert.True(validatedConfigs > 0, "No config directories with api config were found.");
+    }
+
+    private static bool HasApiConfig(string directory)
+    {
+        string folderPath = Path.Combine(directory, "Api");
+
+        if (!Directory.Exists(folderPath))
+            return false;
+
+        return Directory.GetFiles(folderPath, "*.json", SearchOption.TopDirectoryOnly).Length > 0;
     }
 }

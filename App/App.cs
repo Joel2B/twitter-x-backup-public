@@ -19,32 +19,39 @@ public class App(
     private readonly IEnumerable<IPostService> _postServices = _postServices;
     private readonly IEnumerable<IBulkService> _bulkServices = _bulkServices;
     private readonly IEnumerable<IMediaService> _mediaServices = _mediaServices;
-    private string UserId => _config.Services.User.Id;
 
     public async Task Backup()
     {
-        await RunPostRecoveryServices();
-        await RunPostSources();
-        await RunBulkServices();
+        IReadOnlyList<UsersContext> contexts = _config.UsersContext;
+
+        foreach (UsersContext context in contexts)
+        {
+            _logger.LogInfo("running backup for user id: {userId}", context.UserId);
+
+            await RunPostRecoveryServices(context);
+            await RunPostSources(context);
+        }
+
+        await RunBulkServices(contexts[0]);
         await RunMediaServices();
     }
 
-    private async Task RunPostRecoveryServices()
+    private async Task RunPostRecoveryServices(UsersContext context)
     {
         foreach (IPostService service in _postServices)
         {
             using (_logger.LogTimer($"post recovery service: {service.GetType().Name}"))
-                await service.Recover(UserId);
+                await service.Recover(context);
         }
     }
 
-    private async Task RunPostSources()
+    private async Task RunPostSources(UsersContext context)
     {
         foreach (var kvp in _config.Fetch)
         {
             string apiId = kvp.Key;
 
-            if (!_config.Api.TryGetValue(apiId, out Api? api))
+            if (!context.Api.TryGetValue(apiId, out Api? api))
                 continue;
 
             if (!api.Enabled)
@@ -53,16 +60,16 @@ public class App(
             Models.Config.Request.Request request = api.Request.Clone();
             int count = kvp.Value.Count;
 
-            ApiContext context = new()
+            ApiContext apiContext = new()
             {
                 Id = api.Id,
                 Request = request,
                 Count = count,
-                UserId = UserId,
+                UserId = context.UserId,
             };
 
-            _logger.LogInfo("source: {source}", context.Id);
-            await RunPostServices(context);
+            _logger.LogInfo("source: {source}", apiContext.Id);
+            await RunPostServices(apiContext);
         }
     }
 
@@ -75,7 +82,7 @@ public class App(
         }
     }
 
-    private async Task RunBulkServices()
+    private async Task RunBulkServices(UsersContext context)
     {
         if (!_config.Bulk.Enabled)
             return;
@@ -83,7 +90,7 @@ public class App(
         foreach (IBulkService service in _bulkServices)
         {
             using (_logger.LogTimer($"bulk service: {service.GetType().Name}"))
-                await service.Download();
+                await service.Download(context);
         }
     }
 

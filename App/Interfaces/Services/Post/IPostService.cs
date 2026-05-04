@@ -4,6 +4,6 @@ namespace Backup.App.Interfaces.Services.Post;
 
 public interface IPostService
 {
-    public Task Recover(string userId);
+    public Task Recover(UsersContext context);
     public Task Download(ApiContext context);
 }

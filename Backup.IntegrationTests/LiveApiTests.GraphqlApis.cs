@@ -37,7 +37,12 @@ public partial class LiveApiTests
     private static async Task AssertApiRequestWorks(string apiName)
     {
         App.Models.Config.App config = LiveApiTestSupport.LoadAppConfig();
-        Request? request = RequestMerge.Build(config.Api, apiName);
+
+        IReadOnlyDictionary<string, App.Models.Config.Api.Api> primaryApi = config
+            .UsersContext[0]
+            .Api;
+
+        Request? request = RequestMerge.Build(primaryApi, apiName);
 
         if (request is null)
             return;

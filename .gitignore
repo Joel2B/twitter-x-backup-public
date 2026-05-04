@@ -403,3 +403,4 @@ FodyWeavers.xsd
 
 # Local split runtime config
 App/Config/*.json
+App/Config/**/*.json

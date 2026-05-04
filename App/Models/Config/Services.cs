@@ -2,7 +2,7 @@ namespace Backup.App.Models.Config;
 
 public class Services
 {
-    public required UserService User { get; set; }
+    public List<UserService> Users { get; set; } = [];
     public required Recovery Recovery { get; set; }
     public required DumpService Dump { get; set; }
 }

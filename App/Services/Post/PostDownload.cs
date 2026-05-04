@@ -97,7 +97,11 @@ public class PostDownload(
 
                     if (!string.IsNullOrEmpty(response))
                     {
-                        await _postLogger.Save(Context.Id, response, _tokenSource.Token);
+                        await _postLogger.Save(
+                            $"{UserId}_{Context.Id}",
+                            response,
+                            _tokenSource.Token
+                        );
 
                         result = _parser.Parse(UserId, Context.Id, response);
                     }

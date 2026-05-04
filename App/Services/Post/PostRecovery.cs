@@ -27,11 +27,11 @@ public class PostRecovery(
 
     private readonly CancellationTokenSource _tokenSource = new();
 
-    public async Task Recovery(IPostData postData, string userId)
+    public async Task Recovery(IPostData postData, Models.Config.Api.UsersContext context)
     {
         try
         {
-            List<Models.Post.Post> posts = await Download(userId);
+            List<Models.Post.Post> posts = await Download(context);
 
             if (posts.Count == 0)
             {
@@ -39,7 +39,7 @@ public class PostRecovery(
                 return;
             }
 
-            await postData.AddPosts(userId, RecoveryOrigin, posts, new() { Index = false });
+            await postData.AddPosts(context.UserId, RecoveryOrigin, posts, new() { Index = false });
             _logger.LogInformation("post {post} merged", posts.Count);
 
             _logger.LogInformation("saving posts");
@@ -51,7 +51,7 @@ public class PostRecovery(
         }
     }
 
-    private async Task<List<Models.Post.Post>> Download(string userId)
+    private async Task<List<Models.Post.Post>> Download(Models.Config.Api.UsersContext context)
     {
         List<Models.Post.Post> posts = [];
         List<Logs>? logs = await _mediaLogger.GetErrors();
@@ -79,7 +79,7 @@ public class PostRecovery(
         if (ids.Count == 0)
             return posts;
 
-        Request? request = RequestMerge.Build(_config.Api, "TweetDetail");
+        Request? request = RequestMerge.Build(context.Api, "TweetDetail");
 
         if (request is null)
         {
@@ -94,7 +94,7 @@ public class PostRecovery(
             request.Query.Variables["focalTweetId"] = id;
 
             string response = await _downloader.Download(request, _tokenSource.Token);
-            ParseResult result = _parser.Parse(userId, RecoveryOrigin, response);
+            ParseResult result = _parser.Parse(context.UserId, RecoveryOrigin, response);
 
             if (result.Posts.Count == 0)
                 continue;

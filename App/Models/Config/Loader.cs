@@ -14,18 +14,34 @@ public static class ConfigLoader
 
     private static App LoadSplit(string configDirectory)
     {
-        Dictionary<string, ApiConfig.Api> api = LoadApiFile(configDirectory);
-        ValidateAndNormalizeApi(api);
-
-        Dictionary<string, FetchItem> fetch = LoadFetchFile(configDirectory, api);
-        ApplyFetchToApi(api, fetch);
-
         Services services = LoadFile<Services>(configDirectory, "Services.json");
         ValidateServices(services);
 
+        Dictionary<string, Dictionary<string, ApiConfig.Api>> apiByUser = LoadApiFiles(
+            configDirectory,
+            services
+        );
+
+        foreach (Dictionary<string, ApiConfig.Api> api in apiByUser.Values)
+            ValidateAndNormalizeApi(api);
+
+        Dictionary<string, ApiConfig.Api> firstUserApi = apiByUser[services.Users[0].Id];
+        Dictionary<string, FetchItem> fetch = LoadFetchFile(configDirectory, firstUserApi);
+
+        foreach (Dictionary<string, ApiConfig.Api> api in apiByUser.Values)
+            ApplyFetchToApi(api, fetch);
+
+        List<ApiConfig.UsersContext> contexts = services
+            .Users.Select(user => new ApiConfig.UsersContext
+            {
+                UserId = user.Id,
+                Api = apiByUser[user.Id],
+            })
+            .ToList();
+
         return new()
         {
-            Api = api,
+            UsersContext = contexts,
             Fetch = fetch,
             Services = services,
             Data = LoadFile<Data.Data>(configDirectory, "Data.json", prefix: "BACKUP__"),
@@ -39,11 +55,43 @@ public static class ConfigLoader
         };
     }
 
-    private static Dictionary<string, ApiConfig.Api> LoadApiFile(string configDirectory)
+    private static Dictionary<string, Dictionary<string, ApiConfig.Api>> LoadApiFiles(
+        string configDirectory,
+        Services services
+    )
     {
-        Dictionary<string, ApiConfig.Api> api = LoadFile<Dictionary<string, ApiConfig.Api>>(
-            configDirectory,
-            "Api.json"
+        string apiDirectory = Path.Combine(configDirectory, "Api");
+
+        if (!Directory.Exists(apiDirectory))
+            throw new Exception(
+                "error deserializing config folder 'Api': directory does not exist"
+            );
+
+        Dictionary<string, Dictionary<string, ApiConfig.Api>> apiByUser = [];
+        string[] files = Directory.GetFiles(apiDirectory, "*.json", SearchOption.TopDirectoryOnly);
+
+        if (files.Length == 0)
+            throw new Exception("error deserializing config folder 'Api': no json files found");
+
+        foreach (UserService user in services.Users)
+        {
+            string file = Path.Combine(apiDirectory, $"{user.Id}.json");
+
+            if (!File.Exists(file))
+                throw new Exception(
+                    $"error deserializing config folder 'Api': file '{user.Id}.json' not found for user '{user.Id}'"
+                );
+
+            apiByUser[user.Id] = LoadApiFile(file);
+        }
+
+        return apiByUser;
+    }
+
+    private static Dictionary<string, ApiConfig.Api> LoadApiFile(string path)
+    {
+        Dictionary<string, ApiConfig.Api> api = LoadFileByPath<Dictionary<string, ApiConfig.Api>>(
+            path
         );
 
         foreach (var kvp in api)
@@ -53,17 +101,17 @@ public static class ConfigLoader
 
             if (value is null)
                 throw new Exception(
-                    $"error deserializing config file 'Api.json': entry '{key}' is null"
+                    $"error deserializing api file '{Path.GetFileName(path)}': entry '{key}' is null"
                 );
 
             if (string.IsNullOrWhiteSpace(value.Id))
                 throw new Exception(
-                    $"error deserializing config file 'Api.json': entry '{key}' is missing required field 'Id'"
+                    $"error deserializing api file '{Path.GetFileName(path)}': entry '{key}' is missing required field 'Id'"
                 );
 
             if (value.Request is null)
                 throw new Exception(
-                    $"error deserializing config file 'Api.json': entry '{key}' is missing required field 'Request'"
+                    $"error deserializing api file '{Path.GetFileName(path)}': entry '{key}' is missing required field 'Request'"
                 );
         }
 
@@ -87,7 +135,7 @@ public static class ConfigLoader
 
             if (!api.ContainsKey(key))
                 throw new Exception(
-                    $"error deserializing config file 'Fetch.json': key '{key}' does not exist in 'Api.json'"
+                    $"error deserializing config file 'Fetch.json': key '{key}' does not exist in api files"
                 );
 
             if (value is null)
@@ -124,7 +172,7 @@ public static class ConfigLoader
 
             if (!request.Query.Variables.ContainsKey("count"))
                 throw new Exception(
-                    $"error deserializing config file 'Fetch.json': key '{kvp.Key}' requires 'Request:Query:Variables:count' in 'Api.json'"
+                    $"error deserializing config file 'Fetch.json': key '{kvp.Key}' requires 'Request:Query:Variables:count' in api config"
                 );
 
             request.Query.Variables["count"] = kvp.Value.Api;
@@ -142,17 +190,17 @@ public static class ConfigLoader
 
             if (string.IsNullOrWhiteSpace(request.Url))
                 throw new Exception(
-                    $"error deserializing config file 'Api.json': entry '{key}' is missing required field 'Request:Url'"
+                    $"error deserializing api file: entry '{key}' is missing required field 'Request:Url'"
                 );
 
             if (request.Query is null)
                 throw new Exception(
-                    $"error deserializing config file 'Api.json': entry '{key}' is missing required field 'Request:Query'"
+                    $"error deserializing api file: entry '{key}' is missing required field 'Request:Query'"
                 );
 
             if (request.Query.Variables is null)
                 throw new Exception(
-                    $"error deserializing config file 'Api.json': entry '{key}' is missing required field 'Request:Query:Variables'"
+                    $"error deserializing api file: entry '{key}' is missing required field 'Request:Query:Variables'"
                 );
 
             RequestMergeUtils.NormalizeVariables(request.Query.Variables);
@@ -166,7 +214,7 @@ public static class ConfigLoader
 
             if (!TryReadCount(countValue, out int normalizedCount))
                 throw new Exception(
-                    $"error deserializing config file 'Api.json': entry '{key}' has invalid 'Request:Query:Variables:count' (must be positive integer or -1)"
+                    $"error deserializing api file: entry '{key}' has invalid 'Request:Query:Variables:count' (must be positive integer or -1)"
                 );
 
             request.Query.Variables["count"] = normalizedCount;
@@ -176,24 +224,40 @@ public static class ConfigLoader
 
     private static void ValidateServices(Services services)
     {
-        if (services.User is null)
+        if (services.Users.Count == 0)
             throw new Exception(
-                "error deserializing config file 'Services.json': section 'User' is required"
+                "error deserializing config file 'Services.json': section 'Users' is required"
             );
 
-        string userId = services.User.Id?.Trim() ?? string.Empty;
+        HashSet<string> userIds = [];
 
-        if (string.IsNullOrWhiteSpace(userId))
-            throw new Exception(
-                "error deserializing config file 'Services.json': field 'User:Id' is required"
-            );
+        foreach (UserService user in services.Users)
+        {
+            string userId = user.Id?.Trim() ?? string.Empty;
 
-        services.User.Id = userId;
+            if (string.IsNullOrWhiteSpace(userId))
+                throw new Exception(
+                    "error deserializing config file 'Services.json': field 'Users:Id' is required"
+                );
+
+            if (!userIds.Add(userId))
+                throw new Exception(
+                    $"error deserializing config file 'Services.json': duplicate user id '{userId}'"
+                );
+
+            user.Id = userId;
+        }
     }
 
     private static T LoadFile<T>(string configDirectory, string fileName, string? prefix = null)
     {
         string path = Path.Combine(configDirectory, fileName);
+        return LoadFileByPath<T>(path, prefix);
+    }
+
+    private static T LoadFileByPath<T>(string path, string? prefix = null)
+    {
+        string fileName = Path.GetFileName(path);
 
         ConfigurationBuilder builder = new();
         builder.AddJsonFile(path, optional: false, reloadOnChange: false);
