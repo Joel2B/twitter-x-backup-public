@@ -238,10 +238,12 @@ public class LocalDumpData(
             .ToList();
 
         string mainPath = await GetPathCurrent(context);
+        string primaryPath = GetPath(_partition.GetPrimary());
+        string relativePath = Path.GetRelativePath(primaryPath, mainPath);
 
         foreach (Models.Config.Data.Partition partition in partitions)
         {
-            string path = Path.Combine(GetPath(partition), Path.GetFileName(mainPath));
+            string path = Path.Combine(GetPath(partition), relativePath);
             Utils.Path.CopyDirectory(mainPath, path);
         }
     }
