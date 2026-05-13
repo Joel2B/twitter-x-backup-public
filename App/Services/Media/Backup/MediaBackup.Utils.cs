@@ -21,7 +21,7 @@ public partial class MediaBackup : IMediaBackup
 
             foreach (ChunkData chunkData in _chunks[kvp.Key].Data)
             {
-                Cache? cache = await _mediaData.GetCache(chunkData.Path);
+                Cache? cache = await MediaData.GetCache(chunkData.Path);
 
                 if (cache is not null)
                     size += cache.Size?.File ?? 0;

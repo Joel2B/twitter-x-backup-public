@@ -66,7 +66,7 @@ public partial class MediaBackup : IMediaBackup
 
         foreach (string path in _paths)
         {
-            Cache? cache = await _mediaData.GetCache(path);
+            Cache? cache = await MediaData.GetCache(path);
 
             if (
                 cache is null
@@ -120,7 +120,7 @@ public partial class MediaBackup : IMediaBackup
 
             foreach (ChunkData chunkData in chunkBefore?.Data ?? [])
             {
-                Cache? cache = await _mediaData.GetCache(chunkData.Path);
+                Cache? cache = await MediaData.GetCache(chunkData.Path);
 
                 if (cache is not null)
                     sizeBefore += cache.Size?.File ?? 0;
@@ -128,7 +128,7 @@ public partial class MediaBackup : IMediaBackup
 
             foreach (ChunkData chunkData in _chunks[kvp.Key].Data)
             {
-                Cache? cache = await _mediaData.GetCache(chunkData.Path);
+                Cache? cache = await MediaData.GetCache(chunkData.Path);
 
                 if (cache is not null)
                     sizeAfter += cache.Size?.File ?? 0;
@@ -198,12 +198,12 @@ public partial class MediaBackup : IMediaBackup
                             return;
                         }
 
-                        Cache? cache = await _mediaData.GetCache(path);
+                        Cache? cache = await MediaData.GetCache(path);
 
                         if (cache is null || (cache.Size?.File <= _config.Chunk.Path.Size))
                             return;
 
-                        bool existsSource = await _mediaData.Exists(path);
+                        bool existsSource = await MediaData.Exists(path);
 
                         if (!existsSource)
                             throw new Exception();

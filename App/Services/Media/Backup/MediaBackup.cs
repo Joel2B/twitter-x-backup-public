@@ -12,7 +12,6 @@ public partial class MediaBackup(
     ILogger<MediaBackup> _logger,
     Models.Config.Data.Backup.Storage _config,
     IZipWriterFactory _zipWriterFactory,
-    IMediaData _mediaData,
     Interfaces.Data.Media.IMediaBackup _mediaBackup
 ) : IMediaBackup
 {
@@ -20,7 +19,8 @@ public partial class MediaBackup(
 
     private readonly Models.Config.Data.Backup.Storage _config = _config;
     private List<string> _paths = [];
-    private readonly IMediaData _mediaData = _mediaData;
+    private IMediaData? _mediaData;
+    private IMediaData MediaData => _mediaData ?? throw new Exception("media data not initialized");
     private readonly Interfaces.Data.Media.IMediaBackup _mediaBackup = _mediaBackup;
     private Models.Media.Backup.Backup _backup = new()
     {
@@ -41,8 +41,10 @@ public partial class MediaBackup(
 
     private readonly bool _stop = false;
 
-    public async Task Backup(List<Download> downloads)
+    public async Task Backup(List<Download> downloads, IMediaData mediaData)
     {
+        _mediaData = mediaData;
+
         using (_logger.LogTimer(Id, "processing paths"))
             _paths = [.. downloads.SelectMany(o => o.Data).Select(o => o.Path)];
 

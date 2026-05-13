@@ -12,34 +12,29 @@ public static class BulkDataCollectionExtensions
 {
     public static IServiceCollection AddBulkData(this IServiceCollection services)
     {
-        Dictionary<string, Type> types = new() { { "local", typeof(LocalBulkData) } };
+        Dictionary<string, Type> types = new() { ["local"] = typeof(LocalBulkData) };
 
-        List<Storage> config = services
-            .GetAppConfig()
-            .Data.Bulk.Where(o => o.Enabled && types.Keys.ToList().Contains(o.Type))
-            .ToList();
+        List<DataCollectionExtensions.DataRegistration<Storage>> registrations =
+            services.ResolveRegistrations(services.GetAppConfig().Data.Bulk, types, keyOffset: 100);
 
-        for (int i = 0; i < config.Count; i++)
+        foreach (DataCollectionExtensions.DataRegistration<Storage> registration in registrations)
         {
-            Storage storage = config[i];
-
-            string id = (i + 100).ToString();
-            storage.Id ??= id;
-
-            Type type = types["local"];
+            Storage storage = registration.Storage;
+            string key = registration.Key;
+            Type type = registration.ImplementationType;
 
             services.AddKeyedScoped(
-                id,
+                key,
                 (sp, _) =>
                     (IPartition)
                         ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
             );
 
             services.AddKeyedScoped(
-                id,
+                key,
                 (sp, _) =>
                 {
-                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(id);
+                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
                     IBulkSourceData? instance = (IBulkSourceData)
                         ActivatorUtilities.CreateInstance(
@@ -54,28 +49,28 @@ public static class BulkDataCollectionExtensions
             );
 
             services.AddKeyedScoped(
-                id,
+                key,
                 (sp, _) =>
                 {
-                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(id);
+                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
                     IBulkData? instance = (IBulkData)
                         ActivatorUtilities.CreateInstance(sp, type, storage, partition);
 
-                    instance.Id = storage.Id;
+                    instance.Id = registration.Id;
 
                     return instance;
                 }
             );
 
-            services.AddScoped(sp => sp.GetRequiredKeyedService<IBulkSourceData>(id));
-            services.AddScoped(sp => sp.GetRequiredKeyedService<IBulkData>(id));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IBulkSourceData>(key));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IBulkData>(key));
 
             if (typeof(ISetup).IsAssignableFrom(typeof(LocalBulkSourceData)))
-                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IBulkSourceData>(id));
+                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IBulkSourceData>(key));
 
-            if (typeof(ISetup).IsAssignableFrom(type))
-                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IBulkData>(id));
+            if (type.IsSetupType())
+                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IBulkData>(key));
         }
 
         return services;

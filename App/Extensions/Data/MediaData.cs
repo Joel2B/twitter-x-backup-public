@@ -12,34 +12,33 @@ public static class MediaDataCollectionExtensions
 {
     public static IServiceCollection AddMediaData(this IServiceCollection services)
     {
-        Dictionary<string, Type> types = new() { { "local", typeof(LocalMediaData) } };
+        Dictionary<string, Type> types = new() { ["local"] = typeof(LocalMediaData) };
 
-        List<Storage> config = services
-            .GetAppConfig()
-            .Data.Media.Where(o => o.Enabled && types.Keys.ToList().Contains(o.Type))
-            .ToList();
+        List<DataCollectionExtensions.DataRegistration<Storage>> registrations =
+            services.ResolveRegistrations(
+                services.GetAppConfig().Data.Media,
+                types,
+                keyOffset: 200
+            );
 
-        for (int i = 0; i < config.Count; i++)
+        foreach (DataCollectionExtensions.DataRegistration<Storage> registration in registrations)
         {
-            Storage storage = config[i];
-
-            string id = (i + 200).ToString();
-            storage.Id ??= id;
-
-            Type type = types["local"];
+            Storage storage = registration.Storage;
+            string key = registration.Key;
+            Type type = registration.ImplementationType;
 
             services.AddKeyedScoped(
-                id,
+                key,
                 (sp, _) =>
                     (IPartition)
                         ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
             );
 
             services.AddKeyedScoped(
-                id,
+                key,
                 (sp, _) =>
                 {
-                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(id);
+                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
                     LocalMediaCache? instance = (LocalMediaCache)
                         ActivatorUtilities.CreateInstance(
@@ -54,30 +53,34 @@ public static class MediaDataCollectionExtensions
             );
 
             services.AddKeyedScoped(
-                id,
+                key,
                 (sp, _) =>
                 {
-                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(id);
-                    LocalMediaCache cache = sp.GetRequiredKeyedService<LocalMediaCache>(id);
+                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
+                    LocalMediaCache cache = sp.GetRequiredKeyedService<LocalMediaCache>(key);
 
                     IMediaData? instance = (IMediaData)
                         ActivatorUtilities.CreateInstance(sp, type, storage, partition, cache);
 
-                    instance.Id = storage.Id;
+                    instance.Id = registration.Id;
 
                     return instance;
                 }
             );
 
-            if (typeof(ISetup).IsAssignableFrom(type))
+            if (type.IsSetupType())
+            {
                 services.AddKeyedScoped(
-                    id,
-                    (sp, _) => (ISetup)sp.GetRequiredKeyedService<IMediaData>(id)
+                    key,
+                    (sp, _) => (ISetup)sp.GetRequiredKeyedService<IMediaData>(key)
                 );
+            }
 
-            services.AddScoped<ISetup>(sp => sp.GetRequiredKeyedService<LocalMediaCache>(id));
-            services.AddScoped(sp => sp.GetRequiredKeyedService<IMediaData>(id));
-            services.AddScoped(sp => sp.GetRequiredKeyedService<ISetup>(id));
+            services.AddScoped<ISetup>(sp => sp.GetRequiredKeyedService<LocalMediaCache>(key));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IMediaData>(key));
+
+            if (type.IsSetupType())
+                services.AddScoped(sp => sp.GetRequiredKeyedService<ISetup>(key));
         }
 
         return services;

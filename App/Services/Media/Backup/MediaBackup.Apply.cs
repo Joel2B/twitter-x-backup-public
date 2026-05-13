@@ -27,7 +27,7 @@ public partial class MediaBackup : IMediaBackup
                     if (chunkData.Hash is not null)
                         continue;
 
-                    chunkData.Hash = await _mediaData.GetHash(
+                    chunkData.Hash = await MediaData.GetHash(
                         Utils.Path.NormalizePath(chunkData.Path)
                     );
 
@@ -60,7 +60,7 @@ public partial class MediaBackup : IMediaBackup
 
                     storagePaths.Add(relativePath);
 
-                    await using Stream read = await _mediaData.Read(
+                    await using Stream read = await MediaData.Read(
                         Utils.Path.NormalizePath(chunkData.Path)
                     );
 
@@ -220,7 +220,7 @@ public partial class MediaBackup : IMediaBackup
                             return;
                         }
 
-                        await using Stream read = await _mediaData.Read(
+                        await using Stream read = await MediaData.Read(
                             Utils.Path.NormalizePath(path)
                         );
 

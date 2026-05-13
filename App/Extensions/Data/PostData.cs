@@ -12,52 +12,51 @@ public static class PostDataCollectionExtensions
 {
     public static IServiceCollection AddPostData(this IServiceCollection services)
     {
-        Dictionary<string, Type> types = new() { { "local", typeof(LocalPostData) } };
+        Dictionary<string, Type> types = new() { ["local"] = typeof(LocalPostData) };
 
-        List<Storage> config = services
-            .GetAppConfig()
-            .Data.Post.Where(o => o.Enabled && types.Keys.ToList().Contains(o.Type))
-            .ToList();
+        List<DataCollectionExtensions.DataRegistration<Storage>> registrations =
+            services.ResolveRegistrations(services.GetAppConfig().Data.Post, types, keyOffset: 0);
 
-        for (int i = 0; i < config.Count; i++)
+        foreach (DataCollectionExtensions.DataRegistration<Storage> registration in registrations)
         {
-            Storage storage = config[i];
-
-            string id = i.ToString();
-            storage.Id ??= id;
-
-            Type type = types["local"];
+            Storage storage = registration.Storage;
+            string key = registration.Key;
+            Type type = registration.ImplementationType;
 
             services.AddKeyedScoped(
-                id,
+                key,
                 (sp, _) =>
                     (IPartition)
                         ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
             );
 
             services.AddKeyedScoped(
-                id,
+                key,
                 (sp, _) =>
                 {
-                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(id);
+                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
                     IPostData? instance = (IPostData)
                         ActivatorUtilities.CreateInstance(sp, type, storage, partition);
 
-                    instance.Id = storage.Id;
+                    instance.Id = registration.Id;
 
                     return instance;
                 }
             );
 
-            if (typeof(ISetup).IsAssignableFrom(type))
+            if (type.IsSetupType())
+            {
                 services.AddKeyedScoped(
-                    id,
-                    (sp, _) => (ISetup)sp.GetRequiredKeyedService<IPostData>(id)
+                    key,
+                    (sp, _) => (ISetup)sp.GetRequiredKeyedService<IPostData>(key)
                 );
+            }
 
-            services.AddScoped(sp => sp.GetRequiredKeyedService<IPostData>(id));
-            services.AddScoped(sp => sp.GetRequiredKeyedService<ISetup>(id));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IPostData>(key));
+
+            if (type.IsSetupType())
+                services.AddScoped(sp => sp.GetRequiredKeyedService<ISetup>(key));
         }
 
         return services;

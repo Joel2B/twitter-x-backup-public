@@ -1,7 +1,8 @@
 using Backup.App.Data.Partition;
 using Backup.App.Interfaces;
+using Backup.App.Interfaces.Config;
 using Backup.App.Interfaces.Partition;
-using Backup.App.Models.Config;
+using Backup.App.Services.Config;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.App.Extensions;
@@ -10,8 +11,13 @@ public static class CoreCollectionExtensions
 {
     public static IServiceCollection AddCore(this IServiceCollection services)
     {
-        Models.Config.App config = ConfigLoader.Load();
+        IAppConfigStore store = new JsonAppConfigStore();
+        IAppConfigService configService = new AppConfigService(store);
+        AppConfigSnapshot snapshot = configService.GetSnapshot();
+        Models.Config.App config = snapshot.Value;
 
+        services.AddSingleton(store);
+        services.AddSingleton(configService);
         services.AddSingleton(config);
 
         services.AddLogging();

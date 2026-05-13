@@ -28,10 +28,10 @@ public class App(
         {
             _logger.LogInfo("running backup for user id: {userId}", context.UserId);
 
-            await RunPostRecoveryServices(context);
             await RunPostSources(context);
         }
 
+        await RunPostRecoveryServices(contexts[0]);
         await RunBulkServices(contexts[0]);
         await RunMediaServices();
     }

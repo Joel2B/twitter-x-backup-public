@@ -12,34 +12,35 @@ public static class MediaBackupCollectionExtensions
 {
     public static IServiceCollection AddMediaBackup(this IServiceCollection services)
     {
-        Dictionary<string, Type> types = new() { { "local", typeof(MediaBackup) } };
+        Dictionary<string, Type> types = new() { ["local"] = typeof(MediaBackup) };
 
-        List<Models.Config.Data.Backup.Storage> config = services
-            .GetAppConfig()
-            .Data.Backup.Where(o => o.Enabled && types.Keys.ToList().Contains(o.Type))
-            .ToList();
+        List<DataCollectionExtensions.DataRegistration<Models.Config.Data.Backup.Storage>> registrations =
+            services.ResolveRegistrations(
+                services.GetAppConfig().Data.Backup,
+                types,
+                keyOffset: 400
+            );
 
-        for (int i = 0; i < config.Count; i++)
+        foreach (
+            DataCollectionExtensions.DataRegistration<Models.Config.Data.Backup.Storage> registration in registrations
+        )
         {
-            Models.Config.Data.Backup.Storage storage = config[i];
-
-            string id = (i + 400).ToString();
-            storage.Id ??= id;
-
-            Type type = types["local"];
+            Models.Config.Data.Backup.Storage storage = registration.Storage;
+            string key = registration.Key;
+            Type type = registration.ImplementationType;
 
             services.AddKeyedScoped(
-                id,
+                key,
                 (sp, _) =>
                     (IPartition)
                         ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
             );
 
             services.AddKeyedScoped(
-                id,
+                key,
                 (sp, _) =>
                 {
-                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(id);
+                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
                     Interfaces.Data.Media.IMediaBackup? instance =
                         (Interfaces.Data.Media.IMediaBackup)
@@ -55,33 +56,26 @@ public static class MediaBackupCollectionExtensions
             );
 
             services.AddKeyedScoped(
-                id,
+                key,
                 (sp, _) =>
                 {
-                    IMediaData mediaData = sp.GetRequiredKeyedService<IMediaData>("200");
                     Interfaces.Data.Media.IMediaBackup mediaBackup =
-                        sp.GetRequiredKeyedService<Interfaces.Data.Media.IMediaBackup>(id);
+                        sp.GetRequiredKeyedService<Interfaces.Data.Media.IMediaBackup>(key);
 
                     IMediaBackup? instance = (IMediaBackup)
-                        ActivatorUtilities.CreateInstance(
-                            sp,
-                            type,
-                            storage,
-                            mediaData,
-                            mediaBackup
-                        );
+                        ActivatorUtilities.CreateInstance(sp, type, storage, mediaBackup);
 
-                    instance.Id = storage.Id;
+                    instance.Id = registration.Id;
 
                     return instance;
                 }
             );
 
             services.AddScoped(sp =>
-                (ISetup)sp.GetRequiredKeyedService<Interfaces.Data.Media.IMediaBackup>(id)
+                (ISetup)sp.GetRequiredKeyedService<Interfaces.Data.Media.IMediaBackup>(key)
             );
 
-            services.AddScoped(sp => sp.GetRequiredKeyedService<IMediaBackup>(id));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IMediaBackup>(key));
         }
 
         return services;

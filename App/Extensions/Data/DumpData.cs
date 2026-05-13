@@ -12,34 +12,28 @@ public static class DumpsDataCollectionExtensions
 {
     public static IServiceCollection AddDumpData(this IServiceCollection services)
     {
-        Dictionary<string, Type> types = new() { { "local", typeof(LocalDumpData) } };
+        Dictionary<string, Type> types = new() { ["local"] = typeof(LocalDumpData) };
+        List<DataCollectionExtensions.DataRegistration<Storage>> registrations =
+            services.ResolveRegistrations(services.GetAppConfig().Data.Dump, types, keyOffset: 300);
 
-        List<Storage> config = services
-            .GetAppConfig()
-            .Data.Dump.Where(o => o.Enabled && types.Keys.ToList().Contains(o.Type))
-            .ToList();
-
-        for (int i = 0; i < config.Count; i++)
+        foreach (DataCollectionExtensions.DataRegistration<Storage> registration in registrations)
         {
-            Storage storage = config[i];
-
-            string id = (i + 300).ToString();
-            storage.Id ??= id;
-
-            Type type = types["local"];
+            Storage storage = registration.Storage;
+            string key = registration.Key;
+            Type type = registration.ImplementationType;
 
             services.AddKeyedScoped(
-                id,
+                key,
                 (sp, _) =>
                     (IPartition)
                         ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
             );
 
             services.AddKeyedScoped(
-                id,
+                key,
                 (sp, _) =>
                 {
-                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(id);
+                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
                     IDumpsData? instance = (IDumpsData)
                         ActivatorUtilities.CreateInstance(
@@ -54,28 +48,28 @@ public static class DumpsDataCollectionExtensions
             );
 
             services.AddKeyedScoped(
-                id,
+                key,
                 (sp, _) =>
                 {
-                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(id);
+                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
                     IDumpData? instance = (IDumpData)
                         ActivatorUtilities.CreateInstance(sp, type, storage, partition);
 
-                    instance.Id = storage.Id;
+                    instance.Id = registration.Id;
 
                     return instance;
                 }
             );
 
-            services.AddScoped(sp => sp.GetRequiredKeyedService<IDumpsData>(id));
-            services.AddScoped(sp => sp.GetRequiredKeyedService<IDumpData>(id));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IDumpsData>(key));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IDumpData>(key));
 
             if (typeof(ISetup).IsAssignableFrom(typeof(LocalDumpsData)))
-                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IDumpsData>(id));
+                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IDumpsData>(key));
 
-            if (typeof(ISetup).IsAssignableFrom(type))
-                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IDumpData>(id));
+            if (type.IsSetupType())
+                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IDumpData>(key));
         }
 
         return services;

@@ -1,15 +1,25 @@
 using Backup.App.Models.Config.Request;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using ApiConfig = Backup.App.Models.Config.Api;
 
 namespace Backup.App.Models.Config;
 
 public static class ConfigLoader
 {
-    public static App Load()
+    public static string GetConfigDirectory() => Path.Combine(AppContext.BaseDirectory, "config");
+
+    public static App Load() => LoadSplit(GetConfigDirectory());
+
+    public static Data.Data LoadData() =>
+        LoadFile<Data.Data>(GetConfigDirectory(), "Data.json", prefix: "BACKUP__");
+
+    public static void SaveData(Data.Data data)
     {
-        string configDirectory = Path.Combine(AppContext.BaseDirectory, "config");
-        return LoadSplit(configDirectory);
+        string path = Path.Combine(GetConfigDirectory(), "Data.json");
+        string json = JsonConvert.SerializeObject(data, Formatting.Indented);
+
+        File.WriteAllText(path, json);
     }
 
     private static App LoadSplit(string configDirectory)

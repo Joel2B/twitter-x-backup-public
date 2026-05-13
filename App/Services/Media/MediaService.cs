@@ -103,8 +103,16 @@ public class MediaService(
 
         foreach (IMediaBackup backup in _mediaBackups)
         {
+            IMediaData? backupSource = _mediaData.FirstOrDefault();
+
+            if (backupSource is null)
+            {
+                _logger.LogWarning(backup.Id, "no media data configured for backup source");
+                continue;
+            }
+
             using (_logger.LogTimer(backup.Id, "backing up media"))
-                await backup.Backup(filtered);
+                await backup.Backup(filtered, backupSource);
         }
     }
 
