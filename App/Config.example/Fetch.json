@@ -10,5 +10,9 @@
   "bookmarks": {
     "Count": 500,
     "Api": 100
+  },
+  "SearchTimeline": {
+    "Count": 500,
+    "Api": 100
   }
 }
