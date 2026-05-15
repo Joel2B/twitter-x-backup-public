@@ -11,7 +11,7 @@ public partial class BulkService
     {
         _logger.LogInformation("running phase 1");
 
-        IPostData postData = _postData.First();
+        IPostData postData = _postData;
         int postCount = await postData.GetCount();
 
         _logger.LogInformation("post count: {count}", postCount);
@@ -153,8 +153,5 @@ public partial class BulkService
 
         _logger.LogInformation("saving bulks");
         await _bulkData.Save(bulks);
-
-        _logger.LogInformation("replicating posts");
-        await _postReplication.Replicate(_postData);
     }
 }

@@ -12,9 +12,10 @@ public class LocalBulkData(
     Models.Config.App _appConfig,
     Storage _config,
     IPartition _partition
-) : IBulkData, ISetup
+) : IBulkDataStore, ISetup
 {
     public string? Id { get; set; }
+    public bool IsDefault { get; set; }
 
     private readonly ILogger<LocalBulkData> _logger = _logger;
     private readonly Models.Config.App _appConfig = _appConfig;

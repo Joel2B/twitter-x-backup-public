@@ -12,9 +12,10 @@ public partial class LocalPostData(
     Models.Config.App _appConfig,
     Storage _config,
     IPartition _partition
-) : IPostData, ISetup
+) : IPostDataStore, ISetup
 {
     public string? Id { get; set; }
+    public bool IsDefault { get; set; }
 
     private readonly ILogger<LocalPostData> _logger = _logger;
     private readonly Models.Config.App _appConfig = _appConfig;

@@ -13,23 +13,21 @@ namespace Backup.App.Services.Bulk;
 public partial class BulkService(
     ILogger<BulkService> _logger,
     Models.Config.App _config,
-    IEnumerable<IPostData> _postData,
-    IEnumerable<IBulkSourceData> _bulkSourceData,
-    IEnumerable<IBulkData> _bulkData,
+    IPostData _postData,
+    IBulkSourceData _bulkSourceData,
+    IBulkData _bulkData,
     IPostDownloader _downloader,
-    IPostParser _parser,
-    IPostReplication _postReplication
+    IPostParser _parser
 ) : IBulkService
 {
     private readonly ILogger<BulkService> _logger = _logger;
 
     private readonly Models.Config.App _config = _config;
-    private readonly IEnumerable<IPostData> _postData = _postData;
-    private readonly IBulkSourceData _bulkSourceData = _bulkSourceData.First();
-    private readonly IBulkData _bulkData = _bulkData.First();
+    private readonly IPostData _postData = _postData;
+    private readonly IBulkSourceData _bulkSourceData = _bulkSourceData;
+    private readonly IBulkData _bulkData = _bulkData;
     private readonly IPostDownloader _downloader = _downloader;
     private readonly IPostParser _parser = _parser;
-    private readonly IPostReplication _postReplication = _postReplication;
 
     private readonly CancellationTokenSource _tokenSource = new();
     private UsersContext? _context;

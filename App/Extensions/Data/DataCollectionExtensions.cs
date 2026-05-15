@@ -6,7 +6,6 @@ namespace Backup.App.Extensions;
 internal static class DataCollectionExtensions
 {
     internal readonly record struct DataRegistration<TStorage>(
-        int Index,
         string Key,
         string Id,
         TStorage Storage,
@@ -23,8 +22,20 @@ internal static class DataCollectionExtensions
         where TStorage : Models.Config.Data.Storage
     {
         List<TStorage> enabled = storages
-            .Where(o => o.Enabled && types.ContainsKey(o.Type))
+            .Where(storage => storage.Enabled && types.ContainsKey(storage.Type))
             .ToList();
+
+        int defaultCount = enabled.Count(storage => storage.Default);
+
+        if (enabled.Count > 0 && defaultCount == 0)
+            throw new InvalidOperationException(
+                "At least one enabled storage must have Default=true in the same data collection."
+            );
+
+        if (defaultCount > 1)
+            throw new InvalidOperationException(
+                "Only one enabled storage can have Default=true in the same data collection."
+            );
 
         List<DataRegistration<TStorage>> registrations = new(enabled.Count);
 
@@ -37,7 +48,6 @@ internal static class DataCollectionExtensions
 
             registrations.Add(
                 new(
-                    Index: i,
                     Key: key,
                     Id: storage.Id,
                     Storage: storage,

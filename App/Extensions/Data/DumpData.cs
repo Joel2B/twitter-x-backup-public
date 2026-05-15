@@ -35,13 +35,15 @@ public static class DumpsDataCollectionExtensions
                 {
                     IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
-                    IDumpsData? instance = (IDumpsData)
+                    IDumpsDataStore instance = (IDumpsDataStore)
                         ActivatorUtilities.CreateInstance(
                             sp,
                             typeof(LocalDumpsData),
                             storage,
                             partition
                         );
+
+                    instance.IsDefault = storage.Default;
 
                     return instance;
                 }
@@ -53,24 +55,28 @@ public static class DumpsDataCollectionExtensions
                 {
                     IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
-                    IDumpData? instance = (IDumpData)
+                    IDumpDataStore instance = (IDumpDataStore)
                         ActivatorUtilities.CreateInstance(sp, type, storage, partition);
 
                     instance.Id = registration.Id;
+                    instance.IsDefault = storage.Default;
 
                     return instance;
                 }
             );
 
-            services.AddScoped(sp => sp.GetRequiredKeyedService<IDumpsData>(key));
-            services.AddScoped(sp => sp.GetRequiredKeyedService<IDumpData>(key));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IDumpsDataStore>(key));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IDumpDataStore>(key));
 
             if (typeof(ISetup).IsAssignableFrom(typeof(LocalDumpsData)))
-                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IDumpsData>(key));
+                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IDumpsDataStore>(key));
 
             if (type.IsSetupType())
-                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IDumpData>(key));
+                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IDumpDataStore>(key));
         }
+
+        services.AddScoped<IDumpsData, DumpsDataMultiStore>();
+        services.AddScoped<IDumpData, DumpDataMultiStore>();
 
         return services;
     }

@@ -84,6 +84,7 @@
     {
       "Id": "local post",
       "Type": "local",
+      "Default": false,
       "Enabled": false,
       "Paths": {
         "Paths": ["data"],
@@ -100,6 +101,7 @@
     {
       "Id": "nas post json",
       "Type": "local",
+      "Default": true,
       "Enabled": true,
       "Paths": {
         "Paths": ["data"],
@@ -120,6 +122,7 @@
     {
       "Id": "nas dump",
       "Type": "local",
+      "Default": true,
       "Enabled": true,
       "Paths": {
         "Paths": ["data"],
@@ -144,6 +147,7 @@
     {
       "Id": "nas bulk",
       "Type": "local",
+      "Default": true,
       "Enabled": true,
       "Paths": {
         "Paths": ["data"],
@@ -165,6 +169,7 @@
     {
       "Id": "nas media",
       "Type": "local",
+      "Default": true,
       "Enabled": true,
       "SizeHeavy": 10485760,
       "Paths": {
@@ -195,6 +200,7 @@
     {
       "Id": "backup nas",
       "Type": "local",
+      "Default": true,
       "Enabled": true,
       "Paths": {
         "Paths": ["backup"],

@@ -9,21 +9,19 @@ namespace Backup.App.Services.Post;
 
 public class PostService(
     ILogger<PostService> _logger,
-    IEnumerable<IPostData> _postData,
+    IPostData _postData,
     IPostRecovery _postRecovery,
-    IPostDownload _postDownload,
-    IPostReplication _postReplication
+    IPostDownload _postDownload
 ) : IPostService
 {
     private readonly ILogger<PostService> _logger = _logger;
-    private readonly IEnumerable<IPostData> _postData = _postData;
+    private readonly IPostData _postData = _postData;
     private readonly IPostRecovery _postRecovery = _postRecovery;
     private readonly IPostDownload _postDownload = _postDownload;
-    private readonly IPostReplication _postReplication = _postReplication;
 
     public async Task Recover(UsersContext context)
     {
-        IPostData data = _postData.First();
+        IPostData data = _postData;
 
         _logger.LogInformation(data.Id, "post data: {name}", data.GetType().Name);
         _logger.LogInformation(data.Id, "recovering posts in {data}", data.GetType().Name);
@@ -32,15 +30,12 @@ public class PostService(
 
     public async Task Download(ApiContext context)
     {
-        IPostData data = _postData.First();
+        IPostData data = _postData;
 
         _logger.LogInformation(data.Id, "downloading posts");
         await _postDownload.Download(data, context);
 
         _logger.LogInformation(data.Id, "pruning posts");
         await data.Prune();
-
-        _logger.LogInformation(data.Id, "replicating posts");
-        await _postReplication.Replicate(_postData);
     }
 }

@@ -11,8 +11,9 @@ public class LocalBulkSourceData(
     ILogger<LocalBulkSourceData> _logger,
     Models.Config.Data.Bulk.Storage _config,
     IPartition _partition
-) : IBulkSourceData, ISetup
+) : IBulkSourceDataStore, ISetup
 {
+    public bool IsDefault { get; set; }
     private readonly ILogger<LocalBulkSourceData> _logger = _logger;
     private readonly Models.Config.Data.Bulk.Storage _config = _config;
     private readonly IPartition _partition = _partition;

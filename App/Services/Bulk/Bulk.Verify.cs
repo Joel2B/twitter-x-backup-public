@@ -9,7 +9,7 @@ public partial class BulkService
     private async Task Verify()
     {
         _logger.LogInformation("running verify");
-        IPostData postData = _postData.First();
+        IPostData postData = _postData;
 
         _logger.LogInformation("getting bulks");
         List<Models.Bulk.Bulk>? bulks = await _bulkData.GetBulks();

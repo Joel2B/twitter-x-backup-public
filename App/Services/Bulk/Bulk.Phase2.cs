@@ -29,7 +29,7 @@ public partial class BulkService
             return;
         }
 
-        IPostData postData = _postData.First();
+        IPostData postData = _postData;
 
         int progress = 1;
 
@@ -167,9 +167,6 @@ public partial class BulkService
 
         await postData.Save();
         await _bulkData.Save(data);
-
-        _logger.LogInformation("replicating posts");
-        await _postReplication.Replicate(_postData);
     }
 
     private async Task ResetPhase2()

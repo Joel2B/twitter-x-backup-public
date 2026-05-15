@@ -12,8 +12,11 @@ public static class PostDataCollectionExtensions
 {
     public static IServiceCollection AddPostData(this IServiceCollection services)
     {
-        Dictionary<string, Type> types = new() { ["local"] = typeof(LocalPostData) };
-
+        Dictionary<string, Type> types = new()
+        {
+            ["local"] = typeof(LocalPostData),
+            ["sqlite"] = typeof(SqlitePostData),
+        };
         List<DataCollectionExtensions.DataRegistration<Storage>> registrations =
             services.ResolveRegistrations(services.GetAppConfig().Data.Post, types, keyOffset: 0);
 
@@ -36,10 +39,11 @@ public static class PostDataCollectionExtensions
                 {
                     IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
-                    IPostData? instance = (IPostData)
+                    IPostDataStore instance = (IPostDataStore)
                         ActivatorUtilities.CreateInstance(sp, type, storage, partition);
 
                     instance.Id = registration.Id;
+                    instance.IsDefault = storage.Default;
 
                     return instance;
                 }
@@ -49,15 +53,17 @@ public static class PostDataCollectionExtensions
             {
                 services.AddKeyedScoped(
                     key,
-                    (sp, _) => (ISetup)sp.GetRequiredKeyedService<IPostData>(key)
+                    (sp, _) => (ISetup)sp.GetRequiredKeyedService<IPostDataStore>(key)
                 );
             }
 
-            services.AddScoped(sp => sp.GetRequiredKeyedService<IPostData>(key));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IPostDataStore>(key));
 
             if (type.IsSetupType())
                 services.AddScoped(sp => sp.GetRequiredKeyedService<ISetup>(key));
         }
+
+        services.AddScoped<IPostData, PostDataMultiStore>();
 
         return services;
     }

@@ -8,7 +8,7 @@ namespace Backup.App.Services.Media;
 
 public class MediaService(
     ILogger<MediaService> _logger,
-    IEnumerable<IPostData> _postData,
+    IPostData _postData,
     IMediaProcessing _mediaProcessing,
     IMediaPrune _mediaPrune,
     IEnumerable<IMediaData> _mediaData,
@@ -20,7 +20,7 @@ public class MediaService(
 ) : IMediaService
 {
     private readonly ILogger<MediaService> _logger = _logger;
-    private readonly IEnumerable<IPostData> _data = _postData;
+    private readonly IPostData _postData = _postData;
     private readonly IMediaProcessing _mediaProcessing = _mediaProcessing;
     private readonly IMediaPrune _mediaPrune = _mediaPrune;
     private readonly IEnumerable<IMediaData> _mediaData = _mediaData;
@@ -35,7 +35,7 @@ public class MediaService(
         List<Models.Post.MediaInput>? posts;
 
         using (_logger.LogTimer("getting posts"))
-            posts = await _data.First().GetMediaInputs();
+            posts = await _postData.GetMediaInputs();
 
         if (posts is null)
             return;

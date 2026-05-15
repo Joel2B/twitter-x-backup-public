@@ -7,8 +7,9 @@ using Newtonsoft.Json;
 
 namespace Backup.App.Data.Post;
 
-public class LocalDumpsData(Storage _config, IPartition _partition) : IDumpsData, ISetup
+public class LocalDumpsData(Storage _config, IPartition _partition) : IDumpsDataStore, ISetup
 {
+    public bool IsDefault { get; set; }
     private readonly Storage _config = _config;
     private readonly IPartition _partition = _partition;
 

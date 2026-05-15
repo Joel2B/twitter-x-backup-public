@@ -36,13 +36,15 @@ public static class BulkDataCollectionExtensions
                 {
                     IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
-                    IBulkSourceData? instance = (IBulkSourceData)
+                    IBulkSourceDataStore instance = (IBulkSourceDataStore)
                         ActivatorUtilities.CreateInstance(
                             sp,
                             typeof(LocalBulkSourceData),
                             storage,
                             partition
                         );
+
+                    instance.IsDefault = storage.Default;
 
                     return instance;
                 }
@@ -54,24 +56,30 @@ public static class BulkDataCollectionExtensions
                 {
                     IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
-                    IBulkData? instance = (IBulkData)
+                    IBulkDataStore instance = (IBulkDataStore)
                         ActivatorUtilities.CreateInstance(sp, type, storage, partition);
 
                     instance.Id = registration.Id;
+                    instance.IsDefault = storage.Default;
 
                     return instance;
                 }
             );
 
-            services.AddScoped(sp => sp.GetRequiredKeyedService<IBulkSourceData>(key));
-            services.AddScoped(sp => sp.GetRequiredKeyedService<IBulkData>(key));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IBulkSourceDataStore>(key));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IBulkDataStore>(key));
 
             if (typeof(ISetup).IsAssignableFrom(typeof(LocalBulkSourceData)))
-                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IBulkSourceData>(key));
+                services.AddScoped(sp =>
+                    (ISetup)sp.GetRequiredKeyedService<IBulkSourceDataStore>(key)
+                );
 
             if (type.IsSetupType())
-                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IBulkData>(key));
+                services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IBulkDataStore>(key));
         }
+
+        services.AddScoped<IBulkSourceData, BulkSourceDataMultiStore>();
+        services.AddScoped<IBulkData, BulkDataMultiStore>();
 
         return services;
     }

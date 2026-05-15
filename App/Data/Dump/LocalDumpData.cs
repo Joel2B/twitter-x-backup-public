@@ -15,9 +15,10 @@ public class LocalDumpData(
     IDumpsData _dumps,
     Storage _config,
     IPartition _partition
-) : IDumpData
+) : IDumpDataStore
 {
     public string? Id { get; set; }
+    public bool IsDefault { get; set; }
 
     private readonly ILogger<LocalDumpData> _logger = _logger;
     private readonly Models.Config.App _appConfig = _appConfig;
