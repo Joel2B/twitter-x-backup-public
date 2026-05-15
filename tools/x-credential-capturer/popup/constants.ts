@@ -34,6 +34,14 @@ export const ENDPOINTS: EndpointDefinition[] = [
     enabledByDefault: true
   },
   {
+    id: "SearchTimeline",
+    title: "Api.SearchTimeline",
+    type: "api",
+    jsonKey: "SearchTimeline",
+    pageUrlTemplate: "https://x.com/hashtag/{hashtag}?f=media",
+    enabledByDefault: true
+  },
+  {
     id: "UserByScreenName",
     title: "Api.UserByScreenName",
     type: "api",

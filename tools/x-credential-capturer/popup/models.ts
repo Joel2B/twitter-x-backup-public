@@ -144,6 +144,7 @@ export type EndpointTestRuntime = {
 
 export type PopupSettings = {
   username: string;
+  hashtag: string;
   maskSensitive: boolean;
 };
 

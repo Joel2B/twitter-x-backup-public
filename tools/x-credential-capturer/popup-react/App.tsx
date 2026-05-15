@@ -19,6 +19,8 @@ export default function App() {
     sensitiveHint,
     settings,
     testAllStatus,
+    hashtagDraft,
+    hashtagHint,
     usernameDraft,
     usernameHint,
     onClearState,
@@ -34,7 +36,9 @@ export default function App() {
     onRunAllTests,
     onTestEndpoint,
     onUsernameChange,
-    onUsernameCommit
+    onUsernameCommit,
+    onHashtagChange,
+    onHashtagCommit
   } = useCredentialCapturer();
 
   return (
@@ -54,6 +58,8 @@ export default function App() {
         sensitiveHint={sensitiveHint}
         usernameDraft={usernameDraft}
         usernameHint={usernameHint}
+        hashtagDraft={hashtagDraft}
+        hashtagHint={hashtagHint}
         maskSensitive={settings.maskSensitive}
         onClearState={onClearState}
         onCreateProfile={onCreateProfile}
@@ -63,6 +69,8 @@ export default function App() {
         onRefreshCookies={onRefreshCookies}
         onUsernameChange={onUsernameChange}
         onUsernameCommit={onUsernameCommit}
+        onHashtagChange={onHashtagChange}
+        onHashtagCommit={onHashtagCommit}
       />
 
       <EndpointTable

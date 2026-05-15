@@ -66,6 +66,8 @@ export type UseCredentialCapturerResult = {
   testAllStatus: string;
   usernameDraft: string;
   usernameHint: string;
+  hashtagDraft: string;
+  hashtagHint: string;
   onClearState: () => void;
   onCopyEndpoint: (model: EndpointModel, endpointId: string) => void;
   onCopyPatch: () => void;
@@ -80,6 +82,8 @@ export type UseCredentialCapturerResult = {
   onTestEndpoint: (endpoint: EndpointDefinition) => void;
   onUsernameChange: (value: string) => void;
   onUsernameCommit: () => void;
+  onHashtagChange: (value: string) => void;
+  onHashtagCommit: () => void;
 };
 
 export type StorageProfileStore = {

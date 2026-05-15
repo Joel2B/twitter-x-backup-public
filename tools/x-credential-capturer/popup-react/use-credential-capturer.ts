@@ -36,9 +36,15 @@ import {
   normalizeSettings
 } from "../popup/helpers.js";
 import { getCapturedRateEntries, getRateEntries, runEndpointTest } from "../popup/testing.js";
-import { cloneJson, normalizeUsername, resolveEndpointPageUrl } from "../popup/utils.js";
+import {
+  cloneJson,
+  normalizeHashtag,
+  normalizeUsername,
+  resolveEndpointPageUrl
+} from "../popup/utils.js";
 import {
   getGlobalStatusOk,
+  getHashtagHint,
   getProfileHint,
   getSensitiveHint,
   getTestResultText,
@@ -59,12 +65,14 @@ import type {
 
 const PROFILE_SYNC_DEBOUNCE_MS = 400;
 const USERNAME_SAVE_DEBOUNCE_MS = 250;
+const HASHTAG_SAVE_DEBOUNCE_MS = 250;
 
 export function useCredentialCapturer(): UseCredentialCapturerResult {
   const [captureState, setCaptureState] = useState<CaptureState | null>(null);
   const [settings, setSettings] = useState<PopupSettings>({ ...DEFAULT_SETTINGS });
   const [detectedUsername, setDetectedUsername] = useState("");
   const [usernameDraft, setUsernameDraft] = useState("");
+  const [hashtagDraft, setHashtagDraft] = useState("");
   const [profilesStore, setProfilesStore] = useState<ProfilesStore | null>(null);
   const [isApplyingProfile, setIsApplyingProfile] = useState(false);
   const [endpointTestState, setEndpointTestState] = useState<Record<string, EndpointTestRuntime>>(
@@ -82,7 +90,9 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
   const profilesStoreRef = useRef<ProfilesStore | null>(profilesStore);
   const isApplyingProfileRef = useRef(isApplyingProfile);
   const usernameDraftRef = useRef(usernameDraft);
+  const hashtagDraftRef = useRef(hashtagDraft);
   const usernameSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hashtagSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const profileSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -104,6 +114,10 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
   useEffect(() => {
     usernameDraftRef.current = usernameDraft;
   }, [usernameDraft]);
+
+  useEffect(() => {
+    hashtagDraftRef.current = hashtagDraft;
+  }, [hashtagDraft]);
 
   function reportError(error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
@@ -153,6 +167,8 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     if (options.syncInput !== false) {
       setUsernameDraft(normalized.username);
       usernameDraftRef.current = normalized.username;
+      setHashtagDraft(normalized.hashtag);
+      hashtagDraftRef.current = normalized.hashtag;
     }
 
     if (options.scheduleSync) {
@@ -498,6 +514,31 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     }, USERNAME_SAVE_DEBOUNCE_MS);
   }
 
+  async function persistHashtagFromInput() {
+    const normalized = normalizeHashtag(hashtagDraftRef.current);
+
+    if (normalized !== hashtagDraftRef.current) {
+      setHashtagDraft(normalized);
+      hashtagDraftRef.current = normalized;
+    }
+
+    if (normalized === settingsRef.current.hashtag) {
+      return;
+    }
+
+    await saveSettings({ hashtag: normalized });
+  }
+
+  function scheduleHashtagPersist() {
+    if (hashtagSaveTimerRef.current) {
+      clearTimeout(hashtagSaveTimerRef.current);
+    }
+
+    hashtagSaveTimerRef.current = setTimeout(() => {
+      runAsync(persistHashtagFromInput);
+    }, HASHTAG_SAVE_DEBOUNCE_MS);
+  }
+
   async function copyEndpoint(model: EndpointModel, endpointId: string) {
     ensureCopyAllowed();
     const singlePatch = createSingleEndpointPatch(model);
@@ -753,6 +794,11 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
         usernameSaveTimerRef.current = null;
       }
 
+      if (hashtagSaveTimerRef.current) {
+        clearTimeout(hashtagSaveTimerRef.current);
+        hashtagSaveTimerRef.current = null;
+      }
+
       if (profileSyncTimerRef.current) {
         clearTimeout(profileSyncTimerRef.current);
         profileSyncTimerRef.current = null;
@@ -793,6 +839,7 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
   const profileHint = getProfileHint(selectedProfile);
   const sensitiveHint = getSensitiveHint(settings.maskSensitive);
   const usernameHint = getUsernameHint(settings, detectedUsername);
+  const hashtagHint = getHashtagHint(settings);
 
   const endpointRows: EndpointRowView[] = useMemo(() => {
     return ENDPOINTS.map((endpoint) => {
@@ -801,7 +848,8 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
         running: false,
         result: null
       };
-      const endpointPageUrl = resolveEndpointPageUrl(endpoint, settings.username);
+
+      const endpointPageUrl = resolveEndpointPageUrl(endpoint, settings.username, settings.hashtag);
       const freshness = getFreshnessInfo(model, testRuntime);
       const testedRateEntries = getRateEntries(testRuntime.result);
       const capturedRateEntries = getCapturedRateEntries(model.capture);
@@ -848,6 +896,8 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     sensitiveHint,
     settings,
     testAllStatus,
+    hashtagDraft,
+    hashtagHint,
     usernameDraft,
     usernameHint,
     onClearState: () => {
@@ -893,6 +943,14 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     },
     onUsernameCommit: () => {
       runAsync(persistUsernameFromInput);
+    },
+    onHashtagChange: (value: string) => {
+      setHashtagDraft(value);
+      hashtagDraftRef.current = value;
+      scheduleHashtagPersist();
+    },
+    onHashtagCommit: () => {
+      runAsync(persistHashtagFromInput);
     }
   };
 }

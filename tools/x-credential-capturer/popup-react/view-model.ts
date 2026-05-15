@@ -86,3 +86,11 @@ export function getUsernameHint(settings: PopupSettings, detectedUsername: strin
 
   return "Used for posts/likes/media Open links";
 }
+
+export function getHashtagHint(settings: PopupSettings): string {
+  if (settings.hashtag) {
+    return `Open link for SearchTimeline uses #${settings.hashtag}`;
+  }
+
+  return "Used for SearchTimeline Open link";
+}

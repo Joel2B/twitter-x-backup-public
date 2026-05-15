@@ -11,6 +11,8 @@ type GlobalSectionProps = {
   sensitiveHint: string;
   usernameDraft: string;
   usernameHint: string;
+  hashtagDraft: string;
+  hashtagHint: string;
   maskSensitive: boolean;
   onClearState: () => void;
   onCreateProfile: () => void;
@@ -20,6 +22,8 @@ type GlobalSectionProps = {
   onRefreshCookies: () => void;
   onUsernameChange: (value: string) => void;
   onUsernameCommit: () => void;
+  onHashtagChange: (value: string) => void;
+  onHashtagCommit: () => void;
 };
 
 export function GlobalSection({
@@ -36,11 +40,15 @@ export function GlobalSection({
   onRefreshCookies,
   onUsernameChange,
   onUsernameCommit,
+  onHashtagChange,
+  onHashtagCommit,
   profileHint,
   profiles,
   sensitiveHint,
   usernameDraft,
-  usernameHint
+  usernameHint,
+  hashtagDraft,
+  hashtagHint
 }: GlobalSectionProps) {
   return (
     <section className="global">
@@ -101,6 +109,24 @@ export function GlobalSection({
           onChange={onUsernameCommit}
         />
         <span className="meta">{usernameHint}</span>
+      </div>
+
+      <div className="settings-row">
+        <label htmlFor="hashtagInput">Search hashtag</label>
+        <input
+          id="hashtagInput"
+          type="text"
+          placeholder="#test or test"
+          spellCheck={false}
+          autoComplete="off"
+          value={hashtagDraft}
+          onInput={(event) => {
+            const target = event.target as HTMLInputElement;
+            onHashtagChange(target.value);
+          }}
+          onChange={onHashtagCommit}
+        />
+        <span className="meta">{hashtagHint}</span>
       </div>
 
       <div className="settings-row">

@@ -8,6 +8,7 @@ Local Chrome MV3 extension to capture X GraphQL requests and generate a JSON pat
 - Per-endpoint checklist.
 - `Open` button per endpoint to navigate to the page that triggers that API.
 - Configurable `X username` field in popup for user-specific Open links (posts/likes/media).
+- Configurable `Search hashtag` field in popup for `Api.SearchTimeline` Open link.
 - Auto-detects username from intercepted referers and can auto-fill when empty.
 - Username is persisted in `chrome.storage.local` (`captureSettingsV1`).
 - Profile system with isolated snapshots (`Default`, custom profiles, switch/delete).
@@ -58,6 +59,7 @@ Local Chrome MV3 extension to capture X GraphQL requests and generate a JSON pat
 - `Api.likes (Likes)` -> `https://x.com/{username}/likes`
 - `Api.bookmarks (Bookmarks)` -> `https://x.com/i/bookmarks`
 - `Api.media (UserMedia)` -> `https://x.com/{username}/media`
+- `Api.SearchTimeline` -> `https://x.com/hashtag/{hashtag}?f=media`
 - `Api.UserByScreenName` -> `https://x.com/{username}/media`
 - `Api.TweetDetail` -> `https://x.com/AmeDollVT/status/2047352297571725658`
 - `Api.UsersByRestIds` -> currently unused (no button)

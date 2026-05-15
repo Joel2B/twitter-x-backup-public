@@ -8,13 +8,20 @@ import type {
   PopupSettings,
   ProfilesStore
 } from "./models.js";
-import { cloneJson, extractUsernameFromXUrl, isPlainObject, normalizeUsername } from "./utils.js";
+import {
+  cloneJson,
+  extractUsernameFromXUrl,
+  isPlainObject,
+  normalizeHashtag,
+  normalizeUsername
+} from "./utils.js";
 
 const FRESHNESS_VALID_MS = 30 * 60 * 1000;
 const FRESHNESS_EXPIRING_MS = 6 * 60 * 60 * 1000;
 
 export const DEFAULT_SETTINGS = {
   username: "",
+  hashtag: "test",
   maskSensitive: true
 };
 
@@ -23,6 +30,7 @@ export function normalizeSettings(value: unknown): PopupSettings {
 
   return {
     username: normalizeUsername(source.username || ""),
+    hashtag: normalizeHashtag(source.hashtag || DEFAULT_SETTINGS.hashtag),
     maskSensitive: typeof source.maskSensitive === "boolean" ? source.maskSensitive : true
   };
 }

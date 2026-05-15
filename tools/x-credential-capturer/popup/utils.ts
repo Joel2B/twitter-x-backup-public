@@ -123,9 +123,28 @@ export function normalizeUsername(value: unknown): string {
   return username.trim();
 }
 
+export function normalizeHashtag(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  let hashtag = value.trim();
+
+  if (!hashtag) {
+    return "";
+  }
+
+  hashtag = hashtag.replace(/^#/, "");
+  hashtag = hashtag.replace(/^https?:\/\/(?:www\.)?x\.com\/hashtag\//i, "");
+  hashtag = hashtag.split(/[/?#]/)[0];
+
+  return hashtag.trim();
+}
+
 export function resolveEndpointPageUrl(
   endpoint: EndpointDefinition,
-  username: unknown
+  username: unknown,
+  hashtag: unknown
 ): string | null {
   const directUrl = pickFirstNonEmpty(endpoint?.pageUrl);
 
@@ -135,12 +154,23 @@ export function resolveEndpointPageUrl(
 
   const template = pickFirstNonEmpty(endpoint?.pageUrlTemplate);
   const normalizedUsername = normalizeUsername(username);
+  const normalizedHashtag = normalizeHashtag(hashtag);
 
-  if (!template || !normalizedUsername) {
+  if (!template) {
     return null;
   }
 
-  return template.replace("{username}", encodeURIComponent(normalizedUsername));
+  if (template.includes("{username}") && !normalizedUsername) {
+    return null;
+  }
+
+  if (template.includes("{hashtag}") && !normalizedHashtag) {
+    return null;
+  }
+
+  return template
+    .replace("{username}", encodeURIComponent(normalizedUsername))
+    .replace("{hashtag}", encodeURIComponent(normalizedHashtag));
 }
 
 export function cloneJson<T>(value: T): T {
