@@ -36,7 +36,6 @@ public static class ConfigLoader
             ValidateAndNormalizeApi(api);
 
         Dictionary<string, FetchItem> fetch = LoadFetchFile(configDirectory);
-        ValidateFetchKeys(apiByUser, fetch);
 
         foreach (var api in apiByUser)
             ApplyFetchToApi(api.Key, api.Value, fetch);
@@ -162,27 +161,6 @@ public static class ConfigLoader
         return fetch;
     }
 
-    private static void ValidateFetchKeys(
-        IReadOnlyDictionary<string, Dictionary<string, ApiConfig.Api>> apiByUser,
-        IReadOnlyDictionary<string, FetchItem> fetch
-    )
-    {
-        foreach (string key in fetch.Keys)
-        {
-            List<string> missingUsers = apiByUser
-                .Where(user => !user.Value.ContainsKey(key))
-                .Select(user => user.Key)
-                .ToList();
-
-            if (missingUsers.Count == 0)
-                continue;
-
-            throw new Exception(
-                $"error deserializing config file 'Fetch.json': key '{key}' does not exist in api files for users: {string.Join(", ", missingUsers)}"
-            );
-        }
-    }
-
     private static void ApplyFetchToApi(
         string userId,
         IReadOnlyDictionary<string, ApiConfig.Api> api,
@@ -192,9 +170,7 @@ public static class ConfigLoader
         foreach (var kvp in fetch)
         {
             if (!api.TryGetValue(kvp.Key, out ApiConfig.Api? entry))
-                throw new Exception(
-                    $"error deserializing config file 'Fetch.json': key '{kvp.Key}' does not exist in api file for user '{userId}'"
-                );
+                continue;
 
             Request.Request request = entry.Request;
 

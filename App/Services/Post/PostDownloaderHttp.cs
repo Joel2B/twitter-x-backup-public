@@ -63,6 +63,13 @@ public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, Models.Conf
 
         Http.ApplyHeaders(requestHttp, request.Headers);
 
+        _logger.LogInformation("request url: {url}", url);
+
+        _logger.LogInformation(
+            "request headers: {headers}",
+            JsonConvert.SerializeObject(request.Headers, Formatting.None)
+        );
+
         using HttpResponseMessage response = await _client.SendAsync(requestHttp, token);
         HttpStatusCode code = response.StatusCode;
 
