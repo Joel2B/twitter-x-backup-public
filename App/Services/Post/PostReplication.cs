@@ -1,9 +1,10 @@
-using Backup.App.Interfaces.Data.Post;
-using Backup.App.Interfaces.Services.Post;
+using Backup.App.Interfaces.Data.Posts;
+using Backup.App.Interfaces.Services.Posts;
+using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Services.Post;
+namespace Backup.App.Services.Posts;
 
 public class PostReplication(ILogger<PostReplication> _logger) : IPostReplication
 {
@@ -54,7 +55,7 @@ public class PostReplication(ILogger<PostReplication> _logger) : IPostReplicatio
                         postData.Id ?? postData.GetType().Name
                     );
 
-                    List<Models.Post.Post>? allPosts = await source.GetAll();
+                    List<Post>? allPosts = await source.GetAll();
 
                     if (allPosts is null)
                         throw new Exception("replication source returned no posts for full reset");
@@ -86,7 +87,7 @@ public class PostReplication(ILogger<PostReplication> _logger) : IPostReplicatio
 
                 foreach (List<string> chunk in Chunk(changedIds, ReplicationChunkSize))
                 {
-                    List<Models.Post.Post> changedPosts = await source.GetByIds(chunk);
+                    List<Post> changedPosts = await source.GetByIds(chunk);
 
                     if (changedPosts.Count == 0)
                     {

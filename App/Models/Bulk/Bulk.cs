@@ -1,6 +1,6 @@
 namespace Backup.App.Models.Bulk;
 
-public class Bulk
+public class BulkData
 {
     public required User User { get; set; }
     public int? Total { get; set; }

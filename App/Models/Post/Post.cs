@@ -1,6 +1,6 @@
-﻿namespace Backup.App.Models.Post;
+﻿namespace Backup.App.Models.Posts;
 
-public class Post : Data
+public class Post : PostData
 {
     public List<Change> Changes { get; set; } = [];
 

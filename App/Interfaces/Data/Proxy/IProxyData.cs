@@ -1,8 +1,10 @@
-﻿namespace Backup.App.Interfaces.Data.Proxy;
+﻿using Backup.App.Models.Proxy;
+
+namespace Backup.App.Interfaces.Data.Proxy;
 
 public interface IProxyData
 {
-    public Task<List<Models.Proxy.Data>?> GetAll();
-    public Task<Dictionary<Models.Proxy.Proxy, Models.Proxy.Data>?> GetAllAsDictionary();
-    public Task Save(List<Models.Proxy.Data> datas);
+    public Task<List<ProxyData>?> GetAll();
+    public Task<Dictionary<ProxyDataConfig, ProxyData>?> GetAllAsDictionary();
+    public Task Save(List<ProxyData> datas);
 }

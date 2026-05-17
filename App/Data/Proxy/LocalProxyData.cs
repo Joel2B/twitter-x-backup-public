@@ -1,13 +1,17 @@
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Data.Proxy;
 using Backup.App.Interfaces.Partition;
+using Backup.App.Models.Config;
+using Backup.App.Models.Config.Data;
+using Backup.App.Models.Proxy;
+using Backup.App.Utils;
 using Newtonsoft.Json;
 
 namespace Backup.App.Data.Proxy;
 
-public class LocalProxyData(Models.Config.App _config, IPartition _partition) : IProxyData, ISetup
+public class LocalProxyData(AppConfig _config, IPartition _partition) : IProxyData, ISetup
 {
-    private readonly Models.Config.App _config = _config;
+    private readonly AppConfig _config = _config;
     private readonly IPartition _partition = _partition;
 
     public Task Setup()
@@ -24,9 +28,7 @@ public class LocalProxyData(Models.Config.App _config, IPartition _partition) : 
 
     private string GetPath()
     {
-        Models.Config.Data.Partition partition = _partition
-            .GetPartitions(_config.Debug.Partitions)
-            .First();
+        PartitionConfig partition = _partition.GetPartitions(_config.Debug.Partitions).First();
 
         return Path.Combine(
             [.. partition.Paths, .. _config.Proxy.Data.Paths, .. _config.Proxy.Data.Proxy.Paths]
@@ -39,7 +41,7 @@ public class LocalProxyData(Models.Config.App _config, IPartition _partition) : 
             _config.Proxy.Data.Proxy.File ?? throw new Exception("file not configured")
         );
 
-    public async Task<List<Models.Proxy.Data>?> GetAll()
+    public async Task<List<ProxyData>?> GetAll()
     {
         string path = GetPathFile();
 
@@ -48,21 +50,21 @@ public class LocalProxyData(Models.Config.App _config, IPartition _partition) : 
 
         string content = await File.ReadAllTextAsync(path);
 
-        List<Models.Proxy.Data>? datas =
-            JsonConvert.DeserializeObject<List<Models.Proxy.Data>>(content)
+        List<ProxyData>? datas =
+            JsonConvert.DeserializeObject<List<ProxyData>>(content)
             ?? throw new Exception("Error deserializing the file.");
 
         return datas;
     }
 
-    public async Task<Dictionary<Models.Proxy.Proxy, Models.Proxy.Data>?> GetAllAsDictionary()
+    public async Task<Dictionary<ProxyDataConfig, ProxyData>?> GetAllAsDictionary()
     {
-        List<Models.Proxy.Data>? datas = await GetAll();
+        List<ProxyData>? datas = await GetAll();
 
         return datas?.ToDictionary(post => post.Proxy);
     }
 
-    public async Task Save(List<Models.Proxy.Data> data)
+    public async Task Save(List<ProxyData> data)
     {
         string json = JsonConvert.SerializeObject(data);
         string path = GetPathFile();
@@ -71,9 +73,9 @@ public class LocalProxyData(Models.Config.App _config, IPartition _partition) : 
         await SaveFormatted(data);
     }
 
-    private async Task SaveFormatted(List<Models.Proxy.Data> data)
+    private async Task SaveFormatted(List<ProxyData> data)
     {
-        string path = Utils.Path.GetPathFormatted(GetPathFile());
+        string path = UtilsPath.GetPathFormatted(GetPathFile());
         string json = JsonConvert.SerializeObject(data, Formatting.Indented);
 
         await File.WriteAllTextAsync(path, json);

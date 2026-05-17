@@ -1,6 +1,8 @@
+using Backup.App.Models.Config.Downloads;
+
 namespace Backup.App.Models.Config.Data;
 
-public class Partition : Downloads.Path
+public class PartitionConfig : PathConfig
 {
     public int Id { get; set; }
     public string? Name { get; set; }

@@ -1,5 +1,5 @@
 using Backup.App.Models.Media;
-using Backup.App.Models.Post;
+using Backup.App.Models.Posts;
 
 namespace Backup.App.Core.Media;
 

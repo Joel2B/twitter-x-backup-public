@@ -3,6 +3,7 @@ using Backup.App.Data.Partition;
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Partition;
 using Backup.App.Interfaces.Services.Media;
+using Backup.App.Models.Config.Data.Backup;
 using Backup.App.Services.Media;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,7 +15,7 @@ public static class MediaBackupCollectionExtensions
     {
         Dictionary<string, Type> types = new() { ["local"] = typeof(MediaBackup) };
 
-        List<DataCollectionExtensions.DataRegistration<Models.Config.Data.Backup.Storage>> registrations =
+        List<DataCollectionExtensions.DataRegistration<StorageBackup>> registrations =
             services.ResolveRegistrations(
                 services.GetAppConfig().Data.Backup,
                 types,
@@ -22,10 +23,10 @@ public static class MediaBackupCollectionExtensions
             );
 
         foreach (
-            DataCollectionExtensions.DataRegistration<Models.Config.Data.Backup.Storage> registration in registrations
+            DataCollectionExtensions.DataRegistration<StorageBackup> registration in registrations
         )
         {
-            Models.Config.Data.Backup.Storage storage = registration.Storage;
+            StorageBackup storage = registration.Storage;
             string key = registration.Key;
             Type type = registration.ImplementationType;
 
@@ -42,14 +43,13 @@ public static class MediaBackupCollectionExtensions
                 {
                     IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
-                    Interfaces.Data.Media.IMediaBackup? instance =
-                        (Interfaces.Data.Media.IMediaBackup)
-                            ActivatorUtilities.CreateInstance(
-                                sp,
-                                typeof(LocalMediaBackup),
-                                storage,
-                                partition
-                            );
+                    IMediaBackup? instance = (IMediaBackup)
+                        ActivatorUtilities.CreateInstance(
+                            sp,
+                            typeof(LocalMediaBackup),
+                            storage,
+                            partition
+                        );
 
                     return instance;
                 }
@@ -59,8 +59,7 @@ public static class MediaBackupCollectionExtensions
                 key,
                 (sp, _) =>
                 {
-                    Interfaces.Data.Media.IMediaBackup mediaBackup =
-                        sp.GetRequiredKeyedService<Interfaces.Data.Media.IMediaBackup>(key);
+                    IMediaBackup mediaBackup = sp.GetRequiredKeyedService<IMediaBackup>(key);
 
                     IMediaBackup? instance = (IMediaBackup)
                         ActivatorUtilities.CreateInstance(sp, type, storage, mediaBackup);
@@ -71,10 +70,7 @@ public static class MediaBackupCollectionExtensions
                 }
             );
 
-            services.AddScoped(sp =>
-                (ISetup)sp.GetRequiredKeyedService<Interfaces.Data.Media.IMediaBackup>(key)
-            );
-
+            services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IMediaBackup>(key));
             services.AddScoped(sp => sp.GetRequiredKeyedService<IMediaBackup>(key));
         }
 

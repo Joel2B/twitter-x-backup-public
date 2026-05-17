@@ -1,10 +1,12 @@
 using Backup.App.Core.Media;
+using Backup.App.Models.Config.Medias;
 using Backup.App.Models.Media;
 using Backup.App.Models.Media.Processors;
+using Backup.App.Models.Posts;
 
 namespace Backup.App.Services.Media.Processors;
 
-public class BannerProcessor(Models.Config.Medias.Banner config, MediaProcessorContext context)
+public class BannerProcessor(BannerConfig config, MediaProcessorContext context)
     : MediaProcessor(context)
 {
     public override void Process()
@@ -12,7 +14,7 @@ public class BannerProcessor(Models.Config.Medias.Banner config, MediaProcessorC
         if (config.Dimensions is null || config.Sizes is null)
             return;
 
-        foreach (Models.Post.MediaInput post in Context.Posts)
+        foreach (MediaInput post in Context.Posts)
         {
             string? url = post.Profile.BannerUrl;
 

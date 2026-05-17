@@ -1,12 +1,13 @@
 using System.Security.Cryptography;
 using System.Text;
+using Backup.App.Models.Posts;
 using Newtonsoft.Json;
 
 namespace Backup.App.Utils;
 
 public static class PostHash
 {
-    public static string Compute(Models.Post.Post post)
+    public static string Compute(Post post)
     {
         object normalized = Normalize(post);
         string json = JsonConvert.SerializeObject(normalized);
@@ -16,9 +17,9 @@ public static class PostHash
         return Convert.ToHexString(hash);
     }
 
-    private static object Normalize(Models.Post.Post post)
+    private static object Normalize(Post post)
     {
-        Models.Post.Profile profile = post.Profile;
+        PostProfile profile = post.Profile;
 
         List<object>? medias = post
             .Medias?.Select(media => new

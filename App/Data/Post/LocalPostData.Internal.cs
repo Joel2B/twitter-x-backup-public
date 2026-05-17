@@ -1,22 +1,25 @@
+using Backup.App.Models.Config.Data;
 using Backup.App.Models.Data.Json;
+using Backup.App.Models.Posts;
+using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
 public partial class LocalPostData
 {
     private void SetupDirectory()
     {
-        foreach (Models.Config.Data.Partition partition in _partition.GetPartitions())
+        foreach (PartitionConfig partition in _partition.GetPartitions())
             Directory.CreateDirectory(GetPath(partition));
     }
 
-    private string GetPath(Models.Config.Data.Partition partition) =>
-        Utils.Path.GetPath(
+    private string GetPath(PartitionConfig partition) =>
+        UtilsPath.GetPath(
             [.. partition.Paths, .. _config.Paths.Paths, .. _config.Paths.Post.Paths]
         );
 
-    private async Task<Dictionary<string, Models.Post.Post>?> GetCache()
+    private async Task<Dictionary<string, Post>?> GetCache()
     {
         if (_postsCache is not null)
             return _postsCache;
@@ -30,13 +33,13 @@ public partial class LocalPostData
         await Verify();
 
         LocalPostTables tables = await LoadTables();
-        List<Models.Post.Post> posts = BuildPosts(tables);
+        List<Post> posts = BuildPosts(tables);
 
         SetCache(posts);
         return _postsCache;
     }
 
-    private void SetCache(List<Models.Post.Post>? posts)
+    private void SetCache(List<Post>? posts)
     {
         if (posts is null)
         {
@@ -62,7 +65,7 @@ public partial class LocalPostData
 
         var latestHistory = Directory
             .GetDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
-            .Select(path => new { Path = path, Date = Utils.Path.ToDate(path, isDir: true) })
+            .Select(path => new { Path = path, Date = UtilsPath.ToDate(path, isDir: true) })
             .Where(o => o.Date is not null)
             .OrderByDescending(o => o.Date)
             .FirstOrDefault();
@@ -93,18 +96,18 @@ public partial class LocalPostData
 
     private void Replicate()
     {
-        List<Models.Config.Data.Partition> partitions = _partition
+        List<PartitionConfig> partitions = _partition
             .GetPartitions()
             .Except([_partition.GetPrimary()])
             .ToList();
 
         List<string> mainPaths = [.. GetDataFilePaths()];
-        List<string> mainPathsFormatted = [.. mainPaths.Select(Utils.Path.GetPathFormatted)];
+        List<string> mainPathsFormatted = [.. mainPaths.Select(UtilsPath.GetPathFormatted)];
 
-        foreach (Models.Config.Data.Partition partition in partitions)
+        foreach (PartitionConfig partition in partitions)
         {
             List<string> paths = [.. GetDataFilePaths(partition)];
-            List<string> pathsFormatted = [.. paths.Select(Utils.Path.GetPathFormatted)];
+            List<string> pathsFormatted = [.. paths.Select(UtilsPath.GetPathFormatted)];
 
             for (int i = 0; i < paths.Count; i++)
             {
@@ -127,7 +130,7 @@ public partial class LocalPostData
         }
     }
 
-    private Task PrunePartition(Models.Config.Data.Partition partition)
+    private Task PrunePartition(PartitionConfig partition)
     {
         _logger.LogInformation("prunning partition: {value}", partition.Id);
 
@@ -136,7 +139,7 @@ public partial class LocalPostData
 
         var pathsDate = Directory
             .GetDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
-            .Select(o => new { Path = o, Date = Utils.Path.ToDate(o, isDir: true) })
+            .Select(o => new { Path = o, Date = UtilsPath.ToDate(o, isDir: true) })
             .Where(o => o.Date is not null)
             .GroupBy(o => Convert.ToDateTime(o.Date?.ToString("yyyy-MM-dd")))
             .Select(o => new

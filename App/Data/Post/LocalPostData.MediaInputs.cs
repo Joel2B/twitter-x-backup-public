@@ -1,8 +1,10 @@
-namespace Backup.App.Data.Post;
+using Backup.App.Models.Posts;
+
+namespace Backup.App.Data.Posts;
 
 public partial class LocalPostData
 {
-    private static Models.Post.MediaInput ToMediaInput(Models.Post.Post post) =>
+    private static MediaInput ToMediaInput(Post post) =>
         new()
         {
             Id = post.Id,
@@ -11,7 +13,7 @@ public partial class LocalPostData
             Deleted = post.Deleted,
         };
 
-    private static Models.Post.MediaInput ToMediaInput(Models.Post.Data data) =>
+    private static MediaInput ToMediaInput(PostData data) =>
         new()
         {
             Id = data.Id,

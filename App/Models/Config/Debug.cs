@@ -1,13 +1,15 @@
+using Backup.App.Models.Config.Downloads;
+
 namespace Backup.App.Models.Config;
 
-public class Debug : Downloads.Path
+public class DebugConfig : PathConfig
 {
     public required List<int> Partitions { get; set; }
-    public required Downloads.Path Log { get; set; }
+    public required PathConfig Log { get; set; }
     public required DebugApi Api { get; set; }
 }
 
-public class DebugApi : Downloads.Path
+public class DebugApi : PathConfig
 {
     public required DebugPrune Prune { get; set; }
 }

@@ -1,19 +1,20 @@
 using System.Net;
 using System.Net.Http.Headers;
-using Backup.App.Interfaces.Services.Post;
-using Backup.App.Models.Config.Request;
+using Backup.App.Interfaces.Services.Posts;
+using Backup.App.Models.Config;
+using Backup.App.Models.Config.ApiRequest;
 using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Services.Post;
+namespace Backup.App.Services.Posts;
 
-public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, Models.Config.App _config)
+public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, AppConfig _config)
     : IPostDownloader
 {
     private readonly ILogger<PostDownloaderHttp> _logger = _logger;
 
-    private readonly Models.Config.App _config = _config;
+    private readonly AppConfig _config = _config;
     private readonly HttpClient _client = new(
         new HttpClientHandler
         {

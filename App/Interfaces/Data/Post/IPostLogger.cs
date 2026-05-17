@@ -1,4 +1,4 @@
-namespace Backup.App.Interfaces.Data.Post;
+namespace Backup.App.Interfaces.Data.Posts;
 
 public interface IPostLogger
 {

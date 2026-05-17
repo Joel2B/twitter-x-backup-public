@@ -1,5 +1,8 @@
 using System.Diagnostics;
+using Backup.App.Models.Config;
+using Backup.App.Models.Config.Data;
 using Backup.App.Models.Utils;
+using Backup.App.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -14,13 +17,11 @@ public static class LoggingCollectionExtensions
 {
     public static IServiceCollection AddSerilog(this IServiceCollection services)
     {
-        Models.Config.App config = services.GetAppConfig();
+        AppConfig config = services.GetAppConfig();
         int partitionId = config.Debug.Partitions.First();
-        Models.Config.Data.Partition partition = config.Data.Partitions.First(o =>
-            o.Id == partitionId
-        );
+        PartitionConfig partition = config.Data.Partitions.First(o => o.Id == partitionId);
 
-        string basePath = Utils.Path.GetPartitionPath(config, partition);
+        string basePath = UtilsPath.GetPartitionPath(config, partition);
 
         string directory = Path.Combine(
             [basePath, .. config.Debug.Paths, .. config.Debug.Log.Paths]

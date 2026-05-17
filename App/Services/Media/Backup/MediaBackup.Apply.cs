@@ -2,6 +2,7 @@ using Backup.App.Extensions;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Interfaces.Services.UtilsService;
 using Backup.App.Models.Media.Backup;
+using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -28,7 +29,7 @@ public partial class MediaBackup : IMediaBackup
                         continue;
 
                     chunkData.Hash = await MediaData.GetHash(
-                        Utils.Path.NormalizePath(chunkData.Path)
+                        UtilsPath.NormalizePath(chunkData.Path)
                     );
 
                     if (chunkData.Hash is null)
@@ -61,7 +62,7 @@ public partial class MediaBackup : IMediaBackup
                     storagePaths.Add(relativePath);
 
                     await using Stream read = await MediaData.Read(
-                        Utils.Path.NormalizePath(chunkData.Path)
+                        UtilsPath.NormalizePath(chunkData.Path)
                     );
 
                     await zip.AddEntry(relativePath, read);
@@ -221,11 +222,11 @@ public partial class MediaBackup : IMediaBackup
                         }
 
                         await using Stream read = await MediaData.Read(
-                            Utils.Path.NormalizePath(path)
+                            UtilsPath.NormalizePath(path)
                         );
 
                         await using Stream write = await _mediaBackup.Write(
-                            Utils.Path.NormalizePath(path)
+                            UtilsPath.NormalizePath(path)
                         );
 
                         await read.CopyToAsync(write, ct);

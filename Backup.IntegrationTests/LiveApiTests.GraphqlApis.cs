@@ -1,5 +1,7 @@
-using Backup.App.Models.Config.Request;
-using Backup.App.Services.Post;
+using Backup.App.Models.Config;
+using Backup.App.Models.Config.Api;
+using Backup.App.Models.Config.ApiRequest;
+using Backup.App.Services.Posts;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Backup.IntegrationTests;
@@ -36,12 +38,8 @@ public partial class LiveApiTests
 
     private static async Task AssertApiRequestWorks(string apiName)
     {
-        App.Models.Config.App config = LiveApiTestSupport.LoadAppConfig();
-
-        IReadOnlyDictionary<string, App.Models.Config.Api.Api> primaryApi = config
-            .UsersContext[0]
-            .Api;
-
+        AppConfig config = LiveApiTestSupport.LoadAppConfig();
+        IReadOnlyDictionary<string, ApiConfig> primaryApi = config.UsersContext[0].Api;
         Request? request = RequestMerge.Build(primaryApi, apiName);
 
         if (request is null)

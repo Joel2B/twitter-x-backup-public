@@ -1,16 +1,17 @@
-using Backup.App.Models.Post.Response;
+using Backup.App.Models.Posts;
+using Backup.App.Models.Posts.Response;
 
 namespace Backup.App.Mapper;
 
 public class Profile()
 {
-    public static Models.Post.Profile GetProfile(Entry entry)
+    public static PostProfile GetProfile(Entry entry)
     {
         TweetResults tweetResults =
             entry.Content.ItemContent.TweetResults ?? throw new Exception("tweetResults");
 
         Result result = tweetResults.Result;
-        Models.Post.Response.Core resultCore = result.Core ?? throw new Exception("core");
+        Models.Posts.Response.Core resultCore = result.Core ?? throw new Exception("core");
         Result? userResults = resultCore.UserResults.Result;
 
         string id = result.Legacy?.UserIdStr ?? userResults?.RestId ?? throw new Exception("id");
@@ -23,7 +24,7 @@ public class Profile()
 
         int? mediaCount = userResults?.Legacy?.MediaCount;
 
-        Models.Post.Profile profile = new()
+        PostProfile profile = new()
         {
             Id = id,
             UserName = userName,

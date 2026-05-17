@@ -1,12 +1,12 @@
 using Backup.App.Core.Media;
+using Backup.App.Models.Config.Medias;
 using Backup.App.Models.Media;
 using Backup.App.Models.Media.Processors;
-using Backup.App.Models.Post;
+using Backup.App.Models.Posts;
 
 namespace Backup.App.Services.Media.Processors;
 
-public class GifProcessor(Models.Config.Medias.Gif config, MediaProcessorContext context)
-    : MediaProcessor(context)
+public class GifProcessor(GifConfig config, MediaProcessorContext context) : MediaProcessor(context)
 {
     private readonly Utils.MediaFilter _filters = new(config.Thumb.Filters);
 
@@ -20,19 +20,19 @@ public class GifProcessor(Models.Config.Medias.Gif config, MediaProcessorContext
         )
             return;
 
-        List<PostMedia> posts = Context
+        var posts = Context
             .Posts.Where(posts =>
                 posts.Medias is not null && posts.Medias.Any(media => media.Type == "animated_gif")
             )
-            .Select(post => new PostMedia { Id = post.Id, Medias = post.Medias })
+            .Select(post => new { post.Id, post.Medias })
             .ToList();
 
-        foreach (PostMedia post in posts)
+        foreach (var post in posts)
         {
             if (post.Medias is null)
                 continue;
 
-            foreach (Models.Post.Media media in post.Medias)
+            foreach (PostMedia media in post.Medias)
             {
                 if (media.Type != "animated_gif")
                     continue;
@@ -80,7 +80,7 @@ public class GifProcessor(Models.Config.Medias.Gif config, MediaProcessorContext
                     }
                 }
 
-                foreach (Variant variant in media.VideoInfo.Variants)
+                foreach (PostVariant variant in media.VideoInfo.Variants)
                 {
                     if (!config.Types.Contains(variant.ContentType))
                         continue;

@@ -1,17 +1,19 @@
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Services.Media;
-using Backup.App.Interfaces.Services.Post;
-using Backup.App.Models.Config.Request;
+using Backup.App.Interfaces.Services.Posts;
+using Backup.App.Models.Config;
+using Backup.App.Models.Config.Api;
+using Backup.App.Models.Config.ApiRequest;
 using Backup.App.Models.Media.Logging;
-using Backup.App.Models.Post;
+using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Services.Post;
+namespace Backup.App.Services.Posts;
 
 public class PostRecovery(
     ILogger<PostRecovery> _logger,
-    Models.Config.App _config,
+    AppConfig _config,
     IMediaLogger _mediaLogger,
     IPostDownloader _downloader,
     IPostParser _parser
@@ -20,18 +22,18 @@ public class PostRecovery(
     private const string RecoveryOrigin = "recovery";
 
     private readonly ILogger<PostRecovery> _logger = _logger;
-    private readonly Models.Config.App _config = _config;
+    private readonly AppConfig _config = _config;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
     private readonly IPostDownloader _downloader = _downloader;
     private readonly IPostParser _parser = _parser;
 
     private readonly CancellationTokenSource _tokenSource = new();
 
-    public async Task Recovery(IPostData postData, Models.Config.Api.UsersContext context)
+    public async Task Recovery(IPostData postData, UsersContext context)
     {
         try
         {
-            List<Models.Post.Post> posts = await Download(context);
+            List<Post> posts = await Download(context);
 
             if (posts.Count == 0)
             {
@@ -51,9 +53,9 @@ public class PostRecovery(
         }
     }
 
-    private async Task<List<Models.Post.Post>> Download(Models.Config.Api.UsersContext context)
+    private async Task<List<Post>> Download(UsersContext context)
     {
-        List<Models.Post.Post> posts = [];
+        List<Post> posts = [];
         List<Logs>? logs = await _mediaLogger.GetErrors();
 
         if (logs is null)

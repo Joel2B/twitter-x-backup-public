@@ -1,11 +1,11 @@
 using Backup.App.Extensions;
-using Backup.App.Interfaces.Data.Post;
-using Backup.App.Interfaces.Services.Post;
+using Backup.App.Interfaces.Data.Posts;
+using Backup.App.Interfaces.Services.Posts;
 using Backup.App.Models.Config.Api;
-using Backup.App.Models.Post;
+using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Post;
+namespace Backup.App.Services.Posts;
 
 public class PostService(
     ILogger<PostService> _logger,

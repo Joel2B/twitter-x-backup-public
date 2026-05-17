@@ -1,6 +1,6 @@
-namespace Backup.App.Models.Post;
+namespace Backup.App.Models.Posts;
 
-public class Profile
+public class PostProfile
 {
     public required string Id { get; set; }
     public string? UserName { get; set; }
@@ -8,9 +8,9 @@ public class Profile
     public string? BannerUrl { get; set; }
     public string? ImageUrl { get; set; }
     public bool? Following { get; set; }
-    public Count? Count { get; set; }
+    public PostCount? Count { get; set; }
 
-    public Profile Clone() =>
+    public PostProfile Clone() =>
         new()
         {
             Id = Id,
@@ -23,9 +23,9 @@ public class Profile
         };
 }
 
-public class Count
+public class PostCount
 {
     public int? Media { get; set; } = null;
 
-    public Count Clone() => new() { Media = Media };
+    public PostCount Clone() => new() { Media = Media };
 }

@@ -1,7 +1,7 @@
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Models.Config.Api;
 
-namespace Backup.App.Interfaces.Services.Post;
+namespace Backup.App.Interfaces.Services.Posts;
 
 public interface IPostRecovery
 {

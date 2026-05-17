@@ -1,7 +1,8 @@
 using Backup.App.Extensions;
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Models.Media;
+using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.App.Services.Media;
@@ -32,7 +33,7 @@ public class MediaService(
 
     public async Task Download()
     {
-        List<Models.Post.MediaInput>? posts;
+        List<MediaInput>? posts;
 
         using (_logger.LogTimer("getting posts"))
             posts = await _postData.GetMediaInputs();

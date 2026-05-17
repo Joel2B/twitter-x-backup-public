@@ -1,7 +1,7 @@
 using Backup.App.Models.Config;
 using Backup.App.Models.Config.Api;
-using Backup.App.Models.Config.Request;
-using Backup.App.Services.Post;
+using Backup.App.Models.Config.ApiRequest;
+using Backup.App.Services.Posts;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 
@@ -9,11 +9,12 @@ namespace Backup.IntegrationTests;
 
 internal static class LiveApiTestSupport
 {
-    internal static async Task PrepareVariables(App.Models.Config.App config, Request request)
+    internal static async Task PrepareVariables(AppConfig config, Request request)
     {
         string userId =
             ResolveUserId(config) ?? throw new Exception("userId not found in Services.Users");
-        IReadOnlyDictionary<string, Api> primaryApi = config.UsersContext[0].Api;
+
+        IReadOnlyDictionary<string, ApiConfig> primaryApi = config.UsersContext[0].Api;
 
         if (
             request.Query.Variables.TryGetValue("userId", out object? userIdValue)
@@ -49,7 +50,7 @@ internal static class LiveApiTestSupport
             request.Query.Variables["focalTweetId"] = await GetAnyTweetId(config, userId);
     }
 
-    internal static string? ResolveUserId(App.Models.Config.App config)
+    internal static string? ResolveUserId(AppConfig config)
     {
         string? configuredUserId = config.Services.Users.FirstOrDefault()?.Id?.Trim();
 
@@ -59,7 +60,7 @@ internal static class LiveApiTestSupport
         return null;
     }
 
-    internal static App.Models.Config.App LoadAppConfig()
+    internal static AppConfig LoadAppConfig()
     {
         return ConfigLoader.Load();
     }
@@ -77,9 +78,9 @@ internal static class LiveApiTestSupport
         return text.Contains("{REPLACE_THIS}", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string? TryExtractScreenName(IEnumerable<Api> apiEntries)
+    private static string? TryExtractScreenName(IEnumerable<ApiConfig> apiEntries)
     {
-        foreach (Api api in apiEntries)
+        foreach (ApiConfig api in apiEntries)
         {
             if (!api.Request.Headers.TryGetValue("Referer", out string? referer))
                 continue;
@@ -107,9 +108,10 @@ internal static class LiveApiTestSupport
         return null;
     }
 
-    private static async Task<string> GetAnyTweetId(App.Models.Config.App config, string userId)
+    private static async Task<string> GetAnyTweetId(AppConfig config, string userId)
     {
-        IReadOnlyDictionary<string, Api> primaryApi = config.UsersContext[0].Api;
+        IReadOnlyDictionary<string, ApiConfig> primaryApi = config.UsersContext[0].Api;
+
         Request postsRequest =
             RequestMerge.Build(primaryApi, "posts")
             ?? throw new Exception("Api 'posts' not found or disabled");

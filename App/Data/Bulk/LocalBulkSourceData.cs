@@ -3,19 +3,21 @@ using Backup.App.Interfaces;
 using Backup.App.Interfaces.Data.Bulk;
 using Backup.App.Interfaces.Partition;
 using Backup.App.Models.Bulk;
+using Backup.App.Models.Config.Data;
+using Backup.App.Models.Config.Data.Bulk;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.App.Data.Bulk;
 
 public class LocalBulkSourceData(
     ILogger<LocalBulkSourceData> _logger,
-    Models.Config.Data.Bulk.Storage _config,
+    StorageBulk _config,
     IPartition _partition
 ) : IBulkSourceDataStore, ISetup
 {
     public bool IsDefault { get; set; }
     private readonly ILogger<LocalBulkSourceData> _logger = _logger;
-    private readonly Models.Config.Data.Bulk.Storage _config = _config;
+    private readonly StorageBulk _config = _config;
     private readonly IPartition _partition = _partition;
 
     public Task Setup()
@@ -26,9 +28,9 @@ public class LocalBulkSourceData(
         return Task.CompletedTask;
     }
 
-    private string GetPathSources(Models.Config.Data.Partition? partition = null)
+    private string GetPathSources(PartitionConfig? partition = null)
     {
-        Models.Config.Data.Partition primary = partition ?? _partition.GetPrimary();
+        PartitionConfig primary = partition ?? _partition.GetPrimary();
 
         string path = Path.Combine(
             [.. primary.Paths, .. _config.Paths.Paths, .. _config.Paths.Sources.Paths]
@@ -39,7 +41,7 @@ public class LocalBulkSourceData(
 
     private void SetupDirectory()
     {
-        foreach (Models.Config.Data.Partition partition in _partition.GetPartitions())
+        foreach (PartitionConfig partition in _partition.GetPartitions())
             Directory.CreateDirectory(GetPathSources(partition));
     }
 
@@ -103,14 +105,14 @@ public class LocalBulkSourceData(
 
     private void Replicate()
     {
-        List<Models.Config.Data.Partition> partitions = _partition
+        List<PartitionConfig> partitions = _partition
             .GetPartitions()
             .Except([_partition.GetPrimary()])
             .ToList();
 
         string mainPath = GetPathSources();
 
-        foreach (Models.Config.Data.Partition partition in partitions)
+        foreach (PartitionConfig partition in partitions)
         {
             string path = GetPathSources(partition);
 

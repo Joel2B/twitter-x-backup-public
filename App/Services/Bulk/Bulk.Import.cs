@@ -1,5 +1,5 @@
 using Backup.App.Models.Bulk;
-using Backup.App.Models.Post;
+using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.App.Services.Bulk;
@@ -13,7 +13,7 @@ public partial class BulkService
         List<Source> sources = await _bulkSourceData.GetSources();
 
         _logger.LogInformation("getting bulks");
-        List<Models.Bulk.Bulk> bulks = await _bulkData.GetBulks() ?? [];
+        List<BulkData> bulks = await _bulkData.GetBulks() ?? [];
 
         _logger.LogInformation("filtering sources");
         sources.RemoveAll(source =>
@@ -35,7 +35,7 @@ public partial class BulkService
 
             _logger.LogInformation("import user: {user}", source.UserName);
 
-            Models.Bulk.Bulk bulk = new()
+            BulkData bulk = new()
             {
                 User = new() { Name = source.UserName, Status = StatusUser.None },
             };

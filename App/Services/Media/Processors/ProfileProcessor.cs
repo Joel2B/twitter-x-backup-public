@@ -1,10 +1,12 @@
 using Backup.App.Core.Media;
+using Backup.App.Models.Config.Medias;
 using Backup.App.Models.Media;
 using Backup.App.Models.Media.Processors;
+using Backup.App.Models.Posts;
 
 namespace Backup.App.Services.Media.Processors;
 
-public class ProfileProcessor(Models.Config.Medias.Profile config, MediaProcessorContext context)
+public class ProfileProcessor(ProfileConfig config, MediaProcessorContext context)
     : MediaProcessor(context)
 {
     public override void Process()
@@ -22,7 +24,7 @@ public class ProfileProcessor(Models.Config.Medias.Profile config, MediaProcesso
 
         List<Resolution> resolutions = [.. dimensions, .. sizes];
 
-        foreach (Models.Post.MediaInput post in Context.Posts)
+        foreach (MediaInput post in Context.Posts)
         {
             string? url = post.Profile.ImageUrl;
 

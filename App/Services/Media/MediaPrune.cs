@@ -1,11 +1,12 @@
 using Backup.App.Extensions;
 using Backup.App.Interfaces.Services.Media;
+using Backup.App.Models.Config;
 using Backup.App.Models.Media;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace Backup.App.Services.Media;
 
-public class MediaPrune(Models.Config.App _config) : IMediaPrune
+public class MediaPrune(AppConfig _config) : IMediaPrune
 {
     private readonly Utils.MediaFilter _filter = new(_config.Downloads.Prune.Filters);
 

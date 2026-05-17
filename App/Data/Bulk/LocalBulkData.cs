@@ -1,7 +1,11 @@
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Data.Bulk;
 using Backup.App.Interfaces.Partition;
+using Backup.App.Models.Bulk;
+using Backup.App.Models.Config;
+using Backup.App.Models.Config.Data;
 using Backup.App.Models.Config.Data.Bulk;
+using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -9,8 +13,8 @@ namespace Backup.App.Data.Bulk;
 
 public class LocalBulkData(
     ILogger<LocalBulkData> _logger,
-    Models.Config.App _appConfig,
-    Storage _config,
+    AppConfig _appConfig,
+    StorageBulk _config,
     IPartition _partition
 ) : IBulkDataStore, ISetup
 {
@@ -18,8 +22,8 @@ public class LocalBulkData(
     public bool IsDefault { get; set; }
 
     private readonly ILogger<LocalBulkData> _logger = _logger;
-    private readonly Models.Config.App _appConfig = _appConfig;
-    private readonly Storage _config = _config;
+    private readonly AppConfig _appConfig = _appConfig;
+    private readonly StorageBulk _config = _config;
     private readonly IPartition _partition = _partition;
 
     public Task Setup()
@@ -29,17 +33,17 @@ public class LocalBulkData(
         return Task.CompletedTask;
     }
 
-    private string GetPath(Models.Config.Data.Partition partition) =>
-        Utils.Path.GetPath(
+    private string GetPath(PartitionConfig partition) =>
+        UtilsPath.GetPath(
             [.. partition.Paths, .. _config.Paths.Paths, .. _config.Paths.Bulk.Paths]
         );
 
-    private string GetFileBulk(Models.Config.Data.Partition? partition = null)
+    private string GetFileBulk(PartitionConfig? partition = null)
     {
         if (_config.Paths.Bulk.File is null)
             throw new Exception("file not configured");
 
-        Models.Config.Data.Partition primary = partition ?? _partition.GetPrimary();
+        PartitionConfig primary = partition ?? _partition.GetPrimary();
         string path = Path.Combine(GetPath(primary), _config.Paths.Bulk.File);
 
         return path;
@@ -47,11 +51,11 @@ public class LocalBulkData(
 
     private void SetupDirectory()
     {
-        foreach (Models.Config.Data.Partition partition in _partition.GetPartitions())
+        foreach (PartitionConfig partition in _partition.GetPartitions())
             Directory.CreateDirectory(GetPath(partition));
     }
 
-    public async Task<List<Models.Bulk.Bulk>?> GetBulks()
+    public async Task<List<BulkData>?> GetBulks()
     {
         string path = GetFileBulk();
 
@@ -60,14 +64,14 @@ public class LocalBulkData(
 
         string content = await File.ReadAllTextAsync(path);
 
-        List<Models.Bulk.Bulk>? bulks =
-            JsonConvert.DeserializeObject<List<Models.Bulk.Bulk>>(content)
+        List<BulkData>? bulks =
+            JsonConvert.DeserializeObject<List<BulkData>>(content)
             ?? throw new Exception("Error deserializing the file.");
 
         return bulks;
     }
 
-    public async Task Save(List<Models.Bulk.Bulk> bulks)
+    public async Task Save(List<BulkData> bulks)
     {
         await RenameFile();
 
@@ -101,11 +105,11 @@ public class LocalBulkData(
         if (!_config.Tasks.Prune)
             return;
 
-        foreach (Models.Config.Data.Partition partition in _partition.GetPartitions())
+        foreach (PartitionConfig partition in _partition.GetPartitions())
             await PrunePartition(partition);
     }
 
-    private Task PrunePartition(Models.Config.Data.Partition partition)
+    private Task PrunePartition(PartitionConfig partition)
     {
         _logger.LogInformation("prunning partition: {value}", partition.Id);
 
@@ -114,8 +118,8 @@ public class LocalBulkData(
         _logger.LogInformation("base path: {path}", Path.GetFileName(basePath));
 
         var pathsDate = pathsFiles
-            .Where(o => Utils.Path.ToDate(o) is not null)
-            .Select(o => new { Path = o, Date = Utils.Path.ToDate(o) })
+            .Where(o => UtilsPath.ToDate(o) is not null)
+            .Select(o => new { Path = o, Date = UtilsPath.ToDate(o) })
             .OrderBy(o => o.Date);
 
         if (!pathsDate.Any())
@@ -153,14 +157,14 @@ public class LocalBulkData(
 
     public void Replicate()
     {
-        List<Models.Config.Data.Partition> partitions = _partition
+        List<PartitionConfig> partitions = _partition
             .GetPartitions()
             .Except([_partition.GetPrimary()])
             .ToList();
 
         string mainPath = GetFileBulk();
 
-        foreach (Models.Config.Data.Partition partition in partitions)
+        foreach (PartitionConfig partition in partitions)
         {
             string path = GetFileBulk(partition);
 

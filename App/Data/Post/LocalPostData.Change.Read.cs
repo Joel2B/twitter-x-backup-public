@@ -1,14 +1,14 @@
 using Backup.App.Models.Data.Json;
-using Backup.App.Models.Post;
+using Backup.App.Models.Posts;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
 public partial class LocalPostData
 {
     private static List<Change> ToModelChanges(
         List<PostChangeRow> changeRows,
         Dictionary<(string PostId, int ChangeOrdinal), List<PostChangeFieldRow>> fieldsByChange,
-        Models.Post.Post currentPost
+        Post currentPost
     )
     {
         if (changeRows.Count == 0)
@@ -19,7 +19,7 @@ public partial class LocalPostData
             .ThenBy(o => o.Ordinal)
             .ToList();
 
-        Models.Post.Data stateData = currentPost.Clone();
+        PostData stateData = currentPost.Clone();
 
         Dictionary<string, Dictionary<string, IndexData>> stateIndex = currentPost.CloneIndex();
 
@@ -66,7 +66,7 @@ public partial class LocalPostData
     }
 
     private static void ApplyReverseDelta(
-        Models.Post.Data stateData,
+        PostData stateData,
         Dictionary<string, Dictionary<string, IndexData>> stateIndex,
         PostChangeFieldRow field
     )
@@ -94,7 +94,7 @@ public partial class LocalPostData
         stateIndex[userId] = CloneIndex(oldIndex);
     }
 
-    private static void ApplyOldDataValue(Models.Post.Data data, string field, string? oldValueJson)
+    private static void ApplyOldDataValue(PostData data, string field, string? oldValueJson)
     {
         switch (field)
         {
@@ -155,7 +155,7 @@ public partial class LocalPostData
                 data.Hashtags = DeserializeJson<List<string>?>(oldValueJson);
                 break;
             case ChangeFields.PostMedias:
-                data.Medias = DeserializeJson<List<Models.Post.Media>?>(oldValueJson);
+                data.Medias = DeserializeJson<List<PostMedia>?>(oldValueJson);
                 break;
         }
     }

@@ -1,13 +1,15 @@
+using Backup.App.Models.Config.Downloads;
+
 namespace Backup.App.Models.Config.Data.Backup;
 
-public class Storage : Models.Config.Data.Storage
+public class StorageBackup : Storage
 {
     public required Paths Paths { get; set; }
-    public required Chunk Chunk { get; set; }
+    public required ChunkConfig Chunk { get; set; }
     public required Direct Direct { get; set; }
 }
 
-public class Paths : Downloads.Path
+public class Paths : PathConfig
 {
-    public required Downloads.Path Cache { get; set; }
+    public required PathConfig Cache { get; set; }
 }

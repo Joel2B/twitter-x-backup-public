@@ -1,19 +1,24 @@
 using System.Text.RegularExpressions;
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Partition;
+using Backup.App.Models.Config;
 using Backup.App.Models.Config.Api;
+using Backup.App.Models.Config.Data;
+using Backup.App.Models.Config.Data.Bulk;
 using Backup.App.Models.Config.Data.Dump;
 using Backup.App.Models.Dump;
+using Backup.App.Models.Posts;
+using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
 public class LocalDumpData(
     ILogger<LocalDumpData> _logger,
-    Models.Config.App _appConfig,
+    AppConfig _appConfig,
     IDumpsData _dumps,
-    Storage _config,
+    StorageDump _config,
     IPartition _partition
 ) : IDumpDataStore
 {
@@ -21,8 +26,8 @@ public class LocalDumpData(
     public bool IsDefault { get; set; }
 
     private readonly ILogger<LocalDumpData> _logger = _logger;
-    private readonly Models.Config.App _appConfig = _appConfig;
-    private readonly Storage _config = _config;
+    private readonly AppConfig _appConfig = _appConfig;
+    private readonly StorageDump _config = _config;
     private readonly IPartition _partition = _partition;
 
     private DumpData? _dumpData;
@@ -30,7 +35,7 @@ public class LocalDumpData(
 
     public Task Setup() => Task.CompletedTask;
 
-    private string GetPath(Models.Config.Data.Partition partition) =>
+    private string GetPath(PartitionConfig partition) =>
         Path.Combine([.. partition.Paths, .. _config.Paths.Paths, .. _config.Paths.Dumps.Paths]);
 
     private async Task<string> GetPathCurrent(ApiContext context)
@@ -145,12 +150,7 @@ public class LocalDumpData(
         return Data;
     }
 
-    public async Task Save(
-        string response,
-        List<Models.Post.Post> posts,
-        string cursor,
-        ApiContext context
-    )
+    public async Task Save(string response, List<Post> posts, string cursor, ApiContext context)
     {
         await SetupDirectory(context);
 
@@ -195,7 +195,7 @@ public class LocalDumpData(
             .EnumerateFiles(currentPath, "*.json", SearchOption.AllDirectories)
             .ToList();
 
-        List<Models.Post.Post> dumpPosts = [];
+        List<Post> dumpPosts = [];
 
         foreach (string path in paths)
         {
@@ -206,9 +206,7 @@ public class LocalDumpData(
                 continue;
 
             string content = await File.ReadAllTextAsync(path);
-            List<Models.Post.Post>? _posts = JsonConvert.DeserializeObject<List<Models.Post.Post>>(
-                content
-            );
+            List<Post>? _posts = JsonConvert.DeserializeObject<List<Post>>(content);
 
             if (_posts is null)
                 throw new Exception("Error in deserialize");
@@ -233,7 +231,7 @@ public class LocalDumpData(
 
     private async Task Replicate(ApiContext context)
     {
-        List<Models.Config.Data.Partition> partitions = _partition
+        List<PartitionConfig> partitions = _partition
             .GetPartitions()
             .Except([_partition.GetPrimary()])
             .ToList();
@@ -242,10 +240,10 @@ public class LocalDumpData(
         string primaryPath = GetPath(_partition.GetPrimary());
         string relativePath = Path.GetRelativePath(primaryPath, mainPath);
 
-        foreach (Models.Config.Data.Partition partition in partitions)
+        foreach (PartitionConfig partition in partitions)
         {
             string path = Path.Combine(GetPath(partition), relativePath);
-            Utils.Path.CopyDirectory(mainPath, path);
+            UtilsPath.CopyDirectory(mainPath, path);
         }
     }
 }

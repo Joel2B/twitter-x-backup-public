@@ -1,7 +1,7 @@
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Models.Dump;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
 public class DumpsDataMultiStore(IEnumerable<IDumpsDataStore> stores) : IDumpsData
 {

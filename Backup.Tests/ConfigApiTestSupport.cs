@@ -1,13 +1,14 @@
 using System.Reflection;
+using Backup.App.Models.Config;
 using Microsoft.Extensions.Configuration;
 
 namespace Backup.Tests;
 
 internal static class ConfigApiTestSupport
 {
-    internal static App.Models.Config.App LoadSplit(string configDirectory)
+    internal static AppConfig LoadSplit(string configDirectory)
     {
-        MethodInfo? method = typeof(App.Models.Config.ConfigLoader).GetMethod(
+        MethodInfo? method = typeof(ConfigLoader).GetMethod(
             "LoadSplit",
             BindingFlags.NonPublic | BindingFlags.Static
         );
@@ -17,9 +18,9 @@ internal static class ConfigApiTestSupport
         object? result = method!.Invoke(null, [configDirectory]);
 
         Assert.NotNull(result);
-        Assert.IsType<App.Models.Config.App>(result);
+        Assert.IsType<AppConfig>(result);
 
-        return (App.Models.Config.App)result!;
+        return (AppConfig)result!;
     }
 
     internal static T LoadFile<T>(string path)

@@ -2,6 +2,7 @@ using Backup.App.Data.Partition;
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Config;
 using Backup.App.Interfaces.Partition;
+using Backup.App.Models.Config;
 using Backup.App.Services.Config;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,7 +15,7 @@ public static class CoreCollectionExtensions
         IAppConfigStore store = new JsonAppConfigStore();
         IAppConfigService configService = new AppConfigService(store);
         AppConfigSnapshot snapshot = configService.GetSnapshot();
-        Models.Config.App config = snapshot.Value;
+        AppConfig config = snapshot.Value;
 
         services.AddSingleton(store);
         services.AddSingleton(configService);

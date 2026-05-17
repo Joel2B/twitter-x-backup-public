@@ -1,5 +1,6 @@
 using Backup.App.Interfaces.Proxy;
 using Backup.App.Interfaces.Services.Media;
+using Backup.App.Models.Config;
 using Backup.App.Models.Media;
 using Backup.App.Models.Media.Logging;
 using Backup.App.Services.Proxy;
@@ -9,14 +10,14 @@ namespace Backup.App.Services.Media;
 
 class MediaDownload(
     ILogger<MediaDownload> _logger,
-    Models.Config.App _config,
+    AppConfig _config,
     IMediaDownloader _downloader,
     IMediaLogger _mediaLogger,
     IProxyProvider proxyProvider
 ) : IMediaDownload
 {
     private readonly ILogger<MediaDownload> _logger = _logger;
-    private readonly Models.Config.App _config = _config;
+    private readonly AppConfig _config = _config;
     private readonly IMediaDownloader _downloader = _downloader;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
     private readonly IProxyProvider _proxyProvider = proxyProvider;

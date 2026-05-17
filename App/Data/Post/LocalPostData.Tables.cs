@@ -1,8 +1,9 @@
+using Backup.App.Models.Config.Data;
 using Backup.App.Models.Data.Json;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
 public partial class LocalPostData
 {
@@ -26,21 +27,16 @@ public partial class LocalPostData
         Func<LocalPostTables, object> GetRows
     );
 
-    private string GetTablesDirectoryPath(
-        string directoryName,
-        Models.Config.Data.Partition? partition = null
-    )
+    private string GetTablesDirectoryPath(string directoryName, PartitionConfig? partition = null)
     {
-        Models.Config.Data.Partition target = partition ?? _partition.GetPrimary();
+        PartitionConfig target = partition ?? _partition.GetPrimary();
         return Path.Combine(GetPath(target), directoryName);
     }
 
-    private string GetCurrentTablesFilePath(
-        string fileName,
-        Models.Config.Data.Partition? partition = null
-    ) => Path.Combine(GetTablesDirectoryPath(TablesCurrentDirectoryName, partition), fileName);
+    private string GetCurrentTablesFilePath(string fileName, PartitionConfig? partition = null) =>
+        Path.Combine(GetTablesDirectoryPath(TablesCurrentDirectoryName, partition), fileName);
 
-    private void PrepareTablesDirectories(Models.Config.Data.Partition? partition = null)
+    private void PrepareTablesDirectories(PartitionConfig? partition = null)
     {
         string tmpPath = GetTablesDirectoryPath(TablesTmpDirectoryName, partition);
         string currentPath = GetTablesDirectoryPath(TablesCurrentDirectoryName, partition);
@@ -53,9 +49,9 @@ public partial class LocalPostData
             Directory.Move(currentOldPath, currentPath);
     }
 
-    private void ArchiveCurrentOldDirectory(Models.Config.Data.Partition? partition = null)
+    private void ArchiveCurrentOldDirectory(PartitionConfig? partition = null)
     {
-        Models.Config.Data.Partition target = partition ?? _partition.GetPrimary();
+        PartitionConfig target = partition ?? _partition.GetPrimary();
         string currentOldPath = GetTablesDirectoryPath(TablesCurrentOldDirectoryName, target);
 
         if (!Directory.Exists(currentOldPath))
@@ -67,7 +63,7 @@ public partial class LocalPostData
         Directory.Move(currentOldPath, historyPath);
     }
 
-    private IEnumerable<string> GetDataFilePaths(Models.Config.Data.Partition? partition = null)
+    private IEnumerable<string> GetDataFilePaths(PartitionConfig? partition = null)
     {
         foreach (TableManifestEntry table in TableManifest)
             yield return GetCurrentTablesFilePath(table.FileName, partition);

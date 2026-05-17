@@ -1,9 +1,10 @@
 using Backup.App.Extensions;
-using Backup.App.Interfaces.Data.Post;
-using Backup.App.Interfaces.Services.Post;
+using Backup.App.Interfaces.Data.Posts;
+using Backup.App.Interfaces.Services.Posts;
+using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
 public class PostDataMultiStore(
     IEnumerable<IPostDataStore> stores,
@@ -41,14 +42,13 @@ public class PostDataMultiStore(
 
     public Task<int> GetCount() => Primary.GetCount();
 
-    public Task<List<Models.Post.Post>?> GetAll() => Primary.GetAll();
+    public Task<List<Post>?> GetAll() => Primary.GetAll();
 
-    public Task<List<Models.Post.MediaInput>?> GetMediaInputs() => Primary.GetMediaInputs();
+    public Task<List<MediaInput>?> GetMediaInputs() => Primary.GetMediaInputs();
 
     public Task<Dictionary<string, string>> GetHashesById() => Primary.GetHashesById();
 
-    public Task<List<Models.Post.Post>> GetByIds(IReadOnlyCollection<string> ids) =>
-        Primary.GetByIds(ids);
+    public Task<List<Post>> GetByIds(IReadOnlyCollection<string> ids) => Primary.GetByIds(ids);
 
     public Task<Dictionary<string, int>> GetPostCountsByProfileIds(
         IReadOnlyCollection<string> profileIds
@@ -57,8 +57,8 @@ public class PostDataMultiStore(
     public Task AddPosts(
         string userId,
         string origin,
-        List<Models.Post.Post> incoming,
-        Models.Post.MergeOptions? options = null
+        List<Post> incoming,
+        MergeOptions? options = null
     ) => Primary.AddPosts(userId, origin, incoming, options);
 
     public Task<int> MarkDeletedExcept(
@@ -67,9 +67,9 @@ public class PostDataMultiStore(
         IReadOnlyCollection<string> keepPostIds
     ) => Primary.MarkDeletedExcept(userId, origin, keepPostIds);
 
-    public Task Reset(List<Models.Post.Post> posts) => Primary.Reset(posts);
+    public Task Reset(List<Post> posts) => Primary.Reset(posts);
 
-    public Task UpsertPosts(List<Models.Post.Post> posts) => Primary.UpsertPosts(posts);
+    public Task UpsertPosts(List<Post> posts) => Primary.UpsertPosts(posts);
 
     public async Task Save()
     {
@@ -94,11 +94,11 @@ public class PostDataMultiStore(
             return;
         }
 
-        Dictionary<IPostDataStore, Models.Post.PostStoreCounts> countsByStore = [];
+        Dictionary<IPostDataStore, PostStoreCounts> countsByStore = [];
 
         foreach (IPostDataStore store in _stores)
         {
-            Models.Post.PostStoreCounts counts = await store.GetStoreCounts();
+            PostStoreCounts counts = await store.GetStoreCounts();
             countsByStore[store] = counts;
 
             _logger.LogInfo(
@@ -117,11 +117,11 @@ public class PostDataMultiStore(
         }
 
         IPostDataStore primary = Primary;
-        Models.Post.PostStoreCounts primaryCounts = countsByStore[primary];
+        PostStoreCounts primaryCounts = countsByStore[primary];
 
         foreach (IPostDataStore store in _stores.Where(store => !ReferenceEquals(store, primary)))
         {
-            Models.Post.PostStoreCounts candidateCounts = countsByStore[store];
+            PostStoreCounts candidateCounts = countsByStore[store];
             List<string> diffs = GetCountDiffs(primaryCounts, candidateCounts);
 
             if (diffs.Count == 0)
@@ -146,10 +146,7 @@ public class PostDataMultiStore(
     private static string GetStoreLabel(IPostDataStore store) =>
         string.IsNullOrWhiteSpace(store.Id) ? store.GetType().Name : store.Id!;
 
-    private static List<string> GetCountDiffs(
-        Models.Post.PostStoreCounts left,
-        Models.Post.PostStoreCounts right
-    )
+    private static List<string> GetCountDiffs(PostStoreCounts left, PostStoreCounts right)
     {
         List<string> diffs = [];
         AddDiff("posts", left.Posts, right.Posts);
@@ -161,6 +158,7 @@ public class PostDataMultiStore(
         AddDiff("changes", left.Changes, right.Changes);
         AddDiff("changeFields", left.ChangeFields, right.ChangeFields);
         AddDiff("hashMeta", left.HashMeta, right.HashMeta);
+
         return diffs;
 
         void AddDiff(string name, int a, int b)

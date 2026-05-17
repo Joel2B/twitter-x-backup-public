@@ -1,5 +1,5 @@
-using Backup.App.Models.Post;
-using Backup.App.Models.Post.Response;
+using Backup.App.Models.Posts;
+using Backup.App.Models.Posts.Response;
 
 namespace Backup.App.Mapper;
 

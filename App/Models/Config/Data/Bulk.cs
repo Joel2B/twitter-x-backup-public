@@ -1,12 +1,14 @@
+using Backup.App.Models.Config.Downloads;
+
 namespace Backup.App.Models.Config.Data.Bulk;
 
-public class Storage : Models.Config.Data.Storage
+public class StorageBulk : Storage
 {
     public required Paths Paths { get; set; }
 }
 
-public class Paths : Downloads.Path
+public class Paths : PathConfig
 {
-    public required Downloads.Path Bulk { get; set; }
-    public required Downloads.Path Sources { get; set; }
+    public required PathConfig Bulk { get; set; }
+    public required PathConfig Sources { get; set; }
 }

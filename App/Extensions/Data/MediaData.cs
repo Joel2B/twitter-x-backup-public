@@ -14,16 +14,18 @@ public static class MediaDataCollectionExtensions
     {
         Dictionary<string, Type> types = new() { ["local"] = typeof(LocalMediaData) };
 
-        List<DataCollectionExtensions.DataRegistration<Storage>> registrations =
+        List<DataCollectionExtensions.DataRegistration<StorageMedia>> registrations =
             services.ResolveRegistrations(
                 services.GetAppConfig().Data.Media,
                 types,
                 keyOffset: 200
             );
 
-        foreach (DataCollectionExtensions.DataRegistration<Storage> registration in registrations)
+        foreach (
+            DataCollectionExtensions.DataRegistration<StorageMedia> registration in registrations
+        )
         {
-            Storage storage = registration.Storage;
+            StorageMedia storage = registration.Storage;
             string key = registration.Key;
             Type type = registration.ImplementationType;
 

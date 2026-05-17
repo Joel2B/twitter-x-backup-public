@@ -1,19 +1,19 @@
-namespace Backup.App.Models.Post;
+namespace Backup.App.Models.Posts;
 
-public class Data
+public class PostData
 {
     public required string Id { get; set; }
-    public required Profile Profile { get; set; }
+    public required PostProfile Profile { get; set; }
     public required string Description { get; set; }
     public required bool Retweeted { get; set; }
     public required bool Favorited { get; set; }
     public required bool Bookmarked { get; set; }
     public required string CreatedAt { get; set; }
     public List<string>? Hashtags { get; set; }
-    public List<Media>? Medias { get; set; }
+    public List<PostMedia>? Medias { get; set; }
     public bool Deleted { get; set; } = false;
 
-    public Data Clone() =>
+    public PostData Clone() =>
         new()
         {
             Id = Id,

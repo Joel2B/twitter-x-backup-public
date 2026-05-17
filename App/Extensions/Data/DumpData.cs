@@ -1,7 +1,7 @@
 using Backup.App.Data.Partition;
-using Backup.App.Data.Post;
+using Backup.App.Data.Posts;
 using Backup.App.Interfaces;
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Partition;
 using Backup.App.Models.Config.Data.Dump;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,12 +13,14 @@ public static class DumpsDataCollectionExtensions
     public static IServiceCollection AddDumpData(this IServiceCollection services)
     {
         Dictionary<string, Type> types = new() { ["local"] = typeof(LocalDumpData) };
-        List<DataCollectionExtensions.DataRegistration<Storage>> registrations =
+        List<DataCollectionExtensions.DataRegistration<StorageDump>> registrations =
             services.ResolveRegistrations(services.GetAppConfig().Data.Dump, types, keyOffset: 300);
 
-        foreach (DataCollectionExtensions.DataRegistration<Storage> registration in registrations)
+        foreach (
+            DataCollectionExtensions.DataRegistration<StorageDump> registration in registrations
+        )
         {
-            Storage storage = registration.Storage;
+            StorageDump storage = registration.Storage;
             string key = registration.Key;
             Type type = registration.ImplementationType;
 

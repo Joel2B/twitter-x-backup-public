@@ -1,6 +1,8 @@
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Partition;
 using Backup.App.Interfaces.Services.Media;
+using Backup.App.Models.Config.Data;
+using Backup.App.Models.Config.Data.Media;
 using Backup.App.Models.Media;
 using Backup.App.Models.Utils;
 using Microsoft.Extensions.Logging;
@@ -9,7 +11,7 @@ namespace Backup.App.Data.Media;
 
 public class LocalMediaData(
     ILogger<LocalMediaData> _log,
-    Models.Config.Data.Media.Storage _config,
+    StorageMedia _config,
     IPartition _partition,
     LocalMediaCache _mediaCache
 ) : IMediaData, ISetup
@@ -17,7 +19,7 @@ public class LocalMediaData(
     public string? Id { get; set; }
 
     private readonly ILogger<LocalMediaData> _logger = _log;
-    private readonly Models.Config.Data.Media.Storage _config = _config;
+    private readonly StorageMedia _config = _config;
     private readonly IPartition _partition = _partition;
     private readonly LocalMediaCache _mediaCache = _mediaCache;
 
@@ -35,7 +37,7 @@ public class LocalMediaData(
 
     private string GetPathTemp()
     {
-        Models.Config.Data.Partition heavy = _partition.GetHeavy();
+        PartitionConfig heavy = _partition.GetHeavy();
 
         return Path.Combine(
             [.. heavy.Paths, .. _config.Paths.Tmp.Paths, .. _config.Paths.Tmp.Downloader.Paths]

@@ -1,21 +1,22 @@
 using Backup.App.Core.Media;
 using Backup.App.Interfaces.Services.Media;
+using Backup.App.Models.Config;
 using Backup.App.Models.Media;
+using Backup.App.Models.Posts;
 using Backup.App.Services.Media.Processors;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.App.Services.Media;
 
-public class MediaProcessing(ILogger<MediaProcessing> _logger, Models.Config.App _config)
-    : IMediaProcessing
+public class MediaProcessing(ILogger<MediaProcessing> _logger, AppConfig _config) : IMediaProcessing
 {
     private readonly ILogger<MediaProcessing> _logger = _logger;
-    private readonly Models.Config.App _config = _config;
+    private readonly AppConfig _config = _config;
 
     private readonly Dictionary<string, Download> _all = [];
     private readonly Dictionary<string, Download> _filtered = [];
 
-    public Task Process(List<Models.Post.MediaInput> posts)
+    public Task Process(List<MediaInput> posts)
     {
         MediaProcessorContext context = new(posts, _all, _filtered);
 

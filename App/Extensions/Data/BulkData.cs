@@ -14,12 +14,14 @@ public static class BulkDataCollectionExtensions
     {
         Dictionary<string, Type> types = new() { ["local"] = typeof(LocalBulkData) };
 
-        List<DataCollectionExtensions.DataRegistration<Storage>> registrations =
+        List<DataCollectionExtensions.DataRegistration<StorageBulk>> registrations =
             services.ResolveRegistrations(services.GetAppConfig().Data.Bulk, types, keyOffset: 100);
 
-        foreach (DataCollectionExtensions.DataRegistration<Storage> registration in registrations)
+        foreach (
+            DataCollectionExtensions.DataRegistration<StorageBulk> registration in registrations
+        )
         {
-            Storage storage = registration.Storage;
+            StorageBulk storage = registration.Storage;
             string key = registration.Key;
             Type type = registration.ImplementationType;
 

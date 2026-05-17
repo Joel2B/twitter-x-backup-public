@@ -1,7 +1,9 @@
+using Backup.App.Models.Config.Downloads;
+
 namespace Backup.App.Models.Config.Data;
 
-public class Tmp : Downloads.Path
+public class Tmp : PathConfig
 {
-    public required Downloads.Path Downloader { get; set; }
-    public required Downloads.Path Downloaded { get; set; }
+    public required PathConfig Downloader { get; set; }
+    public required PathConfig Downloaded { get; set; }
 }

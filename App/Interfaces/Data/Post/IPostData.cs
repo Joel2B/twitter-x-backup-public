@@ -1,13 +1,15 @@
-﻿namespace Backup.App.Interfaces.Data.Post;
+﻿using Backup.App.Models.Posts;
+
+namespace Backup.App.Interfaces.Data.Posts;
 
 public interface IPostData
 {
     public string? Id { get; set; }
     public Task<int> GetCount();
-    public Task<List<Models.Post.Post>?> GetAll();
-    public Task<List<Models.Post.MediaInput>?> GetMediaInputs();
+    public Task<List<Post>?> GetAll();
+    public Task<List<MediaInput>?> GetMediaInputs();
     public Task<Dictionary<string, string>> GetHashesById();
-    public Task<List<Models.Post.Post>> GetByIds(IReadOnlyCollection<string> ids);
+    public Task<List<Post>> GetByIds(IReadOnlyCollection<string> ids);
 
     public Task<Dictionary<string, int>> GetPostCountsByProfileIds(
         IReadOnlyCollection<string> profileIds
@@ -16,8 +18,8 @@ public interface IPostData
     public Task AddPosts(
         string userId,
         string origin,
-        List<Models.Post.Post> incoming,
-        Models.Post.MergeOptions? options = null
+        List<Post> incoming,
+        MergeOptions? options = null
     );
 
     public Task<int> MarkDeletedExcept(
@@ -26,8 +28,8 @@ public interface IPostData
         IReadOnlyCollection<string> keepPostIds
     );
 
-    public Task Reset(List<Models.Post.Post> posts);
-    public Task UpsertPosts(List<Models.Post.Post> posts);
+    public Task Reset(List<Post> posts);
+    public Task UpsertPosts(List<Post> posts);
     public Task Save();
     public Task Prune();
 }

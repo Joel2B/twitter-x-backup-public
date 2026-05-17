@@ -1,7 +1,9 @@
-namespace Backup.App.Interfaces.Data.Post;
+using Backup.App.Models.Posts;
+
+namespace Backup.App.Interfaces.Data.Posts;
 
 public interface IPostDataStore : IPostData
 {
     public bool IsDefault { get; set; }
-    public Task<Models.Post.PostStoreCounts> GetStoreCounts();
+    public Task<PostStoreCounts> GetStoreCounts();
 }

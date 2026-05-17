@@ -1,6 +1,6 @@
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Models.Bulk;
-using Backup.App.Models.Post;
+using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.App.Services.Bulk;
@@ -16,7 +16,7 @@ public partial class BulkService
 
         _logger.LogInformation("post count: {count}", postCount);
 
-        List<Models.Bulk.Bulk>? bulks = await _bulkData.GetBulks();
+        List<BulkData>? bulks = await _bulkData.GetBulks();
 
         if (bulks is null)
         {
@@ -24,12 +24,12 @@ public partial class BulkService
             return;
         }
 
-        IQueryable<Models.Bulk.Bulk> query = bulks
+        IQueryable<BulkData> query = bulks
             .Where(o => o.User.Status == StatusUser.Active && o.Order.Phase1 is not null)
             .OrderBy(o => o.Order.Phase1)
             .AsQueryable();
 
-        List<Models.Bulk.Bulk> bulksLeft = query.ToList();
+        List<BulkData> bulksLeft = query.ToList();
 
         _logger.LogInformation("bulks left: {count}", bulksLeft.Count);
 
@@ -42,7 +42,7 @@ public partial class BulkService
         if (_config.Bulk.UsersPerCycle > 0)
             query = query.Take(_config.Bulk.UsersPerCycle);
 
-        List<Models.Bulk.Bulk> bulksFiltered = query.ToList();
+        List<BulkData> bulksFiltered = query.ToList();
 
         string? origin = GetType(SourceType.Media);
 
@@ -54,7 +54,7 @@ public partial class BulkService
 
         int progress = 1;
 
-        foreach (Models.Bulk.Bulk bulk in bulksFiltered)
+        foreach (BulkData bulk in bulksFiltered)
         {
             if (bulk.User.Id is null)
                 continue;

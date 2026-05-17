@@ -1,11 +1,12 @@
-using Backup.App.Models.Post.Response;
+using Backup.App.Models.Posts;
+using Backup.App.Models.Posts.Response;
 using Newtonsoft.Json.Linq;
 
 namespace Backup.App.Mapper;
 
 public class Media
 {
-    public static List<Models.Post.Media>? GetMedias(Entry entry)
+    public static List<PostMedia>? GetMedias(Entry entry)
     {
         Result result = entry.Content.ItemContent.TweetResults!.Result;
 
@@ -15,8 +16,8 @@ public class Media
         if (_media is null)
             return null;
 
-        List<Models.Post.Media>? media = _media
-            .Select(o => new Models.Post.Media
+        List<PostMedia>? media = _media
+            .Select(o => new PostMedia
             {
                 Id = o.IdStr,
                 Type = o.Type,
@@ -75,16 +76,16 @@ public class Media
         return media;
     }
 
-    private static Models.Post.VideoInfo? GetVideoInfo(Medium medium)
+    private static PostVideoInfo? GetVideoInfo(Medium medium)
     {
         if (medium.VideoInfo is null)
             return null;
 
-        Models.Post.VideoInfo videoInfo = new()
+        PostVideoInfo videoInfo = new()
         {
             DurationMilis = medium.VideoInfo.DurationMillis,
             Variants = medium
-                .VideoInfo.Variants.Select(medium => new Models.Post.Variant
+                .VideoInfo.Variants.Select(medium => new PostVariant
                 {
                     Bitrate = medium.Bitrate,
                     ContentType = medium.ContentType,

@@ -1,11 +1,13 @@
-namespace Backup.App.Models.Config.Data.Post;
+using Backup.App.Models.Config.Downloads;
 
-public class Storage : Models.Config.Data.Storage
+namespace Backup.App.Models.Config.Data.Posts;
+
+public class StoragePost : Storage
 {
     public required Paths Paths { get; set; }
 }
 
-public class Paths : Downloads.Path
+public class Paths : PathConfig
 {
-    public required Downloads.Path Post { get; set; }
+    public required PathConfig Post { get; set; }
 }

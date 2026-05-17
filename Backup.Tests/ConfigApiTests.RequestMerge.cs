@@ -1,6 +1,6 @@
 using System.Globalization;
 using Backup.App.Models.Config.Api;
-using Backup.App.Models.Config.Request;
+using Backup.App.Models.Config.ApiRequest;
 
 namespace Backup.Tests;
 
@@ -24,7 +24,7 @@ public partial class ConfigApiTests
             },
         };
 
-        Dictionary<string, Api> api = new()
+        Dictionary<string, ApiConfig> api = new()
         {
             ["TweetDetail"] = new()
             {
@@ -50,7 +50,7 @@ public partial class ConfigApiTests
     [Fact]
     public void RequestMerge_Build_ReturnsNull_WhenApiIsDisabledOrMissing()
     {
-        Dictionary<string, Api> api = new()
+        Dictionary<string, ApiConfig> api = new()
         {
             ["TweetDetail"] = new()
             {
@@ -93,7 +93,7 @@ public partial class ConfigApiTests
             Headers = [],
         };
 
-        Dictionary<string, Api> api = new()
+        Dictionary<string, ApiConfig> api = new()
         {
             ["UserByScreenName"] = new()
             {
@@ -139,7 +139,7 @@ public partial class ConfigApiTests
                 Headers = [],
             };
 
-            Dictionary<string, Api> api = new()
+            Dictionary<string, ApiConfig> api = new()
             {
                 ["UserByScreenName"] = new()
                 {

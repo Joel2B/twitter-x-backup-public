@@ -1,6 +1,9 @@
+using Backup.App.Models.Config;
+using Backup.App.Models.Config.Data;
+
 namespace Backup.App.Utils;
 
-public class Path
+public class UtilsPath
 {
     public static string GetPath(List<string> paths)
     {
@@ -14,15 +17,15 @@ public class Path
             _paths.RemoveAt(0);
         }
 
-        return System.IO.Path.Combine([root, .. _paths]);
+        return Path.Combine([root, .. _paths]);
     }
 
     public static DateTime? ToDate(string path, bool isDir = false)
     {
-        string name = System.IO.Path.GetFileNameWithoutExtension(path);
+        string name = Path.GetFileNameWithoutExtension(path);
 
         if (isDir)
-            name = System.IO.Path.GetFileName(path);
+            name = Path.GetFileName(path);
 
         bool isDate = DateTime.TryParseExact(
             name,
@@ -40,11 +43,11 @@ public class Path
 
     public static string GetPathFormatted(string path)
     {
-        string fileName = System.IO.Path.GetFileNameWithoutExtension(path);
-        string extension = System.IO.Path.GetExtension(path);
+        string fileName = Path.GetFileNameWithoutExtension(path);
+        string extension = Path.GetExtension(path);
 
         fileName = $"{fileName}.formatted{extension}";
-        path = path.Replace(System.IO.Path.GetFileName(path), fileName);
+        path = path.Replace(Path.GetFileName(path), fileName);
 
         return path;
     }
@@ -58,13 +61,13 @@ public class Path
 
         foreach (string file in Directory.EnumerateFiles(sourceDir))
         {
-            string destFile = System.IO.Path.Combine(destDir, System.IO.Path.GetFileName(file));
+            string destFile = Path.Combine(destDir, Path.GetFileName(file));
             File.Copy(file, destFile, overwrite);
         }
 
         foreach (string dir in Directory.EnumerateDirectories(sourceDir))
         {
-            string destSubDir = System.IO.Path.Combine(destDir, System.IO.Path.GetFileName(dir));
+            string destSubDir = Path.Combine(destDir, Path.GetFileName(dir));
             CopyDirectory(dir, destSubDir, overwrite);
         }
     }
@@ -83,10 +86,7 @@ public class Path
         throw new Exception();
     }
 
-    public static string GetPartitionPath(
-        Models.Config.App config,
-        Models.Config.Data.Partition partition
-    )
+    public static string GetPartitionPath(AppConfig config, PartitionConfig partition)
     {
         List<string> paths = [];
 

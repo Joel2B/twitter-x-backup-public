@@ -1,17 +1,20 @@
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Partition;
+using Backup.App.Models.Config;
+using Backup.App.Models.Config.Data;
+using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
 public class LocalPostLogger(
     ILogger<LocalPostLogger> _logger,
-    Models.Config.App _config,
+    AppConfig _config,
     IPartition _partition
 ) : IPostLogger
 {
     private readonly ILogger<LocalPostLogger> _logger = _logger;
-    private readonly Models.Config.App _config = _config;
+    private readonly AppConfig _config = _config;
     private readonly IPartition _partition = _partition;
 
     private string _id = "";
@@ -35,9 +38,7 @@ public class LocalPostLogger(
 
     private string GetPath()
     {
-        Models.Config.Data.Partition partition = _partition
-            .GetPartitions(_config.Debug.Partitions)
-            .First();
+        PartitionConfig partition = _partition.GetPartitions(_config.Debug.Partitions).First();
 
         return Path.Combine(
             [.. partition.Paths, .. _config.Debug.Paths, .. _config.Debug.Api.Paths]
@@ -68,8 +69,8 @@ public class LocalPostLogger(
             string[] subPaths = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly);
 
             var pathsDate = subPaths
-                .Where(o => Utils.Path.ToDate(o, true) is not null)
-                .Select(o => new { Path = o, Date = Utils.Path.ToDate(o, true) })
+                .Where(o => UtilsPath.ToDate(o, true) is not null)
+                .Select(o => new { Path = o, Date = UtilsPath.ToDate(o, true) })
                 .OrderBy(o => o.Date)
                 .ToList();
 

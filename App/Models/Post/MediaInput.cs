@@ -1,10 +1,10 @@
-namespace Backup.App.Models.Post;
+namespace Backup.App.Models.Posts;
 
 public class MediaInput
 {
     public required string Id { get; set; }
-    public required Profile Profile { get; set; }
-    public List<Media>? Medias { get; set; }
+    public required PostProfile Profile { get; set; }
+    public List<PostMedia>? Medias { get; set; }
     public bool Deleted { get; set; }
 
     public MediaInput Clone() =>

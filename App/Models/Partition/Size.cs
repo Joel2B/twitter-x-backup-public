@@ -1,3 +1,5 @@
+using Backup.App.Models.Config.Data;
+
 namespace Backup.App.Models.Partition;
 
 public class PartitionSize
@@ -8,7 +10,7 @@ public class PartitionSize
         get => _size;
         set => Interlocked.Exchange(ref _size, value);
     }
-    public required Models.Config.Data.Partition Partition { get; set; }
+    public required PartitionConfig Partition { get; set; }
 
     public void Add(long size)
     {

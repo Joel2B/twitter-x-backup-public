@@ -3,20 +3,22 @@ using System.Net;
 using Backup.App.Interfaces.Proxy;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Interfaces.Services.UtilsService;
+using Backup.App.Models.Config;
 using Backup.App.Models.Media;
+using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.App.Services.Media;
 
 public class MediaDownloaderHttp(
     ILogger<MediaDownloaderHttp> _logger,
-    Models.Config.App _config,
+    AppConfig _config,
     IProxyProvider proxyProvider,
     IBandwidthLimiter bandwidthLimiter
 ) : IMediaDownloader
 {
     private readonly ILogger<MediaDownloaderHttp> _logger = _logger;
-    private readonly Models.Config.App _config = _config;
+    private readonly AppConfig _config = _config;
 
     private readonly IProxyProvider _proxy = proxyProvider;
     private readonly IBandwidthLimiter _bandwidthLimiter = bandwidthLimiter;
@@ -60,7 +62,7 @@ public class MediaDownloaderHttp(
                     && contentLength >= _config.Downloads.MaxBytes
                 )
                     throw new SystemException(
-                        $">= {Utils.Storage.FormatBytes(_config.Downloads.MaxBytes)}"
+                        $">= {UtilsStorage.FormatBytes(_config.Downloads.MaxBytes)}"
                     );
 
                 await using Stream content = await response.Content.ReadAsStreamAsync(token);
@@ -126,8 +128,8 @@ public class MediaDownloaderHttp(
                                 data.Url,
                                 data.Path,
                                 percent,
-                                Utils.Storage.FormatBytes(totalRead),
-                                Utils.Storage.FormatBytes(contentLength.Value)
+                                UtilsStorage.FormatBytes(totalRead),
+                                UtilsStorage.FormatBytes(contentLength.Value)
                             );
 
                             nextPercent += StepPercent;

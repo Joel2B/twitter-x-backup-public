@@ -1,8 +1,8 @@
-using Backup.App.Data.Post;
-using Backup.App.Interfaces.Data.Post;
-using Backup.App.Interfaces.Services.Post;
-using Backup.App.Models.Post;
-using Backup.App.Services.Post;
+using Backup.App.Data.Posts;
+using Backup.App.Interfaces.Data.Posts;
+using Backup.App.Interfaces.Services.Posts;
+using Backup.App.Models.Posts;
+using Backup.App.Services.Posts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.App.Extensions;

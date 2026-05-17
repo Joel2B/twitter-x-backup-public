@@ -2,6 +2,7 @@ using System.Net;
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Data.Proxy;
 using Backup.App.Interfaces.Proxy;
+using Backup.App.Models.Config;
 using Backup.App.Models.Proxy;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -12,13 +13,13 @@ public class ProxyException(string? message = null) : Exception(message) { }
 
 public class ProxyEmptyException(string? message = null) : ProxyException(message) { }
 
-public class ProxyProvider(ILogger<ProxyProvider> _logger, Models.Config.App _config, IProxyData _data)
+public class ProxyProvider(ILogger<ProxyProvider> _logger, AppConfig _config, IProxyData _data)
     : IProxyProvider,
         ISetup,
         IDisposable
 {
     private readonly ILogger<ProxyProvider> _logger = _logger;
-    private readonly Models.Config.App _config = _config;
+    private readonly AppConfig _config = _config;
     private readonly IProxyData _data = _data;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
@@ -28,7 +29,7 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, Models.Config.App _co
 
     private int count = 0;
 
-    private List<Models.Proxy.Data> _proxies = [];
+    private List<ProxyData> _proxies = [];
 
     private volatile HttpClient? _client;
 
@@ -43,15 +44,14 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, Models.Config.App _co
             return;
         }
 
-        Dictionary<Models.Proxy.Proxy, Models.Proxy.Data> proxiesDict =
-            await _data.GetAllAsDictionary() ?? [];
+        Dictionary<ProxyDataConfig, ProxyData> proxiesDict = await _data.GetAllAsDictionary() ?? [];
 
         ProxyLoader loader = new(_logger, _config);
-        List<Models.Proxy.Proxy> proxies = await loader.Load();
+        List<ProxyDataConfig> proxies = await loader.Load();
 
-        foreach (Models.Proxy.Proxy proxy in proxies)
+        foreach (ProxyDataConfig proxy in proxies)
         {
-            if (proxiesDict.TryGetValue(proxy, out Models.Proxy.Data? _))
+            if (proxiesDict.TryGetValue(proxy, out ProxyData? _))
                 continue;
 
             proxiesDict.Add(proxy, new() { Proxy = proxy });
@@ -77,19 +77,19 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, Models.Config.App _co
         if (!_config.Proxy.Check)
             return;
 
-        List<Models.Proxy.Proxy> proxies = [];
+        List<ProxyDataConfig> proxies = [];
         HashSet<string> proxiesAdded = [.. _proxies.Select(o => GetProxyKey(o.Proxy))];
         int count = 0;
 
-        List<Models.Proxy.Data> proxiesStorage = await _data.GetAll() ?? [];
+        List<ProxyData> proxiesStorage = await _data.GetAll() ?? [];
         proxies.AddRange(proxiesStorage.Select(o => o.Proxy));
 
         ProxyLoader loader = new(_logger, _config);
-        List<Models.Proxy.Proxy> proxiesLoader = await loader.Load();
+        List<ProxyDataConfig> proxiesLoader = await loader.Load();
         proxies.AddRange(proxiesLoader);
         proxies = [.. proxies.Distinct()];
 
-        foreach (Models.Proxy.Proxy proxy in proxies)
+        foreach (ProxyDataConfig proxy in proxies)
         {
             string url = "https://pbs.twimg.com/media/G6hPY2KbIAAm-FB?format=jpg&name=large";
             HttpStatusCode? code = null;
@@ -141,11 +141,7 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, Models.Config.App _co
             if (code is not HttpStatusCode.OK)
                 continue;
 
-            Models.Proxy.Data _proxy = new()
-            {
-                Proxy = proxy,
-                Connections = [new() { TotalUses = 1 }],
-            };
+            ProxyData _proxy = new() { Proxy = proxy, Connections = [new() { TotalUses = 1 }] };
 
             if (!proxiesAdded.Add(GetProxyKey(proxy)))
                 continue;
@@ -160,7 +156,7 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, Models.Config.App _co
         await SaveData();
     }
 
-    private static string GetProxyKey(Models.Proxy.Proxy proxy) =>
+    private static string GetProxyKey(ProxyDataConfig proxy) =>
         $"{proxy.Ip}:{proxy.Port}:{proxy.Protocol}".ToLowerInvariant();
 
     public HttpClient GetClient()
@@ -282,16 +278,16 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, Models.Config.App _co
         if (!_config.Proxy.Enabled)
             return;
 
-        Models.Proxy.Data proxy = _proxies[_proxyIndex];
+        ProxyData proxy = _proxies[_proxyIndex];
 
         lock (proxy)
         {
             string format = "yyyy-MM-dd, HH";
             string date = DateTime.Now.ToString(format);
 
-            Connection? conn = proxy
-                .Connections.Where(conn => conn.Date.ToString(format) == date)
-                .LastOrDefault();
+            Connection? conn = proxy.Connections.LastOrDefault(conn =>
+                conn.Date.ToString(format) == date
+            );
 
             if (conn is null)
             {
@@ -310,7 +306,7 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, Models.Config.App _co
         if (!_config.Proxy.Enabled)
             return;
 
-        Models.Proxy.Data proxy = _proxies[_proxyIndex];
+        ProxyData proxy = _proxies[_proxyIndex];
 
         lock (proxy)
         {
@@ -323,9 +319,9 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, Models.Config.App _co
                 Extended = JsonConvert.SerializeObject(ex),
             };
 
-            Error? error = proxy
-                .Errors.Where(error => error.Message.Short == message.Short)
-                .LastOrDefault();
+            Error? error = proxy.Errors.LastOrDefault(error =>
+                error.Message.Short == message.Short
+            );
 
             if (error is null)
                 proxy.Errors.Add(new() { Message = message });

@@ -1,6 +1,8 @@
+using Backup.App.Models.Config.Downloads;
+
 namespace Backup.App.Models.Config.Proxy;
 
-public class Proxy
+public class ProxyConfig
 {
     public required bool Enabled { get; set; }
     public required bool Check { get; set; }
@@ -16,9 +18,9 @@ public class Threshold
     public int ErrorsToStop { get; set; }
 }
 
-public class Data : Downloads.Path
+public class Data : PathConfig
 {
-    public required Downloads.Path Proxy { get; set; }
+    public required PathConfig Proxy { get; set; }
 }
 
 public class Provider

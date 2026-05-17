@@ -1,6 +1,6 @@
-using Backup.App.Models.Post;
+using Backup.App.Models.Posts;
 
-namespace Backup.App.Interfaces.Services.Post;
+namespace Backup.App.Interfaces.Services.Posts;
 
 public interface IPostParser
 {

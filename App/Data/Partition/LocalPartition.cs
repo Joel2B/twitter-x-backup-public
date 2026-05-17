@@ -2,21 +2,23 @@ using System.Collections.Concurrent;
 using System.Text;
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Partition;
+using Backup.App.Models.Config;
 using Backup.App.Models.Config.Data;
 using Backup.App.Models.Partition;
+using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.App.Data.Partition;
 
 public class LocalPartition(
-    Models.Config.App _appConfig,
+    AppConfig _appConfig,
     ILogger<LocalPartition> _logger,
     Storage? _config = null
 ) : IPartition, ISetup
 {
     private readonly ILogger<LocalPartition> _logger = _logger;
     private readonly Storage? _config = _config;
-    private readonly Models.Config.App _appConfig = _appConfig;
+    private readonly AppConfig _appConfig = _appConfig;
 
     private readonly ConcurrentDictionary<int, PartitionSize> _partitions = new(
         _appConfig
@@ -45,8 +47,8 @@ public class LocalPartition(
 
     private void SetupPaths()
     {
-        foreach (Models.Config.Data.Partition partition in _appConfig.Data.Partitions)
-            partition.Paths = [Utils.Path.GetPartitionPath(_appConfig, partition)];
+        foreach (PartitionConfig partition in _appConfig.Data.Partitions)
+            partition.Paths = [UtilsPath.GetPartitionPath(_appConfig, partition)];
     }
 
     private void Print()
@@ -67,7 +69,7 @@ public class LocalPartition(
                 kvp.Value.Partition.Id,
                 kvp.Value.Partition.Enabled,
                 kvp.Value.Partition.Name,
-                Utils.Storage.FormatBytes(kvp.Value.Size),
+                UtilsStorage.FormatBytes(kvp.Value.Size),
                 Path.Combine([.. kvp.Value.Partition.Paths])
             );
         }
@@ -147,7 +149,7 @@ public class LocalPartition(
         Print();
     }
 
-    public List<Models.Config.Data.Partition> GetPartitions(List<int>? ids = null)
+    public List<PartitionConfig> GetPartitions(List<int>? ids = null)
     {
         List<int>? selectedIds = ids ?? _config?.Partitions;
         HashSet<int>? idSet = selectedIds is null ? null : [.. selectedIds];
@@ -160,7 +162,7 @@ public class LocalPartition(
         ];
     }
 
-    public Models.Config.Data.Partition GetPath(int? id = null, long size = 0)
+    public PartitionConfig GetPath(int? id = null, long size = 0)
     {
         int? idIndex;
 
@@ -170,7 +172,7 @@ public class LocalPartition(
                 idIndex = GetPrimary().Id;
             else
             {
-                Models.Config.Data.Partition? partitionAvailable = CheckSpace(size);
+                PartitionConfig? partitionAvailable = CheckSpace(size);
 
                 if (partitionAvailable is null)
                     throw new Exception("no space available");
@@ -187,16 +189,13 @@ public class LocalPartition(
         return _partitions[(int)idIndex].Partition;
     }
 
-    private Models.Config.Data.Partition? CheckSpace(long size)
+    private PartitionConfig? CheckSpace(long size)
     {
-        Models.Config.Data.Partition primary = GetPartitions().First(o => o.Type == "primary");
-        List<Models.Config.Data.Partition> extensions =
-        [
-            .. GetPartitions().Where(o => o.Type == "extension"),
-        ];
-        List<Models.Config.Data.Partition> partitions = [primary, .. extensions];
+        PartitionConfig primary = GetPartitions().First(o => o.Type == "primary");
+        List<PartitionConfig> extensions = [.. GetPartitions().Where(o => o.Type == "extension")];
+        List<PartitionConfig> partitions = [primary, .. extensions];
 
-        foreach (Models.Config.Data.Partition partition in partitions)
+        foreach (PartitionConfig partition in partitions)
         {
             long usableSize = 1_000_000_000L * partition.UsableSpace / 100 * partition.Size;
 
@@ -211,14 +210,13 @@ public class LocalPartition(
         return null;
     }
 
-    public List<Models.Config.Data.Partition> GetCache() =>
+    public List<PartitionConfig> GetCache() =>
         [
             .. GetPartitions()
                 .Where(o => o.Type == "cache" || (o.Tags is not null && o.Tags.Contains("cache"))),
         ];
 
-    public Models.Config.Data.Partition GetPrimary() =>
-        GetPartitions().First(o => o.Type == "primary");
+    public PartitionConfig GetPrimary() => GetPartitions().First(o => o.Type == "primary");
 
-    public Models.Config.Data.Partition GetHeavy() => GetPartitions().First(o => o.Type == "heavy");
+    public PartitionConfig GetHeavy() => GetPartitions().First(o => o.Type == "heavy");
 }

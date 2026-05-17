@@ -1,16 +1,19 @@
 using Backup.App.Interfaces;
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Partition;
-using Backup.App.Models.Config.Data.Post;
+using Backup.App.Models.Config;
+using Backup.App.Models.Config.Data;
+using Backup.App.Models.Config.Data.Posts;
 using Backup.App.Models.Data.Json;
+using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
 public partial class LocalPostData(
     ILogger<LocalPostData> _logger,
-    Models.Config.App _appConfig,
-    Storage _config,
+    AppConfig _appConfig,
+    StoragePost _config,
     IPartition _partition
 ) : IPostDataStore, ISetup
 {
@@ -18,11 +21,11 @@ public partial class LocalPostData(
     public bool IsDefault { get; set; }
 
     private readonly ILogger<LocalPostData> _logger = _logger;
-    private readonly Models.Config.App _appConfig = _appConfig;
-    private readonly Storage _config = _config;
+    private readonly AppConfig _appConfig = _appConfig;
+    private readonly StoragePost _config = _config;
     private readonly IPartition _partition = _partition;
 
-    private Dictionary<string, Models.Post.Post>? _postsCache = null;
+    private Dictionary<string, Post>? _postsCache = null;
     private Dictionary<string, PostMetaRow>? _postMetaCache = null;
 
     public Task Setup()
@@ -32,15 +35,15 @@ public partial class LocalPostData(
         return Task.CompletedTask;
     }
 
-    public async Task<List<Models.Post.Post>?> GetAll()
+    public async Task<List<Post>?> GetAll()
     {
-        Dictionary<string, Models.Post.Post>? posts = await GetCache();
+        Dictionary<string, Post>? posts = await GetCache();
         return posts is null ? null : [.. posts.Values];
     }
 
     public async Task<Dictionary<string, string>> GetHashesById()
     {
-        Dictionary<string, Models.Post.Post>? posts = await GetCache();
+        Dictionary<string, Post>? posts = await GetCache();
         Dictionary<string, PostMetaRow> postMeta = await GetPostMetaCache();
 
         int postCount = posts?.Count ?? 0;
@@ -60,7 +63,7 @@ public partial class LocalPostData(
         );
     }
 
-    public async Task<List<Models.Post.Post>> GetByIds(IReadOnlyCollection<string> ids)
+    public async Task<List<Post>> GetByIds(IReadOnlyCollection<string> ids)
     {
         if (ids.Count == 0)
             return [];
@@ -71,16 +74,16 @@ public partial class LocalPostData(
         if (filter.Count == 0)
             return [];
 
-        Dictionary<string, Models.Post.Post>? posts = await GetCache();
+        Dictionary<string, Post>? posts = await GetCache();
 
         if (posts is null)
             return [];
 
-        List<Models.Post.Post> result = new(filter.Count);
+        List<Post> result = new(filter.Count);
 
         foreach (string id in filter)
         {
-            if (!posts.TryGetValue(id, out Models.Post.Post? post))
+            if (!posts.TryGetValue(id, out Post? post))
                 continue;
 
             result.Add(post.Clone());
@@ -91,13 +94,13 @@ public partial class LocalPostData(
 
     public async Task<int> GetCount() => (await GetCache())?.Count ?? 0;
 
-    public async Task<Models.Post.PostStoreCounts> GetStoreCounts()
+    public async Task<PostStoreCounts> GetStoreCounts()
     {
-        Dictionary<string, Models.Post.Post>? cache = await GetCache();
+        Dictionary<string, Post>? cache = await GetCache();
 
         if (cache is null || cache.Count == 0)
         {
-            return new Models.Post.PostStoreCounts
+            return new PostStoreCounts
             {
                 Posts = 0,
                 Profiles = 0,
@@ -118,7 +121,7 @@ public partial class LocalPostData(
         int changes = 0;
         int changeFields = 0;
 
-        foreach (Models.Post.Post post in cache.Values)
+        foreach (Post post in cache.Values)
         {
             hashtags += post.Hashtags?.Count ?? 0;
 
@@ -132,7 +135,7 @@ public partial class LocalPostData(
             if (post.Changes.Count == 0)
                 continue;
 
-            List<Models.Post.Change> orderedChanges = post
+            List<Models.Posts.Change> orderedChanges = post
                 .Changes.Select((change, index) => new { Change = change, Index = index })
                 .OrderBy(o => o.Change.Date)
                 .ThenBy(o => o.Index)
@@ -151,7 +154,7 @@ public partial class LocalPostData(
             }
         }
 
-        return new Models.Post.PostStoreCounts
+        return new PostStoreCounts
         {
             Posts = cache.Count,
             Profiles = cache
@@ -183,12 +186,12 @@ public partial class LocalPostData(
             .Where(id => !string.IsNullOrWhiteSpace(id))
             .ToHashSet(StringComparer.Ordinal);
 
-        List<Models.Post.Post> deletedPosts = [];
+        List<Post> deletedPosts = [];
 
-        foreach (Models.Post.Post post in _postsCache.Values)
+        foreach (Post post in _postsCache.Values)
         {
             bool hasScope =
-                post.Index.TryGetValue(userId, out Dictionary<string, Models.Post.IndexData>? index)
+                post.Index.TryGetValue(userId, out Dictionary<string, IndexData>? index)
                 && index.ContainsKey(origin);
 
             if (!hasScope)
@@ -197,7 +200,7 @@ public partial class LocalPostData(
             if (keep.Contains(post.Id) || post.Deleted)
                 continue;
 
-            Models.Post.Post deletedPost = post.Clone();
+            Post deletedPost = post.Clone();
             deletedPost.Deleted = true;
             deletedPosts.Add(deletedPost);
         }
@@ -209,15 +212,15 @@ public partial class LocalPostData(
         return deletedPosts.Count;
     }
 
-    public async Task<List<Models.Post.MediaInput>?> GetMediaInputs()
+    public async Task<List<MediaInput>?> GetMediaInputs()
     {
-        Dictionary<string, Models.Post.Post>? posts = await GetCache();
+        Dictionary<string, Post>? posts = await GetCache();
         if (posts is null)
             return null;
 
-        List<Models.Post.MediaInput> current = [.. posts.Values.Select(ToMediaInput)];
+        List<MediaInput> current = [.. posts.Values.Select(ToMediaInput)];
 
-        List<Models.Post.MediaInput> history = posts
+        List<MediaInput> history = posts
             .Values.SelectMany(post => post.Changes)
             .Where(change => change.Data is not null)
             .Select(change => ToMediaInput(change.Data!))
@@ -250,7 +253,7 @@ public partial class LocalPostData(
                 .GroupBy(profileId => profileId, StringComparer.Ordinal)
                 .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
 
-        Dictionary<string, Models.Post.Post>? cache = await GetCache();
+        Dictionary<string, Post>? cache = await GetCache();
         if (cache is null)
             return [];
 
@@ -262,7 +265,7 @@ public partial class LocalPostData(
         if (_postsCache is null)
             return;
 
-        List<Models.Post.Post> posts = [.. _postsCache.Values];
+        List<Post> posts = [.. _postsCache.Values];
         LocalPostTables tables = BuildTables(posts);
         Dictionary<string, PostMetaRow> postMeta = await EnsurePostMetaCache(posts);
 
@@ -281,7 +284,7 @@ public partial class LocalPostData(
         if (!_config.Tasks.Prune)
             return;
 
-        foreach (Models.Config.Data.Partition partition in _partition.GetPartitions())
+        foreach (PartitionConfig partition in _partition.GetPartitions())
             await PrunePartition(partition);
     }
 }

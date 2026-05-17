@@ -1,18 +1,19 @@
 using Backup.App.Interfaces.Data.Bulk;
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Services.Media;
-using Backup.App.Interfaces.Services.Post;
+using Backup.App.Interfaces.Services.Posts;
 using Backup.App.Models.Bulk;
+using Backup.App.Models.Config;
 using Backup.App.Models.Config.Api;
-using Backup.App.Models.Config.Request;
-using Backup.App.Models.Post;
+using Backup.App.Models.Config.ApiRequest;
+using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.App.Services.Bulk;
 
 public partial class BulkService(
     ILogger<BulkService> _logger,
-    Models.Config.App _config,
+    AppConfig _config,
     IPostData _postData,
     IBulkSourceData _bulkSourceData,
     IBulkData _bulkData,
@@ -22,7 +23,7 @@ public partial class BulkService(
 {
     private readonly ILogger<BulkService> _logger = _logger;
 
-    private readonly Models.Config.App _config = _config;
+    private readonly AppConfig _config = _config;
     private readonly IPostData _postData = _postData;
     private readonly IBulkSourceData _bulkSourceData = _bulkSourceData;
     private readonly IBulkData _bulkData = _bulkData;
@@ -32,7 +33,7 @@ public partial class BulkService(
     private readonly CancellationTokenSource _tokenSource = new();
     private UsersContext? _context;
 
-    private Dictionary<string, Api> Api =>
+    private Dictionary<string, ApiConfig> Api =>
         _context?.Api ?? throw new Exception("bulk context not initialized");
 
     public async Task Download(UsersContext context)

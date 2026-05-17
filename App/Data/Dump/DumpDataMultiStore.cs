@@ -1,8 +1,9 @@
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Models.Config.Api;
 using Backup.App.Models.Dump;
+using Backup.App.Models.Posts;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
 public class DumpDataMultiStore(IEnumerable<IDumpDataStore> stores) : IDumpData
 {
@@ -34,12 +35,7 @@ public class DumpDataMultiStore(IEnumerable<IDumpDataStore> stores) : IDumpData
 
     public Task<DumpData?> GetData(ApiContext context) => Primary.GetData(context);
 
-    public async Task Save(
-        string response,
-        List<Models.Post.Post> posts,
-        string cursor,
-        ApiContext context
-    )
+    public async Task Save(string response, List<Post> posts, string cursor, ApiContext context)
     {
         await Primary.Save(response, posts, cursor, context);
 

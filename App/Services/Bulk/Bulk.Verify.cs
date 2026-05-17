@@ -1,4 +1,4 @@
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Models.Bulk;
 using Microsoft.Extensions.Logging;
 
@@ -12,7 +12,7 @@ public partial class BulkService
         IPostData postData = _postData;
 
         _logger.LogInformation("getting bulks");
-        List<Models.Bulk.Bulk>? bulks = await _bulkData.GetBulks();
+        List<BulkData>? bulks = await _bulkData.GetBulks();
 
         if (bulks is null)
         {
@@ -20,7 +20,7 @@ public partial class BulkService
             return;
         }
 
-        List<Models.Bulk.Bulk> bulksFiltered = bulks
+        List<BulkData> bulksFiltered = bulks
             .Where(o => o.User.Status == StatusUser.Active && o.Order.Phase1 is null)
             .ToList();
 

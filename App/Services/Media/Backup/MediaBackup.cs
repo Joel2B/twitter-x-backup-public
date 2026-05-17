@@ -1,7 +1,9 @@
 using System.Collections.Concurrent;
 using Backup.App.Extensions;
+using Backup.App.Interfaces.Data.Media;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Interfaces.Services.UtilsService;
+using Backup.App.Models.Config.Data.Backup;
 using Backup.App.Models.Media;
 using Backup.App.Models.Media.Backup;
 using Microsoft.Extensions.Logging;
@@ -10,19 +12,19 @@ namespace Backup.App.Services.Media;
 
 public partial class MediaBackup(
     ILogger<MediaBackup> _logger,
-    Models.Config.Data.Backup.Storage _config,
+    StorageBackup _config,
     IZipWriterFactory _zipWriterFactory,
-    Interfaces.Data.Media.IMediaBackup _mediaBackup
+    IMediaBackupData _mediaBackup
 ) : IMediaBackup
 {
     public string? Id { get; set; }
 
-    private readonly Models.Config.Data.Backup.Storage _config = _config;
+    private readonly StorageBackup _config = _config;
     private List<string> _paths = [];
     private IMediaData? _mediaData;
     private IMediaData MediaData => _mediaData ?? throw new Exception("media data not initialized");
-    private readonly Interfaces.Data.Media.IMediaBackup _mediaBackup = _mediaBackup;
-    private Models.Media.Backup.Backup _backup = new()
+    private readonly IMediaBackupData _mediaBackup = _mediaBackup;
+    private BackupChunks _backup = new()
     {
         Chunks = new()
         {
@@ -48,7 +50,7 @@ public partial class MediaBackup(
         using (_logger.LogTimer(Id, "processing paths"))
             _paths = [.. downloads.SelectMany(o => o.Data).Select(o => o.Path)];
 
-        Models.Media.Backup.Backup? backup = await _mediaBackup.GetBackup();
+        BackupChunks? backup = await _mediaBackup.GetBackup();
 
         if (backup is not null)
             _backup = backup;

@@ -1,6 +1,6 @@
 using Backup.App.Models.Dump;
 
-namespace Backup.App.Interfaces.Data.Post;
+namespace Backup.App.Interfaces.Data.Posts;
 
 public interface IDumpsData
 {

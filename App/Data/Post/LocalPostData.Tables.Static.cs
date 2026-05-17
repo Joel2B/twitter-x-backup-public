@@ -1,8 +1,9 @@
 using Backup.App.Models.Data.Json;
-using Backup.App.Models.Post;
+using Backup.App.Models.Posts;
+using Backup.App.Utils;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
 public partial class LocalPostData
 {
@@ -33,12 +34,12 @@ public partial class LocalPostData
         }
     }
 
-    private static LocalPostTables BuildTables(List<Models.Post.Post> posts)
+    private static LocalPostTables BuildTables(List<Post> posts)
     {
         LocalPostTables tables = new();
         Dictionary<string, ProfileRow> profileById = new(StringComparer.Ordinal);
 
-        foreach (Models.Post.Post post in posts)
+        foreach (Post post in posts)
         {
             profileById[post.Profile.Id] = new()
             {
@@ -79,7 +80,7 @@ public partial class LocalPostData
             {
                 for (int i = 0; i < post.Medias.Count; i++)
                 {
-                    Models.Post.Media media = post.Medias[i];
+                    PostMedia media = post.Medias[i];
 
                     tables.Medias.Add(
                         new()
@@ -98,7 +99,7 @@ public partial class LocalPostData
 
                     for (int j = 0; j < media.VideoInfo.Variants.Count; j++)
                     {
-                        Variant variant = media.VideoInfo.Variants[j];
+                        PostVariant variant = media.VideoInfo.Variants[j];
 
                         tables.MediaVariants.Add(
                             new()
@@ -139,11 +140,11 @@ public partial class LocalPostData
         return tables;
     }
 
-    private static List<Models.Post.Post> BuildPosts(LocalPostTables tables)
+    private static List<Post> BuildPosts(LocalPostTables tables)
     {
-        Dictionary<string, Profile> profiles = tables.Profiles.ToDictionary(
+        Dictionary<string, PostProfile> profiles = tables.Profiles.ToDictionary(
             o => o.Id,
-            o => new Profile
+            o => new PostProfile
             {
                 Id = o.Id,
                 UserName = o.UserName,
@@ -151,7 +152,7 @@ public partial class LocalPostData
                 BannerUrl = o.BannerUrl,
                 ImageUrl = o.ImageUrl,
                 Following = o.Following,
-                Count = o.CountMedia.HasValue ? new Count { Media = o.CountMedia } : null,
+                Count = o.CountMedia.HasValue ? new PostCount { Media = o.CountMedia } : null,
             },
             StringComparer.Ordinal
         );
@@ -164,13 +165,13 @@ public partial class LocalPostData
                 StringComparer.Ordinal
             );
 
-        Dictionary<(string PostId, int MediaOrdinal), List<Variant>> variantsByMedia = tables
+        Dictionary<(string PostId, int MediaOrdinal), List<PostVariant>> variantsByMedia = tables
             .MediaVariants.GroupBy(o => (o.PostId, o.MediaOrdinal))
             .ToDictionary(
                 g => g.Key,
                 g =>
                     g.OrderBy(o => o.Ordinal)
-                        .Select(o => new Variant
+                        .Select(o => new PostVariant
                         {
                             ContentType = o.ContentType,
                             Bitrate = o.Bitrate,
@@ -179,7 +180,7 @@ public partial class LocalPostData
                         .ToList()
             );
 
-        Dictionary<string, List<Models.Post.Media>> mediasByPost = tables
+        Dictionary<string, List<PostMedia>> mediasByPost = tables
             .Medias.GroupBy(o => o.PostId, StringComparer.Ordinal)
             .ToDictionary(
                 g => g.Key,
@@ -189,7 +190,7 @@ public partial class LocalPostData
                         {
                             variantsByMedia.TryGetValue((o.PostId, o.Ordinal), out var variants);
 
-                            return new Models.Post.Media
+                            return new PostMedia
                             {
                                 Id = o.MediaId,
                                 Url = o.Url,
@@ -198,7 +199,7 @@ public partial class LocalPostData
                                     o.VideoDurationMilis is null
                                     && (variants is null || variants.Count == 0)
                                         ? null
-                                        : new VideoInfo
+                                        : new PostVideoInfo
                                         {
                                             DurationMilis = o.VideoDurationMilis,
                                             Variants = variants,
@@ -247,16 +248,16 @@ public partial class LocalPostData
                 .PostChangeFields.GroupBy(o => (o.PostId, o.ChangeOrdinal))
                 .ToDictionary(g => g.Key, g => g.OrderBy(o => o.Ordinal).ToList());
 
-        List<Models.Post.Post> posts = new(tables.Posts.Count);
+        List<Post> posts = new(tables.Posts.Count);
 
         foreach (PostRow row in tables.Posts)
         {
-            Profile profile = profiles.TryGetValue(row.ProfileId, out Profile? value)
+            PostProfile profile = profiles.TryGetValue(row.ProfileId, out PostProfile? value)
                 ? value
-                : new Profile { Id = row.ProfileId };
+                : new PostProfile { Id = row.ProfileId };
 
             hashtagsByPost.TryGetValue(row.Id, out List<string>? hashtags);
-            mediasByPost.TryGetValue(row.Id, out List<Models.Post.Media>? medias);
+            mediasByPost.TryGetValue(row.Id, out List<PostMedia>? medias);
 
             indexByPost.TryGetValue(
                 row.Id,
@@ -268,7 +269,7 @@ public partial class LocalPostData
             if (!postMetaById.TryGetValue(row.Id, out PostMetaRow? meta))
                 throw new Exception($"Missing post_meta row for post '{row.Id}'.");
 
-            Models.Post.Post post = new()
+            Post post = new()
             {
                 Id = row.Id,
                 Profile = profile,
@@ -304,7 +305,7 @@ public partial class LocalPostData
 
     private static async Task WriteList(string path, object data, bool formatted)
     {
-        string targetPath = formatted ? Utils.Path.GetPathFormatted(path) : path;
+        string targetPath = formatted ? UtilsPath.GetPathFormatted(path) : path;
         string? directory = Path.GetDirectoryName(targetPath);
 
         if (!string.IsNullOrWhiteSpace(directory))

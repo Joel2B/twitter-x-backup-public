@@ -3,6 +3,8 @@ using System.Globalization;
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Partition;
 using Backup.App.Interfaces.Services.Media;
+using Backup.App.Models.Config;
+using Backup.App.Models.Config.Data;
 using Backup.App.Models.Media.Logging;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -11,12 +13,12 @@ namespace Backup.App.Data.Media;
 
 public class LocalMediaLogger(
     ILogger<LocalMediaLogger> _logger,
-    Models.Config.App config,
+    AppConfig config,
     IPartition _partition
 ) : IMediaLogger, ISetup
 {
     private readonly ILogger<LocalMediaLogger> _logger = _logger;
-    public readonly Models.Config.App _config = config;
+    public readonly AppConfig _config = config;
     private readonly IPartition _partition = _partition;
 
     private readonly ConcurrentDictionary<string, Logs> _errors = new();
@@ -46,7 +48,7 @@ public class LocalMediaLogger(
 
     private string GetPath()
     {
-        Models.Config.Data.Partition partition = _partition
+        PartitionConfig partition = _partition
             .GetPartitions(_config.Downloads.Media.Partitions)
             .First();
 

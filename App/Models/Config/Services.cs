@@ -1,6 +1,6 @@
 namespace Backup.App.Models.Config;
 
-public class Services
+public class ServicesConfig
 {
     public List<UserService> Users { get; set; } = [];
     public required Recovery Recovery { get; set; }

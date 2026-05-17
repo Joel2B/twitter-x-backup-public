@@ -1,7 +1,7 @@
 using System.Text.Json;
-using Backup.App.Models.Post;
+using Backup.App.Models.Posts;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
 public partial class LocalPostData
 {

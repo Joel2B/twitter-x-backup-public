@@ -1,6 +1,6 @@
-using Backup.App.Models.Config.Request;
+using Backup.App.Models.Config.ApiRequest;
 
-namespace Backup.App.Interfaces.Services.Post;
+namespace Backup.App.Interfaces.Services.Posts;
 
 public interface IPostDownloader
 {

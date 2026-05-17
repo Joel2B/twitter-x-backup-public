@@ -1,6 +1,8 @@
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Data.Media;
 using Backup.App.Interfaces.Partition;
+using Backup.App.Models.Config.Data;
+using Backup.App.Models.Config.Data.Backup;
 using Backup.App.Models.Media.Backup;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -9,12 +11,12 @@ namespace Backup.App.Data.Media;
 
 public class LocalMediaBackup(
     ILogger<LocalMediaBackup> _logger,
-    Models.Config.Data.Backup.Storage _config,
+    StorageBackup _config,
     IPartition _partition
-) : IMediaBackup, ISetup
+) : IMediaBackupData, ISetup
 {
     private readonly ILogger<LocalMediaBackup> _logger = _logger;
-    private readonly Models.Config.Data.Backup.Storage _config = _config;
+    private readonly StorageBackup _config = _config;
     private readonly IPartition _partition = _partition;
 
     public Task Setup()
@@ -33,34 +35,33 @@ public class LocalMediaBackup(
 
     private string GetPath()
     {
-        Models.Config.Data.Partition? backup = _partition
+        PartitionConfig? backup = _partition
             .GetPartitions()
             .FirstOrDefault(o => o.Type == "backup");
 
         if (backup is null)
             throw new Exception();
 
-        return System.IO.Path.Combine([.. backup.Paths, .. _config.Paths.Paths]);
+        return Path.Combine([.. backup.Paths, .. _config.Paths.Paths]);
     }
 
-    private string GetPathChunks() => System.IO.Path.Combine([GetPath(), .. _config.Chunk.Paths]);
+    private string GetPathChunks() => Path.Combine([GetPath(), .. _config.Chunk.Paths]);
 
-    private string GetPathDirect() => System.IO.Path.Combine([GetPath(), .. _config.Direct.Paths]);
+    private string GetPathDirect() => Path.Combine([GetPath(), .. _config.Direct.Paths]);
 
-    public async Task<Models.Media.Backup.Backup?> GetBackup()
+    public async Task<BackupChunks?> GetBackup()
     {
         if (_config.Chunk.File is null)
             return null;
 
-        string path = System.IO.Path.Combine(GetPathChunks(), _config.Chunk.File);
+        string path = Path.Combine(GetPathChunks(), _config.Chunk.File);
 
         if (!File.Exists(path))
             return null;
 
         string content = await File.ReadAllTextAsync(path);
 
-        Models.Media.Backup.Backup? backup =
-            JsonConvert.DeserializeObject<Models.Media.Backup.Backup>(content);
+        BackupChunks? backup = JsonConvert.DeserializeObject<BackupChunks>(content);
 
         if (backup is null)
             return null;
@@ -73,7 +74,7 @@ public class LocalMediaBackup(
         if (_config.Chunk.Data.File is null)
             return null;
 
-        Models.Media.Backup.Backup? backup = await GetBackup();
+        BackupChunks? backup = await GetBackup();
 
         if (backup is null)
             return null;
@@ -95,7 +96,7 @@ public class LocalMediaBackup(
                     int id = backup.Chunks.Ids[i];
 
                     string fileName = $"{id}.{_config.Chunk.Data.File}";
-                    string path = System.IO.Path.Combine([GetPathChunks(), fileName]);
+                    string path = Path.Combine([GetPathChunks(), fileName]);
                     string content = await File.ReadAllTextAsync(path, ct);
 
                     Chunk? chunk = JsonConvert.DeserializeObject<Chunk>(content);
@@ -127,9 +128,8 @@ public class LocalMediaBackup(
             return Task.FromResult<Stream?>(null);
 
         string fileName = $"{chunk.Id}.{_config.Chunk.Zip.File}";
-        string path = System.IO.Path.Combine(GetPathChunks(), fileName);
-
-        string? directory = System.IO.Path.GetDirectoryName(path);
+        string path = Path.Combine(GetPathChunks(), fileName);
+        string? directory = Path.GetDirectoryName(path);
 
         if (directory is null)
             throw new Exception("error in GetDirectoryName.");
@@ -149,7 +149,7 @@ public class LocalMediaBackup(
 
     public async Task<string?> GetHash(string path)
     {
-        string fullPath = System.IO.Path.Combine(GetPathChunks(), path);
+        string fullPath = Path.Combine(GetPathChunks(), path);
         string? hash = await Utils.FileHasher.GetFileHash(fullPath);
 
         return hash;
@@ -160,19 +160,19 @@ public class LocalMediaBackup(
         foreach (Chunk chunk in chunks)
         {
             string fileName = $"{chunk.Id}.{_config.Chunk.Data.File}";
-            string path = System.IO.Path.Combine(GetPathChunks(), fileName);
+            string path = Path.Combine(GetPathChunks(), fileName);
 
             string json = JsonConvert.SerializeObject(chunk, Formatting.Indented);
             await File.WriteAllTextAsync(path, json);
         }
     }
 
-    public async Task SaveBackup(Models.Media.Backup.Backup backup)
+    public async Task SaveBackup(BackupChunks backup)
     {
         if (_config.Chunk.File is null)
             throw new Exception("file not configured");
 
-        string path = System.IO.Path.Combine(GetPathChunks(), _config.Chunk.File);
+        string path = Path.Combine(GetPathChunks(), _config.Chunk.File);
         string json = JsonConvert.SerializeObject(backup, Formatting.Indented);
 
         await File.WriteAllTextAsync(path, json);
@@ -181,7 +181,7 @@ public class LocalMediaBackup(
     public Task DeleteChunk(Chunk chunk)
     {
         string fileName = $"{chunk.Id}.{_config.Chunk.Zip.File}";
-        string path = System.IO.Path.Combine(GetPathChunks(), fileName);
+        string path = Path.Combine(GetPathChunks(), fileName);
 
         if (!File.Exists(path))
             return Task.CompletedTask;
@@ -192,12 +192,12 @@ public class LocalMediaBackup(
     }
 
     public Task<bool> Exists(string path) =>
-        Task.FromResult(File.Exists(System.IO.Path.Combine([GetPathDirect(), path])));
+        Task.FromResult(File.Exists(Path.Combine([GetPathDirect(), path])));
 
     public async Task<Stream> Write(string path)
     {
-        string fullPath = System.IO.Path.Combine([GetPathDirect(), path]);
-        string? directory = System.IO.Path.GetDirectoryName(fullPath);
+        string fullPath = Path.Combine([GetPathDirect(), path]);
+        string? directory = Path.GetDirectoryName(fullPath);
 
         if (directory is null)
             throw new Exception("Error getting the directory name.");

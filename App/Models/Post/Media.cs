@@ -1,13 +1,13 @@
-namespace Backup.App.Models.Post;
+namespace Backup.App.Models.Posts;
 
-public class Media
+public class PostMedia
 {
     public required string Id { get; set; }
     public required string Url { get; set; }
     public required string Type { get; set; }
-    public VideoInfo? VideoInfo { get; set; }
+    public PostVideoInfo? VideoInfo { get; set; }
 
-    public Media Clone() =>
+    public PostMedia Clone() =>
         new()
         {
             Id = Id,
@@ -17,12 +17,12 @@ public class Media
         };
 }
 
-public class VideoInfo
+public class PostVideoInfo
 {
     public int? DurationMilis { get; set; }
-    public List<Variant>? Variants { get; set; }
+    public List<PostVariant>? Variants { get; set; }
 
-    public VideoInfo Clone() =>
+    public PostVideoInfo Clone() =>
         new()
         {
             DurationMilis = DurationMilis,
@@ -30,13 +30,13 @@ public class VideoInfo
         };
 }
 
-public class Variant
+public class PostVariant
 {
     public required string ContentType { get; set; }
     public int? Bitrate { get; set; }
     public required string Url { get; set; }
 
-    public Variant Clone() =>
+    public PostVariant Clone() =>
         new()
         {
             ContentType = ContentType,

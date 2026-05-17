@@ -1,6 +1,7 @@
+using Backup.App.Models.Config;
 using Backup.App.Models.Config.Api;
-using Backup.App.Models.Config.Request;
-using Backup.App.Services.Post;
+using Backup.App.Models.Config.ApiRequest;
+using Backup.App.Services.Posts;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Backup.IntegrationTests;
@@ -30,10 +31,10 @@ public partial class LiveApiTests
 
     private static async Task AssertPostApiRequestWorks(string apiId)
     {
-        App.Models.Config.App config = LiveApiTestSupport.LoadAppConfig();
-        IReadOnlyDictionary<string, Api> primaryApi = config.UsersContext[0].Api;
+        AppConfig config = LiveApiTestSupport.LoadAppConfig();
+        IReadOnlyDictionary<string, ApiConfig> primaryApi = config.UsersContext[0].Api;
 
-        if (!primaryApi.TryGetValue(apiId, out Api? apiEntry))
+        if (!primaryApi.TryGetValue(apiId, out ApiConfig? apiEntry))
             throw new Exception($"Api '{apiId}' not found in configured api map");
 
         if (!apiEntry.Enabled)

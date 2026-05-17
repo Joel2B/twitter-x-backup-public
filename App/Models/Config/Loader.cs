@@ -1,7 +1,12 @@
-using Backup.App.Models.Config.Request;
+using Backup.App.Models.Config.Api;
+using Backup.App.Models.Config.ApiRequest;
+using Backup.App.Models.Config.Data;
+using Backup.App.Models.Config.Downloads;
+using Backup.App.Models.Config.Medias;
+using Backup.App.Models.Config.Proxy;
+using Backup.App.Models.Config.Tasks;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
-using ApiConfig = Backup.App.Models.Config.Api;
 
 namespace Backup.App.Models.Config;
 
@@ -9,12 +14,12 @@ public static class ConfigLoader
 {
     public static string GetConfigDirectory() => Path.Combine(AppContext.BaseDirectory, "config");
 
-    public static App Load() => LoadSplit(GetConfigDirectory());
+    public static AppConfig Load() => LoadSplit(GetConfigDirectory());
 
-    public static Data.Data LoadData() =>
-        LoadFile<Data.Data>(GetConfigDirectory(), "Data.json", prefix: "BACKUP__");
+    public static DataConfig LoadData() =>
+        LoadFile<DataConfig>(GetConfigDirectory(), "Data.json", prefix: "BACKUP__");
 
-    public static void SaveData(Data.Data data)
+    public static void SaveData(DataConfig data)
     {
         string path = Path.Combine(GetConfigDirectory(), "Data.json");
         string json = JsonConvert.SerializeObject(data, Formatting.Indented);
@@ -22,17 +27,17 @@ public static class ConfigLoader
         File.WriteAllText(path, json);
     }
 
-    private static App LoadSplit(string configDirectory)
+    private static AppConfig LoadSplit(string configDirectory)
     {
-        Services services = LoadFile<Services>(configDirectory, "Services.json");
+        ServicesConfig services = LoadFile<ServicesConfig>(configDirectory, "Services.json");
         ValidateServices(services);
 
-        Dictionary<string, Dictionary<string, ApiConfig.Api>> apiByUser = LoadApiFiles(
+        Dictionary<string, Dictionary<string, ApiConfig>> apiByUser = LoadApiFiles(
             configDirectory,
             services
         );
 
-        foreach (Dictionary<string, ApiConfig.Api> api in apiByUser.Values)
+        foreach (Dictionary<string, ApiConfig> api in apiByUser.Values)
             ValidateAndNormalizeApi(api);
 
         Dictionary<string, FetchItem> fetch = LoadFetchFile(configDirectory);
@@ -40,12 +45,8 @@ public static class ConfigLoader
         foreach (var api in apiByUser)
             ApplyFetchToApi(api.Key, api.Value, fetch);
 
-        List<ApiConfig.UsersContext> contexts = services
-            .Users.Select(user => new ApiConfig.UsersContext
-            {
-                UserId = user.Id,
-                Api = apiByUser[user.Id],
-            })
+        List<UsersContext> contexts = services
+            .Users.Select(user => new UsersContext { UserId = user.Id, Api = apiByUser[user.Id] })
             .ToList();
 
         return new()
@@ -53,20 +54,20 @@ public static class ConfigLoader
             UsersContext = contexts,
             Fetch = fetch,
             Services = services,
-            Data = LoadFile<Data.Data>(configDirectory, "Data.json", prefix: "BACKUP__"),
-            Downloads = LoadFile<Downloads.Downloads>(configDirectory, "Downloads.json"),
-            Medias = LoadFile<Medias.Medias>(configDirectory, "Medias.json"),
-            Proxy = LoadFile<Proxy.Proxy>(configDirectory, "Proxy.json"),
-            Debug = LoadFile<Debug>(configDirectory, "Debug.json"),
-            Tasks = LoadFile<Tasks.Tasks>(configDirectory, "Tasks.json"),
-            Bulk = LoadFile<Bulk>(configDirectory, "Bulk.json"),
-            Network = LoadFile<Network>(configDirectory, "Network.json"),
+            Data = LoadFile<DataConfig>(configDirectory, "Data.json", prefix: "BACKUP__"),
+            Downloads = LoadFile<DownloadsConfig>(configDirectory, "Downloads.json"),
+            Medias = LoadFile<MediasConfig>(configDirectory, "Medias.json"),
+            Proxy = LoadFile<ProxyConfig>(configDirectory, "Proxy.json"),
+            Debug = LoadFile<DebugConfig>(configDirectory, "Debug.json"),
+            Tasks = LoadFile<TasksConfig>(configDirectory, "Tasks.json"),
+            Bulk = LoadFile<BulkConfig>(configDirectory, "Bulk.json"),
+            Network = LoadFile<NetworkConfig>(configDirectory, "Network.json"),
         };
     }
 
-    private static Dictionary<string, Dictionary<string, ApiConfig.Api>> LoadApiFiles(
+    private static Dictionary<string, Dictionary<string, ApiConfig>> LoadApiFiles(
         string configDirectory,
-        Services services
+        ServicesConfig services
     )
     {
         string apiDirectory = Path.Combine(configDirectory, "Api");
@@ -76,7 +77,7 @@ public static class ConfigLoader
                 "error deserializing config folder 'Api': directory does not exist"
             );
 
-        Dictionary<string, Dictionary<string, ApiConfig.Api>> apiByUser = [];
+        Dictionary<string, Dictionary<string, ApiConfig>> apiByUser = [];
         string[] files = Directory.GetFiles(apiDirectory, "*.json", SearchOption.TopDirectoryOnly);
 
         if (files.Length == 0)
@@ -97,16 +98,14 @@ public static class ConfigLoader
         return apiByUser;
     }
 
-    private static Dictionary<string, ApiConfig.Api> LoadApiFile(string path)
+    private static Dictionary<string, ApiConfig> LoadApiFile(string path)
     {
-        Dictionary<string, ApiConfig.Api> api = LoadFileByPath<Dictionary<string, ApiConfig.Api>>(
-            path
-        );
+        Dictionary<string, ApiConfig> api = LoadFileByPath<Dictionary<string, ApiConfig>>(path);
 
         foreach (var kvp in api)
         {
             string key = kvp.Key;
-            ApiConfig.Api value = kvp.Value;
+            ApiConfig value = kvp.Value;
 
             if (value is null)
                 throw new Exception(
@@ -163,16 +162,16 @@ public static class ConfigLoader
 
     private static void ApplyFetchToApi(
         string userId,
-        IReadOnlyDictionary<string, ApiConfig.Api> api,
+        IReadOnlyDictionary<string, ApiConfig> api,
         IReadOnlyDictionary<string, FetchItem> fetch
     )
     {
         foreach (var kvp in fetch)
         {
-            if (!api.TryGetValue(kvp.Key, out ApiConfig.Api? entry))
+            if (!api.TryGetValue(kvp.Key, out ApiConfig? entry))
                 continue;
 
-            Request.Request request = entry.Request;
+            Request request = entry.Request;
 
             if (!request.Query.Variables.ContainsKey("count"))
                 throw new Exception(
@@ -184,13 +183,13 @@ public static class ConfigLoader
         }
     }
 
-    private static void ValidateAndNormalizeApi(IReadOnlyDictionary<string, ApiConfig.Api> api)
+    private static void ValidateAndNormalizeApi(IReadOnlyDictionary<string, ApiConfig> api)
     {
         foreach (var kvp in api)
         {
             string key = kvp.Key;
-            ApiConfig.Api entry = kvp.Value;
-            Request.Request request = entry.Request;
+            ApiConfig entry = kvp.Value;
+            Request request = entry.Request;
 
             if (string.IsNullOrWhiteSpace(request.Url))
                 throw new Exception(
@@ -226,7 +225,7 @@ public static class ConfigLoader
         }
     }
 
-    private static void ValidateServices(Services services)
+    private static void ValidateServices(ServicesConfig services)
     {
         if (services.Users.Count == 0)
             throw new Exception(

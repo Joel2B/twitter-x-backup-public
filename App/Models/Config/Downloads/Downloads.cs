@@ -1,6 +1,6 @@
 namespace Backup.App.Models.Config.Downloads;
 
-public class Downloads
+public class DownloadsConfig
 {
     public required bool Enabled { get; set; }
     public required Threads Threads { get; set; }
@@ -20,9 +20,9 @@ public class Threads
     public required int Max { get; set; }
 }
 
-public class MediaDebug : Path
+public class MediaDebug : PathConfig
 {
     public required List<int> Partitions { get; set; }
-    public required Path Log { get; set; }
-    public required Path Error { get; set; }
+    public required PathConfig Log { get; set; }
+    public required PathConfig Error { get; set; }
 }

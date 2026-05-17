@@ -69,8 +69,8 @@ public partial class ConfigApiTests
             Dictionary<string, FetchItem> expectedFetch = ConfigApiTestSupport.LoadFile<
                 Dictionary<string, FetchItem>
             >(fetchPath);
-            App.Models.Config.App loaded = ConfigApiTestSupport.LoadSplit(directory);
-            IReadOnlyDictionary<string, Api> primaryApi = loaded.UsersContext[0].Api;
+            AppConfig loaded = ConfigApiTestSupport.LoadSplit(directory);
+            IReadOnlyDictionary<string, ApiConfig> primaryApi = loaded.UsersContext[0].Api;
 
             foreach (var kvp in expectedFetch)
             {
@@ -90,7 +90,7 @@ public partial class ConfigApiTests
                 Assert.Equal(expected.Count, actualFetch.Count);
                 Assert.Equal(expected.Api, actualFetch.Api);
 
-                Api api = primaryApi[apiId];
+                ApiConfig api = primaryApi[apiId];
                 Assert.True(
                     api.Request.Query.Variables.ContainsKey("count"),
                     $"{directory}: api '{apiId}' missing query.variables.count"
@@ -131,12 +131,12 @@ public partial class ConfigApiTests
             if (!HasApiConfig(directory))
                 continue;
 
-            App.Models.Config.App loaded = ConfigApiTestSupport.LoadSplit(directory);
-            IReadOnlyDictionary<string, Api> primaryApi = loaded.UsersContext[0].Api;
+            AppConfig loaded = ConfigApiTestSupport.LoadSplit(directory);
+            IReadOnlyDictionary<string, ApiConfig> primaryApi = loaded.UsersContext[0].Api;
 
             foreach (var kvp in primaryApi)
             {
-                Api api = kvp.Value;
+                ApiConfig api = kvp.Value;
 
                 if (!api.Request.Query.Variables.TryGetValue("count", out object? count))
                     continue;
@@ -197,10 +197,10 @@ public partial class ConfigApiTests
             if (!HasApiConfig(directory))
                 continue;
 
-            App.Models.Config.App loaded = ConfigApiTestSupport.LoadSplit(directory);
-            IReadOnlyDictionary<string, Api> primaryApi = loaded.UsersContext[0].Api;
+            AppConfig loaded = ConfigApiTestSupport.LoadSplit(directory);
+            IReadOnlyDictionary<string, ApiConfig> primaryApi = loaded.UsersContext[0].Api;
 
-            foreach (Api api in primaryApi.Values)
+            foreach (ApiConfig api in primaryApi.Values)
             {
                 if (
                     api.Request.Query.Variables.TryGetValue(

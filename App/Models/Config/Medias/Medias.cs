@@ -1,17 +1,17 @@
 namespace Backup.App.Models.Config.Medias;
 
-public class Medias
+public class MediasConfig
 {
     public bool Enabled { get; set; }
-    public required Banner Banner { get; set; }
-    public required Profile Profile { get; set; }
-    public required Photo Photo { get; set; }
-    public required Video Video { get; set; }
-    public required Gif Gif { get; set; }
+    public required BannerConfig Banner { get; set; }
+    public required ProfileConfig Profile { get; set; }
+    public required PhotoConfig Photo { get; set; }
+    public required VideoConfig Video { get; set; }
+    public required GifConfig Gif { get; set; }
 }
 
-public class Banner : Media;
+public class BannerConfig : MediaConfig;
 
-public class Profile : Media;
+public class ProfileConfig : MediaConfig;
 
-public class Photo : Media;
+public class PhotoConfig : MediaConfig;

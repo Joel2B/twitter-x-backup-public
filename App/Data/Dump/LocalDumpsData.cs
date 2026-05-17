@@ -1,16 +1,17 @@
 using Backup.App.Interfaces;
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Partition;
+using Backup.App.Models.Config.Data;
 using Backup.App.Models.Config.Data.Dump;
 using Backup.App.Models.Dump;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
-public class LocalDumpsData(Storage _config, IPartition _partition) : IDumpsDataStore, ISetup
+public class LocalDumpsData(StorageDump _config, IPartition _partition) : IDumpsDataStore, ISetup
 {
     public bool IsDefault { get; set; }
-    private readonly Storage _config = _config;
+    private readonly StorageDump _config = _config;
     private readonly IPartition _partition = _partition;
 
     public async Task Setup()
@@ -30,19 +31,19 @@ public class LocalDumpsData(Storage _config, IPartition _partition) : IDumpsData
 
     private void SetupDirectory()
     {
-        foreach (Models.Config.Data.Partition partition in _partition.GetPartitions())
+        foreach (PartitionConfig partition in _partition.GetPartitions())
             Directory.CreateDirectory(GetPath(partition));
     }
 
-    private string GetPath(Models.Config.Data.Partition partition) =>
+    private string GetPath(PartitionConfig partition) =>
         Path.Combine([.. partition.Paths, .. _config.Paths.Paths, .. _config.Paths.Dumps.Paths]);
 
-    private string GetPathFile(Models.Config.Data.Partition? partition = null)
+    private string GetPathFile(PartitionConfig? partition = null)
     {
         if (_config.Paths.Dumps.File is null)
             throw new Exception("file not configured");
 
-        Models.Config.Data.Partition primary = partition ?? _partition.GetPrimary();
+        PartitionConfig primary = partition ?? _partition.GetPrimary();
         string path = Path.Combine(GetPath(primary), _config.Paths.Dumps.File);
 
         return path;

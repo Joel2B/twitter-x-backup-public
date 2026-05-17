@@ -1,30 +1,31 @@
 using Backup.App.Models.Data.Json;
-using Backup.App.Models.Post;
+using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
 public partial class LocalPostData
 {
     public async Task AddPosts(
         string userId,
         string origin,
-        List<Models.Post.Post> incoming,
+        List<Post> incoming,
         MergeOptions? options = null
     )
     {
         options ??= new();
 
-        Dictionary<string, Models.Post.Post> posts = await GetCache() ?? [];
+        Dictionary<string, Post> posts = await GetCache() ?? [];
         Dictionary<string, PostMetaRow> postMeta = await GetPostMetaCache();
         _postsCache ??= posts;
 
-        foreach (Models.Post.Post result in incoming)
+        foreach (Post result in incoming)
         {
-            if (!posts.TryGetValue(result.Id, out Models.Post.Post? post))
+            if (!posts.TryGetValue(result.Id, out Post? post))
             {
-                Models.Post.Post clone = result.Clone();
+                Post clone = result.Clone();
                 posts[result.Id] = clone;
+
                 postMeta[result.Id] = new()
                 {
                     Id = result.Id,
@@ -36,7 +37,6 @@ public partial class LocalPostData
 
             Change change = new() { UserId = userId };
             MergeData(post, result, change);
-
             IndexData? incomingIndexData = null;
 
             if (options.Index)
@@ -68,8 +68,9 @@ public partial class LocalPostData
             if (change.Data is not null || change.Index is not null)
                 result.Changes.Add(change);
 
-            Models.Post.Post merged = result.Clone();
+            Post merged = result.Clone();
             posts[result.Id] = merged;
+
             postMeta[result.Id] = new()
             {
                 Id = result.Id,
@@ -81,7 +82,7 @@ public partial class LocalPostData
         _postMetaCache = postMeta;
     }
 
-    public Task Reset(List<Models.Post.Post> posts)
+    public Task Reset(List<Post> posts)
     {
         _postsCache = posts
             .Where(post => !string.IsNullOrWhiteSpace(post.Id))
@@ -103,22 +104,23 @@ public partial class LocalPostData
         return Task.CompletedTask;
     }
 
-    public async Task UpsertPosts(List<Models.Post.Post> posts)
+    public async Task UpsertPosts(List<Post> posts)
     {
         if (posts.Count == 0)
             return;
 
-        Dictionary<string, Models.Post.Post> cache = await GetCache() ?? [];
+        Dictionary<string, Post> cache = await GetCache() ?? [];
         Dictionary<string, PostMetaRow> postMeta = await GetPostMetaCache();
         _postsCache ??= cache;
 
-        foreach (Models.Post.Post post in posts)
+        foreach (Post post in posts)
         {
             if (string.IsNullOrWhiteSpace(post.Id))
                 continue;
 
-            Models.Post.Post clone = post.Clone();
+            Post clone = post.Clone();
             cache[clone.Id] = clone;
+
             postMeta[clone.Id] = new()
             {
                 Id = clone.Id,
@@ -130,7 +132,7 @@ public partial class LocalPostData
         _postMetaCache = postMeta;
     }
 
-    private void MergeData(Models.Post.Post post, Models.Post.Post result, Change change)
+    private void MergeData(Post post, Post result, Change change)
     {
         result.Profile.UserName ??= post.Profile.UserName;
         result.Profile.Name ??= post.Profile.Name;
@@ -154,17 +156,12 @@ public partial class LocalPostData
             _logger,
             "old data",
             "new data",
-            ((Models.Post.Data)post).Clone(),
-            ((Models.Post.Data)result).Clone()
+            ((PostData)post).Clone(),
+            ((PostData)result).Clone()
         );
     }
 
-    private void MergeIndex(
-        Models.Post.Post post,
-        Models.Post.Post result,
-        Change change,
-        string origin
-    )
+    private void MergeIndex(Post post, Post result, Change change, string origin)
     {
         if (!post.Index.TryGetValue(change.UserId, out Dictionary<string, IndexData>? oldUserIndex))
             return;

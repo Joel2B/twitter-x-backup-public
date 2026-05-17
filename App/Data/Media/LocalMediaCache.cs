@@ -3,7 +3,10 @@ using System.Security.Cryptography;
 using System.Text;
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Partition;
+using Backup.App.Models.Config.Data;
+using Backup.App.Models.Config.Data.Media;
 using Backup.App.Models.Media;
+using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -11,12 +14,12 @@ namespace Backup.App.Data.Media;
 
 public class LocalMediaCache(
     ILogger<LocalMediaCache> _logger,
-    Models.Config.Data.Media.Storage _config,
+    StorageMedia _config,
     IPartition _partition
 ) : ISetup
 {
     private readonly ILogger<LocalMediaCache> _logger = _logger;
-    private readonly Models.Config.Data.Media.Storage _config = _config;
+    private readonly StorageMedia _config = _config;
     private readonly IPartition _partition = _partition;
 
     private readonly ConcurrentDictionary<string, Cache> _cache = new(
@@ -32,7 +35,7 @@ public class LocalMediaCache(
 
     private void SetupDirectory()
     {
-        foreach (Models.Config.Data.Partition partition in _partition.GetPartitions())
+        foreach (PartitionConfig partition in _partition.GetPartitions())
         {
             if (
                 partition.Type == "primary"
@@ -52,18 +55,18 @@ public class LocalMediaCache(
         Directory.CreateDirectory(GetPathCacheDownload(_partition.GetPrimary()));
     }
 
-    public string GetPathCacheDownload(Models.Config.Data.Partition partition) =>
+    public string GetPathCacheDownload(PartitionConfig partition) =>
         Path.Combine(
             [.. partition.Paths, .. _config.Paths.Tmp.Paths, .. _config.Paths.Tmp.Downloaded.Paths]
         );
 
-    public string GetPathMedia(Models.Config.Data.Partition partition) =>
+    public string GetPathMedia(PartitionConfig partition) =>
         Path.Combine([.. partition.Paths, .. _config.Paths.Media.Paths]);
 
-    public string GetPathCache(Models.Config.Data.Partition partition) =>
+    public string GetPathCache(PartitionConfig partition) =>
         Path.Combine([.. partition.Paths, .. _config.Paths.Cache.Paths]);
 
-    public string GetPathCacheFile(Models.Config.Data.Partition partition)
+    public string GetPathCacheFile(PartitionConfig partition)
     {
         if (_config.Paths.Cache.File is null)
             throw new Exception("file not configured");
@@ -122,10 +125,10 @@ public class LocalMediaCache(
                     if (cache is null || cache.Size is null)
                         throw new Exception();
 
-                    Models.Config.Data.Partition partition = _partition.GetPath(cache.PartitionId);
+                    PartitionConfig partition = _partition.GetPath(cache.PartitionId);
 
                     string fullPath = Path.Combine(
-                        [GetPathMedia(partition), Utils.Path.NormalizePath(path)]
+                        [GetPathMedia(partition), UtilsPath.NormalizePath(path)]
                     );
 
                     FileInfo fi = new(fullPath);
@@ -173,7 +176,7 @@ public class LocalMediaCache(
 
     private async Task LoadCache()
     {
-        Models.Config.Data.Partition primary = _partition.GetPrimary();
+        PartitionConfig primary = _partition.GetPrimary();
         string directory = GetPathCacheDownload(primary);
 
         if (!Directory.Exists(directory))
@@ -204,9 +207,9 @@ public class LocalMediaCache(
         if (!File.Exists(file))
             return;
 
-        List<Models.Config.Data.Partition> partitions = _partition.GetCache();
+        List<PartitionConfig> partitions = _partition.GetCache();
 
-        foreach (Models.Config.Data.Partition partition in partitions)
+        foreach (PartitionConfig partition in partitions)
         {
             string path = GetPathCacheFile(partition);
 
@@ -217,7 +220,7 @@ public class LocalMediaCache(
 
     private async Task SaveCache(Cache cache, CancellationToken ct)
     {
-        Models.Config.Data.Partition primary = _partition.GetPrimary();
+        PartitionConfig primary = _partition.GetPrimary();
         string pathCache = GetPathCacheDownload(primary);
         string name = $"{cache.Path}{cache.PartitionId}";
 
@@ -248,7 +251,7 @@ public class LocalMediaCache(
 
     private void DeleteCache()
     {
-        Models.Config.Data.Partition primary = _partition.GetPrimary();
+        PartitionConfig primary = _partition.GetPrimary();
         string path = GetPathCacheDownload(primary);
 
         if (!Directory.Exists(path))
@@ -261,7 +264,7 @@ public class LocalMediaCache(
     public async Task<string> GetPath(string path, long size = 0, CancellationToken ct = default)
     {
         Cache? cache = Get(path);
-        Models.Config.Data.Partition? partition = null;
+        PartitionConfig? partition = null;
 
         if (size > 0 && size >= _config.SizeHeavy)
             partition = _partition.GetHeavy();
@@ -270,7 +273,7 @@ public class LocalMediaCache(
 
         if (size > 0)
         {
-            string normalizedPath = Utils.Path.NormalizePath(path, true);
+            string normalizedPath = UtilsPath.NormalizePath(path, true);
 
             Cache newCache = new()
             {
@@ -299,7 +302,7 @@ public class LocalMediaCache(
 
     public Cache? Get(string path)
     {
-        path = Utils.Path.NormalizePath(path, true);
+        path = UtilsPath.NormalizePath(path, true);
         _cache.TryGetValue(path, out Cache? cache);
 
         return cache;

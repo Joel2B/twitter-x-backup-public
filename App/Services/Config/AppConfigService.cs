@@ -1,4 +1,6 @@
 using Backup.App.Interfaces.Config;
+using Backup.App.Models.Config;
+using Backup.App.Models.Config.Data;
 
 namespace Backup.App.Services.Config;
 
@@ -21,7 +23,7 @@ public sealed class AppConfigService(IAppConfigStore store) : IAppConfigService
             return RefreshCore();
     }
 
-    public void SaveData(Models.Config.Data.Data data, bool refreshSnapshot = false)
+    public void SaveData(DataConfig data, bool refreshSnapshot = false)
     {
         lock (_sync)
         {
@@ -43,6 +45,6 @@ public sealed class AppConfigService(IAppConfigStore store) : IAppConfigService
         return snapshot;
     }
 
-    private static AppConfigSnapshot BuildSnapshot(long version, Models.Config.App config) =>
+    private static AppConfigSnapshot BuildSnapshot(long version, AppConfig config) =>
         new(version, DateTimeOffset.UtcNow, config);
 }

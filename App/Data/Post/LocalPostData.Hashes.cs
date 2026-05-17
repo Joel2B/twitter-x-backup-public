@@ -1,7 +1,8 @@
 using Backup.App.Models.Data.Json;
+using Backup.App.Models.Posts;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
 public partial class LocalPostData
 {
@@ -34,14 +35,12 @@ public partial class LocalPostData
         return _postMetaCache;
     }
 
-    private async Task<Dictionary<string, PostMetaRow>> EnsurePostMetaCache(
-        IEnumerable<Models.Post.Post> posts
-    )
+    private async Task<Dictionary<string, PostMetaRow>> EnsurePostMetaCache(IEnumerable<Post> posts)
     {
         Dictionary<string, PostMetaRow> meta = await GetPostMetaCache();
         HashSet<string> ids = [];
 
-        foreach (Models.Post.Post post in posts)
+        foreach (Post post in posts)
         {
             ids.Add(post.Id);
             string hash = ComputePostHash(post);
@@ -70,7 +69,7 @@ public partial class LocalPostData
         return meta;
     }
 
-    private static string ComputePostHash(Models.Post.Post post)
+    private static string ComputePostHash(Post post)
     {
         return Utils.PostHash.Compute(post);
     }

@@ -1,6 +1,6 @@
 namespace Backup.App.Utils;
 
-public class Storage
+public class UtilsStorage
 {
     public static string FormatBytes(long bytes)
     {

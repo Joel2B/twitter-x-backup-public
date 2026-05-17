@@ -1,12 +1,13 @@
 using System.Text.RegularExpressions;
 using Backup.App.Core.Media;
+using Backup.App.Models.Config.Medias;
 using Backup.App.Models.Media;
 using Backup.App.Models.Media.Processors;
-using Backup.App.Models.Post;
+using Backup.App.Models.Posts;
 
 namespace Backup.App.Services.Media.Processors;
 
-public class VideoProcessor(Models.Config.Medias.Video config, MediaProcessorContext context)
+public class VideoProcessor(VideoConfig config, MediaProcessorContext context)
     : MediaProcessor(context)
 {
     private readonly Utils.MediaFilter _filters = new(config.Thumb.Filters);
@@ -45,7 +46,7 @@ public class VideoProcessor(Models.Config.Medias.Video config, MediaProcessorCon
 
             List<DataDownload> data = [];
 
-            foreach (Models.Post.Media media in post.Medias)
+            foreach (PostMedia media in post.Medias)
             {
                 if (
                     media.Type != "video"
@@ -87,7 +88,7 @@ public class VideoProcessor(Models.Config.Medias.Video config, MediaProcessorCon
                     }
                 }
 
-                foreach (Variant variant in media.VideoInfo.Variants)
+                foreach (PostVariant variant in media.VideoInfo.Variants)
                 {
                     if (!config.Types.Contains(variant.ContentType))
                         continue;

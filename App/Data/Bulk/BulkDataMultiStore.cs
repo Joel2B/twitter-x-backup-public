@@ -1,4 +1,5 @@
 using Backup.App.Interfaces.Data.Bulk;
+using Backup.App.Models.Bulk;
 
 namespace Backup.App.Data.Bulk;
 
@@ -30,9 +31,9 @@ public class BulkDataMultiStore(IEnumerable<IBulkDataStore> stores) : IBulkData
         set => Primary.Id = value;
     }
 
-    public Task<List<Models.Bulk.Bulk>?> GetBulks() => Primary.GetBulks();
+    public Task<List<BulkData>?> GetBulks() => Primary.GetBulks();
 
-    public async Task Save(List<Models.Bulk.Bulk> bulks)
+    public async Task Save(List<BulkData> bulks)
     {
         await Primary.Save(bulks);
 

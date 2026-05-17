@@ -1,13 +1,14 @@
 using Backup.App.Interfaces.Config;
 using Backup.App.Models.Config;
+using Backup.App.Models.Config.Data;
 
 namespace Backup.App.Services.Config;
 
 public sealed class JsonAppConfigStore : IAppConfigStore
 {
-    public Models.Config.App Load() => ConfigLoader.Load();
+    public AppConfig Load() => ConfigLoader.Load();
 
-    public Models.Config.Data.Data LoadData() => ConfigLoader.LoadData();
+    public DataConfig LoadData() => ConfigLoader.LoadData();
 
-    public void SaveData(Models.Config.Data.Data data) => ConfigLoader.SaveData(data);
+    public void SaveData(DataConfig data) => ConfigLoader.SaveData(data);
 }

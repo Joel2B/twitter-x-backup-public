@@ -1,8 +1,9 @@
 using Backup.App.Interfaces.Services.UtilsService;
+using Backup.App.Models.Config;
 
 namespace Backup.App.Services.UtilsService;
 
-public class BandwidthLimiter(Models.Config.App config) : IBandwidthLimiter
+public class BandwidthLimiter(AppConfig config) : IBandwidthLimiter
 {
     private readonly long _maxBytesPerSecond = Math.Max(0, config.Downloads.MaxBytesPerSecond);
 

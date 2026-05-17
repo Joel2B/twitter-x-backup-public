@@ -1,6 +1,6 @@
 namespace Backup.App.Models.Proxy;
 
-public class Proxy
+public class ProxyDataConfig
 {
     public required string Ip { get; set; }
     public required string Port { get; set; }
@@ -8,7 +8,7 @@ public class Proxy
 
     public override bool Equals(object? obj)
     {
-        if (obj is not Proxy proxy)
+        if (obj is not ProxyDataConfig proxy)
             return false;
 
         return Ip == proxy.Ip && Port == proxy.Port && Protocol == proxy.Protocol;

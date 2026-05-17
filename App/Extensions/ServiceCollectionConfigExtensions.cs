@@ -1,16 +1,17 @@
+using Backup.App.Models.Config;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.App.Extensions;
 
 public static class ServiceCollectionConfigExtensions
 {
-    public static Models.Config.App GetAppConfig(this IServiceCollection services)
+    public static AppConfig GetAppConfig(this IServiceCollection services)
     {
         ServiceDescriptor? descriptor = services.LastOrDefault(o =>
-            o.ServiceType == typeof(Models.Config.App)
+            o.ServiceType == typeof(AppConfig)
         );
 
-        if (descriptor?.ImplementationInstance is Models.Config.App config)
+        if (descriptor?.ImplementationInstance is AppConfig config)
             return config;
 
         throw new InvalidOperationException(

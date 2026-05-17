@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Config.Request;
+namespace Backup.App.Models.Config.ApiRequest;
 
 public class Request
 {

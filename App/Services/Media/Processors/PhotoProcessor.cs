@@ -1,10 +1,11 @@
 using Backup.App.Core.Media;
+using Backup.App.Models.Config.Medias;
 using Backup.App.Models.Media;
 using Backup.App.Models.Media.Processors;
 
 namespace Backup.App.Services.Media.Processors;
 
-public class PhotoProcessor(Models.Config.Medias.Photo config, MediaProcessorContext context)
+public class PhotoProcessor(PhotoConfig config, MediaProcessorContext context)
     : MediaProcessor(context)
 {
     private readonly Utils.MediaFilter _filters = new(config.Filters);
@@ -27,7 +28,7 @@ public class PhotoProcessor(Models.Config.Medias.Photo config, MediaProcessorCon
             if (post.Medias is null)
                 continue;
 
-            foreach (Models.Post.Media media in post.Medias)
+            foreach (var media in post.Medias)
             {
                 string id = Path.GetFileNameWithoutExtension(media.Url);
 

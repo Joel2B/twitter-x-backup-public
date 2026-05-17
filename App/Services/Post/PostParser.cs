@@ -1,12 +1,12 @@
-using Backup.App.Interfaces.Services.Post;
+using Backup.App.Interfaces.Services.Posts;
 using Backup.App.Mapper;
-using Backup.App.Models.Post;
-using Backup.App.Models.Post.Response;
+using Backup.App.Models.Posts;
+using Backup.App.Models.Posts.Response;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Backup.App.Services.Post;
+namespace Backup.App.Services.Posts;
 
 public class PostParser(ILogger<PostParser> _logger) : IPostParser
 {
@@ -25,13 +25,13 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
         if (entries is null)
             entries = [];
 
-        List<Models.Post.Post> tweets = [];
+        List<Post> tweets = [];
         List<Entry> debugTweets = [];
 
         foreach (Entry entry in entries)
             try
             {
-                Models.Post.Post post = Posts.Map(entry);
+                Post post = Mapper.Posts.Map(entry);
                 tweets.Add(post);
             }
             catch (Exception ex)
@@ -119,8 +119,7 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
             return null;
 
         string? cursor = entriesCursor
-            .Where(cursor => cursor.Content.CursorType == "Bottom")
-            .FirstOrDefault()
+            .FirstOrDefault(cursor => cursor.Content.CursorType == "Bottom")
             ?.Content.Value;
 
         return cursor;
@@ -219,7 +218,7 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
         if (token is null)
             throw new Exception();
 
-        Models.Post.Response.Data? data = token.ToObject<Models.Post.Response.Data>();
+        Models.Posts.Response.Data? data = token.ToObject<Models.Posts.Response.Data>();
 
         if (data is null)
             throw new Exception();
@@ -233,7 +232,7 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
             return new ParseUser(null);
         }
 
-        Models.Post.User user = new()
+        Models.Posts.User user = new()
         {
             Id = data.User.Result.RestId ?? throw new Exception("RestId is null"),
             MediaCount =

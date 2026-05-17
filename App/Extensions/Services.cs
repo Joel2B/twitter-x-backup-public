@@ -1,8 +1,8 @@
 using Backup.App.Interfaces.Services.Media;
-using Backup.App.Interfaces.Services.Post;
+using Backup.App.Interfaces.Services.Posts;
 using Backup.App.Services.Bulk;
 using Backup.App.Services.Media;
-using Backup.App.Services.Post;
+using Backup.App.Services.Posts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.App.Extensions;

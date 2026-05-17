@@ -1,6 +1,7 @@
 using System.Net;
-using Backup.App.Models.Config.Proxy;
 using Backup.App.Interfaces.Proxy;
+using Backup.App.Models.Config.Proxy;
+using Backup.App.Models.Proxy;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.App.Services.Proxy.Downloader;
@@ -13,7 +14,7 @@ public class ProxyDownloaderHttp(ILogger _logger, IProxyFormatter _formatter) : 
     private readonly HttpClient _client = new();
     private readonly CancellationTokenSource _tokenSource = new();
 
-    public async Task<List<Models.Proxy.Proxy>?> Load(Resource resource)
+    public async Task<List<ProxyDataConfig>?> Load(Resource resource)
     {
         using HttpRequestMessage requestHttp = new()
         {
@@ -41,7 +42,7 @@ public class ProxyDownloaderHttp(ILogger _logger, IProxyFormatter _formatter) : 
             .Where(line => !string.IsNullOrWhiteSpace(line))
             .ToList();
 
-        List<Models.Proxy.Proxy>? proxies = _formatter.Load(lines, resource.Type);
+        List<ProxyDataConfig>? proxies = _formatter.Load(lines, resource.Type);
 
         return proxies;
     }

@@ -1,6 +1,6 @@
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Models.Bulk;
-using Backup.App.Models.Post;
+using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.App.Services.Bulk;
@@ -10,12 +10,12 @@ public partial class BulkService
     private async Task Phase2()
     {
         _logger.LogInformation("running phase 2");
-        List<Models.Bulk.Bulk>? data = await _bulkData.GetBulks();
+        List<BulkData>? data = await _bulkData.GetBulks();
 
         if (data is null)
             return;
 
-        List<Models.Bulk.Bulk> bulks = data.Where(o =>
+        List<BulkData> bulks = data.Where(o =>
                 o.User.Status == StatusUser.Active && o.Order.Phase2 is not null
             )
             .Take(_config.Bulk.UsersPerPhase2)
@@ -33,7 +33,7 @@ public partial class BulkService
 
         int progress = 1;
 
-        foreach (Models.Bulk.Bulk bulk in bulks)
+        foreach (BulkData bulk in bulks)
         {
             _logger.LogInformation(
                 "progress: {progress}/{total}",
@@ -172,7 +172,7 @@ public partial class BulkService
     private async Task ResetPhase2()
     {
         _logger.LogInformation("reset phase 2");
-        List<Models.Bulk.Bulk>? data = await _bulkData.GetBulks();
+        List<BulkData>? data = await _bulkData.GetBulks();
 
         if (
             data is null
@@ -183,7 +183,7 @@ public partial class BulkService
 
         _logger.LogInformation("setting Phase2 = 0");
 
-        foreach (Models.Bulk.Bulk bulk in data)
+        foreach (BulkData bulk in data)
             bulk.Order.Phase2 = 0;
 
         await _bulkData.Save(data);

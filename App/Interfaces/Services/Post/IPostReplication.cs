@@ -1,6 +1,6 @@
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 
-namespace Backup.App.Interfaces.Services.Post;
+namespace Backup.App.Interfaces.Services.Posts;
 
 public interface IPostReplication
 {

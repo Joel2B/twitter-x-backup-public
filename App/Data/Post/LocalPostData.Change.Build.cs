@@ -1,11 +1,11 @@
 using Backup.App.Models.Data.Json;
-using Backup.App.Models.Post;
+using Backup.App.Models.Posts;
 
-namespace Backup.App.Data.Post;
+namespace Backup.App.Data.Posts;
 
 public partial class LocalPostData
 {
-    private static void AddChangeRows(LocalPostTables tables, Models.Post.Post post)
+    private static void AddChangeRows(LocalPostTables tables, Post post)
     {
         if (post.Changes.Count == 0)
             return;
@@ -53,7 +53,7 @@ public partial class LocalPostData
     }
 
     private static List<PostChangeFieldRow> BuildChangeFields(
-        Models.Post.Post post,
+        Post post,
         List<Change> changes,
         int index
     )
@@ -63,7 +63,7 @@ public partial class LocalPostData
 
         if (change.Data is not null)
         {
-            Models.Post.Data newData = GetNextDataState(post, changes, index);
+            PostData newData = GetNextDataState(post, changes, index);
             AddDataFieldChanges(fields, change.Data, newData);
         }
 
@@ -87,11 +87,7 @@ public partial class LocalPostData
         return fields;
     }
 
-    private static Models.Post.Data GetNextDataState(
-        Models.Post.Post post,
-        List<Change> changes,
-        int index
-    )
+    private static PostData GetNextDataState(Post post, List<Change> changes, int index)
     {
         for (int i = index + 1; i < changes.Count; i++)
             if (changes[i].Data is not null)
@@ -101,7 +97,7 @@ public partial class LocalPostData
     }
 
     private static Dictionary<string, IndexData>? GetNextIndexState(
-        Models.Post.Post post,
+        Post post,
         List<Change> changes,
         int index,
         string userId
@@ -122,8 +118,8 @@ public partial class LocalPostData
 
     private static void AddDataFieldChanges(
         List<PostChangeFieldRow> fields,
-        Models.Post.Data oldData,
-        Models.Post.Data newData
+        PostData oldData,
+        PostData newData
     )
     {
         AddFieldIfDifferent(fields, ChangeFields.PostId, oldData.Id, newData.Id);

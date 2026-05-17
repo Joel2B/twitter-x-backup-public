@@ -1,6 +1,8 @@
+using Backup.App.Models.Config.Downloads;
+
 namespace Backup.App.Models.Config;
 
-public class Bulk
+public class BulkConfig
 {
     public required bool Enabled { get; set; }
     public int UsersPerCycle { get; set; }
@@ -11,11 +13,4 @@ public class Bulk
     public int MediaPerApi { get; set; }
     public int MaxCountPost { get; set; }
     public int ApiRetryCount { get; set; }
-}
-
-public class BulkData : Downloads.Path
-{
-    public bool Prune { get; set; }
-    public required Downloads.Path Bulk { get; set; }
-    public required Downloads.Path Sources { get; set; }
 }

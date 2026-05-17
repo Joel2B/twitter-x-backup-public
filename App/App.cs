@@ -1,16 +1,18 @@
-using Backup.App.Data.Post;
+using Backup.App.Data.Posts;
 using Backup.App.Extensions;
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Services.Media;
-using Backup.App.Interfaces.Services.Post;
+using Backup.App.Interfaces.Services.Posts;
+using Backup.App.Models.Config;
 using Backup.App.Models.Config.Api;
+using Backup.App.Models.Config.ApiRequest;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.App;
 
 public class App(
     ILogger<App> _logger,
-    Models.Config.App _config,
+    AppConfig _config,
     IPostData _postData,
     IEnumerable<IPostService> _postServices,
     IEnumerable<IBulkService> _bulkServices,
@@ -18,7 +20,7 @@ public class App(
 )
 {
     private readonly ILogger<App> _logger = _logger;
-    private readonly Models.Config.App _config = _config;
+    private readonly AppConfig _config = _config;
     private readonly IPostData _postData = _postData;
     private readonly IEnumerable<IPostService> _postServices = _postServices;
     private readonly IEnumerable<IBulkService> _bulkServices = _bulkServices;
@@ -56,13 +58,13 @@ public class App(
         {
             string apiId = kvp.Key;
 
-            if (!context.Api.TryGetValue(apiId, out Api? api))
+            if (!context.Api.TryGetValue(apiId, out ApiConfig? api))
                 continue;
 
             if (!api.Enabled)
                 continue;
 
-            Models.Config.Request.Request request = api.Request.Clone();
+            Request request = api.Request.Clone();
             int count = kvp.Value.Count;
 
             ApiContext apiContext = new()

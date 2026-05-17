@@ -1,5 +1,5 @@
-using Backup.App.Models.Config.Proxy;
 using Backup.App.Interfaces.Proxy;
+using Backup.App.Models.Proxy;
 
 namespace Backup.App.Services.Proxy.Downloader;
 
@@ -7,10 +7,10 @@ public class ProxyDownloaderInLineConfig(IProxyFormatter _formatter) : IProxyDow
 {
     private readonly IProxyFormatter _formatter = _formatter;
 
-    public Task<List<Models.Proxy.Proxy>?> Load(Resource resource)
+    public Task<List<ProxyDataConfig>?> Load(Models.Config.Proxy.Resource resource)
     {
         List<string> lines = [resource.Value];
-        List<Models.Proxy.Proxy>? proxies = _formatter.Load(lines, resource.Type);
+        List<ProxyDataConfig>? proxies = _formatter.Load(lines, resource.Type);
 
         return Task.FromResult(proxies);
     }

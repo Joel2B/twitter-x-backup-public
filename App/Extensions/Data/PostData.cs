@@ -1,9 +1,9 @@
 using Backup.App.Data.Partition;
-using Backup.App.Data.Post;
+using Backup.App.Data.Posts;
 using Backup.App.Interfaces;
-using Backup.App.Interfaces.Data.Post;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Partition;
-using Backup.App.Models.Config.Data.Post;
+using Backup.App.Models.Config.Data.Posts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.App.Extensions;
@@ -17,12 +17,14 @@ public static class PostDataCollectionExtensions
             ["local"] = typeof(LocalPostData),
             ["sqlite"] = typeof(SqlitePostData),
         };
-        List<DataCollectionExtensions.DataRegistration<Storage>> registrations =
+        List<DataCollectionExtensions.DataRegistration<StoragePost>> registrations =
             services.ResolveRegistrations(services.GetAppConfig().Data.Post, types, keyOffset: 0);
 
-        foreach (DataCollectionExtensions.DataRegistration<Storage> registration in registrations)
+        foreach (
+            DataCollectionExtensions.DataRegistration<StoragePost> registration in registrations
+        )
         {
-            Storage storage = registration.Storage;
+            StoragePost storage = registration.Storage;
             string key = registration.Key;
             Type type = registration.ImplementationType;
 
