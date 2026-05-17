@@ -1,23 +1,41 @@
 using Backup.App.Interfaces.Data.Post;
 using Backup.App.Interfaces.Services.Post;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace Backup.App.Services.Post;
 
 public class PostReplication(ILogger<PostReplication> _logger) : IPostReplication
 {
     private readonly ILogger<PostReplication> _logger = _logger;
+    private const int ReplicationChunkSize = 10000;
 
-    public async Task Replicate(IEnumerable<IPostData> data)
+    public async Task Replicate(IEnumerable<IPostDataStore> stores)
     {
-        IPostData source = data.First();
+        List<IPostDataStore> storeList = [.. stores];
+
+        if (storeList.Count == 0)
+            throw new InvalidOperationException(
+                "No post data stores were provided for replication."
+            );
+
+        List<IPostDataStore> defaults = storeList.Where(store => store.IsDefault).ToList();
+
+        if (defaults.Count > 1)
+            throw new InvalidOperationException(
+                "Only one post data store can be marked as default."
+            );
+
+        IPostDataStore source = defaults.First();
 
         try
         {
             Dictionary<string, string> sourceHashes = await source.GetHashesById();
             _logger.LogInformation("replication source hashes: {count}", sourceHashes.Count);
 
-            foreach (IPostData postData in data.Except([source]))
+            foreach (
+                IPostDataStore postData in storeList.Where(store => !ReferenceEquals(store, source))
+            )
             {
                 Dictionary<string, string> targetHashes = await postData.GetHashesById();
 
@@ -64,19 +82,48 @@ public class PostReplication(ILogger<PostReplication> _logger) : IPostReplicatio
                 if (changedIds.Count == 0)
                     continue;
 
-                List<Models.Post.Post> changedPosts = await source.GetByIds(changedIds);
+                int processed = 0;
 
-                if (changedPosts.Count == 0)
-                    continue;
+                foreach (List<string> chunk in Chunk(changedIds, ReplicationChunkSize))
+                {
+                    List<Models.Post.Post> changedPosts = await source.GetByIds(chunk);
 
-                await postData.UpsertPosts(changedPosts);
-                await postData.Save();
+                    if (changedPosts.Count == 0)
+                    {
+                        processed += chunk.Count;
+                        continue;
+                    }
+
+                    await postData.UpsertPosts(changedPosts);
+                    await postData.Save();
+                    processed += chunk.Count;
+
+                    _logger.LogInformation(
+                        "replication target '{target}' progress: {processed}/{total}",
+                        postData.Id ?? postData.GetType().Name,
+                        processed,
+                        changedIds.Count
+                    );
+                }
+
                 await postData.Prune();
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error: {error}", ex.Message);
+            _logger.LogError("Error: {error}", JsonConvert.SerializeObject(ex));
+        }
+    }
+
+    private static IEnumerable<List<string>> Chunk(List<string> ids, int size)
+    {
+        if (size <= 0)
+            throw new ArgumentOutOfRangeException(nameof(size));
+
+        for (int i = 0; i < ids.Count; i += size)
+        {
+            int count = Math.Min(size, ids.Count - i);
+            yield return ids.GetRange(i, count);
         }
     }
 }

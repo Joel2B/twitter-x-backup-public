@@ -4,5 +4,5 @@ namespace Backup.App.Interfaces.Services.Post;
 
 public interface IPostReplication
 {
-    public Task Replicate(IEnumerable<IPostData> data);
+    public Task Replicate(IEnumerable<IPostDataStore> stores);
 }

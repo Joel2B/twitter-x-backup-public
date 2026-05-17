@@ -1,4 +1,6 @@
+using Backup.App.Data.Post;
 using Backup.App.Extensions;
+using Backup.App.Interfaces.Data.Post;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Interfaces.Services.Post;
 using Backup.App.Models.Config.Api;
@@ -9,6 +11,7 @@ namespace Backup.App;
 public class App(
     ILogger<App> _logger,
     Models.Config.App _config,
+    IPostData _postData,
     IEnumerable<IPostService> _postServices,
     IEnumerable<IBulkService> _bulkServices,
     IEnumerable<IMediaService> _mediaServices
@@ -16,6 +19,7 @@ public class App(
 {
     private readonly ILogger<App> _logger = _logger;
     private readonly Models.Config.App _config = _config;
+    private readonly IPostData _postData = _postData;
     private readonly IEnumerable<IPostService> _postServices = _postServices;
     private readonly IEnumerable<IBulkService> _bulkServices = _bulkServices;
     private readonly IEnumerable<IMediaService> _mediaServices = _mediaServices;
@@ -34,6 +38,7 @@ public class App(
         await RunPostRecoveryServices(contexts[0]);
         await RunBulkServices(contexts[0]);
         await RunMediaServices();
+        await VerifyPostStores();
     }
 
     private async Task RunPostRecoveryServices(UsersContext context)
@@ -104,5 +109,14 @@ public class App(
             using (_logger.LogTimer($"media service: {service.GetType().Name}"))
                 await service.Download();
         }
+    }
+
+    private async Task VerifyPostStores()
+    {
+        if (_postData is not PostDataMultiStore stores)
+            return;
+
+        using (_logger.LogTimer("post store parity check"))
+            await stores.VerifyStoreCounts();
     }
 }

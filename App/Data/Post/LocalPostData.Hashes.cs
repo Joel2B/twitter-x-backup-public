@@ -44,13 +44,14 @@ public partial class LocalPostData
         foreach (Models.Post.Post post in posts)
         {
             ids.Add(post.Id);
+            string hash = ComputePostHash(post);
 
             if (!meta.TryGetValue(post.Id, out PostMetaRow? value))
             {
                 meta[post.Id] = new()
                 {
                     Id = post.Id,
-                    Hash = ComputePostHash(post),
+                    Hash = hash,
                     Deleted = post.Deleted,
                 };
 
@@ -58,9 +59,7 @@ public partial class LocalPostData
             }
 
             value.Deleted = post.Deleted;
-
-            if (string.IsNullOrWhiteSpace(value.Hash))
-                value.Hash = ComputePostHash(post);
+            value.Hash = hash;
         }
 
         List<string> staleIds = [.. meta.Keys.Where(id => !ids.Contains(id))];

@@ -21,8 +21,8 @@ services.AddServices();
 services.AddSetup();
 services.AddApp();
 
-using ServiceProvider provider = services.BuildServiceProvider();
-using IServiceScope scope = provider.CreateScope();
+await using ServiceProvider provider = services.BuildServiceProvider();
+await using AsyncServiceScope scope = provider.CreateAsyncScope();
 await scope.ServiceProvider.RunSetup();
 
 Backup.App.App app = scope.ServiceProvider.GetRequiredService<Backup.App.App>();
