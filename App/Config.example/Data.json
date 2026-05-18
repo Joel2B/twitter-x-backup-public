@@ -116,6 +116,25 @@
         "Verify": true,
         "Fix": false
       }
+    },
+    {
+      "Id": "nas post sqlite",
+      "Type": "sqlite",
+      "Default": false,
+      "Enabled": false,
+      "Paths": {
+        "Paths": ["data"],
+        "Post": {
+          "Paths": ["post", "sqlite"],
+          "File": "posts.db"
+        }
+      },
+      "Partitions": [6],
+      "Tasks": {
+        "Prune": true,
+        "Verify": true,
+        "Fix": false
+      }
     }
   ],
   "Dump": [
