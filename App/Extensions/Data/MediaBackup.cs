@@ -1,6 +1,7 @@
 using Backup.App.Data.Media;
 using Backup.App.Data.Partition;
 using Backup.App.Interfaces;
+using Backup.App.Interfaces.Data.Media;
 using Backup.App.Interfaces.Partition;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Models.Config.Data.Backup;
@@ -43,7 +44,7 @@ public static class MediaBackupCollectionExtensions
                 {
                     IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
-                    IMediaBackup? instance = (IMediaBackup)
+                    IMediaBackupData? instance = (IMediaBackupData)
                         ActivatorUtilities.CreateInstance(
                             sp,
                             typeof(LocalMediaBackup),
@@ -59,7 +60,9 @@ public static class MediaBackupCollectionExtensions
                 key,
                 (sp, _) =>
                 {
-                    IMediaBackup mediaBackup = sp.GetRequiredKeyedService<IMediaBackup>(key);
+                    IMediaBackupData mediaBackup = sp.GetRequiredKeyedService<IMediaBackupData>(
+                        key
+                    );
 
                     IMediaBackup? instance = (IMediaBackup)
                         ActivatorUtilities.CreateInstance(sp, type, storage, mediaBackup);
@@ -70,7 +73,7 @@ public static class MediaBackupCollectionExtensions
                 }
             );
 
-            services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IMediaBackup>(key));
+            services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IMediaBackupData>(key));
             services.AddScoped(sp => sp.GetRequiredKeyedService<IMediaBackup>(key));
         }
 

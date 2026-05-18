@@ -56,7 +56,7 @@ public partial class MediaBackup : IMediaBackup
             }
 
             _logger.LogInfo("saving chunk");
-            await _mediaBackup.Save([kvp.Value]);
+            await _mediaBackupData.Save([kvp.Value]);
 
             _logger.LogInformation("chunk {chunk} processed", kvp.Key);
         }

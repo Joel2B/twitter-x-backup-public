@@ -208,7 +208,7 @@ public partial class MediaBackup : IMediaBackup
                         if (!existsSource)
                             throw new Exception();
 
-                        bool existsTarget = await _mediaBackup.Exists(path);
+                        bool existsTarget = await _mediaBackupData.Exists(path);
 
                         if (existsTarget)
                             return;

@@ -180,7 +180,7 @@ public partial class MediaBackup : IMediaBackup
             }
 
             _logger.LogInfo("saving chunk");
-            await _mediaBackup.Save([_chunks[change.Key]]);
+            await _mediaBackupData.Save([_chunks[change.Key]]);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using Backup.App.Extensions;
+using Backup.App;
+using Backup.App.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 
@@ -21,9 +22,17 @@ services.AddServices();
 services.AddSetup();
 services.AddApp();
 
+Console.Error.WriteLine("[startup] building service provider");
 await using ServiceProvider provider = services.BuildServiceProvider();
+
+Console.Error.WriteLine("[startup] creating scope");
 await using AsyncServiceScope scope = provider.CreateAsyncScope();
+
+Console.Error.WriteLine("[startup] running setup");
 await scope.ServiceProvider.RunSetup();
 
-Backup.App.App app = scope.ServiceProvider.GetRequiredService<Backup.App.App>();
+Console.Error.WriteLine("[startup] resolving app");
+App app = scope.ServiceProvider.GetRequiredService<App>();
+
+Console.Error.WriteLine("[startup] running backup");
 await app.Backup();

@@ -14,7 +14,7 @@ public partial class MediaBackup(
     ILogger<MediaBackup> _logger,
     StorageBackup _config,
     IZipWriterFactory _zipWriterFactory,
-    IMediaBackupData _mediaBackup
+    IMediaBackupData _mediaBackupData
 ) : IMediaBackup
 {
     public string? Id { get; set; }
@@ -23,7 +23,7 @@ public partial class MediaBackup(
     private List<string> _paths = [];
     private IMediaData? _mediaData;
     private IMediaData MediaData => _mediaData ?? throw new Exception("media data not initialized");
-    private readonly IMediaBackupData _mediaBackup = _mediaBackup;
+    private readonly IMediaBackupData _mediaBackupData = _mediaBackupData;
     private BackupChunks _backup = new()
     {
         Chunks = new()
@@ -50,7 +50,7 @@ public partial class MediaBackup(
         using (_logger.LogTimer(Id, "processing paths"))
             _paths = [.. downloads.SelectMany(o => o.Data).Select(o => o.Path)];
 
-        BackupChunks? backup = await _mediaBackup.GetBackup();
+        BackupChunks? backup = await _mediaBackupData.GetBackup();
 
         if (backup is not null)
             _backup = backup;
@@ -60,7 +60,7 @@ public partial class MediaBackup(
 
         using (_logger.LogTimer(Id, "processing chunks"))
         {
-            List<Chunk>? chunks = await _mediaBackup.GetChunks();
+            List<Chunk>? chunks = await _mediaBackupData.GetChunks();
             _chunks = chunks?.ToDictionary(o => o.Id) ?? [];
         }
 

@@ -97,8 +97,8 @@ public partial class MediaBackup : IMediaBackup
                 if (!_backup.Chunks.Ids.Contains(kvp.Key))
                     _backup.Chunks.Ids.Add(kvp.Key);
 
-                await _mediaBackup.SaveBackup(_backup);
-                await _mediaBackup.Save([kvp.Value]);
+                await _mediaBackupData.SaveBackup(_backup);
+                await _mediaBackupData.Save([kvp.Value]);
 
                 _logger.LogInformation("chunk {chunk} processed", kvp.Key);
             }
@@ -108,12 +108,12 @@ public partial class MediaBackup : IMediaBackup
 
                 zip?.Dispose();
 
-                await _mediaBackup.DeleteChunk(kvp.Value);
+                await _mediaBackupData.DeleteChunk(kvp.Value);
 
                 foreach (ChunkData chunkData in kvp.Value.Data)
                     chunkData.Hash = null;
 
-                await _mediaBackup.Save([kvp.Value]);
+                await _mediaBackupData.Save([kvp.Value]);
 
                 break;
             }
@@ -174,7 +174,7 @@ public partial class MediaBackup : IMediaBackup
                 if (zip is null)
                     continue;
 
-                await _mediaBackup.Save([_chunks[chunk.Id]]);
+                await _mediaBackupData.Save([_chunks[chunk.Id]]);
                 _logger.LogInformation("chunk {chunk} processed", chunk.Id);
             }
             catch (Exception ex)
@@ -225,7 +225,7 @@ public partial class MediaBackup : IMediaBackup
                             UtilsPath.NormalizePath(path)
                         );
 
-                        await using Stream write = await _mediaBackup.Write(
+                        await using Stream write = await _mediaBackupData.Write(
                             UtilsPath.NormalizePath(path)
                         );
 

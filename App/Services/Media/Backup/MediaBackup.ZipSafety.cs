@@ -13,7 +13,7 @@ public partial class MediaBackup : IMediaBackup
 
         try
         {
-            zipFile = await _mediaBackup.GetChunk(chunk);
+            zipFile = await _mediaBackupData.GetChunk(chunk);
 
             if (zipFile is null)
             {
@@ -41,7 +41,7 @@ public partial class MediaBackup : IMediaBackup
 
         try
         {
-            zipFile = await _mediaBackup.GetChunk(chunk);
+            zipFile = await _mediaBackupData.GetChunk(chunk);
 
             if (zipFile is null)
             {
@@ -72,7 +72,7 @@ public partial class MediaBackup : IMediaBackup
             stage
         );
 
-        await _mediaBackup.DeleteChunk(chunk);
+        await _mediaBackupData.DeleteChunk(chunk);
 
         foreach (ChunkData item in chunk.Data)
         {
@@ -81,6 +81,6 @@ public partial class MediaBackup : IMediaBackup
             item.Crc32 = null;
         }
 
-        await _mediaBackup.Save([chunk]);
+        await _mediaBackupData.Save([chunk]);
     }
 }

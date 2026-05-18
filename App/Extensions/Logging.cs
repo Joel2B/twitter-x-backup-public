@@ -17,36 +17,48 @@ public static class LoggingCollectionExtensions
 {
     public static IServiceCollection AddSerilog(this IServiceCollection services)
     {
-        AppConfig config = services.GetAppConfig();
-        int partitionId = config.Debug.Partitions.First();
-        PartitionConfig partition = config.Data.Partitions.First(o => o.Id == partitionId);
-
-        string basePath = UtilsPath.GetPartitionPath(config, partition);
-
-        string directory = Path.Combine(
-            [basePath, .. config.Debug.Paths, .. config.Debug.Log.Paths]
-        );
-
-        Directory.CreateDirectory(directory);
-
-        string fileName = "app-.log";
-        string path = Path.Combine(directory, fileName);
-
         string outputTemplate =
             "[{Timestamp:yyyy-MM-dd HH:mm:ss}] [{Level:u3}] [{ShortSourceContext}]{ContextId} {Message:lj}{NewLine}";
 
-        Log.Logger = new LoggerConfiguration()
+        LoggerConfiguration loggerConfiguration = new LoggerConfiguration()
             .MinimumLevel.Debug()
             .Enrich.FromLogContext()
             .Enrich.With<ShortSourceContextEnricher>()
-            .WriteTo.Console(outputTemplate: outputTemplate)
-            .WriteTo.File(
+            .WriteTo.Console(outputTemplate: outputTemplate);
+
+        try
+        {
+            AppConfig config = services.GetAppConfig();
+            int partitionId = config.Debug.Partitions.First();
+            PartitionConfig partition = config.Data.Partitions.First(o => o.Id == partitionId);
+            string basePath = UtilsPath.GetPartitionPath(config, partition);
+
+            string directory = Path.Combine(
+                [basePath, .. config.Debug.Paths, .. config.Debug.Log.Paths]
+            );
+
+            Directory.CreateDirectory(directory);
+
+            string fileName = "app-.log";
+            string path = Path.Combine(directory, fileName);
+
+            loggerConfiguration = loggerConfiguration.WriteTo.File(
                 path,
                 rollingInterval: RollingInterval.Day,
                 retainedFileCountLimit: 10,
                 outputTemplate: outputTemplate
-            )
-            .CreateLogger();
+            );
+
+            Console.Error.WriteLine($"[logger] file sink enabled: {path}");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(
+                $"[logger] file sink disabled, using console only. reason: {ex.GetType().Name}: {ex.Message}"
+            );
+        }
+
+        Log.Logger = loggerConfiguration.CreateLogger();
 
         services.AddLogging(builder =>
         {
