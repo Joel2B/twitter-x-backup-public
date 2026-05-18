@@ -135,7 +135,7 @@ public partial class LocalPostData(
             if (post.Changes.Count == 0)
                 continue;
 
-            List<Models.Posts.Change> orderedChanges = post
+            List<Change> orderedChanges = post
                 .Changes.Select((change, index) => new { Change = change, Index = index })
                 .OrderBy(o => o.Change.Date)
                 .ThenBy(o => o.Index)

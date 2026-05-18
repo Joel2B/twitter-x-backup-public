@@ -1,5 +1,4 @@
 using Backup.App.Interfaces.Services.Posts;
-using Backup.App.Mapper;
 using Backup.App.Models.Posts;
 using Backup.App.Models.Posts.Response;
 using Microsoft.Extensions.Logging;
@@ -218,7 +217,7 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
         if (token is null)
             throw new Exception();
 
-        Models.Posts.Response.Data? data = token.ToObject<Models.Posts.Response.Data>();
+        DataUser? data = token.ToObject<DataUser>();
 
         if (data is null)
             throw new Exception();
@@ -232,7 +231,7 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
             return new ParseUser(null);
         }
 
-        Models.Posts.User user = new()
+        PostUser user = new()
         {
             Id = data.User.Result.RestId ?? throw new Exception("RestId is null"),
             MediaCount =

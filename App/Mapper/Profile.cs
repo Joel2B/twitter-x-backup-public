@@ -11,7 +11,7 @@ public class Profile()
             entry.Content.ItemContent.TweetResults ?? throw new Exception("tweetResults");
 
         Result result = tweetResults.Result;
-        Models.Posts.Response.Core resultCore = result.Core ?? throw new Exception("core");
+        CoreUser resultCore = result.Core ?? throw new Exception("core");
         Result? userResults = resultCore.UserResults.Result;
 
         string id = result.Legacy?.UserIdStr ?? userResults?.RestId ?? throw new Exception("id");

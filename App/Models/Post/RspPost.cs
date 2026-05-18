@@ -49,7 +49,7 @@ public class Item
     public ItemContent? ItemContent { get; set; }
 }
 
-public class Core
+public class CoreUser
 {
     [JsonProperty("user_results", NullValueHandling = NullValueHandling.Ignore)]
     public required UserResults UserResults { get; set; }
@@ -61,7 +61,7 @@ public class Core
     public required string ScreenName { get; set; }
 }
 
-public class Data
+public class DataUser
 {
     [JsonProperty("user", NullValueHandling = NullValueHandling.Ignore)]
     public required User User { get; set; }
@@ -568,7 +568,7 @@ public class Result
     public string? RestId { get; set; }
 
     [JsonProperty("core", NullValueHandling = NullValueHandling.Ignore)]
-    public Core? Core { get; set; }
+    public CoreUser? Core { get; set; }
 
     [JsonProperty("tweet", NullValueHandling = NullValueHandling.Ignore)]
     public Result? Tweet { get; set; }
@@ -634,7 +634,7 @@ public class Result
 public class RspPosts
 {
     [JsonProperty("data", NullValueHandling = NullValueHandling.Ignore)]
-    public required Data Data { get; set; }
+    public required DataUser Data { get; set; }
 }
 
 public class ScribeConfig
