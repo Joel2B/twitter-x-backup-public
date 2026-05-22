@@ -12,7 +12,11 @@ public class Hashtag
         Result result = tweetResults.Result;
         Entities entities = result.Legacy?.Entities ?? throw new Exception();
 
-        List<string> hashtags = [.. entities.Hashtags.Select(o => o.Text)];
+        List<string> hashtags =
+            entities
+                .Hashtags?.Where(hashtag => !string.IsNullOrWhiteSpace(hashtag.Text))
+                .Select(hashtag => hashtag.Text)
+                .ToList() ?? [];
 
         if (hashtags.Count == 0)
             return null;
