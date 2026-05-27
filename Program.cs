@@ -1,7 +1,6 @@
 using Backup.App;
 using Backup.App.Extensions;
 using Microsoft.Extensions.DependencyInjection;
-using Serilog;
 
 ServiceCollection services = new();
 

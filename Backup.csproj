@@ -8,10 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Backup.Api\**\*.cs" />
     <Compile Remove="Backup.Tests\**\*.cs" />
     <Compile Remove="Backup.IntegrationTests\**\*.cs" />
+    <EmbeddedResource Remove="Backup.Api\**\*" />
     <EmbeddedResource Remove="Backup.Tests\**\*" />
     <EmbeddedResource Remove="Backup.IntegrationTests\**\*" />
+    <None Remove="Backup.Api\**\*" />
     <None Remove="Backup.Tests\**\*" />
     <None Remove="Backup.IntegrationTests\**\*" />
   </ItemGroup>

@@ -224,7 +224,7 @@ public partial class LocalPostData
             await WriteList(GetTargetFilePath(fileName), data, formatted);
         }
 
-        foreach (bool formatted in new[] { false, true })
+        foreach (bool formatted in new[] { false })
         {
             foreach (TableManifestEntry table in TableManifest)
                 await WriteTable(table.FileName, table.GetRows(tables), formatted);
