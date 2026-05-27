@@ -22,8 +22,21 @@ const FRESHNESS_EXPIRING_MS = 6 * 60 * 60 * 1000;
 export const DEFAULT_SETTINGS = {
   username: "",
   hashtag: "test",
-  maskSensitive: true
+  maskSensitive: true,
+  capturedPostsView: "list" as const,
+  capturedPostsGridColumns: 2,
+  capturedPostsShowThumbnail: true
 };
+
+function normalizeGridColumns(value: unknown): number {
+  const raw = typeof value === "number" ? value : Number(value);
+
+  if (!Number.isFinite(raw)) {
+    return DEFAULT_SETTINGS.capturedPostsGridColumns;
+  }
+
+  return Math.min(6, Math.max(1, Math.trunc(raw)));
+}
 
 export function normalizeSettings(value: unknown): PopupSettings {
   const source = isPlainObject(value) ? value : {};
@@ -31,7 +44,13 @@ export function normalizeSettings(value: unknown): PopupSettings {
   return {
     username: normalizeUsername(source.username || ""),
     hashtag: normalizeHashtag(source.hashtag || DEFAULT_SETTINGS.hashtag),
-    maskSensitive: typeof source.maskSensitive === "boolean" ? source.maskSensitive : true
+    maskSensitive: typeof source.maskSensitive === "boolean" ? source.maskSensitive : true,
+    capturedPostsView: source.capturedPostsView === "grid" ? "grid" : "list",
+    capturedPostsGridColumns: normalizeGridColumns(source.capturedPostsGridColumns),
+    capturedPostsShowThumbnail:
+      typeof source.capturedPostsShowThumbnail === "boolean"
+        ? source.capturedPostsShowThumbnail
+        : DEFAULT_SETTINGS.capturedPostsShowThumbnail
   };
 }
 

@@ -25,6 +25,16 @@ await Promise.all([
   }),
   build({
     ...commonConfig,
+    entryPoints: [resolve(root, "content-script.ts")],
+    outfile: resolve(dist, "content-script.js")
+  }),
+  build({
+    ...commonConfig,
+    entryPoints: [resolve(root, "inpage-bridge.ts")],
+    outfile: resolve(dist, "inpage-bridge.js")
+  }),
+  build({
+    ...commonConfig,
     entryPoints: [resolve(root, "popup-react/main.tsx")],
     outfile: resolve(dist, "popup.js")
   })

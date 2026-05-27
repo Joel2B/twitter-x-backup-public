@@ -1,4 +1,7 @@
 export const STORAGE_KEY = "captureStateV1";
+export const CAPTURED_POSTS_STORAGE_KEY = "capturedPostsV1";
+export const DEFAULT_UPLOAD_API_BASE_URL = "http://127.0.0.1:5085";
+export const DEFAULT_UPLOAD_ORIGIN = "extension-search-timeline";
 
 export const OPERATION_TO_ENDPOINT = {
   UserTweets: "posts",

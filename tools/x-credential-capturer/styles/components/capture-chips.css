@@ -1,0 +1,61 @@
+.capture-hashtags-editor {
+  display: grid;
+  gap: 6px;
+}
+
+.capture-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+  align-items: center;
+}
+
+.capture-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #bfd3dd;
+  background: #e7f3fa;
+  color: #1a4761;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.capture-chip-open {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+}
+
+.capture-chip-open:hover {
+  text-decoration: underline;
+}
+
+.capture-chip-remove {
+  border: 0;
+  background: transparent;
+  color: #0b3e56;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.capture-chip-remove:hover {
+  color: #072a3b;
+}
+
+.capture-chip-input-row {
+  display: flex;
+  gap: 6px;
+}
+
+.capture-chip-input-row input {
+  flex: 1 1 auto;
+}

@@ -1,0 +1,31 @@
+.rate-box {
+  margin-top: 6px;
+  padding: 6px 8px;
+  border: 1px solid #d9e1e7;
+  border-radius: 6px;
+  background: #f7fafc;
+  display: grid;
+  gap: 2px;
+  width: 100%;
+}
+
+.rate-full-row td {
+  padding: 0 8px 8px;
+  border-top: 0;
+}
+
+.rate-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.rate-key {
+  color: #4e5f6d;
+}
+
+.rate-value {
+  color: #162734;
+  font-family: Consolas, "Courier New", monospace;
+}

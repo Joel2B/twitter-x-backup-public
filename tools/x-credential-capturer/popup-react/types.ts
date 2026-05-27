@@ -1,5 +1,7 @@
 import type {
   CaptureState,
+  CapturedPostItem,
+  CapturedPostsStore,
   EndpointDefinition,
   EndpointModel,
   EndpointTestRuntime,
@@ -28,6 +30,7 @@ export type ApplyStateOptions = {
 
 export type OpenUrlOptions = {
   active?: boolean;
+  bypassCache?: boolean;
 };
 
 export type StatusBadge = {
@@ -50,6 +53,13 @@ export type EndpointRowView = {
   testDisabled: boolean;
 };
 
+export type CapturedPostRowView = {
+  item: CapturedPostItem;
+  selected: boolean;
+  selectable: boolean;
+  preview: string;
+};
+
 export type UseCredentialCapturerResult = {
   activeProfileId: string;
   canDeleteProfile: boolean;
@@ -58,12 +68,20 @@ export type UseCredentialCapturerResult = {
   globalStatusOk: boolean;
   isApplyingProfile: boolean;
   isBulkTesting: boolean;
+  isUploadingCapturedPosts: boolean;
   patchOutput: string;
   profileHint: string;
   profiles: ProfileRecord[];
   sensitiveHint: string;
   settings: PopupSettings;
   testAllStatus: string;
+  uploadStatus: string;
+  capturedPostsStore: CapturedPostsStore | null;
+  capturedPostRows: CapturedPostRowView[];
+  selectedCapturedPostIds: string[];
+  capturedPostsSearchQuery: string;
+  captureHashtagDraft: string;
+  captureHashtags: string[];
   usernameDraft: string;
   usernameHint: string;
   hashtagDraft: string;
@@ -74,11 +92,30 @@ export type UseCredentialCapturerResult = {
   onCreateProfile: () => void;
   onDeleteProfile: () => void;
   onMaskSensitiveChange: (checked: boolean) => void;
+  onCapturedPostsViewChange: (value: "list" | "grid") => void;
+  onCapturedPostsGridColumnsChange: (value: number) => void;
+  onCapturedPostsShowThumbnailChange: (value: boolean) => void;
   onOpenEndpointUrl: (url: string, openInBackground: boolean) => void;
   onProfileChange: (profileId: string) => void;
   onRefreshCookies: () => void;
   onRollbackEndpoint: (endpointId: string) => void;
   onRunAllTests: () => void;
+  onToggleCapturedPost: (id: string, checked: boolean) => void;
+  onSelectAllPendingCapturedPosts: () => void;
+  onClearCapturedPostSelection: () => void;
+  onUploadSelectedCapturedPosts: () => void;
+  onClearUploadedCapturedPosts: () => void;
+  onExportCapturedPosts: () => void;
+  onImportCapturedPosts: (file: File) => void;
+  onUploadApiBaseUrlChange: (value: string) => void;
+  onUploadUserIdChange: (value: string) => void;
+  onUploadOriginChange: (value: string) => void;
+  onCapturedPostsSearchQueryChange: (value: string) => void;
+  onCaptureHashtagDraftChange: (value: string) => void;
+  onCaptureHashtagDraftKeyDown: (event: { key: string; preventDefault: () => void }) => void;
+  onAddCaptureHashtag: () => void;
+  onOpenCaptureHashtag: (value: string) => void;
+  onRemoveCaptureHashtag: (value: string) => void;
   onTestEndpoint: (endpoint: EndpointDefinition) => void;
   onUsernameChange: (value: string) => void;
   onUsernameCommit: () => void;

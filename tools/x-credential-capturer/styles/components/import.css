@@ -1,0 +1,11 @@
+.import-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.import-btn input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}

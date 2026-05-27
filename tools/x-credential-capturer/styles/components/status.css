@@ -1,0 +1,24 @@
+.status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  word-break: normal;
+}
+
+.status.ok {
+  color: #0f5e35;
+  background: #d8f2e5;
+}
+
+.status.pending {
+  color: #8b6200;
+  background: #f7edcd;
+}
+
+.status.skipped {
+  color: #5a6470;
+  background: #e7ebef;
+}

@@ -5,7 +5,25 @@
   "description": "Captures X GraphQL requests to update Fetch.json and Api.json in twitter-x-backup.",
   "minimum_chrome_version": "120",
   "permissions": ["storage", "tabs", "webRequest", "cookies"],
-  "host_permissions": ["https://x.com/*", "https://*.x.com/*"],
+  "host_permissions": [
+    "https://x.com/*",
+    "https://*.x.com/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://x.com/*", "https://*.x.com/*"],
+      "js": ["content-script.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["inpage-bridge.js"],
+      "matches": ["https://x.com/*", "https://*.x.com/*"]
+    }
+  ],
   "background": {
     "service_worker": "background.js",
     "type": "module"

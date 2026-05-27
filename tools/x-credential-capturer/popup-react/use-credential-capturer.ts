@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
+  CAPTURED_POSTS_STORAGE_KEY,
   CAPTURE_STATE_STORAGE_KEY,
   DEFAULT_PROFILE_ID,
   ENDPOINTS,
@@ -19,9 +20,12 @@ import type {
   ApiPatch,
   BackgroundMessage,
   CaptureState,
+  CapturedPostsStore,
+  CapturedPostsMessageResponse,
   EndpointDefinition,
   EndpointModel,
   EndpointTestRuntime,
+  UploadCapturedPostsMessageResponse,
   RollbackMessageResponse,
   StateMessageResponse
 } from "../popup/models.js";
@@ -56,6 +60,7 @@ import type {
   ApplySettingsOptions,
   ApplyStateOptions,
   EndpointRowView,
+  CapturedPostRowView,
   OpenUrlOptions,
   PopupSettings,
   ProfileRecord,
@@ -84,10 +89,18 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
   const [endpointCopyLabels, setEndpointCopyLabels] = useState<Record<string, string>>({});
   const [patchOutput, setPatchOutput] = useState("");
   const [currentRawPatch, setCurrentRawPatch] = useState<ApiPatch | null>(null);
+  const [capturedPostsStore, setCapturedPostsStore] = useState<CapturedPostsStore | null>(null);
+  const [selectedCapturedPostIds, setSelectedCapturedPostIds] = useState<string[]>([]);
+  const [capturedPostsSearchQuery, setCapturedPostsSearchQuery] = useState("");
+  const [captureHashtagDraft, setCaptureHashtagDraft] = useState("");
+  const [isUploadingCapturedPosts, setIsUploadingCapturedPosts] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState("");
 
   const captureStateRef = useRef<CaptureState | null>(captureState);
   const settingsRef = useRef<PopupSettings>(settings);
   const profilesStoreRef = useRef<ProfilesStore | null>(profilesStore);
+  const capturedPostsStoreRef = useRef<CapturedPostsStore | null>(capturedPostsStore);
+  const captureHashtagDraftRef = useRef(captureHashtagDraft);
   const isApplyingProfileRef = useRef(isApplyingProfile);
   const usernameDraftRef = useRef(usernameDraft);
   const hashtagDraftRef = useRef(hashtagDraft);
@@ -106,6 +119,14 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
   useEffect(() => {
     profilesStoreRef.current = profilesStore;
   }, [profilesStore]);
+
+  useEffect(() => {
+    capturedPostsStoreRef.current = capturedPostsStore;
+  }, [capturedPostsStore]);
+
+  useEffect(() => {
+    captureHashtagDraftRef.current = captureHashtagDraft;
+  }, [captureHashtagDraft]);
 
   useEffect(() => {
     isApplyingProfileRef.current = isApplyingProfile;
@@ -138,8 +159,68 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     setSettings(nextSettings);
   }
 
+  function applyCapturedPostsStore(nextStore: CapturedPostsStore | null) {
+    capturedPostsStoreRef.current = nextStore;
+    setCapturedPostsStore(nextStore);
+
+    if (!nextStore) {
+      setSelectedCapturedPostIds([]);
+      return;
+    }
+
+    const itemById = nextStore.items || {};
+
+    setSelectedCapturedPostIds((previous) =>
+      previous.filter((id) => {
+        const item = itemById[id];
+        return Boolean(item && !item.uploadedAt);
+      })
+    );
+  }
+
   function clearAllTestRuntime() {
     setEndpointTestState({});
+  }
+
+  function normalizeCaptureHashtag(value: string): string {
+    return value.trim().replace(/^#+/, "").toLowerCase();
+  }
+
+  function splitCaptureHashtagDraft(value: string): string[] {
+    const values = value
+      .split(/[\s,]+/g)
+      .map((entry) => normalizeCaptureHashtag(entry))
+      .filter((entry) => entry.length > 0);
+
+    return [...new Set(values)];
+  }
+
+  function postMatchesSearch(item: CapturedPostRowView["item"], searchQuery: string): boolean {
+    if (!searchQuery) {
+      return true;
+    }
+
+    const parts: string[] = [
+      item.id,
+      item.operation,
+      item.text || "",
+      item.authorUserName || "",
+      item.authorName || "",
+      item.authorId || "",
+      item.postUrl || "",
+      item.capturedAt || "",
+      item.lastSeenAt || "",
+      item.uploadedAt || "",
+      ...item.mediaUrls
+    ];
+
+    try {
+      parts.push(JSON.stringify(item.processed));
+    } catch (_error) {
+      // Ignore serialization errors and keep matching with available fields.
+    }
+
+    return parts.join("\n").toLowerCase().includes(searchQuery);
   }
 
   function setTestRuntime(endpointId: string, nextValue: Partial<EndpointTestRuntime>) {
@@ -419,6 +500,169 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     await activateProfile(activeId, { persistStore: true, resetTests: true }, nextStore);
   }
 
+  async function loadCapturedPosts() {
+    const response = await sendMessage<CapturedPostsMessageResponse>({
+      type: "getCapturedPosts"
+    } satisfies BackgroundMessage);
+
+    if (!response?.ok) {
+      throw new Error(response?.error || "Could not load captured posts");
+    }
+
+    applyCapturedPostsStore(response.store);
+  }
+
+  async function updateUploadTarget(input: {
+    apiBaseUrl?: string;
+    uploadUserId?: string;
+    uploadOrigin?: string;
+    captureHashtags?: string[];
+  }) {
+    const response = await sendMessage<CapturedPostsMessageResponse>({
+      type: "setUploadTarget",
+      ...input
+    } satisfies BackgroundMessage);
+
+    if (!response?.ok) {
+      throw new Error(response?.error || "Could not update upload target");
+    }
+
+    applyCapturedPostsStore(response.store);
+  }
+
+  async function uploadSelectedCapturedPosts() {
+    const selectedIds = [...selectedCapturedPostIds];
+
+    if (selectedIds.length === 0) {
+      setUploadStatus("Select at least one pending post.");
+      return;
+    }
+
+    setIsUploadingCapturedPosts(true);
+    setUploadStatus("");
+
+    try {
+      const response = await sendMessage<UploadCapturedPostsMessageResponse>({
+        type: "uploadCapturedPosts",
+        ids: selectedIds
+      } satisfies BackgroundMessage);
+
+      if (!response?.ok) {
+        throw new Error(response?.error || "Upload failed");
+      }
+
+      applyCapturedPostsStore(response.store);
+      setSelectedCapturedPostIds((previous) =>
+        previous.filter((id) => !response.uploaded.includes(id))
+      );
+      setUploadStatus(`Uploaded: ${response.uploaded.length}`);
+    } finally {
+      setIsUploadingCapturedPosts(false);
+    }
+  }
+
+  async function clearUploadedCapturedPosts() {
+    const response = await sendMessage<CapturedPostsMessageResponse>({
+      type: "clearUploadedCapturedPosts"
+    } satisfies BackgroundMessage);
+
+    if (!response?.ok) {
+      throw new Error(response?.error || "Could not clear uploaded posts");
+    }
+
+    applyCapturedPostsStore(response.store);
+    setUploadStatus("Uploaded posts cleared.");
+  }
+
+  async function exportCapturedPosts() {
+    const store = capturedPostsStoreRef.current;
+
+    if (!store) {
+      setUploadStatus("Nothing to export.");
+      return;
+    }
+
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      version: 1,
+      ...store
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json"
+    });
+
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `xcc-captured-posts-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setUploadStatus("Export complete.");
+  }
+
+  async function importCapturedPostsFromFile(file: File) {
+    const text = await file.text();
+    let payload: unknown;
+
+    try {
+      payload = JSON.parse(text);
+    } catch (_error) {
+      throw new Error("Invalid JSON file.");
+    }
+
+    const response = await sendMessage<CapturedPostsMessageResponse>({
+      type: "importCapturedPosts",
+      payload
+    } satisfies BackgroundMessage);
+
+    if (!response?.ok) {
+      throw new Error(response?.error || "Import failed");
+    }
+
+    applyCapturedPostsStore(response.store);
+    setUploadStatus("Import complete.");
+  }
+
+  async function addCaptureHashtagFromDraft() {
+    const draftTokens = splitCaptureHashtagDraft(captureHashtagDraftRef.current);
+
+    if (draftTokens.length === 0) {
+      setCaptureHashtagDraft("");
+      captureHashtagDraftRef.current = "";
+      return;
+    }
+
+    const current = capturedPostsStoreRef.current?.captureHashtags || [];
+    const next = [...new Set([...current, ...draftTokens])];
+    await updateUploadTarget({ captureHashtags: next });
+    setCaptureHashtagDraft("");
+    captureHashtagDraftRef.current = "";
+  }
+
+  async function removeCaptureHashtag(value: string) {
+    const normalized = normalizeCaptureHashtag(value);
+
+    if (!normalized) {
+      return;
+    }
+
+    const current = capturedPostsStoreRef.current?.captureHashtags || [];
+    const next = current.filter((entry) => entry !== normalized);
+    await updateUploadTarget({ captureHashtags: next });
+  }
+
+  async function openCaptureHashtag(value: string) {
+    const hashtag = normalizeCaptureHashtag(value);
+
+    if (!hashtag) {
+      return;
+    }
+
+    const url = `https://x.com/hashtag/${encodeURIComponent(hashtag)}?f=media`;
+    await openUrlWithBypassCache(url, { active: true, bypassCache: false });
+  }
+
   function ensureCopyAllowed() {
     if (settingsRef.current.maskSensitive) {
       throw new Error("Sensitive guard is enabled. Disable it to copy real credentials.");
@@ -439,15 +683,55 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
 
   async function openUrlWithBypassCache(url: string, options: OpenUrlOptions = {}) {
     const active = options.active !== false;
+    const bypassCache = options.bypassCache === true;
     const tab = await chrome.tabs.create({ url, active });
 
-    if (typeof tab?.id === "number") {
-      try {
-        await chrome.tabs.reload(tab.id, { bypassCache: true });
-      } catch (_error) {
-        // Ignore reload errors; tab was already opened.
-      }
+    if (!bypassCache || typeof tab?.id !== "number") {
+      return;
     }
+
+    await new Promise<void>((resolve) => {
+      let settled = false;
+      let timeoutId: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+        cleanup();
+      }, 4000);
+
+      function cleanup() {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+
+        chrome.tabs.onUpdated.removeListener(handleUpdated);
+        resolve();
+      }
+
+      function handleUpdated(
+        tabId: number,
+        changeInfo: chrome.tabs.OnUpdatedInfo,
+        updatedTab: chrome.tabs.Tab
+      ) {
+        if (tabId !== tab.id || changeInfo.status !== "complete") {
+          return;
+        }
+
+        if (!updatedTab.url || updatedTab.url === "about:blank") {
+          return;
+        }
+
+        chrome.tabs.reload(tab.id as number, { bypassCache: true }, () => {
+          cleanup();
+        });
+      }
+
+      chrome.tabs.onUpdated.addListener(handleUpdated);
+    });
   }
 
   async function clearState() {
@@ -772,6 +1056,12 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
       if (profilesChange && typeof profilesChange.newValue !== "undefined") {
         runAsync(() => handleProfilesStorageChange(profilesChange.newValue));
       }
+
+      const capturedPostsChange = changes?.[CAPTURED_POSTS_STORAGE_KEY];
+
+      if (capturedPostsChange && typeof capturedPostsChange.newValue !== "undefined") {
+        applyCapturedPostsStore(capturedPostsChange.newValue as CapturedPostsStore);
+      }
     }
 
     chrome.storage.onChanged.addListener(handleStorageChanged);
@@ -786,6 +1076,7 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
       await loadState();
       await loadSettings();
       await loadProfiles();
+      await loadCapturedPosts();
     });
 
     return () => {
@@ -882,20 +1173,77 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     });
   }, [captureState, endpointCopyLabels, endpointTestState, globalHeaders, isBulkTesting, settings]);
 
+  const capturedPostRows: CapturedPostRowView[] = useMemo(() => {
+    const items = Object.values(capturedPostsStore?.items || {});
+    const normalizedSearchQuery = capturedPostsSearchQuery.trim().toLowerCase();
+
+    return items
+      .sort((a, b) => new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime())
+      .filter((item) => postMatchesSearch(item, normalizedSearchQuery))
+      .map((item) => {
+        const preview =
+          (item.text && item.text.trim()) ||
+          (item.mediaUrls[0] ? `MEDIA: ${item.mediaUrls[0]}` : "(no text/media)");
+
+        return {
+          item,
+          preview,
+          selected: selectedCapturedPostIds.includes(item.id),
+          selectable: !item.uploadedAt
+        };
+      });
+  }, [capturedPostsSearchQuery, capturedPostsStore, selectedCapturedPostIds]);
+
+  function toggleCapturedPostSelection(id: string, checked: boolean) {
+    setSelectedCapturedPostIds((previous) => {
+      const exists = previous.includes(id);
+
+      if (checked && !exists) {
+        return [...previous, id];
+      }
+
+      if (!checked && exists) {
+        return previous.filter((entry) => entry !== id);
+      }
+
+      return previous;
+    });
+  }
+
+  function selectAllPendingCapturedPosts() {
+    const pendingIds = Object.values(capturedPostsStore?.items || {})
+      .filter((item) => !item.uploadedAt)
+      .map((item) => item.id);
+
+    setSelectedCapturedPostIds(pendingIds);
+  }
+
+  function clearCapturedPostSelection() {
+    setSelectedCapturedPostIds([]);
+  }
+
   return {
     activeProfileId: profilesStore?.activeProfileId || DEFAULT_PROFILE_ID,
     canDeleteProfile,
     copyPatchLabel,
     endpointRows,
+    capturedPostRows,
+    capturedPostsStore,
     globalStatusOk,
     isApplyingProfile,
     isBulkTesting,
+    isUploadingCapturedPosts,
     patchOutput,
     profileHint,
     profiles,
     sensitiveHint,
     settings,
+    selectedCapturedPostIds,
+    capturedPostsSearchQuery,
+    captureHashtagDraft,
+    captureHashtags: capturedPostsStore?.captureHashtags || [],
     testAllStatus,
+    uploadStatus,
     hashtagDraft,
     hashtagHint,
     usernameDraft,
@@ -918,8 +1266,17 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     onMaskSensitiveChange: (checked: boolean) => {
       runAsync(() => saveSettings({ maskSensitive: checked }));
     },
+    onCapturedPostsViewChange: (value: "list" | "grid") => {
+      runAsync(() => saveSettings({ capturedPostsView: value }));
+    },
+    onCapturedPostsGridColumnsChange: (value: number) => {
+      runAsync(() => saveSettings({ capturedPostsGridColumns: value }));
+    },
+    onCapturedPostsShowThumbnailChange: (value: boolean) => {
+      runAsync(() => saveSettings({ capturedPostsShowThumbnail: value }));
+    },
     onOpenEndpointUrl: (url: string, openInBackground: boolean) => {
-      runAsync(() => openUrlWithBypassCache(url, { active: !openInBackground }));
+      runAsync(() => openUrlWithBypassCache(url, { active: !openInBackground, bypassCache: true }));
     },
     onProfileChange: (profileId: string) => {
       runAsync(() => activateProfile(profileId, { persistStore: true, resetTests: true }));
@@ -932,6 +1289,58 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     },
     onRunAllTests: () => {
       runAsync(runAllTests);
+    },
+    onToggleCapturedPost: (id: string, checked: boolean) => {
+      toggleCapturedPostSelection(id, checked);
+    },
+    onSelectAllPendingCapturedPosts: () => {
+      selectAllPendingCapturedPosts();
+    },
+    onClearCapturedPostSelection: () => {
+      clearCapturedPostSelection();
+    },
+    onUploadSelectedCapturedPosts: () => {
+      runAsync(uploadSelectedCapturedPosts);
+    },
+    onClearUploadedCapturedPosts: () => {
+      runAsync(clearUploadedCapturedPosts);
+    },
+    onExportCapturedPosts: () => {
+      runAsync(exportCapturedPosts);
+    },
+    onImportCapturedPosts: (file: File) => {
+      runAsync(() => importCapturedPostsFromFile(file));
+    },
+    onUploadApiBaseUrlChange: (value: string) => {
+      runAsync(() => updateUploadTarget({ apiBaseUrl: value }));
+    },
+    onUploadUserIdChange: (value: string) => {
+      runAsync(() => updateUploadTarget({ uploadUserId: value }));
+    },
+    onUploadOriginChange: (value: string) => {
+      runAsync(() => updateUploadTarget({ uploadOrigin: value }));
+    },
+    onCapturedPostsSearchQueryChange: (value: string) => {
+      setCapturedPostsSearchQuery(value);
+    },
+    onCaptureHashtagDraftChange: (value: string) => {
+      setCaptureHashtagDraft(value);
+      captureHashtagDraftRef.current = value;
+    },
+    onCaptureHashtagDraftKeyDown: (event: { key: string; preventDefault: () => void }) => {
+      if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {
+        event.preventDefault();
+        runAsync(addCaptureHashtagFromDraft);
+      }
+    },
+    onAddCaptureHashtag: () => {
+      runAsync(addCaptureHashtagFromDraft);
+    },
+    onOpenCaptureHashtag: (value: string) => {
+      runAsync(() => openCaptureHashtag(value));
+    },
+    onRemoveCaptureHashtag: (value: string) => {
+      runAsync(() => removeCaptureHashtag(value));
     },
     onTestEndpoint: (endpoint: EndpointDefinition) => {
       runAsync(() => runSingleTest(endpoint));

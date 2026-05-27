@@ -146,6 +146,9 @@ export type PopupSettings = {
   username: string;
   hashtag: string;
   maskSensitive: boolean;
+  capturedPostsView: "list" | "grid";
+  capturedPostsGridColumns: number;
+  capturedPostsShowThumbnail: boolean;
 };
 
 export type ProfileEntry = {
@@ -154,6 +157,70 @@ export type ProfileEntry = {
   state: CaptureState;
   settings: PopupSettings;
   updatedAt: string | null;
+};
+
+export type ProcessedPostVariant = {
+  contentType: string;
+  bitrate?: number | null;
+  url: string;
+};
+
+export type ProcessedPostVideoInfo = {
+  durationMilis?: number | null;
+  variants?: ProcessedPostVariant[] | null;
+};
+
+export type ProcessedPostMedia = {
+  id: string;
+  url: string;
+  type: string;
+  videoInfo?: ProcessedPostVideoInfo | null;
+};
+
+export type ProcessedPostProfile = {
+  id: string;
+  userName?: string | null;
+  name?: string | null;
+  bannerUrl?: string | null;
+  imageUrl?: string | null;
+  following?: boolean | null;
+};
+
+export type ProcessedPost = {
+  id: string;
+  profile: ProcessedPostProfile;
+  description: string;
+  retweeted: boolean;
+  favorited: boolean;
+  bookmarked: boolean;
+  createdAt: string;
+  hashtags?: string[] | null;
+  medias?: ProcessedPostMedia[] | null;
+  deleted?: boolean;
+};
+
+export type CapturedPostItem = {
+  id: string;
+  operation: string;
+  capturedAt: string;
+  lastSeenAt: string;
+  uploadedAt: string | null;
+  text: string | null;
+  mediaUrls: string[];
+  authorUserName: string | null;
+  authorName: string | null;
+  authorId: string;
+  postUrl: string | null;
+  processed: ProcessedPost;
+};
+
+export type CapturedPostsStore = {
+  updatedAt: string;
+  apiBaseUrl: string;
+  uploadUserId: string;
+  uploadOrigin: string;
+  captureHashtags: string[];
+  items: Record<string, CapturedPostItem>;
 };
 
 export type ProfilesStore = {
@@ -176,10 +243,36 @@ export type BackgroundMessage =
   | { type: "clearState" }
   | { type: "setState"; state?: CaptureState }
   | { type: "refreshCookies" }
-  | { type: "rollbackEndpoint"; endpointId?: string };
+  | { type: "rollbackEndpoint"; endpointId?: string }
+  | { type: "getCapturedPosts" }
+  | {
+      type: "setUploadTarget";
+      apiBaseUrl?: string;
+      uploadUserId?: string;
+      uploadOrigin?: string;
+      captureHashtags?: string[];
+    }
+  | { type: "uploadCapturedPosts"; ids?: string[] }
+  | { type: "clearUploadedCapturedPosts" }
+  | { type: "importCapturedPosts"; payload?: unknown }
+  | {
+      type: "captureGraphqlResponseBody";
+      url?: string;
+      status?: number;
+      body?: string;
+      capturedAt?: string;
+    };
 
 export type StateMessageResponse = { ok: true; state: CaptureState } | { ok: false; error: string };
 
 export type RollbackMessageResponse =
   | { ok: true; state: CaptureState; restoredFrom: string | null }
+  | { ok: false; error: string };
+
+export type CapturedPostsMessageResponse =
+  | { ok: true; store: CapturedPostsStore }
+  | { ok: false; error: string };
+
+export type UploadCapturedPostsMessageResponse =
+  | { ok: true; store: CapturedPostsStore; uploaded: string[]; failed: string[] }
   | { ok: false; error: string };

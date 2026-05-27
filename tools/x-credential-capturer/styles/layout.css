@@ -15,6 +15,16 @@
   font-size: 12px;
 }
 
+.tab-nav {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f8fbfd, #eef4f8);
+}
+
 .global {
   border: 1px solid var(--line);
   background: var(--panel);
@@ -72,4 +82,51 @@
   margin-top: 10px;
   display: grid;
   gap: 4px;
+}
+
+.captured-posts {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.captured-posts-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.captured-posts-header h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.captured-posts-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0;
+}
+
+.captured-posts-list {
+  display: grid;
+  gap: 8px;
+}
+
+.captured-posts-list.grid-view {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.captured-posts-list.list-view {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 760px) {
+  .captured-posts-list.grid-view {
+    grid-template-columns: 1fr;
+  }
 }

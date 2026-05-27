@@ -1,0 +1,84 @@
+.btn {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn.secondary {
+  background: #edf3f6;
+  color: #1f3742;
+  border-color: #cad6de;
+}
+
+.btn.secondary.is-active {
+  background: #0a5a72;
+  color: #fff;
+  border-color: #08495c;
+}
+
+.btn.danger {
+  background: #fff2f1;
+  color: var(--danger);
+  border-color: #efc8c4;
+}
+
+.btn.nav {
+  background: #e7f0f5;
+  color: #16455a;
+  border-color: #bfd3dd;
+}
+
+.btn.copy {
+  background: #f3efe4;
+  color: #5e4a12;
+  border-color: #d8ca9d;
+}
+
+.btn.test {
+  background: #e8eef9;
+  color: #1b3f78;
+  border-color: #bfd0f2;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-link {
+  text-decoration: none;
+  display: inline-block;
+}
+
+.tab-btn {
+  border: 1px solid #cbd8e1;
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: #f7fbfe;
+  color: #1e4158;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.tab-btn:hover {
+  background: #eef6fb;
+  border-color: #b3cddd;
+}
+
+.tab-btn.active {
+  background: #0a5a72;
+  color: #fff;
+  border-color: #08495c;
+}

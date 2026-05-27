@@ -1,0 +1,78 @@
+.captured-post-card {
+  border: 1px solid #d9e1e7;
+  border-radius: 8px;
+  background: #f8fbfd;
+  padding: 8px;
+  display: grid;
+  gap: 6px;
+}
+
+.captured-post-card.uploaded {
+  background: #eef8f1;
+  border-color: #cfe6d5;
+}
+
+.captured-post-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.captured-post-preview {
+  margin: 0;
+  white-space: pre-wrap;
+  color: #1a2f3b;
+  font-size: 12px;
+}
+
+.captured-post-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 11px;
+  color: #4e5f6d;
+}
+
+.captured-posts-view-toggle {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.captured-posts-options {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.captured-posts-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #2f3b45;
+}
+
+.captured-posts-options select {
+  border: 1px solid #cad6de;
+  border-radius: 6px;
+  padding: 5px 6px;
+  font-size: 12px;
+  background: #fff;
+  color: #162734;
+}
+
+.captured-post-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.captured-post-search input {
+  border: 1px solid #cad6de;
+  border-radius: 6px;
+  padding: 5px 7px;
+  font-size: 12px;
+  width: 210px;
+  max-width: 100%;
+}
