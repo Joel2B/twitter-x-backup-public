@@ -1,5 +1,7 @@
 using Backup.App.Data.Media;
+using Backup.App.Data.Posts;
 using Backup.App.Data.Proxy;
+using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Interfaces.Services.Posts;
 using Backup.App.Interfaces.Services.UtilsService;
@@ -12,6 +14,7 @@ using Backup.App.Services.Bulk;
 using Backup.App.Services.Media;
 using Backup.App.Services.Posts;
 using Backup.App.Services.UtilsService;
+using Backup.App.Models.Posts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;
@@ -21,14 +24,29 @@ public static class FeatureInfrastructureServiceCollectionExtensions
     public static IServiceCollection AddPostsInfrastructure(this IServiceCollection services)
     {
         services.AddPostData();
-        services.AddPost();
+        services.AddScoped<IPostLogger, LocalPostLogger>();
+        services.AddScoped<IPostDownloader, PostDownloaderHttp>();
+        services.AddScoped<IPostParser, PostParser>();
+        services.AddScoped<IPostRecovery, PostRecovery>();
+        services.AddScoped<IPostDownload, PostDownload>();
+        services.AddScoped<IPostReplication, PostReplication>();
+
         return services;
     }
 
     public static IServiceCollection AddMediaInfrastructure(this IServiceCollection services)
     {
         services.AddMediaData();
-        services.AddMedia();
+        services.AddScoped<IMediaProcessing, MediaProcessing>();
+        services.AddScoped<IMediaPrune, MediaPrune>();
+        services.AddScoped<IMediaIntegrity, MediaIntegrity>();
+        services.AddScoped<IMediaFilter, MediaFilter>();
+        services.AddScoped<IMediaReplication, MediaReplication>();
+        services.AddScoped<IMediaDownload, MediaDownload>();
+
+        services.AddScoped<IMediaDownloader, MediaDownloaderHttp>();
+        services.AddScoped<IMediaLogger, LocalMediaLogger>();
+
         services.AddMediaBackup();
         return services;
     }
