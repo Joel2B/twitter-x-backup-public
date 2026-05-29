@@ -1,4 +1,4 @@
-namespace Backup.App.Api.Models;
+namespace Backup.Api.Models;
 
 public record PostIngestResult(
     int ReceivedPosts,
@@ -6,3 +6,4 @@ public record PostIngestResult(
     string? NextCursor = null,
     PostIngestDiagnostics? Diagnostics = null
 );
+

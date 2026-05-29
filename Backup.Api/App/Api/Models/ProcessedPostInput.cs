@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Backup.App.Api.Models;
+namespace Backup.Api.Models;
 
 public class ProcessedPostInput
 {
@@ -81,3 +81,4 @@ public class ProcessedPostVariantInput
     [RegularExpression(@".*\S.*", ErrorMessage = "variant.url is required.")]
     public string Url { get; set; } = string.Empty;
 }
+

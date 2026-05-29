@@ -1,3 +1,4 @@
-namespace Backup.App.Api.Errors;
+namespace Backup.Api.Errors;
 
 public class ApiException(string message) : Exception(message);
+

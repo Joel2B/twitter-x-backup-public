@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Api.Errors;
+namespace Backup.Api.Errors;
 
 public class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : IExceptionHandler
 {
@@ -33,3 +33,4 @@ public class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : IExcepti
         return true;
     }
 }
+

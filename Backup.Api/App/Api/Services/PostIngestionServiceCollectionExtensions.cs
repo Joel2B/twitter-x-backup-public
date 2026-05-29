@@ -1,7 +1,7 @@
 using Backup.Infrastructure.PostIngestion.Adapters;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Backup.App.Api.Services;
+namespace Backup.Api.Services;
 
 public static class PostIngestionServiceCollectionExtensions
 {
@@ -16,3 +16,4 @@ public static class PostIngestionServiceCollectionExtensions
         return services;
     }
 }
+

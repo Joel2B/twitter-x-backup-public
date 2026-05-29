@@ -1,7 +1,7 @@
-using Backup.App.Api.Errors;
-using Backup.App.Api.Models;
+using Backup.Api.Errors;
+using Backup.Api.Models;
 
-namespace Backup.App.Api.Services;
+namespace Backup.Api.Services;
 
 public class PostIngestionService(
     Backup.Application.PostIngestion.IPostIngestionService appService
@@ -133,3 +133,4 @@ public class PostIngestionService(
         );
     }
 }
+

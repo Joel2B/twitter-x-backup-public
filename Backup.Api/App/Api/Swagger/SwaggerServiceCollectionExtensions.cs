@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Backup.App.Api.Swagger;
+namespace Backup.Api.Swagger;
 
 public static class SwaggerServiceCollectionExtensions
 {
@@ -37,3 +37,4 @@ public static class SwaggerServiceCollectionExtensions
             options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
     }
 }
+

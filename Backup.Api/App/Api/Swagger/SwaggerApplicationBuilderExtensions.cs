@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Swashbuckle.AspNetCore.SwaggerUI;
 
-namespace Backup.App.Api.Swagger;
+namespace Backup.Api.Swagger;
 
 public static class SwaggerApplicationBuilderExtensions
 {
@@ -21,3 +21,4 @@ public static class SwaggerApplicationBuilderExtensions
         return app;
     }
 }
+

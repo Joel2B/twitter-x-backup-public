@@ -2,7 +2,7 @@ using System.Text.Json.Nodes;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
-namespace Backup.App.Api.Swagger;
+namespace Backup.Api.Swagger;
 
 public class PostsApiExamplesOperationFilter : IOperationFilter
 {
@@ -253,3 +253,4 @@ public class PostsApiExamplesOperationFilter : IOperationFilter
         JsonNode.Parse(json)
         ?? throw new InvalidOperationException("Failed to parse Swagger example JSON.");
 }
+

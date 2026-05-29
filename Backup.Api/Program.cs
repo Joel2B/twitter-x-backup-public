@@ -1,6 +1,6 @@
-using Backup.App.Api.Errors;
-using Backup.App.Api.Services;
-using Backup.App.Api.Swagger;
+using Backup.Api.Errors;
+using Backup.Api.Services;
+using Backup.Api.Swagger;
 using Backup.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
@@ -33,3 +33,4 @@ app.MapControllers();
 
 Console.Error.WriteLine("[startup] running api");
 await app.RunAsync();
+

@@ -1,4 +1,4 @@
-namespace Backup.App.Api.Models;
+namespace Backup.Api.Models;
 
 public record PostIngestDiagnostics(
     int BeforeCount,
@@ -7,3 +7,4 @@ public record PostIngestDiagnostics(
     int IgnoredPosts,
     long DurationMs
 );
+

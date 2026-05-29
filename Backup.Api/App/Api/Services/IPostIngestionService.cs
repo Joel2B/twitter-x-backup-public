@@ -1,6 +1,6 @@
-using Backup.App.Api.Models;
+using Backup.Api.Models;
 
-namespace Backup.App.Api.Services;
+namespace Backup.Api.Services;
 
 public interface IPostIngestionService
 {
@@ -12,3 +12,4 @@ public interface IPostIngestionService
         IReadOnlyCollection<ProcessedPostInput> posts
     );
 }
+

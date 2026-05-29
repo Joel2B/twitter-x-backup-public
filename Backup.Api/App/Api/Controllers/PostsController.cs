@@ -1,11 +1,11 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
-using Backup.App.Api.Models;
-using Backup.App.Api.Services;
+using Backup.Api.Models;
+using Backup.Api.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Backup.App.Api.Controllers;
+namespace Backup.Api.Controllers;
 
 [ApiController]
 [Route("api/posts")]
@@ -94,3 +94,4 @@ public class PostsController(IPostIngestionService postIngestionService) : Contr
         return Ok(result);
     }
 }
+
