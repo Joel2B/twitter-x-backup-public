@@ -4,7 +4,7 @@ using Backup.App.Models.Media;
 using Backup.App.Models.Media.Processors;
 using Backup.App.Models.Posts;
 
-namespace Backup.App.Services.Media.Processors;
+namespace Backup.Infrastructure.Services.Media.Processors;
 
 public class ProfileProcessor(ProfileConfig config, MediaProcessorContext context)
     : MediaProcessor(context)
@@ -41,7 +41,7 @@ public class ProfileProcessor(ProfileConfig config, MediaProcessorContext contex
 
             foreach (Resolution resolution in resolutions)
             {
-                DataDownload dataDownload = Utils.MediaProcessor.GetData(
+                DataDownload dataDownload = Backup.App.Utils.MediaProcessor.GetData(
                     new()
                     {
                         PostId = "profiles",
@@ -61,3 +61,5 @@ public class ProfileProcessor(ProfileConfig config, MediaProcessorContext contex
         }
     }
 }
+
+

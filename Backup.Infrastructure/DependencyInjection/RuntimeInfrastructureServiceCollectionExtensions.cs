@@ -10,7 +10,7 @@ using Backup.App.Services.Bulk;
 using Backup.App.Services.Media;
 using Backup.App.Services.Posts;
 using Backup.Infrastructure.Services.Proxy;
-using Backup.App.Services.UtilsService;
+using Backup.Infrastructure.Services.UtilsService;
 using Backup.Infrastructure.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -52,4 +52,5 @@ public static class RuntimeInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+
 

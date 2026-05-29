@@ -2,7 +2,7 @@ using System.IO.Compression;
 using Backup.App.Interfaces.Services.UtilsService;
 using Backup.App.Models.Utils;
 
-namespace Backup.App.Services.UtilsService;
+namespace Backup.Infrastructure.Services.UtilsService;
 
 public class ZipWriter : IZipWriter
 {
@@ -98,3 +98,4 @@ public class ZipWriter : IZipWriter
         _disposed = true;
     }
 }
+

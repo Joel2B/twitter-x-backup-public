@@ -3,7 +3,7 @@ using Backup.App.Interfaces.Services.Media;
 using Backup.App.Models.Config;
 using Backup.App.Models.Media;
 using Backup.App.Models.Posts;
-using Backup.App.Services.Media.Processors;
+using Backup.Infrastructure.Services.Media.Processors;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.App.Services.Media;
@@ -45,3 +45,4 @@ public class MediaProcessing(ILogger<MediaProcessing> _logger, AppConfig _config
 
     public List<Download> GetFilteredMedia() => [.. _filtered.Values];
 }
+

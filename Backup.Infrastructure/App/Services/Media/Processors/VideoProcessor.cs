@@ -5,12 +5,12 @@ using Backup.App.Models.Media;
 using Backup.App.Models.Media.Processors;
 using Backup.App.Models.Posts;
 
-namespace Backup.App.Services.Media.Processors;
+namespace Backup.Infrastructure.Services.Media.Processors;
 
 public class VideoProcessor(VideoConfig config, MediaProcessorContext context)
     : MediaProcessor(context)
 {
-    private readonly Utils.MediaFilter _filters = new(config.Thumb.Filters);
+    private readonly Backup.App.Utils.MediaFilter _filters = new(config.Thumb.Filters);
 
     public override void Process()
     {
@@ -64,7 +64,7 @@ public class VideoProcessor(VideoConfig config, MediaProcessorContext context)
                 {
                     foreach (Resolution resolution in resolutions)
                     {
-                        DataDownload dataDownload = Utils.MediaProcessor.GetData(
+                        DataDownload dataDownload = Backup.App.Utils.MediaProcessor.GetData(
                             new()
                             {
                                 PostId = post.Id,
@@ -117,7 +117,7 @@ public class VideoProcessor(VideoConfig config, MediaProcessorContext context)
                     if (resolution is null)
                         throw new Exception();
 
-                    DataDownload dataDownload = Utils.MediaProcessor.GetData(
+                    DataDownload dataDownload = Backup.App.Utils.MediaProcessor.GetData(
                         new()
                         {
                             PostId = post.Id,
@@ -137,3 +137,5 @@ public class VideoProcessor(VideoConfig config, MediaProcessorContext context)
         }
     }
 }
+
+
