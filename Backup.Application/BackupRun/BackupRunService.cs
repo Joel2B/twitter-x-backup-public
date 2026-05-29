@@ -29,7 +29,7 @@ public class BackupRunService(
         }
 
         foreach (Models.BackupRunUserPlan user in plan.Users.Where(user => user.RunRecovery))
-            await _postRecoveryRunner.Run(user.UserId);
+            await _postRecoveryRunner.Run(user);
 
         if (plan.IsBulkEnabled)
         {

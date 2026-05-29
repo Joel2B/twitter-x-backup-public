@@ -2,7 +2,6 @@ using Backup.Application.BackupRun.Models;
 using Backup.Application.BackupRun.Ports;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Logging;
-using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.ApiRequest;
 using Microsoft.Extensions.Logging;
@@ -10,35 +9,30 @@ using Microsoft.Extensions.Logging;
 namespace Backup.Infrastructure.BackupRun.Adapters;
 
 public class PostSourceRunnerAdapter(
-    AppConfig config,
     IEnumerable<IPostService> postServices,
     ILogger<PostSourceRunnerAdapter> logger
 ) : IPostSourceRunner
 {
-    private readonly AppConfig _config = config;
     private readonly IEnumerable<IPostService> _postServices = postServices;
     private readonly ILogger<PostSourceRunnerAdapter> _logger = logger;
 
     public async Task Run(string userId, BackupRunSourcePlan source)
     {
-        UsersContext? userContext = _config.UsersContext.FirstOrDefault(context =>
-            context.UserId == userId
-        );
-
-        if (userContext is null)
-            return;
-
-        if (!userContext.Api.TryGetValue(source.SourceId, out ApiConfig? api))
-            return;
-
-        if (!api.Enabled)
-            return;
-
-        Request request = api.Request.Clone();
+        Request request = new()
+        {
+            Url = source.Request.Url,
+            Query = new Query
+            {
+                Variables = source.Request.Variables.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+                Features = source.Request.Features.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+                FieldToggles = source.Request.FieldToggles.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            },
+            Headers = source.Request.Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+        };
 
         ApiContext apiContext = new()
         {
-            Id = api.Id,
+            Id = source.ApiId,
             Request = request,
             Count = source.Count,
             UserId = userId,

@@ -1,3 +1,5 @@
+using Backup.Application.Posts;
+using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Services.Media;
 using Backup.Infrastructure.Interfaces.Services.Posts;
@@ -14,6 +16,7 @@ namespace Backup.Infrastructure.Services.Posts;
 public class PostRecovery(
     ILogger<PostRecovery> _logger,
     AppConfig _config,
+    IPostRecoverySelectionService recoverySelectionService,
     IMediaLogger _mediaLogger,
     IPostDownloader _downloader,
     IPostParser _parser
@@ -23,6 +26,7 @@ public class PostRecovery(
 
     private readonly ILogger<PostRecovery> _logger = _logger;
     private readonly AppConfig _config = _config;
+    private readonly IPostRecoverySelectionService _recoverySelectionService = recoverySelectionService;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
     private readonly IPostDownloader _downloader = _downloader;
     private readonly IPostParser _parser = _parser;
@@ -64,21 +68,28 @@ public class PostRecovery(
             return posts;
         }
 
-        List<string> ids = logs.Where(log =>
-                log.Messages.Any(msg => msg.Message == "NotFound" || msg.Message == "Forbidden")
-            )
-            .Select(log => log.Id)
+        IReadOnlyCollection<PostRecoveryLog> recoveryLogs = logs
+            .Select(log => new PostRecoveryLog
+            {
+                PostId = log.Id,
+                Messages = log.Messages.Select(message => message.Message).ToList(),
+            })
             .ToList();
+        PostRecoverySelection selection = _recoverySelectionService.Select(
+            _config.Services.Recovery.Enabled,
+            recoveryLogs,
+            maxPosts: 10
+        );
 
-        _logger.LogInformation("{count} posts with errors", ids.Count);
-
-        if (!_config.Services.Recovery.Enabled)
+        if (!selection.IsRecoveryEnabled)
         {
             _logger.LogInformation("post recovery disabled");
             return posts;
         }
 
-        if (ids.Count == 0)
+        _logger.LogInformation("{count} posts with errors", selection.PostIds.Count);
+
+        if (selection.PostIds.Count == 0)
             return posts;
 
         Request? request = RequestMerge.Build(context.Api, "TweetDetail");
@@ -89,9 +100,7 @@ public class PostRecovery(
             return posts;
         }
 
-        int _count = 0;
-
-        foreach (string id in ids)
+        foreach (string id in selection.PostIds)
         {
             request.Query.Variables["focalTweetId"] = id;
 
@@ -106,11 +115,6 @@ public class PostRecovery(
 
             _logger.LogInformation("post {post} downloaded", id);
             await Task.Delay(5 * 1000);
-
-            _count++;
-
-            if (_count >= 10)
-                break;
         }
 
         return posts;

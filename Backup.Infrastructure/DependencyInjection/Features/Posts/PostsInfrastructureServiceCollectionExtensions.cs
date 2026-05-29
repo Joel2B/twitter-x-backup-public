@@ -1,6 +1,8 @@
+using Backup.Application.Posts;
 using Backup.Infrastructure.Data.Posts;
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Models.Posts;
 using Backup.Infrastructure.Services.Posts;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,7 +19,12 @@ public static class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostParser, PostParser>();
         services.AddScoped<IPostRecovery, PostRecovery>();
         services.AddScoped<IPostDownload, PostDownload>();
-        services.AddScoped<IPostReplication, PostReplication>();
+        services.AddScoped<IPostExecutionService, PostExecutionService>();
+        services.AddScoped<IPostDownloadFlowService, PostDownloadFlowService>();
+        services.AddScoped<IPostReplicationService, PostReplicationService>();
+        services.AddScoped<IPostRecoverySelectionService, PostRecoverySelectionService>();
+        services.AddScoped<IPostStoreParityService, PostStoreParityService>();
+        services.AddScoped<IPostReplication, PostReplicationAdapter>();
 
         return services;
     }

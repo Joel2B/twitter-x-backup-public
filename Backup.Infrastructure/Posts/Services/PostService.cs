@@ -1,3 +1,5 @@
+using Backup.Application.Posts;
+using Backup.Application.Posts.Ports;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Services.Posts;
@@ -9,12 +11,14 @@ namespace Backup.Infrastructure.Services.Posts;
 
 public class PostService(
     ILogger<PostService> _logger,
+    IPostExecutionService postExecutionService,
     IPostData _postData,
     IPostRecovery _postRecovery,
     IPostDownload _postDownload
 ) : IPostService
 {
     private readonly ILogger<PostService> _logger = _logger;
+    private readonly IPostExecutionService _postExecutionService = postExecutionService;
     private readonly IPostData _postData = _postData;
     private readonly IPostRecovery _postRecovery = _postRecovery;
     private readonly IPostDownload _postDownload = _postDownload;
@@ -25,18 +29,33 @@ public class PostService(
 
         _logger.LogInformation(data.Id, "post data: {name}", data.GetType().Name);
         _logger.LogInformation(data.Id, "recovering posts in {data}", data.GetType().Name);
-        await _postRecovery.Recovery(data, context);
+
+        await _postExecutionService.Recover(new RecoveryExecution(_postRecovery, data, context));
     }
 
     public async Task Download(ApiContext context)
     {
         IPostData data = _postData;
 
-        _logger.LogInformation(data.Id, "downloading posts");
-        await _postDownload.Download(data, context);
+        _logger.LogInformation(data.Id, "downloading posts and pruning");
+        await _postExecutionService.Download(new DownloadExecution(_postDownload, data, context));
+    }
 
-        _logger.LogInformation(data.Id, "pruning posts");
-        await data.Prune();
+    private sealed class RecoveryExecution(
+        IPostRecovery recovery,
+        IPostData data,
+        UsersContext context
+    ) : IPostRecoveryExecution
+    {
+        public Task Recover() => recovery.Recovery(data, context);
+    }
+
+    private sealed class DownloadExecution(IPostDownload download, IPostData data, ApiContext context)
+        : IPostDownloadExecution
+    {
+        public Task Download() => download.Download(data, context);
+
+        public Task Prune() => data.Prune();
     }
 }
 

@@ -1,7 +1,9 @@
 using Backup.Infrastructure.Logging;
+using Backup.Application.Posts;
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Data.Posts;
@@ -9,11 +11,13 @@ namespace Backup.Infrastructure.Data.Posts;
 public class PostDataMultiStore(
     IEnumerable<IPostDataStore> stores,
     IPostReplication replication,
+    IPostStoreParityService postStoreParityService,
     ILogger<PostDataMultiStore> logger
 ) : IPostData
 {
     private readonly List<IPostDataStore> _stores = [.. stores];
     private readonly IPostReplication _replication = replication;
+    private readonly IPostStoreParityService _postStoreParityService = postStoreParityService;
     private readonly ILogger<PostDataMultiStore> _logger = logger;
 
     private IPostDataStore Primary
@@ -93,80 +97,55 @@ public class PostDataMultiStore(
             );
             return;
         }
+        List<PostStoreCountSourceAdapter> adapters = _stores
+            .Select(store => new PostStoreCountSourceAdapter(store))
+            .ToList();
+        Backup.Application.Posts.Models.PostStoreParityResult parity = await _postStoreParityService.Verify(
+            adapters
+        );
 
-        Dictionary<IPostDataStore, PostStoreCounts> countsByStore = [];
-
-        foreach (IPostDataStore store in _stores)
+        foreach (Backup.Application.Posts.Models.PostStoreSnapshot snapshot in parity.Snapshots)
         {
-            PostStoreCounts counts = await store.GetStoreCounts();
-            countsByStore[store] = counts;
-
             _logger.LogInfo(
                 "post store counts [{storeId}] posts={posts}, profiles={profiles}, hashtags={hashtags}, medias={medias}, mediaVariants={mediaVariants}, indexEntries={indexEntries}, changes={changes}, changeFields={changeFields}, hashMeta={hashMeta}",
-                GetStoreLabel(store),
-                counts.Posts,
-                counts.Profiles,
-                counts.Hashtags,
-                counts.Medias,
-                counts.MediaVariants,
-                counts.IndexEntries,
-                counts.Changes,
-                counts.ChangeFields,
-                counts.HashMeta
+                snapshot.Label,
+                snapshot.Counts.Posts,
+                snapshot.Counts.Profiles,
+                snapshot.Counts.Hashtags,
+                snapshot.Counts.Medias,
+                snapshot.Counts.MediaVariants,
+                snapshot.Counts.IndexEntries,
+                snapshot.Counts.Changes,
+                snapshot.Counts.ChangeFields,
+                snapshot.Counts.HashMeta
             );
         }
 
-        IPostDataStore primary = Primary;
-        PostStoreCounts primaryCounts = countsByStore[primary];
-
-        foreach (IPostDataStore store in _stores.Where(store => !ReferenceEquals(store, primary)))
+        if (parity.Mismatches.Count == 0)
         {
-            PostStoreCounts candidateCounts = countsByStore[store];
-            List<string> diffs = GetCountDiffs(primaryCounts, candidateCounts);
-
-            if (diffs.Count == 0)
+            foreach (
+                Backup.Application.Posts.Models.PostStoreSnapshot snapshot in parity.Snapshots.Where(snapshot =>
+                    !string.Equals(snapshot.Label, parity.PrimaryLabel, StringComparison.Ordinal)
+                )
+            )
             {
                 _logger.LogInfo(
                     "post store parity OK: primary={primary} secondary={secondary}",
-                    GetStoreLabel(primary),
-                    GetStoreLabel(store)
+                    parity.PrimaryLabel,
+                    snapshot.Label
                 );
-                continue;
             }
+            return;
+        }
 
+        foreach (Backup.Application.Posts.Models.PostStoreMismatch mismatch in parity.Mismatches)
+        {
             _logger.LogWarning(
                 "post store parity MISMATCH: primary={primary} secondary={secondary} diffs={diffs}",
-                GetStoreLabel(primary),
-                GetStoreLabel(store),
-                string.Join(", ", diffs)
+                mismatch.PrimaryLabel,
+                mismatch.SecondaryLabel,
+                string.Join(", ", mismatch.Diffs)
             );
-        }
-    }
-
-    private static string GetStoreLabel(IPostDataStore store) =>
-        string.IsNullOrWhiteSpace(store.Id) ? store.GetType().Name : store.Id!;
-
-    private static List<string> GetCountDiffs(PostStoreCounts left, PostStoreCounts right)
-    {
-        List<string> diffs = [];
-        AddDiff("posts", left.Posts, right.Posts);
-        AddDiff("profiles", left.Profiles, right.Profiles);
-        AddDiff("hashtags", left.Hashtags, right.Hashtags);
-        AddDiff("medias", left.Medias, right.Medias);
-        AddDiff("mediaVariants", left.MediaVariants, right.MediaVariants);
-        AddDiff("indexEntries", left.IndexEntries, right.IndexEntries);
-        AddDiff("changes", left.Changes, right.Changes);
-        AddDiff("changeFields", left.ChangeFields, right.ChangeFields);
-        AddDiff("hashMeta", left.HashMeta, right.HashMeta);
-
-        return diffs;
-
-        void AddDiff(string name, int a, int b)
-        {
-            if (a == b)
-                return;
-
-            diffs.Add($"{name}:{a}!={b}");
         }
     }
 }

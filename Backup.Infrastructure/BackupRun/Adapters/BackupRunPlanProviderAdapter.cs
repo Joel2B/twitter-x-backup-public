@@ -2,6 +2,7 @@ using Backup.Application.BackupRun.Models;
 using Backup.Application.BackupRun.Ports;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
+using Backup.Infrastructure.Models.Config.ApiRequest;
 
 namespace Backup.Infrastructure.BackupRun.Adapters;
 
@@ -17,6 +18,15 @@ public class BackupRunPlanProviderAdapter(AppConfig config) : IBackupRunPlanProv
                     new BackupRunUserPlan
                     {
                         UserId = context.UserId,
+                        Api = context.Api.ToDictionary(
+                            kvp => kvp.Key,
+                            kvp => new BackupRunApiPlan
+                            {
+                                Id = kvp.Value.Id,
+                                Enabled = kvp.Value.Enabled,
+                                Request = MapRequest(kvp.Value.Request),
+                            }
+                        ),
                         Sources = GetSources(context),
                         RunRecovery = index == 0,
                         RunBulk = index == 0,
@@ -44,9 +54,27 @@ public class BackupRunPlanProviderAdapter(AppConfig config) : IBackupRunPlanProv
             if (!api.Enabled)
                 continue;
 
-            sources.Add(new BackupRunSourcePlan { SourceId = sourceKey, Count = fetchItem.Count });
+            sources.Add(
+                new BackupRunSourcePlan
+                {
+                    SourceId = sourceKey,
+                    ApiId = api.Id,
+                    Count = fetchItem.Count,
+                    Request = MapRequest(api.Request),
+                }
+            );
         }
 
         return sources;
     }
+
+    private static BackupRunRequestPlan MapRequest(Request request) =>
+        new()
+        {
+            Url = request.Url,
+            Variables = request.Query.Variables.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            Features = request.Query.Features.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            FieldToggles = request.Query.FieldToggles.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            Headers = request.Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+        };
 }

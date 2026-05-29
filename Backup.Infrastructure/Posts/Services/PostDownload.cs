@@ -1,3 +1,5 @@
+using Backup.Application.Posts;
+using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Models.Config.Api;
@@ -9,6 +11,7 @@ namespace Backup.Infrastructure.Services.Posts;
 
 public class PostDownload(
     ILogger<PostDownload> _logger,
+    IPostDownloadFlowService downloadFlowService,
     IPostDownloader _downloader,
     IPostLogger _postLogger,
     IPostParser _parser,
@@ -16,6 +19,7 @@ public class PostDownload(
 ) : IPostDownload
 {
     private readonly ILogger<PostDownload> _logger = _logger;
+    private readonly IPostDownloadFlowService _downloadFlowService = downloadFlowService;
     private readonly IPostDownloader _downloader = _downloader;
 
     private readonly IPostLogger _postLogger = _postLogger;
@@ -47,44 +51,53 @@ public class PostDownload(
         try
         {
             DumpData? data = await _dump.GetData(Context);
+            PostDownloadResumePoint? resumePoint = data is null
+                ? null
+                : new PostDownloadResumePoint
+                {
+                    QueryCount = data.QueryCount,
+                    TotalCount = data.Count,
+                    Cursor = data.Cursor,
+                };
 
-            if (data is not null)
-            {
-                Context.Request.Query.Variables["count"] = data.QueryCount.ToString();
-                Context.Count = data.Count;
-                Context.Request.Query.Variables["cursor"] = data.Cursor;
-            }
+            int defaultQueryCount = Convert.ToInt32(Context.Request.Query.Variables["count"]);
+            string? defaultCursor =
+                Context.Request.Query.Variables.TryGetValue("cursor", out object? cursorValue)
+                    ? cursorValue?.ToString()
+                    : null;
 
-            int queryCount = Convert.ToInt32(Context.Request.Query.Variables["count"]);
-            int count = 0;
+            PostDownloadPlan plan = _downloadFlowService.CreatePlan(
+                defaultQueryCount,
+                Context.Count,
+                defaultCursor,
+                resumePoint
+            );
 
-            while (count < Context.Count)
+            Context.Request.Query.Variables["count"] = plan.QueryCount.ToString();
+            Context.Count = plan.TotalCount;
+
+            if (!string.IsNullOrEmpty(plan.Cursor))
+                Context.Request.Query.Variables["cursor"] = plan.Cursor;
+
+            while (_downloadFlowService.ShouldContinue(plan))
             {
                 _logger.LogInformation(
                     "Downloading {posts}:{count}:{total} posts",
-                    queryCount,
-                    count,
-                    Context.Count
+                    plan.QueryCount,
+                    plan.DownloadedCount,
+                    plan.TotalCount
                 );
 
-                int attempts = 3;
+                const int maxAttempts = 3;
                 int attemptCount = 0;
 
                 ParseResult result = new([], null);
+                string response = "";
 
                 while (true)
                 {
-                    if (attemptCount == attempts)
-                    {
-                        if (data is not null)
-                            await _dump.Flush(PostData, UserId, Context);
-
-                        return;
-                    }
-
                     _logger.LogWarning("Attempt #{attempt}", attemptCount + 1);
-
-                    string response = "";
+                    response = "";
 
                     try
                     {
@@ -106,23 +119,39 @@ public class PostDownload(
                         result = _parser.Parse(UserId, Context.Id, response);
                     }
 
-                    if (result.Posts.Count == 0 || result.NextCursor is null)
+                    bool hasValidPage = result.Posts.Count > 0 && result.NextCursor is not null;
+                    PostDownloadPageDecision decision = _downloadFlowService.DecidePage(
+                        hasValidPage,
+                        attemptCount + 1,
+                        maxAttempts,
+                        hasResumePoint: data is not null
+                    );
+
+                    if (decision.Outcome == PostDownloadPageOutcome.Retry)
                     {
                         attemptCount++;
                         await Task.Delay(1 * 1000);
                         continue;
                     }
 
+                    if (decision.Outcome == PostDownloadPageOutcome.Abort)
+                    {
+                        if (decision.ShouldFlushDump && data is not null)
+                            await _dump.Flush(PostData, UserId, Context);
+
+                        return;
+                    }
+
                     if (data is not null)
-                        await _dump.Save(response, result.Posts, result.NextCursor, Context);
+                        await _dump.Save(response, result.Posts, result.NextCursor!, Context);
 
                     break;
                 }
 
                 await PostData.AddPosts(UserId, Context.Id, result.Posts);
 
-                count += queryCount;
-                Context.Request.Query.Variables["cursor"] = result.NextCursor;
+                _downloadFlowService.ApplySuccess(plan, result.NextCursor!);
+                Context.Request.Query.Variables["cursor"] = plan.Cursor!;
 
                 await Task.Delay(5 * 1000);
             }
