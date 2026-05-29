@@ -4,10 +4,11 @@ import { ActionsBar } from "./components/actions-bar.js";
 import { CapturedPostsPanel } from "./components/captured-posts-panel.js";
 import { EndpointTable } from "./components/endpoint-table.js";
 import { GlobalSection } from "./components/global-section.js";
+import { NotificationsPanel } from "./components/notifications-panel.js";
 import { PatchOutput } from "./components/patch-output.js";
 import { useCredentialCapturer } from "./use-credential-capturer.js";
 
-type TabId = "config" | "endpoints" | "captured-posts" | "patch-preview";
+type TabId = "config" | "endpoints" | "captured-posts" | "notifications" | "patch-preview";
 
 export default function App() {
   const {
@@ -28,6 +29,8 @@ export default function App() {
     settings,
     testAllStatus,
     uploadStatus,
+    uploadNotifications,
+    runningUploadNotificationsCount,
     selectedCapturedPostIds,
     capturedPostsSearchQuery,
     captureHashtagDraft,
@@ -55,6 +58,8 @@ export default function App() {
     onClearCapturedPostSelection,
     onUploadSelectedCapturedPosts,
     onClearUploadedCapturedPosts,
+    onResetCapturedPostsUploadStatus,
+    onClearUploadNotifications,
     onExportCapturedPosts,
     onImportCapturedPosts,
     onUploadApiBaseUrlChange,
@@ -116,6 +121,15 @@ export default function App() {
           }}
         >
           Captured Posts {pendingCapturedCount > 0 ? `(${pendingCapturedCount})` : ""}
+        </button>
+        <button
+          className={`tab-btn ${activeTab === "notifications" ? "active" : ""}`}
+          type="button"
+          onClick={() => {
+            setActiveTab("notifications");
+          }}
+        >
+          Notifications {runningUploadNotificationsCount > 0 ? `(${runningUploadNotificationsCount})` : ""}
         </button>
         <button
           className={`tab-btn ${activeTab === "patch-preview" ? "active" : ""}`}
@@ -207,11 +221,20 @@ export default function App() {
           onClearSelection={onClearCapturedPostSelection}
           onUploadSelected={onUploadSelectedCapturedPosts}
           onClearUploaded={onClearUploadedCapturedPosts}
+          onResetUploadStatus={onResetCapturedPostsUploadStatus}
           onExport={onExportCapturedPosts}
           onImport={onImportCapturedPosts}
           onViewModeChange={onCapturedPostsViewChange}
           onGridColumnsChange={onCapturedPostsGridColumnsChange}
           onShowThumbnailChange={onCapturedPostsShowThumbnailChange}
+        />
+      )}
+
+      {activeTab === "notifications" && (
+        <NotificationsPanel
+          notifications={uploadNotifications}
+          runningCount={runningUploadNotificationsCount}
+          onClear={onClearUploadNotifications}
         />
       )}
 

@@ -31,6 +31,7 @@ type CapturedPostsPanelProps = {
   onClearSelection: () => void;
   onUploadSelected: () => void;
   onClearUploaded: () => void;
+  onResetUploadStatus: () => void;
   onExport: () => void;
   onImport: (file: File) => void;
   onViewModeChange: (value: "list" | "grid") => void;
@@ -68,6 +69,7 @@ export function CapturedPostsPanel({
   onClearSelection,
   onUploadSelected,
   onClearUploaded,
+  onResetUploadStatus,
   onExport,
   onImport,
   onViewModeChange,
@@ -229,6 +231,14 @@ export function CapturedPostsPanel({
           onClick={onClearUploaded}
         >
           Clear uploaded
+        </button>
+        <button
+          className="btn secondary"
+          type="button"
+          disabled={isUploading}
+          onClick={onResetUploadStatus}
+        >
+          Reset upload status
         </button>
         <button className="btn secondary" type="button" disabled={isUploading} onClick={onExport}>
           Export

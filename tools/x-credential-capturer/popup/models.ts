@@ -223,6 +223,29 @@ export type CapturedPostsStore = {
   items: Record<string, CapturedPostItem>;
 };
 
+export type UploadNotificationStatus = "running" | "completed" | "failed";
+
+export type UploadNotificationItem = {
+  id: string;
+  status: UploadNotificationStatus;
+  createdAt: string;
+  startedAt: string;
+  completedAt: string | null;
+  attemptedPosts: number;
+  uploadedPosts: number;
+  failedPosts: number;
+  apiBaseUrl: string;
+  uploadUserId: string;
+  uploadOrigin: string;
+  uploadSummary: UploadCapturedPostsSummary | null;
+  error: string | null;
+};
+
+export type UploadNotificationsStore = {
+  updatedAt: string;
+  items: UploadNotificationItem[];
+};
+
 export type ProfilesStore = {
   activeProfileId: string;
   profiles: Record<string, ProfileEntry>;
@@ -254,6 +277,9 @@ export type BackgroundMessage =
     }
   | { type: "uploadCapturedPosts"; ids?: string[] }
   | { type: "clearUploadedCapturedPosts" }
+  | { type: "resetCapturedPostsUploadStatus" }
+  | { type: "getUploadNotifications" }
+  | { type: "clearUploadNotifications" }
   | { type: "importCapturedPosts"; payload?: unknown }
   | {
       type: "captureGraphqlResponseBody";
@@ -271,6 +297,10 @@ export type RollbackMessageResponse =
 
 export type CapturedPostsMessageResponse =
   | { ok: true; store: CapturedPostsStore }
+  | { ok: false; error: string };
+
+export type UploadNotificationsMessageResponse =
+  | { ok: true; store: UploadNotificationsStore }
   | { ok: false; error: string };
 
 export type UploadCapturedPostsSummary = {

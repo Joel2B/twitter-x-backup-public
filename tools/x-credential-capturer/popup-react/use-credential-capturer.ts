@@ -6,7 +6,8 @@ import {
   DEFAULT_PROFILE_ID,
   ENDPOINTS,
   PROFILES_STORAGE_KEY,
-  SETTINGS_STORAGE_KEY
+  SETTINGS_STORAGE_KEY,
+  UPLOAD_NOTIFICATIONS_STORAGE_KEY
 } from "../popup/constants.js";
 import { formatDate, formatDurationFromMs } from "../popup/format.js";
 import {
@@ -25,6 +26,8 @@ import type {
   EndpointDefinition,
   EndpointModel,
   EndpointTestRuntime,
+  UploadNotificationsStore,
+  UploadNotificationsMessageResponse,
   UploadCapturedPostsMessageResponse,
   RollbackMessageResponse,
   StateMessageResponse
@@ -61,6 +64,7 @@ import type {
   ApplyStateOptions,
   EndpointRowView,
   CapturedPostRowView,
+  UploadNotificationRowView,
   OpenUrlOptions,
   PopupSettings,
   ProfileRecord,
@@ -95,6 +99,8 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
   const [captureHashtagDraft, setCaptureHashtagDraft] = useState("");
   const [isUploadingCapturedPosts, setIsUploadingCapturedPosts] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
+  const [uploadNotificationsStore, setUploadNotificationsStore] =
+    useState<UploadNotificationsStore | null>(null);
 
   const captureStateRef = useRef<CaptureState | null>(captureState);
   const settingsRef = useRef<PopupSettings>(settings);
@@ -176,6 +182,10 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
         return Boolean(item && !item.uploadedAt);
       })
     );
+  }
+
+  function applyUploadNotificationsStore(nextStore: UploadNotificationsStore | null) {
+    setUploadNotificationsStore(nextStore);
   }
 
   function clearAllTestRuntime() {
@@ -578,6 +588,18 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     applyCapturedPostsStore(response.store);
   }
 
+  async function loadUploadNotifications() {
+    const response = await sendMessage<UploadNotificationsMessageResponse>({
+      type: "getUploadNotifications"
+    } satisfies BackgroundMessage);
+
+    if (!response?.ok) {
+      throw new Error(response?.error || "Could not load upload notifications");
+    }
+
+    applyUploadNotificationsStore(response.store);
+  }
+
   async function updateUploadTarget(input: {
     apiBaseUrl?: string;
     uploadUserId?: string;
@@ -638,6 +660,32 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
 
     applyCapturedPostsStore(response.store);
     setUploadStatus("Uploaded posts cleared.");
+  }
+
+  async function resetCapturedPostsUploadStatus() {
+    const response = await sendMessage<CapturedPostsMessageResponse>({
+      type: "resetCapturedPostsUploadStatus"
+    } satisfies BackgroundMessage);
+
+    if (!response?.ok) {
+      throw new Error(response?.error || "Could not reset upload status");
+    }
+
+    applyCapturedPostsStore(response.store);
+    setUploadStatus("All posts were marked as pending.");
+  }
+
+  async function clearUploadNotifications() {
+    const response = await sendMessage<UploadNotificationsMessageResponse>({
+      type: "clearUploadNotifications"
+    } satisfies BackgroundMessage);
+
+    if (!response?.ok) {
+      throw new Error(response?.error || "Could not clear upload notifications");
+    }
+
+    applyUploadNotificationsStore(response.store);
+    setUploadStatus("Upload notifications cleared.");
   }
 
   async function exportCapturedPosts() {
@@ -1161,6 +1209,15 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
       if (capturedPostsChange && typeof capturedPostsChange.newValue !== "undefined") {
         applyCapturedPostsStore(capturedPostsChange.newValue as CapturedPostsStore);
       }
+
+      const uploadNotificationsChange = changes?.[UPLOAD_NOTIFICATIONS_STORAGE_KEY];
+
+      if (
+        uploadNotificationsChange &&
+        typeof uploadNotificationsChange.newValue !== "undefined"
+      ) {
+        applyUploadNotificationsStore(uploadNotificationsChange.newValue as UploadNotificationsStore);
+      }
     }
 
     chrome.storage.onChanged.addListener(handleStorageChanged);
@@ -1176,6 +1233,7 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
       await loadSettings();
       await loadProfiles();
       await loadCapturedPosts();
+      await loadUploadNotifications();
     });
 
     return () => {
@@ -1297,6 +1355,33 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
       });
   }, [capturedPostsSearchQuery, capturedPostsStore, selectedCapturedPostIds]);
 
+  const uploadNotifications: UploadNotificationRowView[] = useMemo(() => {
+    const now = Date.now();
+    const items = uploadNotificationsStore?.items || [];
+
+    return items
+      .slice()
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+      .map((item) => {
+        const startedMs = new Date(item.startedAt).getTime();
+        const endMs = item.completedAt ? new Date(item.completedAt).getTime() : now;
+        const progressDurationMs =
+          Number.isFinite(startedMs) && Number.isFinite(endMs) && endMs >= startedMs
+            ? endMs - startedMs
+            : 0;
+
+        return {
+          item,
+          progressDurationMs
+        };
+      });
+  }, [uploadNotificationsStore]);
+
+  const runningUploadNotificationsCount = useMemo(
+    () => uploadNotifications.filter((entry) => entry.item.status === "running").length,
+    [uploadNotifications]
+  );
+
   function toggleCapturedPostSelection(id: string, checked: boolean) {
     setSelectedCapturedPostIds((previous) => {
       const exists = previous.includes(id);
@@ -1331,6 +1416,8 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     copyPatchLabel,
     endpointRows,
     capturedPostRows,
+    uploadNotifications,
+    runningUploadNotificationsCount,
     capturedPostsStore,
     globalStatusOk,
     isApplyingProfile,
@@ -1407,6 +1494,12 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     },
     onClearUploadedCapturedPosts: () => {
       runAsync(clearUploadedCapturedPosts);
+    },
+    onResetCapturedPostsUploadStatus: () => {
+      runAsync(resetCapturedPostsUploadStatus);
+    },
+    onClearUploadNotifications: () => {
+      runAsync(clearUploadNotifications);
     },
     onExportCapturedPosts: () => {
       runAsync(exportCapturedPosts);

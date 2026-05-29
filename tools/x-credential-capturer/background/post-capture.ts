@@ -5,11 +5,14 @@ import type {
   ProcessedPostMedia,
   ProcessedPostProfile,
   ProcessedPostVariant,
+  UploadNotificationItem,
+  UploadNotificationsStore,
   UploadCapturedPostsSummary,
   UploadCapturedPostsMessageResponse
 } from "../popup/models.js";
 import {
   CAPTURED_POSTS_STORAGE_KEY,
+  UPLOAD_NOTIFICATIONS_STORAGE_KEY,
   DEFAULT_UPLOAD_API_BASE_URL,
   DEFAULT_UPLOAD_ORIGIN
 } from "./constants.js";
@@ -35,6 +38,8 @@ type UploadApiResponsePayload = {
   savedPosts: number | null;
   diagnostics: UploadApiDiagnosticsPayload | null;
 };
+
+const UPLOAD_NOTIFICATIONS_LIMIT = 200;
 
 function isSupportedOperation(operation: string | null): boolean {
   if (!operation) {
@@ -145,6 +150,29 @@ function buildUploadSummary(
     afterCount: diagnostics?.afterCount ?? null,
     deltaCount: diagnostics?.deltaCount ?? null,
     durationMs: diagnostics?.durationMs ?? null
+  };
+}
+
+function normalizeUploadSummary(
+  value: unknown,
+  attemptedFallback: number
+): UploadCapturedPostsSummary | null {
+  if (!isPlainObject(value)) {
+    return null;
+  }
+
+  const attemptedPosts =
+    typeof value.attemptedPosts === "number" ? value.attemptedPosts : attemptedFallback;
+
+  return {
+    attemptedPosts,
+    receivedPosts: toNullableNumber(value.receivedPosts),
+    savedPosts: toNullableNumber(value.savedPosts),
+    ignoredPosts: toNullableNumber(value.ignoredPosts),
+    beforeCount: toNullableNumber(value.beforeCount),
+    afterCount: toNullableNumber(value.afterCount),
+    deltaCount: toNullableNumber(value.deltaCount),
+    durationMs: toNullableNumber(value.durationMs)
   };
 }
 
@@ -357,6 +385,157 @@ async function saveCapturedPostsStore(store: CapturedPostsStore): Promise<Captur
   return normalized;
 }
 
+function defaultUploadNotificationsStore(): UploadNotificationsStore {
+  return {
+    updatedAt: nowIso(),
+    items: []
+  };
+}
+
+function normalizeUploadNotificationStatus(value: unknown): UploadNotificationItem["status"] {
+  if (value === "running" || value === "completed" || value === "failed") {
+    return value;
+  }
+
+  return "failed";
+}
+
+function normalizeUploadNotificationItem(value: unknown): UploadNotificationItem | null {
+  if (!isPlainObject(value) || typeof value.id !== "string") {
+    return null;
+  }
+
+  return {
+    id: value.id,
+    status: normalizeUploadNotificationStatus(value.status),
+    createdAt: typeof value.createdAt === "string" ? value.createdAt : nowIso(),
+    startedAt: typeof value.startedAt === "string" ? value.startedAt : nowIso(),
+    completedAt: typeof value.completedAt === "string" ? value.completedAt : null,
+    attemptedPosts: typeof value.attemptedPosts === "number" ? value.attemptedPosts : 0,
+    uploadedPosts: typeof value.uploadedPosts === "number" ? value.uploadedPosts : 0,
+    failedPosts: typeof value.failedPosts === "number" ? value.failedPosts : 0,
+    apiBaseUrl: typeof value.apiBaseUrl === "string" ? value.apiBaseUrl : DEFAULT_UPLOAD_API_BASE_URL,
+    uploadUserId: typeof value.uploadUserId === "string" ? value.uploadUserId : "",
+    uploadOrigin: typeof value.uploadOrigin === "string" ? value.uploadOrigin : DEFAULT_UPLOAD_ORIGIN,
+    uploadSummary: normalizeUploadSummary(
+      value.uploadSummary,
+      typeof value.attemptedPosts === "number" ? value.attemptedPosts : 0
+    ),
+    error: typeof value.error === "string" ? value.error : null
+  };
+}
+
+function normalizeUploadNotificationsItems(items: unknown): UploadNotificationItem[] {
+  if (!Array.isArray(items)) {
+    return [];
+  }
+
+  return items
+    .map((item) => normalizeUploadNotificationItem(item))
+    .filter((item): item is UploadNotificationItem => item !== null)
+    .slice(0, UPLOAD_NOTIFICATIONS_LIMIT);
+}
+
+export async function getUploadNotificationsStore(): Promise<UploadNotificationsStore> {
+  const raw = await chrome.storage.local.get(UPLOAD_NOTIFICATIONS_STORAGE_KEY);
+  const source = raw?.[UPLOAD_NOTIFICATIONS_STORAGE_KEY];
+
+  if (!isPlainObject(source)) {
+    return defaultUploadNotificationsStore();
+  }
+
+  return {
+    updatedAt: typeof source.updatedAt === "string" ? source.updatedAt : nowIso(),
+    items: normalizeUploadNotificationsItems(source.items)
+  };
+}
+
+async function saveUploadNotificationsStore(
+  store: UploadNotificationsStore
+): Promise<UploadNotificationsStore> {
+  const normalized: UploadNotificationsStore = {
+    updatedAt: nowIso(),
+    items: normalizeUploadNotificationsItems(store.items)
+  };
+
+  await chrome.storage.local.set({
+    [UPLOAD_NOTIFICATIONS_STORAGE_KEY]: normalized
+  });
+
+  return normalized;
+}
+
+function createUploadNotificationId(): string {
+  const random = Math.random().toString(36).slice(2, 10);
+  return `upload-${Date.now()}-${random}`;
+}
+
+async function createUploadNotification(input: {
+  attemptedPosts: number;
+  apiBaseUrl: string;
+  uploadUserId: string;
+  uploadOrigin: string;
+}): Promise<UploadNotificationItem> {
+  const store = await getUploadNotificationsStore();
+  const startedAt = nowIso();
+  const item: UploadNotificationItem = {
+    id: createUploadNotificationId(),
+    status: "running",
+    createdAt: startedAt,
+    startedAt,
+    completedAt: null,
+    attemptedPosts: input.attemptedPosts,
+    uploadedPosts: 0,
+    failedPosts: 0,
+    apiBaseUrl: normalizeApiBaseUrl(input.apiBaseUrl),
+    uploadUserId: normalizeUploadUserId(input.uploadUserId),
+    uploadOrigin: normalizeUploadOrigin(input.uploadOrigin),
+    uploadSummary: null,
+    error: null
+  };
+
+  const nextItems = [item, ...store.items].slice(0, UPLOAD_NOTIFICATIONS_LIMIT);
+  await saveUploadNotificationsStore({
+    ...store,
+    items: nextItems
+  });
+
+  return item;
+}
+
+async function patchUploadNotification(
+  id: string,
+  patch: Partial<Omit<UploadNotificationItem, "id" | "createdAt" | "startedAt">>
+): Promise<void> {
+  const store = await getUploadNotificationsStore();
+  let changed = false;
+
+  const nextItems = store.items.map((item) => {
+    if (item.id !== id) {
+      return item;
+    }
+
+    changed = true;
+    return {
+      ...item,
+      ...patch
+    };
+  });
+
+  if (!changed) {
+    return;
+  }
+
+  await saveUploadNotificationsStore({
+    ...store,
+    items: nextItems
+  });
+}
+
+export async function clearUploadNotifications(): Promise<UploadNotificationsStore> {
+  return saveUploadNotificationsStore(defaultUploadNotificationsStore());
+}
+
 export async function setUploadTarget(input: {
   apiBaseUrl?: string;
   uploadUserId?: string;
@@ -397,6 +576,23 @@ export async function clearUploadedCapturedPosts(): Promise<CapturedPostsStore> 
     }
 
     items[id] = item;
+  }
+
+  return saveCapturedPostsStore({
+    ...store,
+    items
+  });
+}
+
+export async function resetCapturedPostsUploadStatus(): Promise<CapturedPostsStore> {
+  const store = await getCapturedPostsStore();
+  const items: Record<string, CapturedPostItem> = {};
+
+  for (const [id, item] of Object.entries(store.items)) {
+    items[id] = {
+      ...item,
+      uploadedAt: null
+    };
   }
 
   return saveCapturedPostsStore({
@@ -835,7 +1031,13 @@ export async function uploadCapturedPosts(
     `${normalizeApiBaseUrl(store.apiBaseUrl)}/api/posts/processed` +
     `?userId=${encodeURIComponent(store.uploadUserId)}` +
     `&origin=${encodeURIComponent(store.uploadOrigin)}`;
-
+  const notification = await createUploadNotification({
+    attemptedPosts: candidates.length,
+    apiBaseUrl: store.apiBaseUrl,
+    uploadUserId: store.uploadUserId,
+    uploadOrigin: store.uploadOrigin
+  });
+  const startedAtEpoch = Date.now();
   let response: Response;
 
   try {
@@ -847,6 +1049,13 @@ export async function uploadCapturedPosts(
       body: JSON.stringify(candidates.map((item) => item.processed))
     });
   } catch (error) {
+    await patchUploadNotification(notification.id, {
+      status: "failed",
+      completedAt: nowIso(),
+      uploadedPosts: 0,
+      failedPosts: candidates.length,
+      error: error instanceof Error ? error.message : "Upload request failed."
+    });
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Upload request failed."
@@ -856,6 +1065,13 @@ export async function uploadCapturedPosts(
   if (!response.ok) {
     const text = await response.text().catch(() => "");
     const message = text?.trim() || `HTTP ${response.status}`;
+    await patchUploadNotification(notification.id, {
+      status: "failed",
+      completedAt: nowIso(),
+      uploadedPosts: 0,
+      failedPosts: candidates.length,
+      error: `Upload failed: ${message}`
+    });
     return { ok: false, error: `Upload failed: ${message}` };
   }
 
@@ -883,6 +1099,22 @@ export async function uploadCapturedPosts(
   }
 
   const savedStore = await saveCapturedPostsStore(nextStore);
+  const finishedAt = nowIso();
+  const durationMs = Date.now() - startedAtEpoch;
+  const finalSummary = uploadSummary
+    ? {
+        ...uploadSummary,
+        durationMs: uploadSummary.durationMs ?? durationMs
+      }
+    : null;
+  await patchUploadNotification(notification.id, {
+    status: "completed",
+    completedAt: finishedAt,
+    uploadedPosts: candidates.length,
+    failedPosts: 0,
+    uploadSummary: finalSummary,
+    error: null
+  });
   return {
     ok: true,
     store: savedStore,

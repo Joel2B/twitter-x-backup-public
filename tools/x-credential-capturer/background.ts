@@ -2,6 +2,7 @@ import type {
   BackgroundMessage,
   CaptureState,
   CapturedPostsMessageResponse,
+  UploadNotificationsMessageResponse,
   StateMessageResponse,
   UploadCapturedPostsMessageResponse
 } from "./popup/models.js";
@@ -10,8 +11,11 @@ import { GRAPHQL_FILTER } from "./background/constants.js";
 import {
   capturePostsFromGraphqlResponseBody,
   clearUploadedCapturedPosts,
+  clearUploadNotifications,
   getCapturedPostsStore,
+  getUploadNotificationsStore,
   importCapturedPosts,
+  resetCapturedPostsUploadStatus,
   setUploadTarget,
   uploadCapturedPosts
 } from "./background/post-capture.js";
@@ -58,6 +62,12 @@ function asBackgroundMessage(message: unknown): BackgroundMessage | null {
       };
     case "clearUploadedCapturedPosts":
       return { type: "clearUploadedCapturedPosts" };
+    case "resetCapturedPostsUploadStatus":
+      return { type: "resetCapturedPostsUploadStatus" };
+    case "getUploadNotifications":
+      return { type: "getUploadNotifications" };
+    case "clearUploadNotifications":
+      return { type: "clearUploadNotifications" };
     case "importCapturedPosts":
       return {
         type: "importCapturedPosts",
@@ -255,6 +265,20 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
     return true;
   }
 
+  if (parsed.type === "resetCapturedPostsUploadStatus") {
+    enqueueUpdate(async () => {
+      const store = await resetCapturedPostsUploadStatus();
+      sendResponse({ ok: true, store } satisfies CapturedPostsMessageResponse);
+    }).catch((error: unknown) => {
+      sendResponse({
+        ok: false,
+        error: error instanceof Error ? error.message : "resetCapturedPostsUploadStatus failed"
+      } satisfies CapturedPostsMessageResponse);
+    });
+
+    return true;
+  }
+
   if (parsed.type === "importCapturedPosts") {
     enqueueUpdate(async () => {
       const store = await importCapturedPosts(parsed.payload);
@@ -264,6 +288,33 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
         ok: false,
         error: error instanceof Error ? error.message : "importCapturedPosts failed"
       } satisfies CapturedPostsMessageResponse);
+    });
+
+    return true;
+  }
+
+  if (parsed.type === "getUploadNotifications") {
+    getUploadNotificationsStore()
+      .then((store) => sendResponse({ ok: true, store } satisfies UploadNotificationsMessageResponse))
+      .catch((error: unknown) =>
+        sendResponse({
+          ok: false,
+          error: error instanceof Error ? error.message : "getUploadNotifications failed"
+        } satisfies UploadNotificationsMessageResponse)
+      );
+
+    return true;
+  }
+
+  if (parsed.type === "clearUploadNotifications") {
+    enqueueUpdate(async () => {
+      const store = await clearUploadNotifications();
+      sendResponse({ ok: true, store } satisfies UploadNotificationsMessageResponse);
+    }).catch((error: unknown) => {
+      sendResponse({
+        ok: false,
+        error: error instanceof Error ? error.message : "clearUploadNotifications failed"
+      } satisfies UploadNotificationsMessageResponse);
     });
 
     return true;

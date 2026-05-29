@@ -7,7 +7,8 @@ import type {
   EndpointTestRuntime,
   FreshnessInfo,
   PopupSettings,
-  ProfileEntry
+  ProfileEntry,
+  UploadNotificationItem
 } from "../popup/models.js";
 
 export type { PopupSettings };
@@ -61,6 +62,11 @@ export type CapturedPostRowView = {
   externalUrl: string | null;
 };
 
+export type UploadNotificationRowView = {
+  item: UploadNotificationItem;
+  progressDurationMs: number;
+};
+
 export type UseCredentialCapturerResult = {
   activeProfileId: string;
   canDeleteProfile: boolean;
@@ -77,6 +83,8 @@ export type UseCredentialCapturerResult = {
   settings: PopupSettings;
   testAllStatus: string;
   uploadStatus: string;
+  uploadNotifications: UploadNotificationRowView[];
+  runningUploadNotificationsCount: number;
   capturedPostsStore: CapturedPostsStore | null;
   capturedPostRows: CapturedPostRowView[];
   selectedCapturedPostIds: string[];
@@ -106,6 +114,8 @@ export type UseCredentialCapturerResult = {
   onClearCapturedPostSelection: () => void;
   onUploadSelectedCapturedPosts: () => void;
   onClearUploadedCapturedPosts: () => void;
+  onResetCapturedPostsUploadStatus: () => void;
+  onClearUploadNotifications: () => void;
   onExportCapturedPosts: () => void;
   onImportCapturedPosts: (file: File) => void;
   onUploadApiBaseUrlChange: (value: string) => void;
