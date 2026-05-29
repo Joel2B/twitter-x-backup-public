@@ -28,7 +28,7 @@ public static class LoggingCollectionExtensions
 
         try
         {
-            AppConfig config = services.GetAppConfig();
+            AppConfig config = GetAppConfig(services);
             int partitionId = config.Debug.Partitions.First();
             PartitionConfig partition = config.Data.Partitions.First(o => o.Id == partitionId);
             string basePath = UtilsPath.GetPartitionPath(config, partition);
@@ -67,6 +67,20 @@ public static class LoggingCollectionExtensions
         });
 
         return services;
+    }
+
+    private static AppConfig GetAppConfig(IServiceCollection services)
+    {
+        ServiceDescriptor? descriptor = services.LastOrDefault(o => o.ServiceType == typeof(AppConfig));
+
+        if (descriptor?.ImplementationInstance is AppConfig config)
+        {
+            return config;
+        }
+
+        throw new InvalidOperationException(
+            $"{nameof(AppConfig)} is not registered as an implementation instance."
+        );
     }
 }
 
