@@ -2,11 +2,11 @@ using Backup.App.Interfaces.Proxy;
 using Backup.App.Models.Config;
 using Backup.App.Models.Config.Proxy;
 using Backup.App.Models.Proxy;
-using Backup.App.Services.Proxy.Downloader;
-using Backup.App.Services.Proxy.Formatter;
+using Backup.Infrastructure.Services.Proxy.Downloader;
+using Backup.Infrastructure.Services.Proxy.Formatter;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Proxy;
+namespace Backup.Infrastructure.Services.Proxy;
 
 public class ProxyLoader(ILogger _logger, AppConfig _config)
 {
@@ -36,3 +36,4 @@ public class ProxyLoader(ILogger _logger, AppConfig _config)
         return _proxies;
     }
 }
+

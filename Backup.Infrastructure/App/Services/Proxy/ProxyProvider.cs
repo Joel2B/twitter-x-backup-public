@@ -7,7 +7,7 @@ using Backup.App.Models.Proxy;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Services.Proxy;
+namespace Backup.Infrastructure.Services.Proxy;
 
 public class ProxyException(string? message = null) : Exception(message) { }
 
@@ -379,3 +379,4 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, AppConfig _config, IP
         GC.SuppressFinalize(this);
     }
 }
+

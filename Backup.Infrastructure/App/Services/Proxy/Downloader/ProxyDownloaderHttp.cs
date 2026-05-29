@@ -4,7 +4,7 @@ using Backup.App.Models.Config.Proxy;
 using Backup.App.Models.Proxy;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Proxy.Downloader;
+namespace Backup.Infrastructure.Services.Proxy.Downloader;
 
 public class ProxyDownloaderHttp(ILogger _logger, IProxyFormatter _formatter) : IProxyDownloader
 {
@@ -47,3 +47,4 @@ public class ProxyDownloaderHttp(ILogger _logger, IProxyFormatter _formatter) : 
         return proxies;
     }
 }
+

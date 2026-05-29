@@ -1,6 +1,6 @@
 using Backup.App.Interfaces.Proxy;
 
-namespace Backup.App.Services.Proxy.Formatter;
+namespace Backup.Infrastructure.Services.Proxy.Formatter;
 
 public class ProxyFormatter
 {
@@ -13,3 +13,4 @@ public class ProxyFormatter
         };
     }
 }
+

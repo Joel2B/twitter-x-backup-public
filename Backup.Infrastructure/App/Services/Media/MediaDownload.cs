@@ -3,7 +3,7 @@ using Backup.App.Interfaces.Services.Media;
 using Backup.App.Models.Config;
 using Backup.App.Models.Media;
 using Backup.App.Models.Media.Logging;
-using Backup.App.Services.Proxy;
+using Backup.Infrastructure.Services.Proxy;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.App.Services.Media;
@@ -124,3 +124,4 @@ class MediaDownload(
         await _mediaLogger.Save();
     }
 }
+

@@ -1,7 +1,7 @@
 using Backup.App.Interfaces.Proxy;
 using Backup.App.Models.Proxy;
 
-namespace Backup.App.Services.Proxy.Formatter;
+namespace Backup.Infrastructure.Services.Proxy.Formatter;
 
 public class ProxyFormatterSimple : IProxyFormatter
 {
@@ -24,3 +24,4 @@ public class ProxyFormatterSimple : IProxyFormatter
         return proxies;
     }
 }
+
