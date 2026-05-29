@@ -12,15 +12,15 @@ This project is under active personal development. Structure and configuration f
 
 - .NET SDK 10 (`net10.0`)
 - Docker and Docker Compose (optional)
-- Valid split configuration files in `App/Config/`
+- Valid split configuration files in `Backup.Infrastructure/App/Config/`
 
 ## Configuration
 
-1. Use files in `App/Config.example/` as a starting point.
-2. Copy them to `App/Config/` and replace all fields marked as `{REPLACE_THIS}`.
+1. Use files in `Backup.Infrastructure/App/Config.example/` as a starting point.
+2. Copy them to `Backup.Infrastructure/App/Config/` and replace all fields marked as `{REPLACE_THIS}`.
 3. Adjust data/debug paths and download settings for your environment.
 
-Note: files in `App/Config/` are intended for local use and should not be committed.
+Note: files in `Backup.Infrastructure/App/Config/` are intended for local use and should not be committed.
 
 ## Run Locally
 
@@ -33,6 +33,14 @@ Run API locally:
 
 ```bash
 dotnet run --project Backup.Api
+```
+
+## Build and Test
+
+```bash
+dotnet build Backup.Cli/Backup.Cli.csproj -c Release
+dotnet build Backup.Api/Backup.Api.csproj -c Release
+dotnet test Backup.Tests/Backup.Tests.csproj -c Release
 ```
 
 ## Run with Docker
@@ -70,22 +78,27 @@ docker compose -f compose.yml -f compose.windows.yml up -d
 
 For Windows CIFS volumes, create `.env` from `.env.example` and set your credentials/paths.
 
-## Quick Structure
+## Architecture
 
-- `Backup.Cli/Program.cs`: CLI entry point
-- `Backup.Api/Program.cs`: API entry point
-- `App/`: services, models, utilities, and configuration
-- `compose*.yml`: environment-specific deployment files
-- `Dockerfile.Cli`: CLI runtime image definition
-- `Dockerfile.Api`: API runtime image definition
-- `deploy-cli.ps1`: build/push CLI image
-- `deploy-api.ps1`: build/push API image
+- `Backup.Domain/`: domain entities and core contracts.
+- `Backup.Application/`: application workflows/use-cases.
+- `Backup.Infrastructure/`: adapters and implementations.
+  - `Backup.Infrastructure/Data/`: storage adapters (post/media/bulk/dump/proxy/partition).
+  - `Backup.Infrastructure/Services/`: runtime services (post/media/bulk/proxy/config/utils).
+  - `Backup.Infrastructure/Models/`: configuration and DTO models.
+  - `Backup.Infrastructure/Interfaces/`: infrastructure contracts.
+  - `Backup.Infrastructure/DependencyInjection/`: composition root modules.
+  - `Backup.Infrastructure/Hosting/`: CLI runtime orchestration.
+  - `Backup.Infrastructure/App/Config*/`: local runtime config files.
+- `Backup.Cli/`: CLI host entry point.
+- `Backup.Api/`: REST API host (controllers + Swagger).
+- `Backup.Tests/`: unit/integration tests for infrastructure + API behaviors.
 
 ## Security
 
 - Do not commit real tokens/cookies/sessions.
-- Keep `App/Config/*.json` out of version control.
-- Keep only sanitized sample values in `App/Config.example/*.json`.
+- Keep `Backup.Infrastructure/App/Config/*.json` out of version control.
+- Keep only sanitized sample values in `Backup.Infrastructure/App/Config.example/*.json`.
 
 ## License
 
