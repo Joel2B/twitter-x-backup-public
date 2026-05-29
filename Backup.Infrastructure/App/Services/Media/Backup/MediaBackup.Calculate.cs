@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using Backup.App.Extensions;
+using Backup.Infrastructure.Logging;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Models.Media;
 using Backup.App.Models.Media.Backup;

@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using Backup.App.Extensions;
+using Backup.Infrastructure.Logging;
 using Backup.App.Interfaces.Data.Media;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Interfaces.Services.UtilsService;

@@ -619,7 +619,7 @@ public partial class SqlitePostData
             result.Profile.UserName
         );
 
-        Extensions.LoggingExtensions.LogAsJsonDiff(
+        Backup.Infrastructure.Logging.LoggingExtensions.LogAsJsonDiff(
             _logger,
             "old data",
             "new data",
@@ -659,7 +659,7 @@ public partial class SqlitePostData
             result.Profile.UserName
         );
 
-        Extensions.LoggingExtensions.LogAsJsonDiff(
+        Backup.Infrastructure.Logging.LoggingExtensions.LogAsJsonDiff(
             _logger,
             "old index",
             "new index",

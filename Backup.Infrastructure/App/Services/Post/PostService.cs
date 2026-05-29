@@ -1,4 +1,4 @@
-using Backup.App.Extensions;
+using Backup.Infrastructure.Logging;
 using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Services.Posts;
 using Backup.App.Models.Config.Api;
