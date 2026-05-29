@@ -45,6 +45,41 @@ internal static class PostReplicationMapper
             ),
         };
 
+    public static MediaInput ToDomain(AppPosts.MediaInput source) =>
+        new()
+        {
+            Id = source.Id,
+            Profile = ToDomain(source.Profile),
+            Medias = source.Medias?.Select(ToDomain).ToList(),
+            Deleted = source.Deleted,
+        };
+
+    public static AppPosts.MediaInput ToApp(MediaInput source) =>
+        new()
+        {
+            Id = source.Id,
+            Profile = ToApp(source.Profile),
+            Medias = source.Medias?.Select(ToApp).ToList(),
+            Deleted = source.Deleted,
+        };
+
+    public static AppPosts.MergeOptions? ToApp(MergeOptions? source) =>
+        source is null ? null : new AppPosts.MergeOptions { Index = source.Index };
+
+    public static PostStoreCounts ToDomain(AppPosts.PostStoreCounts source) =>
+        new()
+        {
+            Posts = source.Posts,
+            Profiles = source.Profiles,
+            Hashtags = source.Hashtags,
+            Medias = source.Medias,
+            MediaVariants = source.MediaVariants,
+            IndexEntries = source.IndexEntries,
+            Changes = source.Changes,
+            ChangeFields = source.ChangeFields,
+            HashMeta = source.HashMeta,
+        };
+
     private static PostProfile ToDomain(AppPosts.PostProfile source) =>
         new()
         {
@@ -159,4 +194,3 @@ internal static class PostReplicationMapper
     private static AppPosts.IndexData ToApp(IndexData source) =>
         new() { Previous = source.Previous, Next = source.Next };
 }
-

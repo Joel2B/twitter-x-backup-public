@@ -3,6 +3,7 @@ using Backup.Infrastructure.Data.Posts;
 using Backup.Infrastructure.Interfaces;
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Models.Config.Data.Posts;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -71,6 +72,7 @@ public static class PostDataInfrastructureServiceCollectionExtensions
         }
 
         services.AddScoped<IPostData, PostDataMultiStore>();
+        services.AddScoped<IPostDomainData, PostDataDomainAdapter>();
         return services;
     }
 }
