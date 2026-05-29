@@ -6,7 +6,7 @@ using Backup.App.Interfaces.Proxy;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Interfaces.Services.Posts;
 using Backup.App.Interfaces.Services.UtilsService;
-using Backup.App.Services.Bulk;
+using Backup.Infrastructure.Services.Bulk;
 using Backup.App.Services.Media;
 using Backup.Infrastructure.Services.Posts;
 using Backup.Infrastructure.Services.Proxy;
@@ -52,6 +52,7 @@ public static class RuntimeInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+
 
 
 

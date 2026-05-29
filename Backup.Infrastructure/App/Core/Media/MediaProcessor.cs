@@ -1,6 +1,6 @@
 using Backup.App.Models.Media;
 
-namespace Backup.App.Core.Media;
+namespace Backup.Infrastructure.Core.Media;
 
 public abstract class MediaProcessor(MediaProcessorContext context)
 {
@@ -51,3 +51,4 @@ public abstract class MediaProcessor(MediaProcessorContext context)
         }
     }
 }
+

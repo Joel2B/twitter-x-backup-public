@@ -2,7 +2,7 @@ using Backup.App.Models.Bulk;
 using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Bulk;
+namespace Backup.Infrastructure.Services.Bulk;
 
 public partial class BulkService
 {
@@ -70,3 +70,4 @@ public partial class BulkService
         await _bulkData.Save(bulks);
     }
 }
+

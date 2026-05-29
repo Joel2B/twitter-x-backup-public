@@ -2,7 +2,7 @@ using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Models.Bulk;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Bulk;
+namespace Backup.Infrastructure.Services.Bulk;
 
 public partial class BulkService
 {
@@ -56,3 +56,4 @@ public partial class BulkService
         }
     }
 }
+

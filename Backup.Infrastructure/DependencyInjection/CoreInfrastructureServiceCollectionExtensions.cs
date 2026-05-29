@@ -1,4 +1,4 @@
-using Backup.App.Data.Partition;
+using Backup.Infrastructure.Data.Partition;
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Config;
 using Backup.App.Interfaces.Partition;
@@ -56,3 +56,4 @@ public static class CoreInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+

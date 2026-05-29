@@ -9,7 +9,7 @@ using Backup.App.Models.Config.ApiRequest;
 using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Bulk;
+namespace Backup.Infrastructure.Services.Bulk;
 
 public partial class BulkService(
     ILogger<BulkService> _logger,
@@ -144,3 +144,4 @@ public partial class BulkService(
         return url;
     }
 }
+

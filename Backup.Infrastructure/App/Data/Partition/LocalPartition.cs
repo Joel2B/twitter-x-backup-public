@@ -8,7 +8,7 @@ using Backup.App.Models.Partition;
 using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Data.Partition;
+namespace Backup.Infrastructure.Data.Partition;
 
 public class LocalPartition(
     AppConfig _appConfig,
@@ -220,3 +220,4 @@ public class LocalPartition(
 
     public PartitionConfig GetHeavy() => GetPartitions().First(o => o.Type == "heavy");
 }
+

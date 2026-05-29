@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Data.Bulk;
-using Backup.App.Data.Partition;
+using Backup.Infrastructure.Data.Partition;
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Data.Bulk;
 using Backup.App.Interfaces.Partition;
@@ -87,4 +87,5 @@ public static class BulkDataInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+
 

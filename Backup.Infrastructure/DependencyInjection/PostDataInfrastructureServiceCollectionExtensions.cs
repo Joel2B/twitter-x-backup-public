@@ -1,4 +1,4 @@
-using Backup.App.Data.Partition;
+using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.Data.Posts;
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Data.Posts;
@@ -74,4 +74,5 @@ public static class PostDataInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+
 
