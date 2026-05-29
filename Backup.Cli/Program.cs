@@ -1,5 +1,5 @@
-using Backup.App;
 using Backup.Infrastructure.DependencyInjection;
+using Backup.Infrastructure.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
 ServiceCollection services = new();
@@ -16,7 +16,7 @@ Console.Error.WriteLine("[startup] running setup");
 await scope.ServiceProvider.RunBackupInfrastructureSetup();
 
 Console.Error.WriteLine("[startup] resolving app");
-App app = scope.ServiceProvider.GetRequiredService<App>();
+IBackupCliRunner cliRunner = scope.ServiceProvider.GetRequiredService<IBackupCliRunner>();
 
 Console.Error.WriteLine("[startup] running backup");
-await app.Backup();
+await cliRunner.RunBackup();

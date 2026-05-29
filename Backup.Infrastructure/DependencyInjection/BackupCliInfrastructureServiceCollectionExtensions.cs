@@ -1,4 +1,5 @@
 using Backup.App.Extensions;
+using Backup.Infrastructure.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;
@@ -16,6 +17,7 @@ public static class BackupCliInfrastructureServiceCollectionExtensions
         services.AddRuntimeServicesInfrastructure();
         services.AddSetupInfrastructure();
         services.AddAppRuntimeInfrastructure();
+        services.AddScoped<IBackupCliRunner, BackupCliRunner>();
 
         return services;
     }
