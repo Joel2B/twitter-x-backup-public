@@ -223,6 +223,72 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     return parts.join("\n").toLowerCase().includes(searchQuery);
   }
 
+  function normalizeDetectedUrl(value: string): string | null {
+    const trimmed = value.trim().replace(/[)\],.;!?]+$/g, "");
+
+    if (!trimmed) {
+      return null;
+    }
+
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  }
+
+  function extractLastTcoUrlFromDescription(description: string | null | undefined): string | null {
+    if (!description) {
+      return null;
+    }
+
+    const matches =
+      description.match(/\b(?:https?:\/\/)?t\.co\/[A-Za-z0-9]+(?:[^\s]*)?/gi) || [];
+
+    if (matches.length === 0) {
+      return null;
+    }
+
+    return normalizeDetectedUrl(matches[matches.length - 1]);
+  }
+
+  function formatUploadSummary(response: UploadCapturedPostsMessageResponse): string {
+    if (!response.ok) {
+      return "";
+    }
+
+    const summary = response.uploadSummary;
+
+    if (!summary) {
+      return `Uploaded: ${response.uploaded.length}`;
+    }
+
+    const segments: string[] = [`Uploaded: ${response.uploaded.length}/${summary.attemptedPosts}`];
+
+    if (summary.receivedPosts !== null) {
+      segments.push(`received: ${summary.receivedPosts}`);
+    }
+
+    if (summary.savedPosts !== null) {
+      segments.push(`saved: ${summary.savedPosts}`);
+    }
+
+    if (summary.ignoredPosts !== null) {
+      segments.push(`ignored: ${summary.ignoredPosts}`);
+    }
+
+    if (summary.beforeCount !== null && summary.afterCount !== null) {
+      const delta =
+        summary.deltaCount !== null
+          ? summary.deltaCount
+          : summary.afterCount - summary.beforeCount;
+      const deltaSign = delta >= 0 ? "+" : "";
+      segments.push(`total: ${summary.beforeCount} -> ${summary.afterCount} (${deltaSign}${delta})`);
+    }
+
+    if (summary.durationMs !== null) {
+      segments.push(`duration: ${summary.durationMs} ms`);
+    }
+
+    return segments.join(" | ");
+  }
+
   function setTestRuntime(endpointId: string, nextValue: Partial<EndpointTestRuntime>) {
     setEndpointTestState((previous) => {
       const merged = {
@@ -555,7 +621,7 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
       setSelectedCapturedPostIds((previous) =>
         previous.filter((id) => !response.uploaded.includes(id))
       );
-      setUploadStatus(`Uploaded: ${response.uploaded.length}`);
+      setUploadStatus(formatUploadSummary(response));
     } finally {
       setIsUploadingCapturedPosts(false);
     }
@@ -661,6 +727,39 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
 
     const url = `https://x.com/hashtag/${encodeURIComponent(hashtag)}?f=media`;
     await openUrlWithBypassCache(url, { active: true, bypassCache: false });
+  }
+
+  async function openCaptureHashtagInWindow(value: string) {
+    const hashtag = normalizeCaptureHashtag(value);
+
+    if (!hashtag) {
+      return;
+    }
+
+    const url = `https://x.com/hashtag/${encodeURIComponent(hashtag)}?f=media`;
+    await chrome.windows.create({
+      url,
+      focused: true,
+      type: "normal"
+    });
+  }
+
+  async function openCapturedPostExternalUrl(capturedPostId: string) {
+    const item = capturedPostsStoreRef.current?.items?.[capturedPostId];
+
+    if (!item) {
+      return;
+    }
+
+    const link =
+      extractLastTcoUrlFromDescription(item.processed?.description) ||
+      extractLastTcoUrlFromDescription(item.text);
+
+    if (!link) {
+      return;
+    }
+
+    await openUrlWithBypassCache(link, { active: true, bypassCache: false });
   }
 
   function ensureCopyAllowed() {
@@ -1184,10 +1283,14 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
         const preview =
           (item.text && item.text.trim()) ||
           (item.mediaUrls[0] ? `MEDIA: ${item.mediaUrls[0]}` : "(no text/media)");
+        const externalUrl =
+          extractLastTcoUrlFromDescription(item.processed?.description) ||
+          extractLastTcoUrlFromDescription(item.text);
 
         return {
           item,
           preview,
+          externalUrl,
           selected: selectedCapturedPostIds.includes(item.id),
           selectable: !item.uploadedAt
         };
@@ -1336,8 +1439,14 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     onAddCaptureHashtag: () => {
       runAsync(addCaptureHashtagFromDraft);
     },
+    onOpenCapturedPostExternalUrl: (id: string) => {
+      runAsync(() => openCapturedPostExternalUrl(id));
+    },
     onOpenCaptureHashtag: (value: string) => {
       runAsync(() => openCaptureHashtag(value));
+    },
+    onOpenCaptureHashtagInWindow: (value: string) => {
+      runAsync(() => openCaptureHashtagInWindow(value));
     },
     onRemoveCaptureHashtag: (value: string) => {
       runAsync(() => removeCaptureHashtag(value));

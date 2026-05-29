@@ -64,7 +64,9 @@ export default function App() {
     onCaptureHashtagDraftChange,
     onCaptureHashtagDraftKeyDown,
     onAddCaptureHashtag,
+    onOpenCapturedPostExternalUrl,
     onOpenCaptureHashtag,
+    onOpenCaptureHashtagInWindow,
     onRemoveCaptureHashtag,
     onTestEndpoint,
     onUsernameChange,
@@ -196,7 +198,9 @@ export default function App() {
           onCaptureHashtagDraftChange={onCaptureHashtagDraftChange}
           onCaptureHashtagDraftKeyDown={onCaptureHashtagDraftKeyDown}
           onAddCaptureHashtag={onAddCaptureHashtag}
+          onOpenCapturedPostExternalUrl={onOpenCapturedPostExternalUrl}
           onOpenCaptureHashtag={onOpenCaptureHashtag}
+          onOpenCaptureHashtagInWindow={onOpenCaptureHashtagInWindow}
           onRemoveCaptureHashtag={onRemoveCaptureHashtag}
           onToggleRow={onToggleCapturedPost}
           onSelectAllPending={onSelectAllPendingCapturedPosts}

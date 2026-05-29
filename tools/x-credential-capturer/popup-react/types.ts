@@ -58,6 +58,7 @@ export type CapturedPostRowView = {
   selected: boolean;
   selectable: boolean;
   preview: string;
+  externalUrl: string | null;
 };
 
 export type UseCredentialCapturerResult = {
@@ -114,7 +115,9 @@ export type UseCredentialCapturerResult = {
   onCaptureHashtagDraftChange: (value: string) => void;
   onCaptureHashtagDraftKeyDown: (event: { key: string; preventDefault: () => void }) => void;
   onAddCaptureHashtag: () => void;
+  onOpenCapturedPostExternalUrl: (id: string) => void;
   onOpenCaptureHashtag: (value: string) => void;
+  onOpenCaptureHashtagInWindow: (value: string) => void;
   onRemoveCaptureHashtag: (value: string) => void;
   onTestEndpoint: (endpoint: EndpointDefinition) => void;
   onUsernameChange: (value: string) => void;

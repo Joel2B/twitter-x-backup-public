@@ -273,6 +273,23 @@ export type CapturedPostsMessageResponse =
   | { ok: true; store: CapturedPostsStore }
   | { ok: false; error: string };
 
+export type UploadCapturedPostsSummary = {
+  attemptedPosts: number;
+  receivedPosts: number | null;
+  savedPosts: number | null;
+  ignoredPosts: number | null;
+  beforeCount: number | null;
+  afterCount: number | null;
+  deltaCount: number | null;
+  durationMs: number | null;
+};
+
 export type UploadCapturedPostsMessageResponse =
-  | { ok: true; store: CapturedPostsStore; uploaded: string[]; failed: string[] }
+  | {
+      ok: true;
+      store: CapturedPostsStore;
+      uploaded: string[];
+      failed: string[];
+      uploadSummary?: UploadCapturedPostsSummary | null;
+    }
   | { ok: false; error: string };

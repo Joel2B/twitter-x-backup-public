@@ -15,8 +15,28 @@
 .captured-post-card-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
+}
+
+.captured-post-id-link {
+  border: 0;
+  background: transparent;
+  color: #1a2f3b;
+  font-size: 12px;
+  padding: 0;
+  line-height: 1.2;
+}
+
+.captured-post-id-link.clickable {
+  color: #0a5a72;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.captured-post-card-top .status {
+  margin-left: auto;
 }
 
 .captured-post-preview {

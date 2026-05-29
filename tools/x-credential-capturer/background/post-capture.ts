@@ -5,6 +5,7 @@ import type {
   ProcessedPostMedia,
   ProcessedPostProfile,
   ProcessedPostVariant,
+  UploadCapturedPostsSummary,
   UploadCapturedPostsMessageResponse
 } from "../popup/models.js";
 import {
@@ -19,6 +20,20 @@ type CaptureResponseBodyPayload = {
   status?: number;
   body: string;
   capturedAt?: string;
+};
+
+type UploadApiDiagnosticsPayload = {
+  beforeCount: number | null;
+  afterCount: number | null;
+  deltaCount: number | null;
+  ignoredPosts: number | null;
+  durationMs: number | null;
+};
+
+type UploadApiResponsePayload = {
+  receivedPosts: number | null;
+  savedPosts: number | null;
+  diagnostics: UploadApiDiagnosticsPayload | null;
 };
 
 function isSupportedOperation(operation: string | null): boolean {
@@ -78,6 +93,59 @@ function normalizeHashtagToken(value: unknown): string | null {
 
   const normalized = value.trim().replace(/^#+/, "").toLowerCase();
   return normalized || null;
+}
+
+function toNullableNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function readProperty(source: unknown, camelName: string, pascalName: string): unknown {
+  if (!isPlainObject(source)) {
+    return null;
+  }
+
+  return source[camelName] ?? source[pascalName] ?? null;
+}
+
+function parseUploadApiResponse(value: unknown): UploadApiResponsePayload | null {
+  if (!isPlainObject(value)) {
+    return null;
+  }
+
+  const diagnosticsSource = readProperty(value, "diagnostics", "Diagnostics");
+  const diagnostics: UploadApiDiagnosticsPayload | null = isPlainObject(diagnosticsSource)
+    ? {
+        beforeCount: toNullableNumber(readProperty(diagnosticsSource, "beforeCount", "BeforeCount")),
+        afterCount: toNullableNumber(readProperty(diagnosticsSource, "afterCount", "AfterCount")),
+        deltaCount: toNullableNumber(readProperty(diagnosticsSource, "deltaCount", "DeltaCount")),
+        ignoredPosts: toNullableNumber(readProperty(diagnosticsSource, "ignoredPosts", "IgnoredPosts")),
+        durationMs: toNullableNumber(readProperty(diagnosticsSource, "durationMs", "DurationMs"))
+      }
+    : null;
+
+  return {
+    receivedPosts: toNullableNumber(readProperty(value, "receivedPosts", "ReceivedPosts")),
+    savedPosts: toNullableNumber(readProperty(value, "savedPosts", "SavedPosts")),
+    diagnostics
+  };
+}
+
+function buildUploadSummary(
+  attemptedPosts: number,
+  apiResult: UploadApiResponsePayload | null
+): UploadCapturedPostsSummary {
+  const diagnostics = apiResult?.diagnostics;
+
+  return {
+    attemptedPosts,
+    receivedPosts: apiResult?.receivedPosts ?? null,
+    savedPosts: apiResult?.savedPosts ?? null,
+    ignoredPosts: diagnostics?.ignoredPosts ?? null,
+    beforeCount: diagnostics?.beforeCount ?? null,
+    afterCount: diagnostics?.afterCount ?? null,
+    deltaCount: diagnostics?.deltaCount ?? null,
+    durationMs: diagnostics?.durationMs ?? null
+  };
 }
 
 function normalizeCaptureHashtags(value: unknown): string[] {
@@ -756,7 +824,7 @@ export async function uploadCapturedPosts(
     .filter((item): item is CapturedPostItem => Boolean(item && !item.uploadedAt));
 
   if (candidates.length === 0) {
-    return { ok: true, store, uploaded: [], failed: [] };
+    return { ok: true, store, uploaded: [], failed: [], uploadSummary: null };
   }
 
   if (!store.uploadUserId) {
@@ -791,6 +859,10 @@ export async function uploadCapturedPosts(
     return { ok: false, error: `Upload failed: ${message}` };
   }
 
+  const apiPayload = await response.json().catch(() => null);
+  const apiResult = parseUploadApiResponse(apiPayload);
+  const uploadSummary = buildUploadSummary(candidates.length, apiResult);
+
   const uploadedAt = nowIso();
   const nextStore: CapturedPostsStore = {
     ...store,
@@ -811,5 +883,11 @@ export async function uploadCapturedPosts(
   }
 
   const savedStore = await saveCapturedPostsStore(nextStore);
-  return { ok: true, store: savedStore, uploaded: candidates.map((item) => item.id), failed: [] };
+  return {
+    ok: true,
+    store: savedStore,
+    uploaded: candidates.map((item) => item.id),
+    failed: [],
+    uploadSummary
+  };
 }

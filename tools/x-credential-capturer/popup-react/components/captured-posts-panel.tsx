@@ -22,7 +22,9 @@ type CapturedPostsPanelProps = {
   onCaptureHashtagDraftChange: (value: string) => void;
   onCaptureHashtagDraftKeyDown: (event: { key: string; preventDefault: () => void }) => void;
   onAddCaptureHashtag: () => void;
+  onOpenCapturedPostExternalUrl: (id: string) => void;
   onOpenCaptureHashtag: (value: string) => void;
+  onOpenCaptureHashtagInWindow: (value: string) => void;
   onRemoveCaptureHashtag: (value: string) => void;
   onToggleRow: (id: string, checked: boolean) => void;
   onSelectAllPending: () => void;
@@ -57,7 +59,9 @@ export function CapturedPostsPanel({
   onCaptureHashtagDraftChange,
   onCaptureHashtagDraftKeyDown,
   onAddCaptureHashtag,
+  onOpenCapturedPostExternalUrl,
   onOpenCaptureHashtag,
+  onOpenCaptureHashtagInWindow,
   onRemoveCaptureHashtag,
   onToggleRow,
   onSelectAllPending,
@@ -127,6 +131,21 @@ export function CapturedPostsPanel({
                   title={`Open #${hashtag}`}
                   onClick={() => {
                     onOpenCaptureHashtag(hashtag);
+                  }}
+                  onMouseDown={(event) => {
+                    if (event.button !== 1) {
+                      return;
+                    }
+
+                    event.preventDefault();
+                    onOpenCaptureHashtagInWindow(hashtag);
+                  }}
+                  onAuxClick={(event) => {
+                    if (event.button !== 1) {
+                      return;
+                    }
+
+                    event.preventDefault();
                   }}
                 >
                   #{hashtag}
@@ -296,10 +315,17 @@ export function CapturedPostsPanel({
               <div className="captured-post-thumb-wrap">
                 {row.item.mediaUrls[0] ? (
                   <img
-                    className="captured-post-thumb"
+                    className={`captured-post-thumb ${row.externalUrl ? "clickable" : ""}`}
                     src={row.item.mediaUrls[0]}
                     alt="media thumbnail"
                     loading="lazy"
+                    onClick={() => {
+                      if (!row.externalUrl) {
+                        return;
+                      }
+
+                      onOpenCapturedPostExternalUrl(row.item.id);
+                    }}
                   />
                 ) : (
                   <div className="captured-post-thumb captured-post-thumb-empty">No thumbnail</div>
@@ -334,8 +360,22 @@ export function CapturedPostsPanel({
                         onToggleRow(row.item.id, event.target.checked);
                       }}
                     />
-                    <span>{row.item.id}</span>
+                    <span />
                   </label>
+                  <button
+                    className={`captured-post-id-link ${row.externalUrl ? "clickable" : ""}`}
+                    type="button"
+                    onClick={() => {
+                      if (!row.externalUrl) {
+                        return;
+                      }
+
+                      onOpenCapturedPostExternalUrl(row.item.id);
+                    }}
+                    title={row.externalUrl ? "Open link from description (last t.co)" : "No t.co link"}
+                  >
+                    {row.item.id}
+                  </button>
                   <span className={`status ${row.item.uploadedAt ? "ok" : "pending"}`}>
                     {row.item.uploadedAt ? "Uploaded" : "Pending"}
                   </span>
