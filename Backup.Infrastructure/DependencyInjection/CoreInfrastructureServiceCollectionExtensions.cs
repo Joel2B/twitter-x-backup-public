@@ -1,4 +1,5 @@
 using Backup.App.Data.Partition;
+using Backup.App.Extensions;
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Config;
 using Backup.App.Interfaces.Partition;
@@ -36,6 +37,14 @@ public static class CoreInfrastructureServiceCollectionExtensions
     public static IServiceCollection AddCoreLoggingInfrastructure(this IServiceCollection services)
     {
         services.AddLogging();
+        return services;
+    }
+
+    public static IServiceCollection AddStructuredLoggingInfrastructure(
+        this IServiceCollection services
+    )
+    {
+        services.AddSerilog();
         return services;
     }
 
