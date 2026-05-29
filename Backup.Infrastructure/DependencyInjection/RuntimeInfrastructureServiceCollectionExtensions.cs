@@ -1,13 +1,13 @@
 using Backup.Infrastructure.Data.Media;
 using Backup.Infrastructure.Data.Proxy;
-using Backup.App.Interfaces;
-using Backup.App.Interfaces.Data.Proxy;
-using Backup.App.Interfaces.Proxy;
-using Backup.App.Interfaces.Services.Media;
-using Backup.App.Interfaces.Services.Posts;
-using Backup.App.Interfaces.Services.UtilsService;
+using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Interfaces.Data.Proxy;
+using Backup.Infrastructure.Interfaces.Proxy;
+using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Interfaces.Services.UtilsService;
 using Backup.Infrastructure.Services.Bulk;
-using Backup.App.Services.Media;
+using Backup.Infrastructure.Services.Media;
 using Backup.Infrastructure.Services.Posts;
 using Backup.Infrastructure.Services.Proxy;
 using Backup.Infrastructure.Services.UtilsService;
@@ -52,6 +52,7 @@ public static class RuntimeInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+
 
 
 

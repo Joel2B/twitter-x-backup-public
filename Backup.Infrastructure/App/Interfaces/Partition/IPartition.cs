@@ -1,6 +1,6 @@
-using Backup.App.Models.Config.Data;
+using Backup.Infrastructure.Models.Config.Data;
 
-namespace Backup.App.Interfaces.Partition;
+namespace Backup.Infrastructure.Interfaces.Partition;
 
 public interface IPartition
 {
@@ -11,3 +11,4 @@ public interface IPartition
     public PartitionConfig GetHeavy();
     public void SetupSizes(Dictionary<int, long> sizes);
 }
+

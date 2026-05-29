@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Media.Backup;
+namespace Backup.Infrastructure.Models.Media.Backup;
 
 public class BackupChunks
 {
@@ -17,3 +17,4 @@ public class PathChunks
 {
     public int Increase { get; set; }
 }
+

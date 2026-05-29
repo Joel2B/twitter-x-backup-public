@@ -1,5 +1,5 @@
-using Backup.App.Interfaces.Proxy;
-using Backup.App.Models.Proxy;
+using Backup.Infrastructure.Interfaces.Proxy;
+using Backup.Infrastructure.Models.Proxy;
 
 namespace Backup.Infrastructure.Services.Proxy.Formatter;
 
@@ -24,4 +24,5 @@ public class ProxyFormatterSimple : IProxyFormatter
         return proxies;
     }
 }
+
 

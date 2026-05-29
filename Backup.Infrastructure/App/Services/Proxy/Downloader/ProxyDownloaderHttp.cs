@@ -1,7 +1,7 @@
 using System.Net;
-using Backup.App.Interfaces.Proxy;
-using Backup.App.Models.Config.Proxy;
-using Backup.App.Models.Proxy;
+using Backup.Infrastructure.Interfaces.Proxy;
+using Backup.Infrastructure.Models.Config.Proxy;
+using Backup.Infrastructure.Models.Proxy;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Proxy.Downloader;
@@ -47,4 +47,5 @@ public class ProxyDownloaderHttp(ILogger _logger, IProxyFormatter _formatter) : 
         return proxies;
     }
 }
+
 

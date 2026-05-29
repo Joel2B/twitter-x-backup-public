@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Bulk;
+namespace Backup.Infrastructure.Models.Bulk;
 
 public class User
 {
@@ -13,3 +13,4 @@ public enum StatusUser
     Active,
     Inactive,
 }
+

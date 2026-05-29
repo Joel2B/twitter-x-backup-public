@@ -1,7 +1,7 @@
-using Backup.App.Models.Media;
+using Backup.Infrastructure.Models.Media;
 using Microsoft.AspNetCore.WebUtilities;
 
-namespace Backup.App.Utils;
+namespace Backup.Infrastructure.Utils;
 
 public class MediaProcessor
 {
@@ -44,3 +44,4 @@ public class MediaProcessor
         return new() { Url = url, Path = path };
     }
 }
+

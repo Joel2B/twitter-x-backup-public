@@ -1,7 +1,7 @@
-using Backup.App.Models.Config;
-using Backup.App.Models.Config.Data;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Data;
 
-namespace Backup.App.Utils;
+namespace Backup.Infrastructure.Utils;
 
 public class UtilsPath
 {
@@ -109,3 +109,4 @@ public class UtilsPath
         return GetPath(paths);
     }
 }
+

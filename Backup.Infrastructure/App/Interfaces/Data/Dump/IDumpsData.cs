@@ -1,9 +1,10 @@
-using Backup.App.Models.Dump;
+using Backup.Infrastructure.Models.Dump;
 
-namespace Backup.App.Interfaces.Data.Posts;
+namespace Backup.Infrastructure.Interfaces.Data.Posts;
 
 public interface IDumpsData
 {
     public Task<DumpsData> GetData();
     public Task Save(DumpsData dumps);
 }
+

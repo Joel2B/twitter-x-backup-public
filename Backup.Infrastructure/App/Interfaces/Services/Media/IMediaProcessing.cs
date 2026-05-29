@@ -1,7 +1,7 @@
-using Backup.App.Models.Media;
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Models.Posts;
 
-namespace Backup.App.Interfaces.Services.Media;
+namespace Backup.Infrastructure.Interfaces.Services.Media;
 
 public interface IMediaProcessing
 {
@@ -9,3 +9,4 @@ public interface IMediaProcessing
     public List<Download> GetMedia();
     public List<Download> GetFilteredMedia();
 }
+

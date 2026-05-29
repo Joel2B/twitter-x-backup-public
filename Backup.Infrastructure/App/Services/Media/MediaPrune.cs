@@ -1,9 +1,9 @@
-using Backup.App.Interfaces.Services.Media;
-using Backup.App.Models.Config;
-using Backup.App.Models.Media;
+using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Media;
 using Microsoft.AspNetCore.WebUtilities;
 
-namespace Backup.App.Services.Media;
+namespace Backup.Infrastructure.Services.Media;
 
 public class MediaPrune(AppConfig _config) : IMediaPrune
 {
@@ -42,3 +42,4 @@ public class MediaPrune(AppConfig _config) : IMediaPrune
         return Task.CompletedTask;
     }
 }
+

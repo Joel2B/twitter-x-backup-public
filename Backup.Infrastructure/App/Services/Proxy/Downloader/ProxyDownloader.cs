@@ -1,4 +1,4 @@
-using Backup.App.Interfaces.Proxy;
+using Backup.Infrastructure.Interfaces.Proxy;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Proxy.Downloader;
@@ -18,4 +18,5 @@ public class ProxyDownloader(ILogger _logger, IProxyFormatter _formatter)
         };
     }
 }
+
 

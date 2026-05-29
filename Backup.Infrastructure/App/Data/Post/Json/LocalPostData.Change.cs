@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Models.Posts;
 
 namespace Backup.Infrastructure.Data.Posts;
 
@@ -28,4 +28,5 @@ public partial class LocalPostData
         return JsonSerializer.Deserialize<T>(json, ChangeJsonOptions);
     }
 }
+
 

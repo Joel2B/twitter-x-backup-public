@@ -1,11 +1,11 @@
 using Backup.Infrastructure.Logging;
-using Backup.App.Interfaces.Data.Posts;
-using Backup.App.Interfaces.Services.Media;
-using Backup.App.Models.Media;
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Models.Posts;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Media;
+namespace Backup.Infrastructure.Services.Media;
 
 public class MediaService(
     ILogger<MediaService> _logger,
@@ -120,3 +120,4 @@ public class MediaService(
     private static int GetCount(List<Download> downloads) =>
         downloads.SelectMany(o => o.Data).Count();
 }
+

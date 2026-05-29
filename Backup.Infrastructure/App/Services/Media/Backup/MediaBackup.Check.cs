@@ -1,10 +1,10 @@
 using Backup.Infrastructure.Logging;
-using Backup.App.Interfaces.Services.Media;
-using Backup.App.Interfaces.Services.UtilsService;
+using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Interfaces.Services.UtilsService;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Services.Media;
+namespace Backup.Infrastructure.Services.Media;
 
 public partial class MediaBackup : IMediaBackup
 {
@@ -203,3 +203,4 @@ public partial class MediaBackup : IMediaBackup
         );
     }
 }
+

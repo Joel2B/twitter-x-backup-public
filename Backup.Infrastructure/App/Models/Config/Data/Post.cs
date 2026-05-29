@@ -1,6 +1,6 @@
-using Backup.App.Models.Config.Downloads;
+using Backup.Infrastructure.Models.Config.Downloads;
 
-namespace Backup.App.Models.Config.Data.Posts;
+namespace Backup.Infrastructure.Models.Config.Data.Posts;
 
 public class StoragePost : Storage
 {
@@ -11,3 +11,4 @@ public class Paths : PathConfig
 {
     public required PathConfig Post { get; set; }
 }
+

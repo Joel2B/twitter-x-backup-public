@@ -1,6 +1,6 @@
-using Backup.App.Models.Config.Downloads;
+using Backup.Infrastructure.Models.Config.Downloads;
 
-namespace Backup.App.Models.Config.Data;
+namespace Backup.Infrastructure.Models.Config.Data;
 
 public class PartitionConfig : PathConfig
 {
@@ -12,3 +12,4 @@ public class PartitionConfig : PathConfig
     public required int UsableSpace { get; set; }
     public bool Enabled { get; set; } = true;
 }
+

@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Media;
+namespace Backup.Infrastructure.Models.Media;
 
 public class Cache
 {
@@ -12,3 +12,4 @@ public class Size
     public long? Stream { get; set; }
     public long? File { get; set; }
 }
+

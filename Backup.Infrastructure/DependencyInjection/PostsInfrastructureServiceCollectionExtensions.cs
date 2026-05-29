@@ -1,7 +1,7 @@
 using Backup.Infrastructure.Data.Posts;
-using Backup.App.Interfaces.Data.Posts;
-using Backup.App.Interfaces.Services.Posts;
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Models.Posts;
 using Backup.Infrastructure.Services.Posts;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -22,5 +22,6 @@ public static class PostsInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+
 
 

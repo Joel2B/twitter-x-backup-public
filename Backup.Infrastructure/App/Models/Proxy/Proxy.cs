@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Proxy;
+namespace Backup.Infrastructure.Models.Proxy;
 
 public class ProxyDataConfig
 {
@@ -21,3 +21,4 @@ public class ProxyDataConfig
 
     public override string ToString() => $"{Protocol}://{Ip}:{Port}";
 }
+

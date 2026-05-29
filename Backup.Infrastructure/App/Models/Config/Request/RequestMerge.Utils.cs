@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace Backup.App.Models.Config.ApiRequest;
+namespace Backup.Infrastructure.Models.Config.ApiRequest;
 
 internal static class RequestMergeUtils
 {
@@ -73,3 +73,4 @@ internal static class RequestMergeUtils
         return text;
     }
 }
+

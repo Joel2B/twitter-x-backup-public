@@ -1,7 +1,7 @@
-using Backup.App.Models.Posts;
-using Backup.App.Models.Posts.Response;
+using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Models.Posts.Response;
 
-namespace Backup.App.Mapper;
+namespace Backup.Infrastructure.Mapper;
 
 public class Profile()
 {
@@ -42,3 +42,4 @@ public class Profile()
         return profile;
     }
 }
+

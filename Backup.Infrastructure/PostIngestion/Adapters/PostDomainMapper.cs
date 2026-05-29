@@ -1,5 +1,5 @@
 using Backup.Domain.Posts;
-using AppPosts = Backup.App.Models.Posts;
+using AppPosts = Backup.Infrastructure.Models.Posts;
 
 namespace Backup.Infrastructure.PostIngestion.Adapters;
 
@@ -159,3 +159,4 @@ internal static class PostDomainMapper
     private static AppPosts.IndexData ToApp(IndexData source) =>
         new() { Previous = source.Previous, Next = source.Next };
 }
+

@@ -1,4 +1,4 @@
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Models.Posts;
 
 namespace Backup.Infrastructure.Data.Posts;
 
@@ -210,4 +210,5 @@ public partial class SqlitePostData
         };
     }
 }
+
 

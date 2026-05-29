@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Models.Posts;
 
 namespace Backup.Infrastructure.Data.Posts;
 
@@ -401,4 +401,5 @@ public partial class SqlitePostData
     private static Dictionary<string, IndexData> CloneIndex(Dictionary<string, IndexData> index) =>
         index.ToDictionary(o => o.Key, o => o.Value.Clone(), StringComparer.Ordinal);
 }
+
 

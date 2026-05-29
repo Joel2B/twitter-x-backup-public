@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Posts;
+namespace Backup.Infrastructure.Models.Posts;
 
 public class PostProfile
 {
@@ -29,3 +29,4 @@ public class PostCount
 
     public PostCount Clone() => new() { Media = Media };
 }
+

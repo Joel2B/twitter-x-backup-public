@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Posts;
+namespace Backup.Infrastructure.Models.Posts;
 
 public class PostStoreCounts
 {
@@ -12,3 +12,4 @@ public class PostStoreCounts
     public int ChangeFields { get; set; }
     public int HashMeta { get; set; }
 }
+

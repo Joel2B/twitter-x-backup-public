@@ -1,8 +1,8 @@
-using Backup.App.Interfaces.Services.Media;
-using Backup.App.Models.Media;
-using Backup.App.Models.Utils;
+using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Models.Utils;
 
-namespace Backup.App.Services.Media;
+namespace Backup.Infrastructure.Services.Media;
 
 public class MediaIntegrity : IMediaIntegrity
 {
@@ -24,3 +24,4 @@ public class MediaIntegrity : IMediaIntegrity
         await data.CheckIntegrity(downloads);
     }
 }
+

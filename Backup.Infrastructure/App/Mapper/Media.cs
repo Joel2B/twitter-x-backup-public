@@ -1,8 +1,8 @@
-using Backup.App.Models.Posts;
-using Backup.App.Models.Posts.Response;
+using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Models.Posts.Response;
 using Newtonsoft.Json.Linq;
 
-namespace Backup.App.Mapper;
+namespace Backup.Infrastructure.Mapper;
 
 public class Media
 {
@@ -97,3 +97,4 @@ public class Media
         return videoInfo;
     }
 }
+

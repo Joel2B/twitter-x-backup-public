@@ -1,11 +1,11 @@
 using System.Collections.Concurrent;
 using System.Text;
-using Backup.App.Interfaces;
-using Backup.App.Interfaces.Partition;
-using Backup.App.Models.Config;
-using Backup.App.Models.Config.Data;
-using Backup.App.Models.Partition;
-using Backup.App.Utils;
+using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Data;
+using Backup.Infrastructure.Models.Partition;
+using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Data.Partition;
@@ -220,4 +220,5 @@ public class LocalPartition(
 
     public PartitionConfig GetHeavy() => GetPartitions().First(o => o.Type == "heavy");
 }
+
 

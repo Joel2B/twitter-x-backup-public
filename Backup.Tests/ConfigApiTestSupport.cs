@@ -1,5 +1,5 @@
 using System.Reflection;
-using Backup.App.Models.Config;
+using Backup.Infrastructure.Models.Config;
 using Microsoft.Extensions.Configuration;
 
 namespace Backup.Tests;
@@ -45,3 +45,4 @@ internal static class ConfigApiTestSupport
         throw new Exception("Repository root not found.");
     }
 }
+

@@ -1,10 +1,10 @@
-using Backup.App.Interfaces;
-using Backup.App.Interfaces.Data.Proxy;
-using Backup.App.Interfaces.Partition;
-using Backup.App.Models.Config;
-using Backup.App.Models.Config.Data;
-using Backup.App.Models.Proxy;
-using Backup.App.Utils;
+using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Interfaces.Data.Proxy;
+using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Data;
+using Backup.Infrastructure.Models.Proxy;
+using Backup.Infrastructure.Utils;
 using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Data.Proxy;
@@ -81,4 +81,5 @@ public class LocalProxyData(AppConfig _config, IPartition _partition) : IProxyDa
         await File.WriteAllTextAsync(path, json);
     }
 }
+
 

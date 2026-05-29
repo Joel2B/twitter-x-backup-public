@@ -1,6 +1,7 @@
-namespace Backup.App.Interfaces.Data.Bulk;
+namespace Backup.Infrastructure.Interfaces.Data.Bulk;
 
 public interface IBulkSourceDataStore : IBulkSourceData
 {
     public bool IsDefault { get; set; }
 }
+

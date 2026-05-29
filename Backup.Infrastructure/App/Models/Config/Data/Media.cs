@@ -1,6 +1,6 @@
-using Backup.App.Models.Config.Downloads;
+using Backup.Infrastructure.Models.Config.Downloads;
 
-namespace Backup.App.Models.Config.Data.Media;
+namespace Backup.Infrastructure.Models.Config.Data.Media;
 
 public class StorageMedia : Storage
 {
@@ -14,3 +14,4 @@ public class Paths : PathConfig
     public required PathConfig Cache { get; set; }
     public required Tmp Tmp { get; set; }
 }
+

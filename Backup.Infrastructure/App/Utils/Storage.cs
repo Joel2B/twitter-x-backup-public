@@ -1,4 +1,4 @@
-namespace Backup.App.Utils;
+namespace Backup.Infrastructure.Utils;
 
 public class UtilsStorage
 {
@@ -23,3 +23,4 @@ public class UtilsStorage
         return $"{size:0.##} {units[unitIndex]}";
     }
 }
+

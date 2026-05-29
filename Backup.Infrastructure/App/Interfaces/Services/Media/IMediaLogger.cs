@@ -1,6 +1,6 @@
-using Backup.App.Models.Media.Logging;
+using Backup.Infrastructure.Models.Media.Logging;
 
-namespace Backup.App.Interfaces.Services.Media;
+namespace Backup.Infrastructure.Interfaces.Services.Media;
 
 public interface IMediaLogger
 {
@@ -10,3 +10,4 @@ public interface IMediaLogger
     public void Log(Logs log);
     public Task Save();
 }
+

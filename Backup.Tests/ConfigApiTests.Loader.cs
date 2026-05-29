@@ -1,5 +1,5 @@
-using Backup.App.Models.Config;
-using Backup.App.Models.Config.Api;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Api;
 
 namespace Backup.Tests;
 
@@ -245,3 +245,4 @@ public partial class ConfigApiTests
         return Directory.GetFiles(folderPath, "*.json", SearchOption.TopDirectoryOnly).Length > 0;
     }
 }
+

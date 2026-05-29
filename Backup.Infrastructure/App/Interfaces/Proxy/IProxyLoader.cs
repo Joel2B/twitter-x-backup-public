@@ -1,9 +1,10 @@
-using Backup.App.Models.Config.Proxy;
-using Backup.App.Models.Proxy;
+using Backup.Infrastructure.Models.Config.Proxy;
+using Backup.Infrastructure.Models.Proxy;
 
-namespace Backup.App.Interfaces.Proxy;
+namespace Backup.Infrastructure.Interfaces.Proxy;
 
 public interface IProxyDownloader
 {
     public Task<List<ProxyDataConfig>?> Load(Resource resource);
 }
+

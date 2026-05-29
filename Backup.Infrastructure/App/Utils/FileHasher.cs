@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace Backup.App.Utils;
+namespace Backup.Infrastructure.Utils;
 
 public static class FileHasher
 {
@@ -26,3 +26,4 @@ public static class FileHasher
         return Convert.ToHexString(hashBytes);
     }
 }
+

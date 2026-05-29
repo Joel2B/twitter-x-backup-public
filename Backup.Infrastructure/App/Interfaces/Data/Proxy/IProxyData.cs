@@ -1,6 +1,6 @@
-﻿using Backup.App.Models.Proxy;
+using Backup.Infrastructure.Models.Proxy;
 
-namespace Backup.App.Interfaces.Data.Proxy;
+namespace Backup.Infrastructure.Interfaces.Data.Proxy;
 
 public interface IProxyData
 {
@@ -8,3 +8,4 @@ public interface IProxyData
     public Task<Dictionary<ProxyDataConfig, ProxyData>?> GetAllAsDictionary();
     public Task Save(List<ProxyData> datas);
 }
+

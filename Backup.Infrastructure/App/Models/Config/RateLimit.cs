@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Config;
+namespace Backup.Infrastructure.Models.Config;
 
 public class RateLimit
 {
@@ -13,3 +13,4 @@ public class RateLimitWait
     public int Max { get; set; }
     public bool Reset { get; set; }
 }
+

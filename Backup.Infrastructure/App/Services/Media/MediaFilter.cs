@@ -1,8 +1,8 @@
-using Backup.App.Interfaces.Services.Media;
-using Backup.App.Models.Media;
-using Backup.App.Models.Media.Logging;
+using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Models.Media.Logging;
 
-namespace Backup.App.Services.Media;
+namespace Backup.Infrastructure.Services.Media;
 
 public class MediaFilter(IMediaLogger _mediaLogger) : IMediaFilter
 {
@@ -23,3 +23,4 @@ public class MediaFilter(IMediaLogger _mediaLogger) : IMediaFilter
         downloads.RemoveAll(dl => dl.Data.Count == 0);
     }
 }
+

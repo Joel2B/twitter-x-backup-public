@@ -1,6 +1,6 @@
-using Backup.App.Models.Utils;
+using Backup.Infrastructure.Models.Utils;
 
-namespace Backup.App.Utils;
+namespace Backup.Infrastructure.Utils;
 
 public class Text
 {
@@ -15,3 +15,4 @@ public class Text
         return new() { Diff1 = diff1, Diff2 = diff2 };
     }
 }
+

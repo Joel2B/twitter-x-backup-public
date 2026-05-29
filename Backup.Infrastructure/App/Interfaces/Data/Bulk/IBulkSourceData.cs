@@ -1,8 +1,9 @@
-﻿using Backup.App.Models.Bulk;
+using Backup.Infrastructure.Models.Bulk;
 
-namespace Backup.App.Interfaces.Data.Bulk;
+namespace Backup.Infrastructure.Interfaces.Data.Bulk;
 
 public interface IBulkSourceData
 {
     public Task<List<Source>> GetSources();
 }
+

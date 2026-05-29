@@ -1,6 +1,6 @@
-using Backup.App.Models.Posts.Response;
+using Backup.Infrastructure.Models.Posts.Response;
 
-namespace Backup.App.Mapper;
+namespace Backup.Infrastructure.Mapper;
 
 public class Hashtag
 {
@@ -24,3 +24,4 @@ public class Hashtag
         return hashtags;
     }
 }
+

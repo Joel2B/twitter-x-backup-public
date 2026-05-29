@@ -1,6 +1,6 @@
-using Backup.App.Models.Config.Downloads;
+using Backup.Infrastructure.Models.Config.Downloads;
 
-namespace Backup.App.Models.Config.Proxy;
+namespace Backup.Infrastructure.Models.Config.Proxy;
 
 public class ProxyConfig
 {
@@ -35,3 +35,4 @@ public class Resource
     public required string Type { get; set; }
     public required string Value { get; set; }
 }
+

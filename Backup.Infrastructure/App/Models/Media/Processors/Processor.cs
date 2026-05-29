@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Media.Processors;
+namespace Backup.Infrastructure.Models.Media.Processors;
 
 public class Data
 {
@@ -23,3 +23,4 @@ public class Resolution
     public required string Name { get; set; }
     public required string Type { get; set; }
 }
+

@@ -1,6 +1,6 @@
-using Backup.App.Models.Config.Downloads;
+using Backup.Infrastructure.Models.Config.Downloads;
 
-namespace Backup.App.Models.Config.Data.Backup;
+namespace Backup.Infrastructure.Models.Config.Data.Backup;
 
 public class ChunkConfig : PathConfig
 {
@@ -15,3 +15,4 @@ public class PathChunkConfig : PathConfig
     public int Increase { get; set; }
     public int Size { get; set; }
 }
+

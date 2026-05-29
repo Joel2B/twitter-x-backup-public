@@ -1,9 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Models.Posts;
 using Newtonsoft.Json;
 
-namespace Backup.App.Utils;
+namespace Backup.Infrastructure.Utils;
 
 public static class PostHash
 {
@@ -86,3 +86,4 @@ public static class PostHash
         };
     }
 }
+

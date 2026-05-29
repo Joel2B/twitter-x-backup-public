@@ -1,6 +1,6 @@
 using System.Globalization;
-using Backup.App.Models.Config.Api;
-using Backup.App.Models.Config.ApiRequest;
+using Backup.Infrastructure.Models.Config.Api;
+using Backup.Infrastructure.Models.Config.ApiRequest;
 
 namespace Backup.Tests;
 
@@ -164,3 +164,4 @@ public partial class ConfigApiTests
         }
     }
 }
+

@@ -1,6 +1,6 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 
-namespace Backup.App.Models.Posts.Response;
+namespace Backup.Infrastructure.Models.Posts.Response;
 
 public class AffiliatesHighlightedLabel { }
 
@@ -785,3 +785,4 @@ public class RelationshipPerspectives
     [JsonProperty("following", NullValueHandling = NullValueHandling.Ignore)]
     public required bool Following { get; set; }
 }
+

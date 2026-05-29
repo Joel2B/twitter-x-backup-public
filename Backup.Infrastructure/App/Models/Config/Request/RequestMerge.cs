@@ -1,6 +1,6 @@
-using Backup.App.Models.Config.Api;
+using Backup.Infrastructure.Models.Config.Api;
 
-namespace Backup.App.Models.Config.ApiRequest;
+namespace Backup.Infrastructure.Models.Config.ApiRequest;
 
 public static class RequestMerge
 {
@@ -16,3 +16,4 @@ public static class RequestMerge
         return request;
     }
 }
+

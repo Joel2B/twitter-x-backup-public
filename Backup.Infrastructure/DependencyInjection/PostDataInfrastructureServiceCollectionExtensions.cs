@@ -1,9 +1,9 @@
 using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.Data.Posts;
-using Backup.App.Interfaces;
-using Backup.App.Interfaces.Data.Posts;
-using Backup.App.Interfaces.Partition;
-using Backup.App.Models.Config.Data.Posts;
+using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Models.Config.Data.Posts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;
@@ -74,5 +74,6 @@ public static class PostDataInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+
 
 

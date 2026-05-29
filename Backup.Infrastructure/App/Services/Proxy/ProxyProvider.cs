@@ -1,9 +1,9 @@
 using System.Net;
-using Backup.App.Interfaces;
-using Backup.App.Interfaces.Data.Proxy;
-using Backup.App.Interfaces.Proxy;
-using Backup.App.Models.Config;
-using Backup.App.Models.Proxy;
+using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Interfaces.Data.Proxy;
+using Backup.Infrastructure.Interfaces.Proxy;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Proxy;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -379,4 +379,5 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, AppConfig _config, IP
         GC.SuppressFinalize(this);
     }
 }
+
 

@@ -1,6 +1,6 @@
-using Backup.App.Models.Config.Data;
+using Backup.Infrastructure.Models.Config.Data;
 
-namespace Backup.App.Models.Partition;
+namespace Backup.Infrastructure.Models.Partition;
 
 public class PartitionSize
 {
@@ -17,3 +17,4 @@ public class PartitionSize
         Interlocked.Add(ref _size, size);
     }
 }
+

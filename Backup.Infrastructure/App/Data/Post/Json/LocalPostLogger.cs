@@ -1,8 +1,8 @@
-using Backup.App.Interfaces.Data.Posts;
-using Backup.App.Interfaces.Partition;
-using Backup.App.Models.Config;
-using Backup.App.Models.Config.Data;
-using Backup.App.Utils;
+using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Data;
+using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Data.Posts;
@@ -102,4 +102,5 @@ public class LocalPostLogger(
         return Task.CompletedTask;
     }
 }
+
 

@@ -1,5 +1,5 @@
-using Backup.App.Interfaces.Services.UtilsService;
-using Backup.App.Models.Config;
+using Backup.Infrastructure.Interfaces.Services.UtilsService;
+using Backup.Infrastructure.Models.Config;
 
 namespace Backup.Infrastructure.Services.UtilsService;
 
@@ -49,4 +49,5 @@ public class BandwidthLimiter(AppConfig config) : IBandwidthLimiter
         }
     }
 }
+
 

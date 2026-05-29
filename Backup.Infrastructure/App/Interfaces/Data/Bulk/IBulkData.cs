@@ -1,6 +1,6 @@
-﻿using Backup.App.Models.Bulk;
+using Backup.Infrastructure.Models.Bulk;
 
-namespace Backup.App.Interfaces.Data.Bulk;
+namespace Backup.Infrastructure.Interfaces.Data.Bulk;
 
 public interface IBulkData
 {
@@ -9,3 +9,4 @@ public interface IBulkData
     public Task Save(List<BulkData> bulks);
     public Task Prune();
 }
+

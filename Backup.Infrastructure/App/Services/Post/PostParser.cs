@@ -1,7 +1,7 @@
-using Backup.App.Interfaces.Services.Posts;
-using PostMapper = Backup.App.Mapper.Posts;
-using Backup.App.Models.Posts;
-using Backup.App.Models.Posts.Response;
+using Backup.Infrastructure.Interfaces.Services.Posts;
+using PostMapper = Backup.Infrastructure.Mapper.Posts;
+using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Models.Posts.Response;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -242,4 +242,5 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
         return new ParseUser(user);
     }
 }
+
 

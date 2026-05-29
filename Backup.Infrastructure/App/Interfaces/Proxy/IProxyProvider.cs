@@ -1,4 +1,4 @@
-namespace Backup.App.Interfaces.Proxy;
+namespace Backup.Infrastructure.Interfaces.Proxy;
 
 public interface IProxyProvider
 {
@@ -9,3 +9,4 @@ public interface IProxyProvider
     public void OnError(Exception ex);
     public Task SaveData();
 }
+

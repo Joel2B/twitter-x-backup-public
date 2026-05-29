@@ -1,9 +1,9 @@
-using Backup.App.Interfaces;
-using Backup.App.Interfaces.Data.Posts;
-using Backup.App.Interfaces.Partition;
-using Backup.App.Models.Config.Data;
-using Backup.App.Models.Config.Data.Posts;
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Models.Config.Data;
+using Backup.Infrastructure.Models.Config.Data.Posts;
+using Backup.Infrastructure.Models.Posts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -354,7 +354,7 @@ public partial class SqlitePostData(
 
             db.PostChanges.Add(change);
             meta.Deleted = true;
-            meta.Hash = Backup.App.Utils.PostHash.Compute(ToModel(entity, deleted: true));
+            meta.Hash = Backup.Infrastructure.Utils.PostHash.Compute(ToModel(entity, deleted: true));
             marked++;
         }
 
@@ -496,4 +496,5 @@ public partial class SqlitePostData(
         GC.SuppressFinalize(this);
     }
 }
+
 

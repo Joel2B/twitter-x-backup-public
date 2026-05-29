@@ -1,8 +1,8 @@
 using Backup.Infrastructure.Core.Media;
-using Backup.App.Models.Config.Medias;
-using Backup.App.Models.Media;
-using Backup.App.Models.Media.Processors;
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Models.Config.Medias;
+using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Models.Media.Processors;
+using Backup.Infrastructure.Models.Posts;
 
 namespace Backup.Infrastructure.Services.Media.Processors;
 
@@ -35,7 +35,7 @@ public class BannerProcessor(BannerConfig config, MediaProcessorContext context)
 
             foreach (Resolution resolution in resolutions)
             {
-                DataDownload dataDownload = Backup.App.Utils.MediaProcessor.GetData(
+                DataDownload dataDownload = Backup.Infrastructure.Utils.MediaProcessor.GetData(
                     new()
                     {
                         PostId = "profiles",
@@ -55,6 +55,7 @@ public class BannerProcessor(BannerConfig config, MediaProcessorContext context)
         }
     }
 }
+
 
 
 

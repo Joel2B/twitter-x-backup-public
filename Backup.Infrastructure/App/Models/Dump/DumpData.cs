@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Dump;
+namespace Backup.Infrastructure.Models.Dump;
 
 public class DumpData
 {
@@ -10,3 +10,4 @@ public class DumpData
     public int Count { get; set; } = 0;
     public DateTime LastUpdate { get; set; } = DateTime.Now;
 }
+

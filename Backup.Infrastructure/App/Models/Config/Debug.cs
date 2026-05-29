@@ -1,6 +1,6 @@
-using Backup.App.Models.Config.Downloads;
+using Backup.Infrastructure.Models.Config.Downloads;
 
-namespace Backup.App.Models.Config;
+namespace Backup.Infrastructure.Models.Config;
 
 public class DebugConfig : PathConfig
 {
@@ -19,3 +19,4 @@ public class DebugPrune
     public bool Enabled { get; set; }
     public int RetainedCountLimit { get; set; }
 }
+

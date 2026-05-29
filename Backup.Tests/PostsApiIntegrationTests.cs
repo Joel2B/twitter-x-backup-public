@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Models.Posts;
 
 namespace Backup.Tests;
 
@@ -156,3 +156,4 @@ public partial class PostsApiIntegrationTests
         Assert.Equal(0, fakePostData.SaveCalls);
     }
 }
+

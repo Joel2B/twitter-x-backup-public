@@ -1,4 +1,4 @@
-﻿namespace Backup.App.Models.Posts;
+namespace Backup.Infrastructure.Models.Posts;
 
 public class Post : PostData
 {
@@ -72,3 +72,4 @@ public class Post : PostData
         throw new NotImplementedException();
     }
 }
+

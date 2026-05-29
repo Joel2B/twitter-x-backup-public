@@ -1,4 +1,4 @@
-using Backup.App.Interfaces.Proxy;
+using Backup.Infrastructure.Interfaces.Proxy;
 
 namespace Backup.Infrastructure.Services.Proxy.Formatter;
 
@@ -13,4 +13,5 @@ public class ProxyFormatter
         };
     }
 }
+
 

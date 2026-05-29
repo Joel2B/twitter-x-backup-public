@@ -1,12 +1,12 @@
 using Backup.Infrastructure.Core.Media;
-using Backup.App.Interfaces.Services.Media;
-using Backup.App.Models.Config;
-using Backup.App.Models.Media;
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Models.Posts;
 using Backup.Infrastructure.Services.Media.Processors;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Media;
+namespace Backup.Infrastructure.Services.Media;
 
 public class MediaProcessing(ILogger<MediaProcessing> _logger, AppConfig _config) : IMediaProcessing
 {
@@ -45,5 +45,6 @@ public class MediaProcessing(ILogger<MediaProcessing> _logger, AppConfig _config
 
     public List<Download> GetFilteredMedia() => [.. _filtered.Values];
 }
+
 
 

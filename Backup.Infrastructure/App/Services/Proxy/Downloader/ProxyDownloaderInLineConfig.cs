@@ -1,6 +1,6 @@
-using Backup.App.Interfaces.Proxy;
-using Backup.App.Models.Config.Proxy;
-using Backup.App.Models.Proxy;
+using Backup.Infrastructure.Interfaces.Proxy;
+using Backup.Infrastructure.Models.Config.Proxy;
+using Backup.Infrastructure.Models.Proxy;
 
 namespace Backup.Infrastructure.Services.Proxy.Downloader;
 
@@ -16,4 +16,5 @@ public class ProxyDownloaderInLineConfig(IProxyFormatter _formatter) : IProxyDow
         return Task.FromResult(proxies);
     }
 }
+
 

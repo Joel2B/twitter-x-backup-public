@@ -1,6 +1,6 @@
-using Backup.App.Interfaces;
-using Backup.App.Models.Config;
-using Backup.App.Models.Config.Data;
+using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Data;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;
@@ -80,3 +80,4 @@ internal static class DataInfrastructureHelpers
         );
     }
 }
+

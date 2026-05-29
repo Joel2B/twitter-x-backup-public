@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Utils;
+namespace Backup.Infrastructure.Models.Utils;
 
 public static class FileExtension
 {
@@ -7,3 +7,4 @@ public static class FileExtension
     public const string PNG = ".png";
     public const string MP4 = ".mp4";
 }
+

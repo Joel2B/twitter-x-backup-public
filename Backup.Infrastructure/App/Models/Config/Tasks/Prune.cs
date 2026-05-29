@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Config.Tasks;
+namespace Backup.Infrastructure.Models.Config.Tasks;
 
 public class Prune
 {
@@ -15,3 +15,4 @@ public class Data
 {
     public required PruneConfig Post { get; set; }
 }
+

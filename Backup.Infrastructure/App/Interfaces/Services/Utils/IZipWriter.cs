@@ -1,6 +1,6 @@
-using Backup.App.Models.Utils;
+using Backup.Infrastructure.Models.Utils;
 
-namespace Backup.App.Interfaces.Services.UtilsService;
+namespace Backup.Infrastructure.Interfaces.Services.UtilsService;
 
 public interface IZipWriter : IDisposable
 {
@@ -8,3 +8,4 @@ public interface IZipWriter : IDisposable
     public bool RemoveEntry(string entryName, bool duplicate = false, int skip = 1);
     public IEnumerable<ZipEntry> GetEntries();
 }
+

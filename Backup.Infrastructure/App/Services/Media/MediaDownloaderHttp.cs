@@ -1,14 +1,14 @@
 using System.Diagnostics;
 using System.Net;
-using Backup.App.Interfaces.Proxy;
-using Backup.App.Interfaces.Services.Media;
-using Backup.App.Interfaces.Services.UtilsService;
-using Backup.App.Models.Config;
-using Backup.App.Models.Media;
-using Backup.App.Utils;
+using Backup.Infrastructure.Interfaces.Proxy;
+using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Interfaces.Services.UtilsService;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Media;
+namespace Backup.Infrastructure.Services.Media;
 
 public class MediaDownloaderHttp(
     ILogger<MediaDownloaderHttp> _logger,
@@ -198,3 +198,4 @@ public class MediaDownloaderHttp(
         }
     }
 }
+

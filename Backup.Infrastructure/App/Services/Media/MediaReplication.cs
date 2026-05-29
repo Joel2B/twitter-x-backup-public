@@ -1,9 +1,9 @@
 using Backup.Infrastructure.Logging;
-using Backup.App.Interfaces.Services.Media;
-using Backup.App.Models.Media;
+using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Models.Media;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Media;
+namespace Backup.Infrastructure.Services.Media;
 
 public class MediaReplication(ILogger<MediaReplication> _logger) : IMediaReplication
 {
@@ -62,3 +62,4 @@ public class MediaReplication(ILogger<MediaReplication> _logger) : IMediaReplica
         downloads.RemoveAll(dl => dl.Data.Count == 0);
     }
 }
+

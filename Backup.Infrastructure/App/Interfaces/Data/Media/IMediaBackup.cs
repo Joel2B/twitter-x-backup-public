@@ -1,6 +1,6 @@
-﻿using Backup.App.Models.Media.Backup;
+using Backup.Infrastructure.Models.Media.Backup;
 
-namespace Backup.App.Interfaces.Data.Media;
+namespace Backup.Infrastructure.Interfaces.Data.Media;
 
 public interface IMediaBackupData
 {
@@ -14,3 +14,4 @@ public interface IMediaBackupData
     public Task<bool> Exists(string path);
     public Task<Stream> Write(string path);
 }
+

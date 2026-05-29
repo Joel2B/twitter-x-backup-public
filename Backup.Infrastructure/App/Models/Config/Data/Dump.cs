@@ -1,6 +1,6 @@
-using Backup.App.Models.Config.Downloads;
+using Backup.Infrastructure.Models.Config.Downloads;
 
-namespace Backup.App.Models.Config.Data.Dump;
+namespace Backup.Infrastructure.Models.Config.Data.Dump;
 
 public class StorageDump : Storage
 {
@@ -21,3 +21,4 @@ public class Dump : PathConfig
 {
     public required PathConfig Api { get; set; }
 }
+

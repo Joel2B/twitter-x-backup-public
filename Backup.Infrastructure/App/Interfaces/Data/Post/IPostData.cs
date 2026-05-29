@@ -1,6 +1,6 @@
-﻿using Backup.App.Models.Posts;
+using Backup.Infrastructure.Models.Posts;
 
-namespace Backup.App.Interfaces.Data.Posts;
+namespace Backup.Infrastructure.Interfaces.Data.Posts;
 
 public interface IPostData
 {
@@ -33,3 +33,4 @@ public interface IPostData
     public Task Save();
     public Task Prune();
 }
+

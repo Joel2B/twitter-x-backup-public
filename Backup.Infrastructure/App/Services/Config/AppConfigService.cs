@@ -1,8 +1,8 @@
-using Backup.App.Interfaces.Config;
-using Backup.App.Models.Config;
-using Backup.App.Models.Config.Data;
+using Backup.Infrastructure.Interfaces.Config;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Data;
 
-namespace Backup.App.Services.Config;
+namespace Backup.Infrastructure.Services.Config;
 
 public sealed class AppConfigService(IAppConfigStore store) : IAppConfigService
 {
@@ -48,3 +48,4 @@ public sealed class AppConfigService(IAppConfigStore store) : IAppConfigService
     private static AppConfigSnapshot BuildSnapshot(long version, AppConfig config) =>
         new(version, DateTimeOffset.UtcNow, config);
 }
+

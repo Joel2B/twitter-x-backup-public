@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Config.Data;
+namespace Backup.Infrastructure.Models.Config.Data;
 
 public class Tasks
 {
@@ -7,3 +7,4 @@ public class Tasks
     public bool Fix { get; set; } = false;
     public long VerifyMaxSizeDiffBytes { get; set; } = 1024;
 }
+

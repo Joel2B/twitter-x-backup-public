@@ -1,14 +1,14 @@
 using System.Collections.Concurrent;
 using Backup.Infrastructure.Logging;
-using Backup.App.Interfaces.Data.Media;
-using Backup.App.Interfaces.Services.Media;
-using Backup.App.Interfaces.Services.UtilsService;
-using Backup.App.Models.Config.Data.Backup;
-using Backup.App.Models.Media;
-using Backup.App.Models.Media.Backup;
+using Backup.Infrastructure.Interfaces.Data.Media;
+using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Interfaces.Services.UtilsService;
+using Backup.Infrastructure.Models.Config.Data.Backup;
+using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Models.Media.Backup;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Media;
+namespace Backup.Infrastructure.Services.Media;
 
 public partial class MediaBackup(
     ILogger<MediaBackup> _logger,
@@ -95,3 +95,4 @@ public partial class MediaBackup(
             await CheckIntegrity();
     }
 }
+

@@ -1,9 +1,10 @@
-using Backup.App.Interfaces.Data.Posts;
-using Backup.App.Models.Config.Api;
+using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Models.Config.Api;
 
-namespace Backup.App.Models.Posts;
+namespace Backup.Infrastructure.Models.Posts;
 
 public interface IPostDownload
 {
     public Task Download(IPostData postData, ApiContext context);
 }
+

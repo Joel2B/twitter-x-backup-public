@@ -1,10 +1,10 @@
-using Backup.App.Models.Config.Data;
-using Backup.App.Models.Config.Downloads;
-using Backup.App.Models.Config.Medias;
-using Backup.App.Models.Config.Proxy;
-using Backup.App.Models.Config.Tasks;
+using Backup.Infrastructure.Models.Config.Data;
+using Backup.Infrastructure.Models.Config.Downloads;
+using Backup.Infrastructure.Models.Config.Medias;
+using Backup.Infrastructure.Models.Config.Proxy;
+using Backup.Infrastructure.Models.Config.Tasks;
 
-namespace Backup.App.Models.Config;
+namespace Backup.Infrastructure.Models.Config;
 
 public class AppConfig
 {
@@ -20,3 +20,4 @@ public class AppConfig
     public required BulkConfig Bulk { get; set; }
     public required NetworkConfig Network { get; set; }
 }
+

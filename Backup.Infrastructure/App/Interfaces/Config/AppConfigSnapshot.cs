@@ -1,5 +1,6 @@
-using Backup.App.Models.Config;
+using Backup.Infrastructure.Models.Config;
 
-namespace Backup.App.Interfaces.Config;
+namespace Backup.Infrastructure.Interfaces.Config;
 
 public sealed record AppConfigSnapshot(long Version, DateTimeOffset LoadedAt, AppConfig Value);
+

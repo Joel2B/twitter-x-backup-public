@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Bulk;
+namespace Backup.Infrastructure.Models.Bulk;
 
 public class Source
 {
@@ -14,3 +14,4 @@ public enum SourceType
     Status,
     Notifications,
 }
+

@@ -1,9 +1,9 @@
 using Backup.Infrastructure.Data.Bulk;
 using Backup.Infrastructure.Data.Partition;
-using Backup.App.Interfaces;
-using Backup.App.Interfaces.Data.Bulk;
-using Backup.App.Interfaces.Partition;
-using Backup.App.Models.Config.Data.Bulk;
+using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Interfaces.Data.Bulk;
+using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Models.Config.Data.Bulk;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;
@@ -87,5 +87,6 @@ public static class BulkDataInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+
 
 

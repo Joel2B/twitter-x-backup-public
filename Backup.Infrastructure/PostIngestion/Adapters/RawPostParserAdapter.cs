@@ -1,6 +1,6 @@
 using Backup.Application.PostIngestion.Models;
 using Backup.Application.PostIngestion.Ports;
-using Backup.App.Interfaces.Services.Posts;
+using Backup.Infrastructure.Interfaces.Services.Posts;
 
 namespace Backup.Infrastructure.PostIngestion.Adapters;
 
@@ -10,7 +10,8 @@ public class RawPostParserAdapter(IPostParser postParser) : IRawPostParser
 
     public RawPostParseResult Parse(string userId, string origin, string rawRequestBody)
     {
-        Backup.App.Models.Posts.ParseResult parsed = _postParser.Parse(userId, origin, rawRequestBody);
+        Backup.Infrastructure.Models.Posts.ParseResult parsed = _postParser.Parse(userId, origin, rawRequestBody);
         return new RawPostParseResult(parsed.Posts.Select(PostDomainMapper.ToDomain).ToList(), parsed.NextCursor);
     }
 }
+

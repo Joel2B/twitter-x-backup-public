@@ -1,14 +1,14 @@
 using Backup.Infrastructure.Core.Media;
-using Backup.App.Models.Config.Medias;
-using Backup.App.Models.Media;
-using Backup.App.Models.Media.Processors;
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Models.Config.Medias;
+using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Models.Media.Processors;
+using Backup.Infrastructure.Models.Posts;
 
 namespace Backup.Infrastructure.Services.Media.Processors;
 
 public class GifProcessor(GifConfig config, MediaProcessorContext context) : MediaProcessor(context)
 {
-    private readonly Backup.App.Utils.MediaFilter _filters = new(config.Thumb.Filters);
+    private readonly Backup.Infrastructure.Utils.MediaFilter _filters = new(config.Thumb.Filters);
 
     public override void Process()
     {
@@ -56,7 +56,7 @@ public class GifProcessor(GifConfig config, MediaProcessorContext context) : Med
                 {
                     foreach (Resolution resolution in resolutions)
                     {
-                        DataDownload dataDownload = Backup.App.Utils.MediaProcessor.GetData(
+                        DataDownload dataDownload = Backup.Infrastructure.Utils.MediaProcessor.GetData(
                             new()
                             {
                                 PostId = post.Id,
@@ -90,7 +90,7 @@ public class GifProcessor(GifConfig config, MediaProcessorContext context) : Med
                     string VideoExtension = Path.GetExtension(videoFileName);
                     string VideoId = Path.GetFileNameWithoutExtension(videoFileName);
 
-                    DataDownload dataDownload = Backup.App.Utils.MediaProcessor.GetData(
+                    DataDownload dataDownload = Backup.Infrastructure.Utils.MediaProcessor.GetData(
                         new()
                         {
                             PostId = post.Id,
@@ -110,6 +110,7 @@ public class GifProcessor(GifConfig config, MediaProcessorContext context) : Med
         }
     }
 }
+
 
 
 

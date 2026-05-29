@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Data.Json;
+namespace Backup.Infrastructure.Models.Data.Json;
 
 internal sealed class LocalPostTables
 {
@@ -96,3 +96,4 @@ internal sealed class PostChangeFieldRow
     public string? OldValueJson { get; set; }
     public string? NewValueJson { get; set; }
 }
+

@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Media.Logging;
+namespace Backup.Infrastructure.Models.Media.Logging;
 
 public class Logs
 {
@@ -11,3 +11,4 @@ public class Log
     public required string Id { get; set; }
     public required string Message { get; set; }
 }
+

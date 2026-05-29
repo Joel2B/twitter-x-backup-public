@@ -1,5 +1,5 @@
-using Backup.App.Models.Bulk;
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Models.Bulk;
+using Backup.Infrastructure.Models.Posts;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Bulk;
@@ -70,4 +70,5 @@ public partial class BulkService
         await _bulkData.Save(bulks);
     }
 }
+
 

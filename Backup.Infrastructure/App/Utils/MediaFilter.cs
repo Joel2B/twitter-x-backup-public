@@ -1,6 +1,6 @@
-using Backup.App.Models.Utils;
+using Backup.Infrastructure.Models.Utils;
 
-namespace Backup.App.Utils;
+namespace Backup.Infrastructure.Utils;
 
 public class MediaFilter(List<string>? _rawFilters)
 {
@@ -38,3 +38,4 @@ public class MediaFilter(List<string>? _rawFilters)
         return false;
     }
 }
+

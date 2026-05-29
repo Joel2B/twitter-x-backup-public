@@ -1,5 +1,5 @@
-using Backup.App.Interfaces.Data.Posts;
-using Backup.App.Models.Bulk;
+using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Models.Bulk;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Bulk;
@@ -56,4 +56,5 @@ public partial class BulkService
         }
     }
 }
+
 

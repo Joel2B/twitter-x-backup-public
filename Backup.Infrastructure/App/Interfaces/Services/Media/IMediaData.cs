@@ -1,6 +1,6 @@
-using Backup.App.Models.Media;
+using Backup.Infrastructure.Models.Media;
 
-namespace Backup.App.Interfaces.Services.Media;
+namespace Backup.Infrastructure.Interfaces.Services.Media;
 
 public interface IMediaData
 {
@@ -16,3 +16,4 @@ public interface IMediaData
     public Task<Cache?> GetCache(string path);
     public Stream GetTempStream();
 }
+

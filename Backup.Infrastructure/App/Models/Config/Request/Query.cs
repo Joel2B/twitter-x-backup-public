@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Config.ApiRequest;
+namespace Backup.Infrastructure.Models.Config.ApiRequest;
 
 public class Query
 {
@@ -14,3 +14,4 @@ public class Query
             FieldToggles = (FieldToggles ?? []).ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
         };
 }
+

@@ -1,5 +1,5 @@
-using Backup.App.Models.Media;
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Models.Posts;
 
 namespace Backup.Infrastructure.Core.Media;
 
@@ -14,4 +14,5 @@ public class MediaProcessorContext(
     public Dictionary<string, Download> All = all;
     public Dictionary<string, Download> Filtered = filtered;
 }
+
 

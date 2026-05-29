@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Media;
+namespace Backup.Infrastructure.Models.Media;
 
 public class Download
 {
@@ -15,3 +15,4 @@ public class DataDownload
 
     public DataDownload Clone() => new() { Url = Url, Path = Path };
 }
+

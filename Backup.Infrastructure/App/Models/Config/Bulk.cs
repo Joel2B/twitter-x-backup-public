@@ -1,6 +1,6 @@
-using Backup.App.Models.Config.Downloads;
+using Backup.Infrastructure.Models.Config.Downloads;
 
-namespace Backup.App.Models.Config;
+namespace Backup.Infrastructure.Models.Config;
 
 public class BulkConfig
 {
@@ -14,3 +14,4 @@ public class BulkConfig
     public int MaxCountPost { get; set; }
     public int ApiRetryCount { get; set; }
 }
+

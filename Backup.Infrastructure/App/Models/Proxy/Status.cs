@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Proxy;
+namespace Backup.Infrastructure.Models.Proxy;
 
 public enum StatusEnum
 {
@@ -11,3 +11,4 @@ public class Status
     public StatusEnum Current { get; set; } = StatusEnum.Active;
     public DateTime? Date { get; set; }
 }
+

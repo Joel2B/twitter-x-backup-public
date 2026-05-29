@@ -1,4 +1,4 @@
-namespace Backup.App.Utils;
+namespace Backup.Infrastructure.Utils;
 
 public class Http
 {
@@ -39,3 +39,4 @@ public class Http
         }
     }
 }
+

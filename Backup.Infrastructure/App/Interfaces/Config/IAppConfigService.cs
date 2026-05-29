@@ -1,6 +1,6 @@
-using Backup.App.Models.Config.Data;
+using Backup.Infrastructure.Models.Config.Data;
 
-namespace Backup.App.Interfaces.Config;
+namespace Backup.Infrastructure.Interfaces.Config;
 
 public interface IAppConfigService
 {
@@ -8,3 +8,4 @@ public interface IAppConfigService
     public AppConfigSnapshot Refresh();
     public void SaveData(DataConfig data, bool refreshSnapshot = false);
 }
+

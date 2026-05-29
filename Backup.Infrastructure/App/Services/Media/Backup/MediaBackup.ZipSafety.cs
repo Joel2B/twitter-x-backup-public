@@ -1,9 +1,9 @@
-using Backup.App.Interfaces.Services.Media;
-using Backup.App.Interfaces.Services.UtilsService;
-using Backup.App.Models.Media.Backup;
+using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Interfaces.Services.UtilsService;
+using Backup.Infrastructure.Models.Media.Backup;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Media;
+namespace Backup.Infrastructure.Services.Media;
 
 public partial class MediaBackup : IMediaBackup
 {
@@ -84,3 +84,4 @@ public partial class MediaBackup : IMediaBackup
         await _mediaBackupData.Save([chunk]);
     }
 }
+

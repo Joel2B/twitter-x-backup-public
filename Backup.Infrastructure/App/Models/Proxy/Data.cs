@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Proxy;
+namespace Backup.Infrastructure.Models.Proxy;
 
 public class ProxyData
 {
@@ -8,3 +8,4 @@ public class ProxyData
     public DateTime Date { get; set; } = DateTime.Now;
     public Status Status { get; set; } = new();
 }
+

@@ -1,10 +1,10 @@
-using Backup.App.Interfaces;
-using Backup.App.Interfaces.Partition;
-using Backup.App.Interfaces.Services.Media;
-using Backup.App.Models.Config.Data;
-using Backup.App.Models.Config.Data.Media;
-using Backup.App.Models.Media;
-using Backup.App.Models.Utils;
+using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Models.Config.Data;
+using Backup.Infrastructure.Models.Config.Data.Media;
+using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Models.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Data.Media;
@@ -214,7 +214,7 @@ public class LocalMediaData(
     }
 
     public async Task<string?> GetHash(string path) =>
-        await Backup.App.Utils.FileHasher.GetFileHash(await _mediaCache.GetPath(path));
+        await Backup.Infrastructure.Utils.FileHasher.GetFileHash(await _mediaCache.GetPath(path));
 
     public Task<Cache?> GetCache(string path) => Task.FromResult(_mediaCache.Get(path));
 
@@ -245,4 +245,5 @@ public class LocalMediaData(
         Directory.CreateDirectory(path);
     }
 }
+
 

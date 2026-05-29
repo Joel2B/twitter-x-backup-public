@@ -1,9 +1,9 @@
-using Backup.App.Interfaces;
-using Backup.App.Interfaces.Data.Media;
-using Backup.App.Interfaces.Partition;
-using Backup.App.Models.Config.Data;
-using Backup.App.Models.Config.Data.Backup;
-using Backup.App.Models.Media.Backup;
+using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Interfaces.Data.Media;
+using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Models.Config.Data;
+using Backup.Infrastructure.Models.Config.Data.Backup;
+using Backup.Infrastructure.Models.Media.Backup;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -150,7 +150,7 @@ public class LocalMediaBackup(
     public async Task<string?> GetHash(string path)
     {
         string fullPath = Path.Combine(GetPathChunks(), path);
-        string? hash = await Backup.App.Utils.FileHasher.GetFileHash(fullPath);
+        string? hash = await Backup.Infrastructure.Utils.FileHasher.GetFileHash(fullPath);
 
         return hash;
     }
@@ -208,4 +208,5 @@ public class LocalMediaBackup(
         return stream;
     }
 }
+
 

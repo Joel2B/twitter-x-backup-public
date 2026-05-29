@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Config.ApiRequest;
+namespace Backup.Infrastructure.Models.Config.ApiRequest;
 
 public class Request
 {
@@ -14,3 +14,4 @@ public class Request
             Headers = (Headers ?? []).ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
         };
 }
+

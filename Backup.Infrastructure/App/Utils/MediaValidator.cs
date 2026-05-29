@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Utils;
+namespace Backup.Infrastructure.Models.Utils;
 
 public static class MediaValidator
 {
@@ -103,3 +103,4 @@ public static class MediaValidator
         }
     }
 }
+

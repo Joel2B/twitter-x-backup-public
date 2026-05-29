@@ -1,8 +1,9 @@
-using Backup.App.Models.Config.Api;
+using Backup.Infrastructure.Models.Config.Api;
 
-namespace Backup.App.Interfaces.Services.Media;
+namespace Backup.Infrastructure.Interfaces.Services.Media;
 
 public interface IBulkService
 {
     public Task Download(UsersContext context);
 }
+

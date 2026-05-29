@@ -1,8 +1,9 @@
-using Backup.App.Models.Proxy;
+using Backup.Infrastructure.Models.Proxy;
 
-namespace Backup.App.Interfaces.Proxy;
+namespace Backup.Infrastructure.Interfaces.Proxy;
 
 public interface IProxyFormatter
 {
     public List<ProxyDataConfig>? Load(List<string> lines, string protocol);
 }
+

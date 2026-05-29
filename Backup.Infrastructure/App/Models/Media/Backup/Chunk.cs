@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Media.Backup;
+namespace Backup.Infrastructure.Models.Media.Backup;
 
 public class Chunk
 {
@@ -24,3 +24,4 @@ public class ChunkData
             Crc32 = Crc32,
         };
 }
+

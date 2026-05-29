@@ -1,11 +1,11 @@
-using Backup.App.Interfaces;
-using Backup.App.Interfaces.Data.Bulk;
-using Backup.App.Interfaces.Partition;
-using Backup.App.Models.Bulk;
-using Backup.App.Models.Config;
-using Backup.App.Models.Config.Data;
-using Backup.App.Models.Config.Data.Bulk;
-using Backup.App.Utils;
+using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Interfaces.Data.Bulk;
+using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Models.Bulk;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Data;
+using Backup.Infrastructure.Models.Config.Data.Bulk;
+using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -173,4 +173,5 @@ public class LocalBulkData(
         }
     }
 }
+
 

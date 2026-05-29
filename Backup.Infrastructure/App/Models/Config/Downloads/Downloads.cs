@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Config.Downloads;
+namespace Backup.Infrastructure.Models.Config.Downloads;
 
 public class DownloadsConfig
 {
@@ -26,3 +26,4 @@ public class MediaDebug : PathConfig
     public required PathConfig Log { get; set; }
     public required PathConfig Error { get; set; }
 }
+

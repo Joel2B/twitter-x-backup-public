@@ -1,10 +1,10 @@
-using Backup.App.Models.Config.Data.Backup;
-using Backup.App.Models.Config.Data.Bulk;
-using Backup.App.Models.Config.Data.Dump;
-using Backup.App.Models.Config.Data.Media;
-using Backup.App.Models.Config.Data.Posts;
+using Backup.Infrastructure.Models.Config.Data.Backup;
+using Backup.Infrastructure.Models.Config.Data.Bulk;
+using Backup.Infrastructure.Models.Config.Data.Dump;
+using Backup.Infrastructure.Models.Config.Data.Media;
+using Backup.Infrastructure.Models.Config.Data.Posts;
 
-namespace Backup.App.Models.Config.Data;
+namespace Backup.Infrastructure.Models.Config.Data;
 
 public class DataConfig
 {
@@ -16,3 +16,4 @@ public class DataConfig
     public required List<StorageMedia> Media { get; set; }
     public required List<StorageBackup> Backup { get; set; }
 }
+

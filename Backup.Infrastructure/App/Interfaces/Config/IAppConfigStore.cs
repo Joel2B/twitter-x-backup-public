@@ -1,7 +1,7 @@
-using Backup.App.Models.Config;
-using Backup.App.Models.Config.Data;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Data;
 
-namespace Backup.App.Interfaces.Config;
+namespace Backup.Infrastructure.Interfaces.Config;
 
 public interface IAppConfigStore
 {
@@ -9,3 +9,4 @@ public interface IAppConfigStore
     public DataConfig LoadData();
     public void SaveData(DataConfig data);
 }
+

@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Data.Media;
-using Backup.App.Interfaces.Services.Media;
-using Backup.App.Services.Media;
+using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Services.Media;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;
@@ -23,4 +23,5 @@ public static class MediaInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+
 

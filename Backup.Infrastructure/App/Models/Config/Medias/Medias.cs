@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Config.Medias;
+namespace Backup.Infrastructure.Models.Config.Medias;
 
 public class MediasConfig
 {
@@ -15,3 +15,4 @@ public class BannerConfig : MediaConfig;
 public class ProfileConfig : MediaConfig;
 
 public class PhotoConfig : MediaConfig;
+

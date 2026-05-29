@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Posts;
+namespace Backup.Infrastructure.Models.Posts;
 
 public class Change
 {
@@ -20,3 +20,4 @@ public class Change
             ),
         };
 }
+

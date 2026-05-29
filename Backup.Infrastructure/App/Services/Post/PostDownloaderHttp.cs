@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
-using Backup.App.Interfaces.Services.Posts;
-using Backup.App.Models.Config;
-using Backup.App.Models.Config.ApiRequest;
-using Backup.App.Utils;
+using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.ApiRequest;
+using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -148,4 +148,5 @@ public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, AppConfig _
         await Task.Delay(ms);
     }
 }
+
 

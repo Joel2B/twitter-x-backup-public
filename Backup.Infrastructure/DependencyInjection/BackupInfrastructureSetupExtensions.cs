@@ -1,4 +1,4 @@
-using Backup.App.Interfaces;
+using Backup.Infrastructure.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -33,3 +33,4 @@ public static class BackupInfrastructureSetupExtensions
         }
     }
 }
+

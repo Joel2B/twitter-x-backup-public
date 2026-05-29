@@ -1,6 +1,6 @@
-using Backup.App.Models.Config.ApiRequest;
+using Backup.Infrastructure.Models.Config.ApiRequest;
 
-namespace Backup.App.Models.Config.Api;
+namespace Backup.Infrastructure.Models.Config.Api;
 
 public class ApiConfig
 {
@@ -8,3 +8,4 @@ public class ApiConfig
     public bool Enabled { get; set; } = true;
     public required Request Request { get; set; }
 }
+

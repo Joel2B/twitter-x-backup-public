@@ -1,6 +1,7 @@
-namespace Backup.App.Interfaces.Services;
+namespace Backup.Infrastructure.Interfaces.Services;
 
 public interface IService
 {
     public Task Download();
 }
+

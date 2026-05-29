@@ -1,9 +1,9 @@
 using Backup.Infrastructure.Data.Partition;
-using Backup.App.Interfaces;
-using Backup.App.Interfaces.Config;
-using Backup.App.Interfaces.Partition;
-using Backup.App.Models.Config;
-using Backup.App.Services.Config;
+using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Interfaces.Config;
+using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Services.Config;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;
@@ -56,4 +56,5 @@ public static class CoreInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+
 

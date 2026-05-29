@@ -1,7 +1,7 @@
 using Backup.Infrastructure.Logging;
-using Backup.App.Interfaces.Data.Posts;
-using Backup.App.Interfaces.Services.Posts;
-using Backup.App.Models.Posts;
+using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Models.Posts;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Data.Posts;
@@ -170,4 +170,5 @@ public class PostDataMultiStore(
         }
     }
 }
+
 

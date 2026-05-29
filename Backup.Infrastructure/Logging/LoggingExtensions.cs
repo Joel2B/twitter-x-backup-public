@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using Backup.App.Models.Utils;
+using Backup.Infrastructure.Models.Utils;
 using Newtonsoft.Json;
 using Serilog.Context;
 
@@ -38,7 +38,7 @@ public static class LoggingExtensions
         string json1 = JsonConvert.SerializeObject(data1, Formatting.Indented);
         string json2 = JsonConvert.SerializeObject(data2, Formatting.Indented);
 
-        Diff diff = Backup.App.Utils.Text.Diff(json1, json2);
+        Diff diff = Backup.Infrastructure.Utils.Text.Diff(json1, json2);
 
         Microsoft.Extensions.Logging.LoggerExtensions.LogInformation(
             logger,
@@ -111,3 +111,4 @@ public static class LoggingExtensions
         }
     }
 }
+

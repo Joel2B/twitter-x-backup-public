@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Config.Data;
+namespace Backup.Infrastructure.Models.Config.Data;
 
 public class Storage
 {
@@ -9,3 +9,4 @@ public class Storage
     public required List<int> Partitions { get; set; }
     public required Tasks Tasks { get; set; }
 }
+

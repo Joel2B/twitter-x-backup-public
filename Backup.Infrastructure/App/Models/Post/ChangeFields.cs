@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Posts;
+namespace Backup.Infrastructure.Models.Posts;
 
 internal static class ChangeFields
 {
@@ -42,3 +42,4 @@ internal static class ChangeFields
         return string.IsNullOrWhiteSpace(userId) ? null : userId;
     }
 }
+

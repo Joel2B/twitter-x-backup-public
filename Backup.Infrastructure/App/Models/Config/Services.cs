@@ -1,4 +1,4 @@
-namespace Backup.App.Models.Config;
+namespace Backup.Infrastructure.Models.Config;
 
 public class ServicesConfig
 {
@@ -21,3 +21,4 @@ public class DumpService
 {
     public int Count { get; set; }
 }
+

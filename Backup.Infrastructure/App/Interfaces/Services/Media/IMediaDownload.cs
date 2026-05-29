@@ -1,8 +1,9 @@
-using Backup.App.Models.Media;
+using Backup.Infrastructure.Models.Media;
 
-namespace Backup.App.Interfaces.Services.Media;
+namespace Backup.Infrastructure.Interfaces.Services.Media;
 
 public interface IMediaDownload
 {
     public Task Download(List<Download> downloads, IMediaData data);
 }
+
