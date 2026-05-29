@@ -9,7 +9,7 @@ using Backup.App.Models.Media.Logging;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Media;
+namespace Backup.Infrastructure.Data.Media;
 
 public class LocalMediaLogger(
     ILogger<LocalMediaLogger> _logger,
@@ -164,3 +164,4 @@ public class LocalMediaLogger(
         await SaveErrors();
     }
 }
+

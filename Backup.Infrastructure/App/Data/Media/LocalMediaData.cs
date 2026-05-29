@@ -7,7 +7,7 @@ using Backup.App.Models.Media;
 using Backup.App.Models.Utils;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Data.Media;
+namespace Backup.Infrastructure.Data.Media;
 
 public class LocalMediaData(
     ILogger<LocalMediaData> _log,
@@ -214,7 +214,7 @@ public class LocalMediaData(
     }
 
     public async Task<string?> GetHash(string path) =>
-        await Utils.FileHasher.GetFileHash(await _mediaCache.GetPath(path));
+        await Backup.App.Utils.FileHasher.GetFileHash(await _mediaCache.GetPath(path));
 
     public Task<Cache?> GetCache(string path) => Task.FromResult(_mediaCache.Get(path));
 
@@ -245,3 +245,4 @@ public class LocalMediaData(
         Directory.CreateDirectory(path);
     }
 }
+

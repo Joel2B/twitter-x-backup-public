@@ -2,7 +2,7 @@ using System.Text;
 using Backup.App.Models.Media;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Media;
+namespace Backup.Infrastructure.Data.Media;
 
 public class LocalMediaCacheReader
 {
@@ -238,3 +238,4 @@ public class LocalMediaCacheReader
         fs.Flush(true);
     }
 }
+

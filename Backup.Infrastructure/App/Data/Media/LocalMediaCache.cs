@@ -10,7 +10,7 @@ using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Media;
+namespace Backup.Infrastructure.Data.Media;
 
 public class LocalMediaCache(
     ILogger<LocalMediaCache> _logger,
@@ -308,3 +308,4 @@ public class LocalMediaCache(
         return cache;
     }
 }
+

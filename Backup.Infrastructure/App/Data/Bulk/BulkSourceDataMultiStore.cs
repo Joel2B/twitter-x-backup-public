@@ -1,6 +1,7 @@
 using Backup.App.Interfaces.Data.Bulk;
+using Backup.App.Models.Bulk;
 
-namespace Backup.App.Data.Bulk;
+namespace Backup.Infrastructure.Data.Bulk;
 
 public class BulkSourceDataMultiStore(IEnumerable<IBulkSourceDataStore> stores) : IBulkSourceData
 {
@@ -24,5 +25,6 @@ public class BulkSourceDataMultiStore(IEnumerable<IBulkSourceDataStore> stores) 
         }
     }
 
-    public Task<List<Models.Bulk.Source>> GetSources() => Primary.GetSources();
+    public Task<List<Source>> GetSources() => Primary.GetSources();
 }
+

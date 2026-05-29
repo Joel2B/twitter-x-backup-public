@@ -1,7 +1,7 @@
 using Backup.App.Interfaces.Data.Bulk;
 using Backup.App.Models.Bulk;
 
-namespace Backup.App.Data.Bulk;
+namespace Backup.Infrastructure.Data.Bulk;
 
 public class BulkDataMultiStore(IEnumerable<IBulkDataStore> stores) : IBulkData
 {
@@ -47,3 +47,4 @@ public class BulkDataMultiStore(IEnumerable<IBulkDataStore> stores) : IBulkData
             await store.Prune();
     }
 }
+

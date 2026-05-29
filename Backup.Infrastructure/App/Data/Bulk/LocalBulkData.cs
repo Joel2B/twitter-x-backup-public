@@ -9,7 +9,7 @@ using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Bulk;
+namespace Backup.Infrastructure.Data.Bulk;
 
 public class LocalBulkData(
     ILogger<LocalBulkData> _logger,
@@ -173,3 +173,4 @@ public class LocalBulkData(
         }
     }
 }
+

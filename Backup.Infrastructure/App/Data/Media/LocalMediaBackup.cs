@@ -7,7 +7,7 @@ using Backup.App.Models.Media.Backup;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Media;
+namespace Backup.Infrastructure.Data.Media;
 
 public class LocalMediaBackup(
     ILogger<LocalMediaBackup> _logger,
@@ -150,7 +150,7 @@ public class LocalMediaBackup(
     public async Task<string?> GetHash(string path)
     {
         string fullPath = Path.Combine(GetPathChunks(), path);
-        string? hash = await Utils.FileHasher.GetFileHash(fullPath);
+        string? hash = await Backup.App.Utils.FileHasher.GetFileHash(fullPath);
 
         return hash;
     }
@@ -208,3 +208,4 @@ public class LocalMediaBackup(
         return stream;
     }
 }
+

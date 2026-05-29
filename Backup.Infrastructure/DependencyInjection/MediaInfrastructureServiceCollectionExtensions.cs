@@ -1,4 +1,4 @@
-using Backup.App.Data.Media;
+using Backup.Infrastructure.Data.Media;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Services.Media;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,3 +23,4 @@ public static class MediaInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+

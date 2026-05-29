@@ -1,4 +1,4 @@
-using Backup.App.Data.Media;
+using Backup.Infrastructure.Data.Media;
 using Backup.App.Data.Partition;
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Data.Media;
@@ -75,3 +75,4 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+
