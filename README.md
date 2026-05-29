@@ -26,15 +26,34 @@ Note: files in `App/Config/` are intended for local use and should not be commit
 
 ```bash
 dotnet restore
-dotnet run
+dotnet run --project Backup.Cli
+```
+
+Run API locally:
+
+```bash
+dotnet run --project Backup.Api
 ```
 
 ## Run with Docker
 
-Build:
+Build CLI image:
 
 ```bash
-docker build -t twitter-x-backup:latest .
+docker build -f Dockerfile.Cli -t twitter-x-backup:latest .
+```
+
+Build API image:
+
+```bash
+docker build -f Dockerfile.Api -t twitter-x-backup-api:latest .
+```
+
+Deploy with scripts (PowerShell):
+
+```powershell
+.\deploy-cli.ps1
+.\deploy-api.ps1
 ```
 
 Linux override:
@@ -53,10 +72,14 @@ For Windows CIFS volumes, create `.env` from `.env.example` and set your credent
 
 ## Quick Structure
 
-- `Program.cs`: application entry point
+- `Backup.Cli/Program.cs`: CLI entry point
+- `Backup.Api/Program.cs`: API entry point
 - `App/`: services, models, utilities, and configuration
 - `compose*.yml`: environment-specific deployment files
-- `Dockerfile`: runtime image definition
+- `Dockerfile.Cli`: CLI runtime image definition
+- `Dockerfile.Api`: API runtime image definition
+- `deploy-cli.ps1`: build/push CLI image
+- `deploy-api.ps1`: build/push API image
 
 ## Security
 
