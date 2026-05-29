@@ -1,7 +1,7 @@
 using Backup.App.Api.Errors;
 using Backup.App.Api.Services;
 using Backup.App.Api.Swagger;
-using Backup.App.Extensions;
+using Backup.Infrastructure.DependencyInjection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -9,12 +9,7 @@ Console.Error.WriteLine("[startup] creating web application builder");
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 Console.Error.WriteLine("[startup] registering services");
-builder.Services.AddCore();
-builder.Services.AddSerilog();
-
-builder.Services.AddPostData();
-builder.Services.AddPost();
-builder.Services.AddSetup();
+builder.Services.AddBackupApiInfrastructure();
 
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
@@ -29,7 +24,7 @@ Console.Error.WriteLine("[startup] creating scope");
 await using AsyncServiceScope scope = app.Services.CreateAsyncScope();
 
 Console.Error.WriteLine("[startup] running setup");
-await scope.ServiceProvider.RunSetup();
+await scope.ServiceProvider.RunBackupInfrastructureSetup();
 
 Console.Error.WriteLine("[startup] configuring middleware and routes");
 app.UseExceptionHandler();

@@ -1,3 +1,8 @@
 namespace Backup.App.Api.Models;
 
-public record PostIngestResult(int ReceivedPosts, int SavedPosts, string? NextCursor = null);
+public record PostIngestResult(
+    int ReceivedPosts,
+    int SavedPosts,
+    string? NextCursor = null,
+    PostIngestDiagnostics? Diagnostics = null
+);

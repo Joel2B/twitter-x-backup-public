@@ -1,21 +1,13 @@
 using Backup.App.Api.Errors;
 using Backup.App.Api.Models;
-using Backup.App.Interfaces.Data.Posts;
-using Backup.App.Interfaces.Services.Posts;
-using Backup.App.Models.Posts;
-using Microsoft.Extensions.Logging;
 
 namespace Backup.App.Api.Services;
 
 public class PostIngestionService(
-    IPostParser postParser,
-    IPostData postData,
-    ILogger<PostIngestionService> logger
+    Backup.Application.PostIngestion.IPostIngestionService appService
 ) : IPostIngestionService
 {
-    private readonly IPostParser _postParser = postParser;
-    private readonly IPostData _postData = postData;
-    private readonly ILogger<PostIngestionService> _logger = logger;
+    private readonly Backup.Application.PostIngestion.IPostIngestionService _appService = appService;
 
     public async Task<PostIngestResult> IngestRaw(
         string userId,
@@ -25,21 +17,19 @@ public class PostIngestionService(
     {
         try
         {
-            ParseResult parsed = _postParser.Parse(userId, origin, rawRequestBody);
-            await PersistPosts(userId, origin, parsed.Posts);
+            Backup.Application.PostIngestion.Models.PostIngestResult result =
+                await _appService.IngestRaw(userId, origin, rawRequestBody);
 
-            return new PostIngestResult(parsed.Posts.Count, parsed.Posts.Count, parsed.NextCursor);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Raw post ingestion failed for userId={userId}, origin={origin}",
-                userId,
-                origin
+            return new PostIngestResult(
+                result.ReceivedPosts,
+                result.SavedPosts,
+                result.NextCursor,
+                MapDiagnostics(result.Diagnostics)
             );
-
-            throw new ApiException("Raw post request could not be processed.");
+        }
+        catch (Backup.Application.PostIngestion.PostIngestionException ex)
+        {
+            throw new ApiException(ex.Message);
         }
     }
 
@@ -51,30 +41,95 @@ public class PostIngestionService(
     {
         try
         {
-            List<Post> mappedPosts = ProcessedPostMapper.MapMany(posts);
-            await PersistPosts(userId, origin, mappedPosts);
-
-            return new PostIngestResult(posts.Count, posts.Count);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(
-                ex,
-                "Processed post ingestion failed for userId={userId}, origin={origin}, count={count}",
+            Backup.Application.PostIngestion.Models.PostIngestResult result =
+                await _appService.IngestProcessed(
                 userId,
                 origin,
-                posts.Count
+                MapMany(posts)
             );
 
-            throw new ApiException("Processed post payload could not be saved.");
+            return new PostIngestResult(
+                result.ReceivedPosts,
+                result.SavedPosts,
+                result.NextCursor,
+                MapDiagnostics(result.Diagnostics)
+            );
+        }
+        catch (Backup.Application.PostIngestion.PostIngestionException ex)
+        {
+            throw new ApiException(ex.Message);
         }
     }
 
-    private async Task PersistPosts(string userId, string origin, List<Post> posts)
+    private static List<Backup.Application.PostIngestion.Models.ProcessedPostInput> MapMany(
+        IReadOnlyCollection<ProcessedPostInput> posts
+    ) => posts.Select(Map).ToList();
+
+    private static Backup.Application.PostIngestion.Models.ProcessedPostInput Map(
+        ProcessedPostInput post
+    ) =>
+        new()
+        {
+            Id = post.Id,
+            Profile = new Backup.Application.PostIngestion.Models.ProcessedPostProfileInput
+            {
+                Id = post.Profile.Id,
+                UserName = post.Profile.UserName,
+                Name = post.Profile.Name,
+                BannerUrl = post.Profile.BannerUrl,
+                ImageUrl = post.Profile.ImageUrl,
+                Following = post.Profile.Following,
+            },
+            Description = post.Description,
+            Retweeted = post.Retweeted,
+            Favorited = post.Favorited,
+            Bookmarked = post.Bookmarked,
+            CreatedAt = post.CreatedAt,
+            Hashtags = post.Hashtags is null ? null : [.. post.Hashtags],
+            Medias = post.Medias?.Select(MapMedia).ToList(),
+            Deleted = post.Deleted,
+        };
+
+    private static Backup.Application.PostIngestion.Models.ProcessedPostMediaInput MapMedia(
+        ProcessedPostMediaInput media
+    ) =>
+        new()
+        {
+            Id = media.Id,
+            Url = media.Url,
+            Type = media.Type,
+            VideoInfo = media.VideoInfo is null
+                ? null
+                : new Backup.Application.PostIngestion.Models.ProcessedPostVideoInfoInput
+                {
+                    DurationMilis = media.VideoInfo.DurationMilis,
+                    Variants = media.VideoInfo.Variants?.Select(MapVariant).ToList(),
+                },
+        };
+
+    private static Backup.Application.PostIngestion.Models.ProcessedPostVariantInput MapVariant(
+        ProcessedPostVariantInput variant
+    ) =>
+        new()
+        {
+            ContentType = variant.ContentType,
+            Bitrate = variant.Bitrate,
+            Url = variant.Url,
+        };
+
+    private static PostIngestDiagnostics? MapDiagnostics(
+        Backup.Application.PostIngestion.Models.PostIngestDiagnostics? diagnostics
+    )
     {
-        _logger.LogInformation("{count}", await _postData.GetCount());
-        await _postData.AddPosts(userId, origin, posts);
-        await _postData.Save();
-        _logger.LogInformation("{count}", await _postData.GetCount());
+        if (diagnostics is null)
+            return null;
+
+        return new PostIngestDiagnostics(
+            diagnostics.BeforeCount,
+            diagnostics.AfterCount,
+            diagnostics.DeltaCount,
+            diagnostics.IgnoredPosts,
+            diagnostics.DurationMs
+        );
     }
 }

@@ -1,0 +1,157 @@
+using Backup.App.Interfaces.Data.Posts;
+using Backup.App.Models.Bulk;
+using Backup.App.Models.Posts;
+using Microsoft.Extensions.Logging;
+
+namespace Backup.App.Services.Bulk;
+
+public partial class BulkService
+{
+    private async Task Phase1()
+    {
+        _logger.LogInformation("running phase 1");
+
+        IPostData postData = _postData;
+        int postCount = await postData.GetCount();
+
+        _logger.LogInformation("post count: {count}", postCount);
+
+        List<BulkData>? bulks = await _bulkData.GetBulks();
+
+        if (bulks is null)
+        {
+            _logger.LogInformation("bulk data is null");
+            return;
+        }
+
+        IQueryable<BulkData> query = bulks
+            .Where(o => o.User.Status == StatusUser.Active && o.Order.Phase1 is not null)
+            .OrderBy(o => o.Order.Phase1)
+            .AsQueryable();
+
+        List<BulkData> bulksLeft = query.ToList();
+
+        _logger.LogInformation("bulks left: {count}", bulksLeft.Count);
+
+        if (bulksLeft.Count > 0)
+            _logger.LogInformation(
+                "{names}",
+                string.Join(", ", bulksLeft.Select(o => o.User.Name))
+            );
+
+        if (_config.Bulk.UsersPerCycle > 0)
+            query = query.Take(_config.Bulk.UsersPerCycle);
+
+        List<BulkData> bulksFiltered = query.ToList();
+
+        string? origin = GetType(SourceType.Media);
+
+        if (origin is null)
+        {
+            _logger.LogInformation("origin is null");
+            return;
+        }
+
+        int progress = 1;
+
+        foreach (BulkData bulk in bulksFiltered)
+        {
+            if (bulk.User.Id is null)
+                continue;
+
+            _logger.LogInformation(
+                "progress: {progress}/{total}",
+                progress,
+                _config.Bulk.UsersPerCycle
+            );
+
+            _logger.LogInformation(
+                "user id: {id} user name: {name}, media count: {count}",
+                bulk.User.Id,
+                bulk.User.Name,
+                bulk.Total
+            );
+
+            int index = 0;
+            int count = 0;
+
+            while (_config.Bulk.ApiPerCycle <= 0 || index < _config.Bulk.ApiPerCycle)
+            {
+                _logger.LogInformation("index: {index}, count: {count}", index, count);
+
+                bool valid = await _downloader.Verify();
+
+                if (!valid)
+                {
+                    _logger.LogInformation("downloader is not valid");
+                    break;
+                }
+
+                ParseResult? result = null;
+                int attempt = 0;
+
+                while (attempt < _config.Bulk.ApiRetryCount)
+                {
+                    result = await GetUserMedia(
+                        bulk.User.Id,
+                        origin,
+                        _config.Bulk.MediaPerApi,
+                        bulk.Cursor
+                    );
+
+                    if (result is not null)
+                        break;
+
+                    attempt++;
+
+                    _logger.LogWarning("attempt: {attempt}", attempt);
+                }
+
+                if (result is null)
+                {
+                    bulk.User.Status = StatusUser.Inactive;
+                    _logger.LogInformation("error in GetUserMedia in the id {id}", bulk.User.Id);
+                    break;
+                }
+
+                _logger.LogInformation("ParseResult return {count} posts", result.Posts.Count);
+                await postData.AddPosts(bulk.User.Id, origin, result.Posts);
+
+                if (result.Posts.Count == 0 || result.NextCursor is null)
+                {
+                    bulk.Order.Phase1 = null;
+                    bulk.Cursor = null;
+                }
+                else
+                    bulk.Order.Phase1++;
+
+                bulk.Cursor = result.NextCursor;
+
+                index++;
+                count += result.Posts.Count;
+
+                _logger.LogInformation("cursor: {cursor}", bulk.Cursor);
+
+                if (bulk.Order.Phase1 is null || count >= _config.Bulk.MaxCountPost)
+                    break;
+            }
+
+            if (progress % _config.Bulk.SavePerAction == 0)
+            {
+                _logger.LogInformation("saving posts");
+                await postData.Save();
+
+                _logger.LogInformation("saving bulks");
+                await _bulkData.Save(bulks);
+            }
+
+            progress++;
+        }
+
+        _logger.LogInformation("saving posts");
+        await postData.Save();
+
+        _logger.LogInformation("saving bulks");
+        await _bulkData.Save(bulks);
+    }
+}

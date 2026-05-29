@@ -1,7 +1,7 @@
-using Backup.App.Api.Models;
-using Backup.App.Models.Posts;
+using Backup.Application.PostIngestion.Models;
+using Backup.Domain.Posts;
 
-namespace Backup.App.Api.Services;
+namespace Backup.Application.PostIngestion;
 
 public static class ProcessedPostMapper
 {

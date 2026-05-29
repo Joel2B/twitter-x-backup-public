@@ -175,7 +175,14 @@ public class PostsApiExamplesOperationFilter : IOperationFilter
             {
               "receivedPosts": 3,
               "savedPosts": 3,
-              "nextCursor": null
+              "nextCursor": null,
+              "diagnostics": {
+                "beforeCount": 1024,
+                "afterCount": 1027,
+                "deltaCount": 3,
+                "ignoredPosts": 0,
+                "durationMs": 182
+              }
             }
             """
         );
@@ -186,7 +193,14 @@ public class PostsApiExamplesOperationFilter : IOperationFilter
             {
               "receivedPosts": 20,
               "savedPosts": 20,
-              "nextCursor": "DAABCgABGemExampleCursor"
+              "nextCursor": "DAABCgABGemExampleCursor",
+              "diagnostics": {
+                "beforeCount": 20480,
+                "afterCount": 20500,
+                "deltaCount": 20,
+                "ignoredPosts": 0,
+                "durationMs": 741
+              }
             }
             """
         );

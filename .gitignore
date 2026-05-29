@@ -404,3 +404,5 @@ FodyWeavers.xsd
 # Local split runtime config
 App/Config/*.json
 App/Config/**/*.json
+Backup.Infrastructure/App/Config/*.json
+Backup.Infrastructure/App/Config/**/*.json

@@ -17,7 +17,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Backup.Api\Backup.Api.csproj" />
-    <ProjectReference Include="..\Backup.csproj" />
   </ItemGroup>
 
   <ItemGroup>

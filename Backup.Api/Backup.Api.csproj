@@ -16,7 +16,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Backup.csproj" />
+    <ProjectReference Include="..\Backup.Application\Backup.Application.csproj" />
+    <ProjectReference Include="..\Backup.Infrastructure\Backup.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

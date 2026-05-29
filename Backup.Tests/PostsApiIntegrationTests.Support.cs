@@ -35,7 +35,7 @@ public partial class PostsApiIntegrationTests
             builder.Services.AddControllers().AddApplicationPart(typeof(PostsController).Assembly);
             builder.Services.AddSingleton(postData);
             builder.Services.AddSingleton(postParser);
-            builder.Services.AddScoped<IPostIngestionService, PostIngestionService>();
+            builder.Services.AddPostIngestionApi();
             builder.Services.AddLogging();
 
             WebApplication app = builder.Build();

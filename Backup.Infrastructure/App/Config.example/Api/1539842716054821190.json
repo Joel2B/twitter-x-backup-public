@@ -1,0 +1,202 @@
+{
+  "posts": {
+    "Id": "posts",
+    "Enabled": true,
+    "Request": {
+      "Url": "https://x.com/i/api/graphql/{REPLACE_THIS}/UserTweets",
+      "Query": {
+        "Variables": {
+          "userId": "{REPLACE_THIS}",
+          "count": 20,
+          "cursor": null,
+          "includePromotedContent": true,
+          "withVoice": true
+        },
+        "Features": {},
+        "FieldToggles": {}
+      },
+      "Headers": {
+        "authorization": "{REPLACE_THIS}",
+        "cookie": "{REPLACE_THIS}",
+        "x-csrf-token": "{REPLACE_THIS}",
+        "x-client-transaction-id": "{REPLACE_THIS}",
+        "Referer": "https://x.com/{REPLACE_THIS}"
+      }
+    }
+  },
+  "likes": {
+    "Id": "likes",
+    "Enabled": true,
+    "Request": {
+      "Url": "https://x.com/i/api/graphql/{REPLACE_THIS}/Likes",
+      "Query": {
+        "Variables": {
+          "userId": "{REPLACE_THIS}",
+          "count": 20,
+          "cursor": null,
+          "includePromotedContent": false,
+          "withVoice": true
+        },
+        "Features": {},
+        "FieldToggles": {}
+      },
+      "Headers": {
+        "authorization": "{REPLACE_THIS}",
+        "cookie": "{REPLACE_THIS}",
+        "x-csrf-token": "{REPLACE_THIS}",
+        "x-client-transaction-id": "{REPLACE_THIS}",
+        "Referer": "https://x.com/{REPLACE_THIS}/likes"
+      }
+    }
+  },
+  "bookmarks": {
+    "Id": "bookmarks",
+    "Enabled": true,
+    "Request": {
+      "Url": "https://x.com/i/api/graphql/{REPLACE_THIS}/Bookmarks",
+      "Query": {
+        "Variables": {
+          "userId": "{REPLACE_THIS}",
+          "count": 20,
+          "cursor": null,
+          "includePromotedContent": true
+        },
+        "Features": {},
+        "FieldToggles": {}
+      },
+      "Headers": {
+        "authorization": "{REPLACE_THIS}",
+        "cookie": "{REPLACE_THIS}",
+        "x-csrf-token": "{REPLACE_THIS}",
+        "x-client-transaction-id": "{REPLACE_THIS}",
+        "Referer": "https://x.com/i/bookmarks"
+      }
+    }
+  },
+  "TweetDetail": {
+    "Id": "TweetDetail",
+    "Enabled": true,
+    "Request": {
+      "Url": "https://x.com/i/api/graphql/{REPLACE_THIS}/TweetDetail",
+      "Query": {
+        "Variables": {
+          "focalTweetId": null,
+          "rankingMode": "Relevance",
+          "includePromotedContent": true,
+          "withCommunity": true,
+          "withQuickPromoteEligibilityTweetFields": true,
+          "withBirdwatchNotes": true,
+          "withVoice": true
+        },
+        "Features": {},
+        "FieldToggles": {}
+      },
+      "Headers": {
+        "authorization": "{REPLACE_THIS}",
+        "cookie": "{REPLACE_THIS}",
+        "x-csrf-token": "{REPLACE_THIS}",
+        "x-client-transaction-id": "{REPLACE_THIS}",
+        "Referer": "{REPLACE_THIS}"
+      }
+    }
+  },
+  "UserByScreenName": {
+    "Id": "UserByScreenName",
+    "Enabled": true,
+    "Request": {
+      "Url": "https://x.com/i/api/graphql/{REPLACE_THIS}/UserByScreenName",
+      "Query": {
+        "Variables": {
+          "screen_name": "{REPLACE_THIS}",
+          "withGrokTranslatedBio": false
+        },
+        "Features": {},
+        "FieldToggles": {}
+      },
+      "Headers": {
+        "authorization": "{REPLACE_THIS}",
+        "cookie": "{REPLACE_THIS}",
+        "x-csrf-token": "{REPLACE_THIS}",
+        "x-client-transaction-id": "{REPLACE_THIS}",
+        "Referer": "{REPLACE_THIS}"
+      }
+    }
+  },
+  "UserMedia": {
+    "Id": "media",
+    "Enabled": true,
+    "Request": {
+      "Url": "https://x.com/i/api/graphql/{REPLACE_THIS}/UserMedia",
+      "Query": {
+        "Variables": {
+          "userId": "{REPLACE_THIS}",
+          "count": 20,
+          "cursor": null,
+          "includePromotedContent": false,
+          "withClientEventToken": false,
+          "withBirdwatchNotes": false,
+          "withVoice": true
+        },
+        "Features": {},
+        "FieldToggles": {}
+      },
+      "Headers": {
+        "authorization": "{REPLACE_THIS}",
+        "cookie": "{REPLACE_THIS}",
+        "x-csrf-token": "{REPLACE_THIS}",
+        "x-client-transaction-id": "{REPLACE_THIS}",
+        "Referer": "{REPLACE_THIS}"
+      }
+    }
+  },
+  "SearchTimeline": {
+    "Id": "SearchTimeline",
+    "Enabled": false,
+    "Request": {
+      "Url": "https://x.com/i/api/graphql/{REPLACE_THIS}/SearchTimeline",
+      "Query": {
+        "Variables": {
+          "rawQuery": "#test",
+          "count": 20,
+          "cursor": null,
+          "querySource": "",
+          "product": "Media",
+          "withGrokTranslatedBio": false,
+          "withQuickPromoteEligibilityTweetFields": false
+        },
+        "Features": {},
+        "FieldToggles": {}
+      },
+      "Headers": {
+        "authorization": "{REPLACE_THIS}",
+        "cookie": "{REPLACE_THIS}",
+        "x-csrf-token": "{REPLACE_THIS}",
+        "x-client-transaction-id": "{REPLACE_THIS}",
+        "Referer": "https://x.com/hashtag/test?f=media"
+      }
+    }
+  },
+  "UsersByRestIds": {
+    "Id": "UsersByRestIds",
+    "Enabled": false,
+    "Request": {
+      "Url": "https://x.com/i/api/graphql/{REPLACE_THIS}/UsersByRestIds",
+      "Query": {
+        "Variables": {
+          "userIds": [
+            "{REPLACE_THIS}"
+          ]
+        },
+        "Features": {},
+        "FieldToggles": {}
+      },
+      "Headers": {
+        "authorization": "{REPLACE_THIS}",
+        "cookie": "{REPLACE_THIS}",
+        "x-csrf-token": "{REPLACE_THIS}",
+        "x-client-transaction-id": "{REPLACE_THIS}",
+        "Referer": "{REPLACE_THIS}"
+      }
+    }
+  }
+}

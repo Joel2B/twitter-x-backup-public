@@ -1,0 +1,13 @@
+{
+  "Users": [
+    {
+      "Id": "1539842716054821190"
+    }
+  ],
+  "Recovery": {
+    "Enabled": false
+  },
+  "Dump": {
+    "Count": 5000
+  }
+}
