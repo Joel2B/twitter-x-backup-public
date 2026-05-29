@@ -1,4 +1,3 @@
-using Backup.App.Extensions;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Models.Config;
 using Backup.App.Models.Media;
@@ -27,8 +26,12 @@ public class MediaPrune(AppConfig _config) : IMediaPrune
 
                 var query = QueryHelpers.ParseQuery(uri.Query);
 
-                string format = query.GetValue("format");
-                string name = query.GetValue("name");
+                string format = query.TryGetValue("format", out var formatValue)
+                    ? formatValue.ToString()
+                    : string.Empty;
+                string name = query.TryGetValue("name", out var nameValue)
+                    ? nameValue.ToString()
+                    : string.Empty;
 
                 return !_filter.IsExcluded(extension, format, name);
             });
