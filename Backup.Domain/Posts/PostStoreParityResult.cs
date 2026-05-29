@@ -1,6 +1,4 @@
-using Backup.Domain.Posts;
-
-namespace Backup.Application.Posts.Models;
+namespace Backup.Domain.Posts;
 
 public class PostStoreParityResult
 {

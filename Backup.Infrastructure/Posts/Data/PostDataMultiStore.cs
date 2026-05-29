@@ -100,11 +100,11 @@ public class PostDataMultiStore(
         List<PostStoreCountSourceAdapter> adapters = _stores
             .Select(store => new PostStoreCountSourceAdapter(store))
             .ToList();
-        Backup.Application.Posts.Models.PostStoreParityResult parity = await _postStoreParityService.Verify(
+        Backup.Domain.Posts.PostStoreParityResult parity = await _postStoreParityService.Verify(
             adapters
         );
 
-        foreach (Backup.Application.Posts.Models.PostStoreSnapshot snapshot in parity.Snapshots)
+        foreach (Backup.Domain.Posts.PostStoreSnapshot snapshot in parity.Snapshots)
         {
             _logger.LogInfo(
                 "post store counts [{storeId}] posts={posts}, profiles={profiles}, hashtags={hashtags}, medias={medias}, mediaVariants={mediaVariants}, indexEntries={indexEntries}, changes={changes}, changeFields={changeFields}, hashMeta={hashMeta}",
@@ -124,7 +124,7 @@ public class PostDataMultiStore(
         if (parity.Mismatches.Count == 0)
         {
             foreach (
-                Backup.Application.Posts.Models.PostStoreSnapshot snapshot in parity.Snapshots.Where(snapshot =>
+                Backup.Domain.Posts.PostStoreSnapshot snapshot in parity.Snapshots.Where(snapshot =>
                     !string.Equals(snapshot.Label, parity.PrimaryLabel, StringComparison.Ordinal)
                 )
             )
@@ -138,7 +138,7 @@ public class PostDataMultiStore(
             return;
         }
 
-        foreach (Backup.Application.Posts.Models.PostStoreMismatch mismatch in parity.Mismatches)
+        foreach (Backup.Domain.Posts.PostStoreMismatch mismatch in parity.Mismatches)
         {
             _logger.LogWarning(
                 "post store parity MISMATCH: primary={primary} secondary={secondary} diffs={diffs}",

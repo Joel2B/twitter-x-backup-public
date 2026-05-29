@@ -1,4 +1,3 @@
-using Backup.Application.Posts.Models;
 using Backup.Application.Posts.Ports;
 using Backup.Domain.Posts;
 
