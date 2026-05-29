@@ -5,7 +5,6 @@ using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Services.Media;
 using Backup.App.Interfaces.Services.Posts;
 using Backup.App.Interfaces.Services.UtilsService;
-using Backup.App.Extensions;
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Data.Proxy;
 using Backup.App.Interfaces.Proxy;
@@ -23,7 +22,7 @@ public static class FeatureInfrastructureServiceCollectionExtensions
 {
     public static IServiceCollection AddPostsInfrastructure(this IServiceCollection services)
     {
-        services.AddPostData();
+        services.AddPostDataInfrastructure();
         services.AddScoped<IPostLogger, LocalPostLogger>();
         services.AddScoped<IPostDownloader, PostDownloaderHttp>();
         services.AddScoped<IPostParser, PostParser>();
@@ -36,7 +35,7 @@ public static class FeatureInfrastructureServiceCollectionExtensions
 
     public static IServiceCollection AddMediaInfrastructure(this IServiceCollection services)
     {
-        services.AddMediaData();
+        services.AddMediaDataInfrastructure();
         services.AddScoped<IMediaProcessing, MediaProcessing>();
         services.AddScoped<IMediaPrune, MediaPrune>();
         services.AddScoped<IMediaIntegrity, MediaIntegrity>();
@@ -47,19 +46,19 @@ public static class FeatureInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaDownloader, MediaDownloaderHttp>();
         services.AddScoped<IMediaLogger, LocalMediaLogger>();
 
-        services.AddMediaBackup();
+        services.AddMediaBackupInfrastructure();
         return services;
     }
 
     public static IServiceCollection AddBulkInfrastructure(this IServiceCollection services)
     {
-        services.AddBulkData();
+        services.AddBulkDataInfrastructure();
         return services;
     }
 
     public static IServiceCollection AddDumpInfrastructure(this IServiceCollection services)
     {
-        services.AddDumpData();
+        services.AddDumpDataInfrastructure();
         return services;
     }
 
