@@ -9,9 +9,9 @@ services:
       - smb_s:/mnt/s
       - smb_j:/mnt/j
     
-      - "C:/data/dev/c#/twitter-x-backup/bin/Debug/net10.0/config:/app/config"
-      - "C:/data/dev/c#/twitter-x-backup/bin/Debug/net10.0/data:/app/data"
-      - "C:/data/dev/c#/twitter-x-backup/bin/Debug/net10.0/debug:/app/debug"
+      - "./Backup.Cli/bin/Debug/net10.0/config:/app/config"
+      - "./Backup.Cli/bin/Debug/net10.0/data:/app/data"
+      - "./Backup.Cli/bin/Debug/net10.0/debug:/app/debug"
 
 volumes:
   smb_i:
