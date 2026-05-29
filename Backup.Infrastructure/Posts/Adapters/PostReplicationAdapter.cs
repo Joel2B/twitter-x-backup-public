@@ -19,7 +19,11 @@ public class PostReplicationAdapter(
         try
         {
             List<PostReplicationStoreAdapter> adapters = stores
-                .Select(store => new PostReplicationStoreAdapter(new PostDataDomainStoreAdapter(store)))
+                .Select(store =>
+                    new PostReplicationStoreAdapter(
+                        store as IPostDomainDataStore ?? new PostDataDomainStoreAdapter(store)
+                    )
+                )
                 .ToList();
 
             await _postReplicationService.Replicate(adapters);
