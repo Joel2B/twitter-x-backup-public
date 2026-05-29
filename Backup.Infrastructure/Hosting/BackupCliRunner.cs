@@ -1,8 +1,8 @@
 namespace Backup.Infrastructure.Hosting;
 
-public sealed class BackupCliRunner(global::Backup.App.App app) : IBackupCliRunner
+public sealed class BackupCliRunner(BackupRuntime backupRuntime) : IBackupCliRunner
 {
-    private readonly global::Backup.App.App _app = app;
+    private readonly BackupRuntime _backupRuntime = backupRuntime;
 
-    public Task RunBackup() => _app.Backup();
+    public Task RunBackup() => _backupRuntime.RunBackup();
 }

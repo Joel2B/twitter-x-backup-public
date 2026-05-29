@@ -8,10 +8,10 @@ using Backup.App.Models.Config.Api;
 using Backup.App.Models.Config.ApiRequest;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App;
+namespace Backup.Infrastructure.Hosting;
 
-public class App(
-    ILogger<App> _logger,
+public class BackupRuntime(
+    ILogger<BackupRuntime> _logger,
     AppConfig _config,
     IPostData _postData,
     IEnumerable<IPostService> _postServices,
@@ -19,14 +19,14 @@ public class App(
     IEnumerable<IMediaService> _mediaServices
 )
 {
-    private readonly ILogger<App> _logger = _logger;
+    private readonly ILogger<BackupRuntime> _logger = _logger;
     private readonly AppConfig _config = _config;
     private readonly IPostData _postData = _postData;
     private readonly IEnumerable<IPostService> _postServices = _postServices;
     private readonly IEnumerable<IBulkService> _bulkServices = _bulkServices;
     private readonly IEnumerable<IMediaService> _mediaServices = _mediaServices;
 
-    public async Task Backup()
+    public async Task RunBackup()
     {
         IReadOnlyList<UsersContext> contexts = _config.UsersContext;
 

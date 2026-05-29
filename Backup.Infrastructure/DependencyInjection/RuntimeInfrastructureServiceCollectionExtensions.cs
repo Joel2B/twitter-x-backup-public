@@ -11,6 +11,7 @@ using Backup.App.Services.Media;
 using Backup.App.Services.Posts;
 using Backup.App.Services.Proxy;
 using Backup.App.Services.UtilsService;
+using Backup.Infrastructure.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;
@@ -45,9 +46,9 @@ public static class RuntimeInfrastructureServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddAppRuntimeInfrastructure(this IServiceCollection services)
+    public static IServiceCollection AddBackupRuntimeInfrastructure(this IServiceCollection services)
     {
-        services.AddScoped<global::Backup.App.App>();
+        services.AddScoped<BackupRuntime>();
         return services;
     }
 }

@@ -15,7 +15,7 @@ public static class BackupCliInfrastructureServiceCollectionExtensions
         services.AddMediaInfrastructure();
         services.AddRuntimeServicesInfrastructure();
         services.AddSetupInfrastructure();
-        services.AddAppRuntimeInfrastructure();
+        services.AddBackupRuntimeInfrastructure();
         services.AddScoped<IBackupCliRunner, BackupCliRunner>();
 
         return services;
