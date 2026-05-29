@@ -1,6 +1,6 @@
 $ErrorActionPreference = "Stop"
 
-$image = "192.168.2.141:5000/twitter-x-backup:latest"
+$image = "192.168.2.141:5000/twitter-x-backup-cli:latest"
 
 docker build -f Dockerfile.Cli -t $image .
 

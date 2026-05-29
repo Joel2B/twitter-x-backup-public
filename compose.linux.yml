@@ -1,5 +1,5 @@
 services:
-  twitter-x-backup:
+  twitter-x-backup-cli:
     volumes:
       - /mnt/i:/mnt/i
       # - /mnt/k:/mnt/k
