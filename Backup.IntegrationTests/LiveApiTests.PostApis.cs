@@ -1,7 +1,7 @@
-using Backup.App.Models.Config;
-using Backup.App.Models.Config.Api;
-using Backup.App.Models.Config.ApiRequest;
-using Backup.App.Services.Posts;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Api;
+using Backup.Infrastructure.Models.Config.ApiRequest;
+using Backup.Infrastructure.Services.Posts;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Backup.IntegrationTests;
@@ -67,3 +67,4 @@ public partial class LiveApiTests
         Assert.True(request.Query.Variables.ContainsKey("count"));
     }
 }
+

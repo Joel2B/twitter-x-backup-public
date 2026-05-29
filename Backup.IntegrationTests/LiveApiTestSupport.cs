@@ -1,7 +1,7 @@
-using Backup.App.Models.Config;
-using Backup.App.Models.Config.Api;
-using Backup.App.Models.Config.ApiRequest;
-using Backup.App.Services.Posts;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Api;
+using Backup.Infrastructure.Models.Config.ApiRequest;
+using Backup.Infrastructure.Services.Posts;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 
@@ -145,3 +145,4 @@ internal static class LiveApiTestSupport
         throw new Exception("tweet id not found in posts response");
     }
 }
+
