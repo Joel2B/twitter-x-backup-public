@@ -7,7 +7,7 @@ using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Services.Posts;
+namespace Backup.Infrastructure.Services.Posts;
 
 public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, AppConfig _config)
     : IPostDownloader
@@ -148,3 +148,4 @@ public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, AppConfig _
         await Task.Delay(ms);
     }
 }
+

@@ -1,11 +1,12 @@
 using Backup.App.Interfaces.Services.Posts;
+using PostMapper = Backup.App.Mapper.Posts;
 using Backup.App.Models.Posts;
 using Backup.App.Models.Posts.Response;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Backup.App.Services.Posts;
+namespace Backup.Infrastructure.Services.Posts;
 
 public class PostParser(ILogger<PostParser> _logger) : IPostParser
 {
@@ -30,7 +31,7 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
         foreach (Entry entry in entries)
             try
             {
-                Post post = Mapper.Posts.Map(entry);
+                Post post = PostMapper.Map(entry);
                 tweets.Add(post);
             }
             catch (Exception ex)
@@ -241,3 +242,4 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
         return new ParseUser(user);
     }
 }
+

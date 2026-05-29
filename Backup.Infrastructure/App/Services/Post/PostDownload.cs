@@ -5,7 +5,7 @@ using Backup.App.Models.Dump;
 using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Posts;
+namespace Backup.Infrastructure.Services.Posts;
 
 public class PostDownload(
     ILogger<PostDownload> _logger,
@@ -143,3 +143,4 @@ public class PostDownload(
         await PostData.Save();
     }
 }
+

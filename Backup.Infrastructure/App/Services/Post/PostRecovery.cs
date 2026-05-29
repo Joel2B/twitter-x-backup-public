@@ -9,7 +9,7 @@ using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Services.Posts;
+namespace Backup.Infrastructure.Services.Posts;
 
 public class PostRecovery(
     ILogger<PostRecovery> _logger,
@@ -116,3 +116,4 @@ public class PostRecovery(
         return posts;
     }
 }
+

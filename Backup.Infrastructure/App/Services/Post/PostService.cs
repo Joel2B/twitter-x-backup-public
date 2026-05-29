@@ -5,7 +5,7 @@ using Backup.App.Models.Config.Api;
 using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Services.Posts;
+namespace Backup.Infrastructure.Services.Posts;
 
 public class PostService(
     ILogger<PostService> _logger,
@@ -39,3 +39,4 @@ public class PostService(
         await data.Prune();
     }
 }
+

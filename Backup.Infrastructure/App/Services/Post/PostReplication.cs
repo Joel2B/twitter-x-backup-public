@@ -4,7 +4,7 @@ using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Services.Posts;
+namespace Backup.Infrastructure.Services.Posts;
 
 public class PostReplication(ILogger<PostReplication> _logger) : IPostReplication
 {
@@ -128,3 +128,4 @@ public class PostReplication(ILogger<PostReplication> _logger) : IPostReplicatio
         }
     }
 }
+

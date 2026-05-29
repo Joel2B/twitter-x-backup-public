@@ -7,7 +7,7 @@ using Backup.App.Models.Proxy;
 using Backup.App.Utils;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Proxy;
+namespace Backup.Infrastructure.Data.Proxy;
 
 public class LocalProxyData(AppConfig _config, IPartition _partition) : IProxyData, ISetup
 {
@@ -81,3 +81,4 @@ public class LocalProxyData(AppConfig _config, IPartition _partition) : IProxyDa
         await File.WriteAllTextAsync(path, json);
     }
 }
+
