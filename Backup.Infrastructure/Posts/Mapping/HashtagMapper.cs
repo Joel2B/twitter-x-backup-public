@@ -1,10 +1,10 @@
 using Backup.Infrastructure.Models.Posts.Response;
 
-namespace Backup.Infrastructure.Mapper;
+namespace Backup.Infrastructure.Posts.Mapping;
 
-public class Hashtag
+public static class HashtagMapper
 {
-    public static List<string>? GetHashtags(Entry entry)
+    public static List<string>? Map(Entry entry)
     {
         TweetResults tweetResults =
             entry.Content.ItemContent.TweetResults ?? throw new Exception("tweetResults");
@@ -24,4 +24,3 @@ public class Hashtag
         return hashtags;
     }
 }
-

@@ -1,11 +1,11 @@
 using Backup.Infrastructure.Models.Posts;
 using Backup.Infrastructure.Models.Posts.Response;
 
-namespace Backup.Infrastructure.Mapper;
+namespace Backup.Infrastructure.Posts.Mapping;
 
-public class Profile()
+public static class ProfileMapper
 {
-    public static PostProfile GetProfile(Entry entry)
+    public static PostProfile Map(Entry entry)
     {
         TweetResults tweetResults =
             entry.Content.ItemContent.TweetResults ?? throw new Exception("tweetResults");
@@ -42,4 +42,3 @@ public class Profile()
         return profile;
     }
 }
-

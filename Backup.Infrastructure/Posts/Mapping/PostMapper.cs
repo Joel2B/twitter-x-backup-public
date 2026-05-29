@@ -1,9 +1,9 @@
 using Backup.Infrastructure.Models.Posts;
 using Backup.Infrastructure.Models.Posts.Response;
 
-namespace Backup.Infrastructure.Mapper;
+namespace Backup.Infrastructure.Posts.Mapping;
 
-public static class Posts
+public static class PostMapper
 {
     public static Post Map(Entry entry)
     {
@@ -15,14 +15,14 @@ public static class Posts
         return new()
         {
             Id = legacy.IdStr ?? throw new Exception("Id"),
-            Profile = Profile.GetProfile(entry),
+            Profile = ProfileMapper.Map(entry),
             Description = legacy.FullText ?? throw new Exception("Description"),
             Retweeted = legacy.Retweeted,
             Favorited = legacy.Favorited,
             Bookmarked = legacy.Bookmarked ?? false,
             CreatedAt = legacy.CreatedAt ?? throw new Exception("CreatedAt"),
-            Hashtags = Hashtag.GetHashtags(entry),
-            Medias = Media.GetMedias(entry),
+            Hashtags = HashtagMapper.Map(entry),
+            Medias = MediaMapper.Map(entry),
         };
     }
 
@@ -45,10 +45,7 @@ public static class Posts
 
         tweetResults.Result = retweeted;
 
-        // "__typename": "Tweet" => Core
-        // "__typename": "TweetWithVisibilityResults" => Tweet?.Core
         if (tweetResults.Result.Tweet is not null)
             tweetResults.Result = tweetResults.Result.Tweet;
     }
 }
-

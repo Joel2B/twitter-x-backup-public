@@ -1,0 +1,55 @@
+using Backup.Application.BackupRun.Models;
+using Backup.Application.BackupRun.Ports;
+using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Logging;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Api;
+using Backup.Infrastructure.Models.Config.ApiRequest;
+using Microsoft.Extensions.Logging;
+
+namespace Backup.Infrastructure.BackupRun.Adapters;
+
+public class PostSourceRunnerAdapter(
+    AppConfig config,
+    IEnumerable<IPostService> postServices,
+    ILogger<PostSourceRunnerAdapter> logger
+) : IPostSourceRunner
+{
+    private readonly AppConfig _config = config;
+    private readonly IEnumerable<IPostService> _postServices = postServices;
+    private readonly ILogger<PostSourceRunnerAdapter> _logger = logger;
+
+    public async Task Run(string userId, BackupRunSourcePlan source)
+    {
+        UsersContext? userContext = _config.UsersContext.FirstOrDefault(context =>
+            context.UserId == userId
+        );
+
+        if (userContext is null)
+            return;
+
+        if (!userContext.Api.TryGetValue(source.SourceId, out ApiConfig? api))
+            return;
+
+        if (!api.Enabled)
+            return;
+
+        Request request = api.Request.Clone();
+
+        ApiContext apiContext = new()
+        {
+            Id = api.Id,
+            Request = request,
+            Count = source.Count,
+            UserId = userId,
+        };
+
+        _logger.LogInfo("source: {source}", apiContext.Id);
+
+        foreach (IPostService service in _postServices)
+        {
+            using (_logger.LogTimer($"post service: {service.GetType().Name}"))
+                await service.Download(apiContext);
+        }
+    }
+}

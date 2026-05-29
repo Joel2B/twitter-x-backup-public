@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Data.Media;
 using Backup.Infrastructure.Data.Proxy;
+using Backup.Infrastructure.BackupRun.Adapters;
 using Backup.Infrastructure.Interfaces;
 using Backup.Infrastructure.Interfaces.Data.Proxy;
 using Backup.Infrastructure.Interfaces.Proxy;
@@ -11,7 +12,6 @@ using Backup.Infrastructure.Services.Media;
 using Backup.Infrastructure.Services.Posts;
 using Backup.Infrastructure.Services.Proxy;
 using Backup.Infrastructure.Services.UtilsService;
-using Backup.Infrastructure.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;
@@ -46,9 +46,13 @@ public static class RuntimeInfrastructureServiceCollectionExtensions
         return services;
     }
 
-    public static IServiceCollection AddBackupRuntimeInfrastructure(this IServiceCollection services)
+    public static IServiceCollection AddBackupRunInfrastructure(this IServiceCollection services)
     {
-        services.AddScoped<BackupRuntime>();
+        services.AddBackupRunAdapters();
+        services.AddScoped<
+            Backup.Application.BackupRun.IBackupRunService,
+            Backup.Application.BackupRun.BackupRunService
+        >();
         return services;
     }
 }

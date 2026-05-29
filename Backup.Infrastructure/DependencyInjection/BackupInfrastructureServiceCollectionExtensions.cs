@@ -6,10 +6,8 @@ public static class BackupInfrastructureServiceCollectionExtensions
 {
     public static IServiceCollection AddBackupApiInfrastructure(this IServiceCollection services)
     {
-        services.AddCoreInfrastructure();
-        services.AddStructuredLoggingInfrastructure();
-        services.AddPostsInfrastructure();
-        services.AddSetupInfrastructure();
+        services.AddInfrastructureBase();
+        services.AddBackupApiFeatureSet();
         return services;
     }
 }

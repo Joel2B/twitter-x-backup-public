@@ -2,21 +2,21 @@ using Backup.Infrastructure.Models.Posts;
 using Backup.Infrastructure.Models.Posts.Response;
 using Newtonsoft.Json.Linq;
 
-namespace Backup.Infrastructure.Mapper;
+namespace Backup.Infrastructure.Posts.Mapping;
 
-public class Media
+public static class MediaMapper
 {
-    public static List<PostMedia>? GetMedias(Entry entry)
+    public static List<PostMedia>? Map(Entry entry)
     {
         Result result = entry.Content.ItemContent.TweetResults!.Result;
 
-        List<Medium>? _media = result.Legacy!.Entities.Media;
-        _media ??= GetMediaCard(result);
+        List<Medium>? sourceMedia = result.Legacy!.Entities.Media;
+        sourceMedia ??= GetMediaCard(result);
 
-        if (_media is null)
+        if (sourceMedia is null)
             return null;
 
-        List<PostMedia>? media = _media
+        List<PostMedia>? media = sourceMedia
             .Select(o => new PostMedia
             {
                 Id = o.IdStr,
@@ -97,4 +97,3 @@ public class Media
         return videoInfo;
     }
 }
-

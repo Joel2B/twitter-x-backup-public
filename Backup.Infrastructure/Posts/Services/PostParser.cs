@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Interfaces.Services.Posts;
-using PostMapper = Backup.Infrastructure.Mapper.Posts;
+using PostMapper = Backup.Infrastructure.Posts.Mapping.PostMapper;
 using Backup.Infrastructure.Models.Posts;
 using Backup.Infrastructure.Models.Posts.Response;
 using Microsoft.Extensions.Logging;
