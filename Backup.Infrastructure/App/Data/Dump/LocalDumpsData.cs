@@ -6,7 +6,7 @@ using Backup.App.Models.Config.Data.Dump;
 using Backup.App.Models.Dump;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public class LocalDumpsData(StorageDump _config, IPartition _partition) : IDumpsDataStore, ISetup
 {
@@ -73,3 +73,4 @@ public class LocalDumpsData(StorageDump _config, IPartition _partition) : IDumps
         await File.WriteAllTextAsync(path, content);
     }
 }
+

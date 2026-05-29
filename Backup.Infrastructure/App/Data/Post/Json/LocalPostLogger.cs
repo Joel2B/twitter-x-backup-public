@@ -5,7 +5,7 @@ using Backup.App.Models.Config.Data;
 using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public class LocalPostLogger(
     ILogger<LocalPostLogger> _logger,
@@ -102,3 +102,4 @@ public class LocalPostLogger(
         return Task.CompletedTask;
     }
 }
+

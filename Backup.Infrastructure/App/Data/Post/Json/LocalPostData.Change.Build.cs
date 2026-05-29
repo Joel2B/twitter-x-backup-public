@@ -1,7 +1,7 @@
 using Backup.App.Models.Data.Json;
 using Backup.App.Models.Posts;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public partial class LocalPostData
 {
@@ -274,3 +274,4 @@ public partial class LocalPostData
         return "unknown";
     }
 }
+

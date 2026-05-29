@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public partial class SqlitePostData
 {
@@ -141,3 +141,4 @@ public partial class SqlitePostData
         return new SqliteConnection(connection.ToString());
     }
 }
+

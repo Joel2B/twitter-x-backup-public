@@ -3,7 +3,7 @@ using Backup.App.Models.Config.Api;
 using Backup.App.Models.Dump;
 using Backup.App.Models.Posts;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public class DumpDataMultiStore(IEnumerable<IDumpDataStore> stores) : IDumpData
 {
@@ -46,3 +46,4 @@ public class DumpDataMultiStore(IEnumerable<IDumpDataStore> stores) : IDumpData
     public Task Flush(IPostData postData, string userId, ApiContext context) =>
         Primary.Flush(postData, userId, context);
 }
+

@@ -12,7 +12,7 @@ using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public class LocalDumpData(
     ILogger<LocalDumpData> _logger,
@@ -247,3 +247,4 @@ public class LocalDumpData(
         }
     }
 }
+

@@ -3,7 +3,7 @@ using Backup.App.Models.Posts;
 using Backup.App.Utils;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public partial class LocalPostData
 {
@@ -318,3 +318,4 @@ public partial class LocalPostData
         await File.WriteAllTextAsync(targetPath, json);
     }
 }
+

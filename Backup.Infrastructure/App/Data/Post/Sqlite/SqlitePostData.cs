@@ -7,7 +7,7 @@ using Backup.App.Models.Posts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public partial class SqlitePostData(
     ILogger<SqlitePostData> logger,
@@ -354,7 +354,7 @@ public partial class SqlitePostData(
 
             db.PostChanges.Add(change);
             meta.Deleted = true;
-            meta.Hash = Utils.PostHash.Compute(ToModel(entity, deleted: true));
+            meta.Hash = Backup.App.Utils.PostHash.Compute(ToModel(entity, deleted: true));
             marked++;
         }
 
@@ -496,3 +496,4 @@ public partial class SqlitePostData(
         GC.SuppressFinalize(this);
     }
 }
+

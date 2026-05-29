@@ -2,7 +2,7 @@ using Backup.App.Models.Data.Json;
 using Backup.App.Models.Posts;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public partial class LocalPostData
 {
@@ -71,6 +71,7 @@ public partial class LocalPostData
 
     private static string ComputePostHash(Post post)
     {
-        return Utils.PostHash.Compute(post);
+        return Backup.App.Utils.PostHash.Compute(post);
     }
 }
+

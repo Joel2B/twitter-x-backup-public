@@ -1,4 +1,4 @@
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public partial class SqlitePostData
 {
@@ -110,3 +110,4 @@ public partial class SqlitePostData
         public bool Deleted { get; set; }
     }
 }
+

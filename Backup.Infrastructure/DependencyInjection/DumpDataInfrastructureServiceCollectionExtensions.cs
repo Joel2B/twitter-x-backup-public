@@ -1,5 +1,5 @@
 using Backup.App.Data.Partition;
-using Backup.App.Data.Posts;
+using Backup.Infrastructure.Data.Posts;
 using Backup.App.Interfaces;
 using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Partition;
@@ -87,3 +87,4 @@ public static class DumpDataInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+

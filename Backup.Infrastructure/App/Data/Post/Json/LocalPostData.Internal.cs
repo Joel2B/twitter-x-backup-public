@@ -4,7 +4,7 @@ using Backup.App.Models.Posts;
 using Backup.App.Utils;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public partial class LocalPostData
 {
@@ -197,3 +197,4 @@ public partial class LocalPostData
         return Task.CompletedTask;
     }
 }
+

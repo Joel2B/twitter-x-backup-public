@@ -1,7 +1,7 @@
 using System.Text.Json;
 using Backup.App.Models.Posts;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public partial class LocalPostData
 {
@@ -28,3 +28,4 @@ public partial class LocalPostData
         return JsonSerializer.Deserialize<T>(json, ChangeJsonOptions);
     }
 }
+

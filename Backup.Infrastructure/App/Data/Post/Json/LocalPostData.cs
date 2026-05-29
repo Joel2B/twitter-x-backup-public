@@ -8,7 +8,7 @@ using Backup.App.Models.Data.Json;
 using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public partial class LocalPostData(
     ILogger<LocalPostData> _logger,
@@ -288,3 +288,4 @@ public partial class LocalPostData(
             await PrunePartition(partition);
     }
 }
+

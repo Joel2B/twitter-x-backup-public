@@ -1,4 +1,4 @@
-using Backup.App.Data.Posts;
+using Backup.Infrastructure.Data.Posts;
 using Backup.App.Interfaces.Data.Posts;
 using Backup.App.Interfaces.Services.Posts;
 using Backup.App.Models.Posts;
@@ -22,4 +22,5 @@ public static class PostsInfrastructureServiceCollectionExtensions
         return services;
     }
 }
+
 

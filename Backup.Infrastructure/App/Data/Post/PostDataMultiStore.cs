@@ -4,7 +4,7 @@ using Backup.App.Interfaces.Services.Posts;
 using Backup.App.Models.Posts;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public class PostDataMultiStore(
     IEnumerable<IPostDataStore> stores,
@@ -170,3 +170,4 @@ public class PostDataMultiStore(
         }
     }
 }
+

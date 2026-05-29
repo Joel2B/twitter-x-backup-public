@@ -3,7 +3,7 @@ using Backup.App.Models.Data.Json;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public partial class LocalPostData
 {
@@ -238,3 +238,4 @@ public partial class LocalPostData
         }
     }
 }
+

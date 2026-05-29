@@ -2,7 +2,7 @@ using Backup.App.Models.Posts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.App.Data.Posts;
+namespace Backup.Infrastructure.Data.Posts;
 
 public partial class SqlitePostData
 {
@@ -578,7 +578,7 @@ public partial class SqlitePostData
             foreach (string id in chunk)
             {
                 Post post = normalized[id];
-                string hash = Utils.PostHash.Compute(post);
+                string hash = Backup.App.Utils.PostHash.Compute(post);
 
                 if (existing.TryGetValue(id, out PostHashMetaEntity? row))
                 {
@@ -668,3 +668,4 @@ public partial class SqlitePostData
         );
     }
 }
+
