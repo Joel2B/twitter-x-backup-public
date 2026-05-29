@@ -1,4 +1,4 @@
-namespace Backup.Application.BackupRun.Models;
+namespace Backup.Domain.BackupRun;
 
 public sealed class BackupRunPlan
 {

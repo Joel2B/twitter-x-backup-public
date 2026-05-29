@@ -1,4 +1,4 @@
-using Backup.Application.BackupRun.Models;
+using Backup.Domain.BackupRun;
 
 namespace Backup.Application.BackupRun.Ports;
 

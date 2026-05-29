@@ -1,5 +1,5 @@
-using Backup.Application.BackupRun.Models;
 using Backup.Application.BackupRun.Ports;
+using Backup.Domain.BackupRun;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 

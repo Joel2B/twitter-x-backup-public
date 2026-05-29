@@ -1,4 +1,4 @@
-using Backup.Application.BackupRun.Models;
+using Backup.Domain.BackupRun;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.ApiRequest;
 

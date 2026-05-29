@@ -1,4 +1,5 @@
 using Backup.Application.BackupRun.Ports;
+using Backup.Domain.BackupRun;
 
 namespace Backup.Application.BackupRun;
 
@@ -20,20 +21,20 @@ public class BackupRunService(
 
     public async Task RunBackup()
     {
-        Models.BackupRunPlan plan = _planProvider.GetPlan();
+        BackupRunPlan plan = _planProvider.GetPlan();
 
-        foreach (Models.BackupRunUserPlan user in plan.Users)
+        foreach (BackupRunUserPlan user in plan.Users)
         {
-            foreach (Models.BackupRunSourcePlan source in user.Sources)
+            foreach (BackupRunSourcePlan source in user.Sources)
                 await _postSourceRunner.Run(user.UserId, source);
         }
 
-        foreach (Models.BackupRunUserPlan user in plan.Users.Where(user => user.RunRecovery))
+        foreach (BackupRunUserPlan user in plan.Users.Where(user => user.RunRecovery))
             await _postRecoveryRunner.Run(user);
 
         if (plan.IsBulkEnabled)
         {
-            foreach (Models.BackupRunUserPlan user in plan.Users.Where(user => user.RunBulk))
+            foreach (BackupRunUserPlan user in plan.Users.Where(user => user.RunBulk))
                 await _bulkRunner.Run(user.UserId);
         }
 
