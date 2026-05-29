@@ -9,20 +9,13 @@ public static class BackupCliInfrastructureServiceCollectionExtensions
     {
         services.AddCoreInfrastructure();
         services.AddSerilog();
-
-        services.AddPostData();
-        services.AddDumpData();
-        services.AddBulkData();
-        services.AddMediaData();
-
-        services.AddUtils();
-        services.AddPost();
-        services.AddMedia();
-        services.AddMediaBackup();
-        services.AddServices();
-
-        services.AddSetup();
-        services.AddApp();
+        services.AddPostsInfrastructure();
+        services.AddDumpInfrastructure();
+        services.AddBulkInfrastructure();
+        services.AddMediaInfrastructure();
+        services.AddRuntimeServicesInfrastructure();
+        services.AddSetupInfrastructure();
+        services.AddAppRuntimeInfrastructure();
 
         return services;
     }

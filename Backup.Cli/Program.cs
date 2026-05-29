@@ -1,5 +1,4 @@
 using Backup.App;
-using Backup.App.Extensions;
 using Backup.Infrastructure.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,7 +13,7 @@ Console.Error.WriteLine("[startup] creating scope");
 await using AsyncServiceScope scope = provider.CreateAsyncScope();
 
 Console.Error.WriteLine("[startup] running setup");
-await scope.ServiceProvider.RunSetup();
+await scope.ServiceProvider.RunBackupInfrastructureSetup();
 
 Console.Error.WriteLine("[startup] resolving app");
 App app = scope.ServiceProvider.GetRequiredService<App>();

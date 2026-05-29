@@ -9,9 +9,8 @@ public static class BackupInfrastructureServiceCollectionExtensions
     {
         services.AddCoreInfrastructure();
         services.AddSerilog();
-        services.AddPostData();
-        services.AddPost();
-        services.AddSetup();
+        services.AddPostsInfrastructure();
+        services.AddSetupInfrastructure();
         return services;
     }
 }
