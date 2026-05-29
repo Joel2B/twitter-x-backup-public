@@ -1,4 +1,5 @@
 using Backup.Application.PostIngestion.Models;
+using Backup.Domain.Posts;
 
 namespace Backup.Application.PostIngestion;
 
@@ -9,6 +10,6 @@ public interface IPostIngestionService
     Task<PostIngestResult> IngestProcessed(
         string userId,
         string origin,
-        IReadOnlyCollection<ProcessedPostInput> posts
+        IReadOnlyCollection<Post> posts
     );
 }

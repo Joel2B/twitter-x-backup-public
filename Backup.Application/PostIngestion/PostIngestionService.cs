@@ -41,19 +41,18 @@ public class PostIngestionService(IRawPostParser postParser, IPostStoreWriter po
     public async Task<PostIngestResult> IngestProcessed(
         string userId,
         string origin,
-        IReadOnlyCollection<ProcessedPostInput> posts
+        IReadOnlyCollection<Post> posts
     )
     {
         try
         {
-            List<Post> mappedPosts = ProcessedPostMapper.MapMany(posts);
             int receivedPosts = posts.Count;
-            int savedPosts = mappedPosts.Count;
+            int savedPosts = posts.Count;
 
             PostIngestDiagnostics diagnostics = await PersistPosts(
                 userId,
                 origin,
-                mappedPosts,
+                [.. posts],
                 receivedPosts,
                 savedPosts
             );
