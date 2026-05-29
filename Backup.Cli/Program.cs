@@ -1,10 +1,11 @@
 using Backup.App;
 using Backup.App.Extensions;
+using Backup.Infrastructure.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 
 ServiceCollection services = new();
 
-services.AddCore();
+services.AddCoreInfrastructure();
 services.AddSerilog();
 
 services.AddPostData();
