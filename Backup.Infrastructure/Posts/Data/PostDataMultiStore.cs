@@ -98,7 +98,7 @@ public class PostDataMultiStore(
             return;
         }
         List<PostStoreCountSourceAdapter> adapters = _stores
-            .Select(store => new PostStoreCountSourceAdapter(store))
+            .Select(store => new PostStoreCountSourceAdapter(new PostDataDomainStoreAdapter(store)))
             .ToList();
         Backup.Domain.Posts.PostStoreParityResult parity = await _postStoreParityService.Verify(
             adapters

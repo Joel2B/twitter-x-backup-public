@@ -19,7 +19,7 @@ public class PostReplicationAdapter(
         try
         {
             List<PostReplicationStoreAdapter> adapters = stores
-                .Select(store => new PostReplicationStoreAdapter(store))
+                .Select(store => new PostReplicationStoreAdapter(new PostDataDomainStoreAdapter(store)))
                 .ToList();
 
             await _postReplicationService.Replicate(adapters);
@@ -30,4 +30,3 @@ public class PostReplicationAdapter(
         }
     }
 }
-
