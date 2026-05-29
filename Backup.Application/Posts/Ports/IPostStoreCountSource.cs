@@ -1,4 +1,5 @@
 using Backup.Application.Posts.Models;
+using Backup.Domain.Posts;
 
 namespace Backup.Application.Posts.Ports;
 
@@ -8,4 +9,3 @@ public interface IPostStoreCountSource
     bool IsDefault { get; }
     Task<PostStoreCounts> GetStoreCounts();
 }
-

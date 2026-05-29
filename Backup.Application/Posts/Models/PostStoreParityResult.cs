@@ -1,3 +1,5 @@
+using Backup.Domain.Posts;
+
 namespace Backup.Application.Posts.Models;
 
 public class PostStoreParityResult
@@ -19,4 +21,3 @@ public class PostStoreMismatch
     public string SecondaryLabel { get; set; } = "";
     public List<string> Diffs { get; set; } = [];
 }
-

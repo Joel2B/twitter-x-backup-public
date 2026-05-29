@@ -1,5 +1,6 @@
 using Backup.Application.Posts.Models;
 using Backup.Application.Posts.Ports;
+using Backup.Domain.Posts;
 
 namespace Backup.Application.Posts;
 
@@ -88,4 +89,3 @@ public class PostStoreParityService : IPostStoreParityService
         }
     }
 }
-
