@@ -2,7 +2,6 @@ using Backup.Application.BackupRun.Models;
 using Backup.Application.BackupRun.Ports;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
-using Backup.Infrastructure.Models.Config.ApiRequest;
 
 namespace Backup.Infrastructure.BackupRun.Adapters;
 
@@ -24,7 +23,7 @@ public class BackupRunPlanProviderAdapter(AppConfig config) : IBackupRunPlanProv
                             {
                                 Id = kvp.Value.Id,
                                 Enabled = kvp.Value.Enabled,
-                                Request = MapRequest(kvp.Value.Request),
+                                Request = BackupRunPlanMapper.ToPlanRequest(kvp.Value.Request),
                             }
                         ),
                         Sources = GetSources(context),
@@ -60,21 +59,11 @@ public class BackupRunPlanProviderAdapter(AppConfig config) : IBackupRunPlanProv
                     SourceId = sourceKey,
                     ApiId = api.Id,
                     Count = fetchItem.Count,
-                    Request = MapRequest(api.Request),
+                    Request = BackupRunPlanMapper.ToPlanRequest(api.Request),
                 }
             );
         }
 
         return sources;
     }
-
-    private static BackupRunRequestPlan MapRequest(Request request) =>
-        new()
-        {
-            Url = request.Url,
-            Variables = request.Query.Variables.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-            Features = request.Query.Features.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-            FieldToggles = request.Query.FieldToggles.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-            Headers = request.Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-        };
 }

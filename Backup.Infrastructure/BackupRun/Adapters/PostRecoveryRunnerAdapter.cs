@@ -2,8 +2,6 @@ using Backup.Application.BackupRun.Models;
 using Backup.Application.BackupRun.Ports;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Logging;
-using Backup.Infrastructure.Models.Config.Api;
-using Backup.Infrastructure.Models.Config.ApiRequest;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.BackupRun.Adapters;
@@ -18,45 +16,7 @@ public class PostRecoveryRunnerAdapter(
 
     public async Task Run(BackupRunUserPlan user)
     {
-        UsersContext userContext = new()
-        {
-            UserId = user.UserId,
-            Api = user.Api.ToDictionary(
-                kvp => kvp.Key,
-                kvp => new ApiConfig
-                {
-                    Id = kvp.Value.Id,
-                    Enabled = kvp.Value.Enabled,
-                    Request = new Request
-                    {
-                        Url = kvp.Value.Request.Url,
-                        Query = new Query
-                        {
-                            Variables = kvp
-                                .Value
-                                .Request
-                                .Variables
-                                .ToDictionary(entry => entry.Key, entry => entry.Value),
-                            Features = kvp
-                                .Value
-                                .Request
-                                .Features
-                                .ToDictionary(entry => entry.Key, entry => entry.Value),
-                            FieldToggles = kvp
-                                .Value
-                                .Request
-                                .FieldToggles
-                                .ToDictionary(entry => entry.Key, entry => entry.Value),
-                        },
-                        Headers = kvp
-                            .Value
-                            .Request
-                            .Headers
-                            .ToDictionary(entry => entry.Key, entry => entry.Value),
-                    },
-                }
-            ),
-        };
+        var userContext = BackupRunPlanMapper.ToUsersContext(user);
 
         foreach (IPostService service in _postServices)
         {

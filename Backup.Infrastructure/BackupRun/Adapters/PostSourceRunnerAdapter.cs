@@ -2,8 +2,6 @@ using Backup.Application.BackupRun.Models;
 using Backup.Application.BackupRun.Ports;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Logging;
-using Backup.Infrastructure.Models.Config.Api;
-using Backup.Infrastructure.Models.Config.ApiRequest;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.BackupRun.Adapters;
@@ -18,25 +16,7 @@ public class PostSourceRunnerAdapter(
 
     public async Task Run(string userId, BackupRunSourcePlan source)
     {
-        Request request = new()
-        {
-            Url = source.Request.Url,
-            Query = new Query
-            {
-                Variables = source.Request.Variables.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-                Features = source.Request.Features.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-                FieldToggles = source.Request.FieldToggles.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-            },
-            Headers = source.Request.Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-        };
-
-        ApiContext apiContext = new()
-        {
-            Id = source.ApiId,
-            Request = request,
-            Count = source.Count,
-            UserId = userId,
-        };
+        var apiContext = BackupRunPlanMapper.ToApiContext(userId, source);
 
         _logger.LogInfo("source: {source}", apiContext.Id);
 
