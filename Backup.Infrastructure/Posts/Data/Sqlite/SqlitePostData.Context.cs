@@ -2,7 +2,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 
-namespace Backup.Infrastructure.Posts.Data;
+namespace Backup.Infrastructure.Posts.Data.Sqlite;
 
 public partial class SqlitePostData
 {

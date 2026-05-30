@@ -10,7 +10,7 @@ namespace Backup.Infrastructure.Media.Services.Processors;
 public class VideoProcessor(VideoConfig config, MediaProcessorContext context)
     : MediaProcessor(context)
 {
-    private readonly Backup.Infrastructure.Utils.MediaFilter _filters = new(config.Thumb.Filters);
+    private readonly global::Backup.Infrastructure.Utils.MediaFilter _filters = new(config.Thumb.Filters);
 
     public override void Process()
     {
@@ -64,7 +64,7 @@ public class VideoProcessor(VideoConfig config, MediaProcessorContext context)
                 {
                     foreach (Resolution resolution in resolutions)
                     {
-                        DataDownload dataDownload = Backup.Infrastructure.Utils.MediaProcessor.GetData(
+                        DataDownload dataDownload = global::Backup.Infrastructure.Utils.MediaProcessor.GetData(
                             new()
                             {
                                 PostId = post.Id,
@@ -117,7 +117,7 @@ public class VideoProcessor(VideoConfig config, MediaProcessorContext context)
                     if (resolution is null)
                         throw new Exception();
 
-                    DataDownload dataDownload = Backup.Infrastructure.Utils.MediaProcessor.GetData(
+                    DataDownload dataDownload = global::Backup.Infrastructure.Utils.MediaProcessor.GetData(
                         new()
                         {
                             PostId = post.Id,

@@ -3,7 +3,7 @@ using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Adapters;
 using AppPosts = Backup.Infrastructure.Posts.Models;
 
-namespace Backup.Infrastructure.Posts.Data;
+namespace Backup.Infrastructure.Posts.Data.Json;
 
 public partial class LocalPostData : IPostDomainDataStore
 {

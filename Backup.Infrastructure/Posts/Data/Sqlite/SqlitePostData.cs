@@ -6,7 +6,7 @@ using Backup.Infrastructure.Models.Config.Data.Posts;
 using Backup.Infrastructure.Posts.Models;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Posts.Data;
+namespace Backup.Infrastructure.Posts.Data.Sqlite;
 
 public partial class SqlitePostData(
     ILogger<SqlitePostData> logger,

@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Posts.Data;
+using Backup.Infrastructure.Posts.Data.Sqlite;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Posts;

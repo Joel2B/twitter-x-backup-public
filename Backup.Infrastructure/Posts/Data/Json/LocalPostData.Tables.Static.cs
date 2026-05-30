@@ -3,7 +3,7 @@ using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Utils;
 using Newtonsoft.Json;
 
-namespace Backup.Infrastructure.Posts.Data;
+namespace Backup.Infrastructure.Posts.Data.Json;
 
 public partial class LocalPostData
 {

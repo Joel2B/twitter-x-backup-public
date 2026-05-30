@@ -4,7 +4,7 @@ using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Posts.Data;
+namespace Backup.Infrastructure.Posts.Data.Json;
 
 public partial class LocalPostData
 {

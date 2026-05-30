@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Posts.Models;
 
-namespace Backup.Infrastructure.Posts.Data;
+namespace Backup.Infrastructure.Posts.Data.Json;
 
 public partial class LocalPostData
 {

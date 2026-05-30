@@ -8,7 +8,7 @@ namespace Backup.Infrastructure.Media.Services.Processors;
 public class PhotoProcessor(PhotoConfig config, MediaProcessorContext context)
     : MediaProcessor(context)
 {
-    private readonly Backup.Infrastructure.Utils.MediaFilter _filters = new(config.Filters);
+    private readonly global::Backup.Infrastructure.Utils.MediaFilter _filters = new(config.Filters);
 
     public override void Process()
     {
@@ -46,7 +46,7 @@ public class PhotoProcessor(PhotoConfig config, MediaProcessorContext context)
                 {
                     foreach (Resolution resolution in resolutions)
                     {
-                        DataDownload dataDownload = Backup.Infrastructure.Utils.MediaProcessor.GetData(
+                        DataDownload dataDownload = global::Backup.Infrastructure.Utils.MediaProcessor.GetData(
                             new()
                             {
                                 PostId = post.Id,
