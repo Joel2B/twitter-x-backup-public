@@ -21,7 +21,8 @@ public partial class LocalPostData(
     IPostSoftDeleteSelectionService postSoftDeleteSelectionService,
     IPostSnapshotNormalizationService postSnapshotNormalizationService,
     IPostMediaInputsCompositionService postMediaInputsCompositionService,
-    IPostHashingService postHashingService
+    IPostHashingService postHashingService,
+    IPostHistoryPrunePolicyService postHistoryPrunePolicyService
 ) : IPostDataStore, ISetup
 {
     public string? Id { get; set; }
@@ -39,6 +40,8 @@ public partial class LocalPostData(
     private readonly IPostMediaInputsCompositionService _postMediaInputsCompositionService =
         postMediaInputsCompositionService;
     private readonly IPostHashingService _postHashingService = postHashingService;
+    private readonly IPostHistoryPrunePolicyService _postHistoryPrunePolicyService =
+        postHistoryPrunePolicyService;
 
     private Dictionary<string, Post>? _postsCache = null;
     private Dictionary<string, PostMetaRow>? _postMetaCache = null;

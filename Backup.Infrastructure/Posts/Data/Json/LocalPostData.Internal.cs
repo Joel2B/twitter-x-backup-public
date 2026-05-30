@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Data.Json;
+using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
@@ -137,17 +138,11 @@ public partial class LocalPostData
         string basePath = GetPath(partition);
         _logger.LogInformation("base path: {path}", Path.GetFileName(basePath));
 
-        var pathsDate = Directory
+        List<PostHistoryPath> pathsDate = Directory
             .GetDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
-            .Select(o => new { Path = o, Date = UtilsPath.ToDate(o, isDir: true) })
-            .Where(o => o.Date is not null)
-            .GroupBy(o => Convert.ToDateTime(o.Date?.ToString("yyyy-MM-dd")))
-            .Select(o => new
-            {
-                Date = o.Key,
-                Paths = o.OrderBy(o => o.Date).Select(o => o.Path).ToList(),
-            })
-            .OrderBy(o => o.Date)
+            .Select(path => new { Path = path, Date = UtilsPath.ToDate(path, isDir: true) })
+            .Where(entry => entry.Date is not null)
+            .Select(entry => new PostHistoryPath(entry.Path, entry.Date!.Value))
             .ToList();
 
         _logger.LogInformation("paths: {value}", pathsDate.Count);
@@ -158,30 +153,16 @@ public partial class LocalPostData
         int keepDays = Math.Max(1, _appConfig.Tasks.Prune.Data.Post.KeepDays);
         int keepCount = Math.Max(0, _appConfig.Tasks.Prune.Data.Post.KeepCount);
 
-        HashSet<DateTime> keepDates =
-        [
-            .. pathsDate.OrderByDescending(o => o.Date).Take(keepDays).Select(o => o.Date),
-        ];
-
         _logger.LogInformation(
             "prunning keep policy: keeping last {keepDays} stored days, found {kept} days",
             keepDays,
-            keepDates.Count
+            pathsDate.Select(path => path.Date.Date).Distinct().Count()
         );
 
-        List<string> remove = [];
-
-        foreach (var day in pathsDate)
-        {
-            if (!keepDates.Contains(day.Date))
-            {
-                remove.AddRange(day.Paths);
-                continue;
-            }
-
-            int removeCount = Math.Max(0, day.Paths.Count - keepCount);
-            remove.AddRange(day.Paths.Take(removeCount));
-        }
+        List<string> remove =
+        [
+            .. _postHistoryPrunePolicyService.GetPathsToRemove(pathsDate, keepDays, keepCount),
+        ];
 
         _logger.LogInformation("prunning {value} paths", remove.Count);
 
