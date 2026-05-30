@@ -1,4 +1,5 @@
 using Backup.Application.Posts;
+using Backup.Application.Network;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection.Features.Posts;
@@ -10,6 +11,7 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
     )
     {
         services.AddScoped<IPostExecutionService, PostExecutionService>();
+        services.AddScoped<IHttpRequestHeaderPolicyService, HttpRequestHeaderPolicyService>();
         services.AddScoped<IPostRuntimeService, PostRuntimeService>();
         services.AddScoped<IPostDownloadCommandService, PostDownloadCommandService>();
         services.AddScoped<IPostRecoveryCommandService, PostRecoveryCommandService>();

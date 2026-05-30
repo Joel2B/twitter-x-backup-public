@@ -1,20 +1,26 @@
 using System.Net;
 using System.Net.Http.Headers;
+using Backup.Application.Network;
 using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Request;
-using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Posts.Adapters;
 
-public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, AppConfig _config)
+public class PostDownloaderHttp(
+    ILogger<PostDownloaderHttp> _logger,
+    AppConfig _config,
+    IHttpRequestHeaderPolicyService httpRequestHeaderPolicyService
+)
     : IPostDownloader
 {
     private readonly ILogger<PostDownloaderHttp> _logger = _logger;
 
     private readonly AppConfig _config = _config;
+    private readonly IHttpRequestHeaderPolicyService _httpRequestHeaderPolicyService =
+        httpRequestHeaderPolicyService;
     private readonly HttpClient _client = new(
         new HttpClientHandler
         {
@@ -62,7 +68,7 @@ public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, AppConfig _
             RequestUri = new Uri(url),
         };
 
-        Http.ApplyHeaders(requestHttp, request.Headers);
+        _httpRequestHeaderPolicyService.ApplyHeaders(requestHttp, request.Headers);
 
         _logger.LogInformation("request url: {url}", url);
 
