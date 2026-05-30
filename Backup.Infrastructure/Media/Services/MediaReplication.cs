@@ -1,9 +1,9 @@
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Media.Abstractions.Services;
-using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Media.Models;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Services.Media;
+namespace Backup.Infrastructure.Media.Services;
 
 public class MediaReplication(ILogger<MediaReplication> _logger) : IMediaReplication
 {

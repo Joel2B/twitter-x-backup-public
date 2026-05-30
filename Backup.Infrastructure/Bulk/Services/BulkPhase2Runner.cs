@@ -1,13 +1,13 @@
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Abstractions.Services;
-using Backup.Infrastructure.Models.Bulk;
+using Backup.Infrastructure.Bulk.Models;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Microsoft.Extensions.Logging;
 using ParseResult = Backup.Domain.Posts.ParseResult;
 
-namespace Backup.Infrastructure.Services.Bulk;
+namespace Backup.Infrastructure.Bulk.Services;
 
 public sealed class BulkPhase2Runner(
     ILogger<BulkPhase2Runner> logger,

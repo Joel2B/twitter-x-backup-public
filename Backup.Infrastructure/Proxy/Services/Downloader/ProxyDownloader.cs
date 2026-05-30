@@ -1,7 +1,7 @@
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Services.Proxy.Downloader;
+namespace Backup.Infrastructure.Proxy.Services.Downloader;
 
 public class ProxyDownloader(ILogger _logger, IProxyFormatter _formatter)
 {

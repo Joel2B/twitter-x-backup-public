@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Bulk.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Api;
-using Backup.Infrastructure.Models.Config.ApiRequest;
+using Backup.Infrastructure.Models.Config.Request;
 
 namespace Backup.Infrastructure.Bulk.Adapters;
 

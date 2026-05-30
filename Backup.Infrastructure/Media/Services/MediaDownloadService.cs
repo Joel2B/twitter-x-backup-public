@@ -1,12 +1,12 @@
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
-using Backup.Infrastructure.Models.Media;
-using Backup.Infrastructure.Models.Media.Logging;
-using Backup.Infrastructure.Services.Proxy;
+using Backup.Infrastructure.Media.Models;
+using Backup.Infrastructure.Media.Models.Logging;
+using Backup.Infrastructure.Proxy.Services;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Services.Media;
+namespace Backup.Infrastructure.Media.Services;
 
 class MediaDownloadService(
     ILogger<MediaDownloadService> _logger,

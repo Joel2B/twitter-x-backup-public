@@ -1,8 +1,8 @@
 using Backup.Infrastructure.Bulk.Abstractions.Services;
 using Backup.Infrastructure.Posts.Abstractions.Services;
-using Backup.Infrastructure.Models.Bulk;
+using Backup.Infrastructure.Bulk.Models;
 using Backup.Infrastructure.Models.Config.Api;
-using Backup.Infrastructure.Models.Config.ApiRequest;
+using Backup.Infrastructure.Models.Config.Request;
 using Microsoft.Extensions.Logging;
 using ParseResult = Backup.Domain.Posts.ParseResult;
 using ParseUser = Backup.Domain.Posts.ParseUser;

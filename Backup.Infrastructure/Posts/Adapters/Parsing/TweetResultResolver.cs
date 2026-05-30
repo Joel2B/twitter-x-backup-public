@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Models.Posts.Response;
+using Backup.Infrastructure.Posts.Models;
 
 namespace Backup.Infrastructure.Posts.Adapters.Parsing;
 

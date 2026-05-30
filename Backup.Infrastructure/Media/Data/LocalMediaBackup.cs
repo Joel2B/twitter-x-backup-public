@@ -3,11 +3,11 @@ using Backup.Infrastructure.Media.Abstractions.Data;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Backup;
-using Backup.Infrastructure.Models.Media.Backup;
+using Backup.Infrastructure.Media.Models.Backup;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.Infrastructure.Data.Media;
+namespace Backup.Infrastructure.Media.Data;
 
 public class LocalMediaBackup(
     ILogger<LocalMediaBackup> _logger,

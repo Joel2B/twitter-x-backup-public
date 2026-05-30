@@ -2,11 +2,11 @@ using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
-using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Models.Utils;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Data.Media;
+namespace Backup.Infrastructure.Media.Data;
 
 public class LocalMediaDataMaintenance(
     ILogger<LocalMediaDataMaintenance> _log,

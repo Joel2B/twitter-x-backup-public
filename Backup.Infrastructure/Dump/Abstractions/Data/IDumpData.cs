@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Dump;
-using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 
 namespace Backup.Infrastructure.Dump.Abstractions.Data;

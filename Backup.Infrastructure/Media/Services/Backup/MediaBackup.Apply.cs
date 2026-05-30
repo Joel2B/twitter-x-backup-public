@@ -1,12 +1,12 @@
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Utility.Abstractions.Services;
-using Backup.Infrastructure.Models.Media.Backup;
+using Backup.Infrastructure.Media.Models.Backup;
 using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.Infrastructure.Services.Media;
+namespace Backup.Infrastructure.Media.Services;
 
 public partial class MediaBackup
 {

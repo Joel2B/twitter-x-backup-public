@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Models.Bulk;
+namespace Backup.Infrastructure.Bulk.Models;
 
 public class Source
 {

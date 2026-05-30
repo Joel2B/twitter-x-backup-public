@@ -3,7 +3,7 @@ using Backup.Infrastructure.Bulk.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Api;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Services.Bulk;
+namespace Backup.Infrastructure.Bulk.Services;
 
 public class BulkService(
     ILogger<BulkService> _logger,

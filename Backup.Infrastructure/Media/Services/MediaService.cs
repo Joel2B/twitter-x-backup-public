@@ -1,11 +1,11 @@
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Media.Abstractions.Services;
-using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Services.Media;
+namespace Backup.Infrastructure.Media.Services;
 
 public class MediaService(
     ILogger<MediaService> _logger,
@@ -45,7 +45,7 @@ public class MediaService(
         if (posts is null)
             return;
 
-        List<Backup.Infrastructure.Models.Posts.MediaInput> appPosts = posts
+        List<Backup.Infrastructure.Posts.Models.MediaInput> appPosts = posts
             .Select(PostReplicationMapper.ToApp)
             .ToList();
 

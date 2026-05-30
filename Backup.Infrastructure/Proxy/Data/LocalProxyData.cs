@@ -3,11 +3,11 @@ using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
-using Backup.Infrastructure.Models.Proxy;
+using Backup.Infrastructure.Proxy.Models;
 using Backup.Infrastructure.Utils;
 using Newtonsoft.Json;
 
-namespace Backup.Infrastructure.Data.Proxy;
+namespace Backup.Infrastructure.Proxy.Data;
 
 public class LocalProxyData(AppConfig _config, IPartition _partition) : IProxyData, ISetup
 {

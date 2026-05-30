@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Models.Media.Backup;
+namespace Backup.Infrastructure.Media.Models.Backup;
 
 public class Chunk
 {

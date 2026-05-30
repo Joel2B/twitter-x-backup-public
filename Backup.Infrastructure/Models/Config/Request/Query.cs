@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Models.Config.ApiRequest;
+namespace Backup.Infrastructure.Models.Config.Request;
 
 public class Query
 {

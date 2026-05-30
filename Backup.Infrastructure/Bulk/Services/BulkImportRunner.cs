@@ -1,12 +1,12 @@
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Abstractions.Services;
-using Backup.Infrastructure.Models.Bulk;
+using Backup.Infrastructure.Bulk.Models;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Microsoft.Extensions.Logging;
 using ParseUser = Backup.Domain.Posts.ParseUser;
 
-namespace Backup.Infrastructure.Services.Bulk;
+namespace Backup.Infrastructure.Bulk.Services;
 
 public sealed class BulkImportRunner(
     ILogger<BulkImportRunner> logger,

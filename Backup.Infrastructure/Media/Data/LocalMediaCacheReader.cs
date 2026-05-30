@@ -1,8 +1,8 @@
 using System.Text;
-using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Media.Models;
 using Newtonsoft.Json;
 
-namespace Backup.Infrastructure.Data.Media;
+namespace Backup.Infrastructure.Media.Data;
 
 public class LocalMediaCacheReader
 {

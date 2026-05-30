@@ -1,7 +1,7 @@
 using Backup.Infrastructure.Utility.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 
-namespace Backup.Infrastructure.Services.UtilsService;
+namespace Backup.Infrastructure.Services.Utils;
 
 public class BandwidthLimiter(AppConfig config) : IBandwidthLimiter
 {

@@ -1,8 +1,8 @@
 using Backup.Infrastructure.Media.Abstractions.Services;
-using Backup.Infrastructure.Models.Media;
-using Backup.Infrastructure.Models.Media.Logging;
+using Backup.Infrastructure.Media.Models;
+using Backup.Infrastructure.Media.Models.Logging;
 
-namespace Backup.Infrastructure.Services.Media;
+namespace Backup.Infrastructure.Media.Services;
 
 public class MediaFilter(IMediaLogger _mediaLogger) : IMediaFilter
 {

@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Models.Data.Json;
-using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Posts.Models;
 using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Posts.Data;

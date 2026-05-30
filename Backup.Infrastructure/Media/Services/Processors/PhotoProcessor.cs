@@ -1,9 +1,9 @@
 using Backup.Infrastructure.Core.Media;
 using Backup.Infrastructure.Models.Config.Medias;
-using Backup.Infrastructure.Models.Media;
-using Backup.Infrastructure.Models.Media.Processors;
+using Backup.Infrastructure.Media.Models;
+using Backup.Infrastructure.Media.Models.Processors;
 
-namespace Backup.Infrastructure.Services.Media.Processors;
+namespace Backup.Infrastructure.Media.Services.Processors;
 
 public class PhotoProcessor(PhotoConfig config, MediaProcessorContext context)
     : MediaProcessor(context)

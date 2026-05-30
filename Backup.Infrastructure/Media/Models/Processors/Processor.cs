@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Models.Media.Processors;
+namespace Backup.Infrastructure.Media.Models.Processors;
 
 public class MediaProcessorInput
 {

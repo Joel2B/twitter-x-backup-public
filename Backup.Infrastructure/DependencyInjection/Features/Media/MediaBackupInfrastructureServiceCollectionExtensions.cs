@@ -1,11 +1,11 @@
-using Backup.Infrastructure.Data.Media;
+using Backup.Infrastructure.Media.Data;
 using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Media.Abstractions.Data;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Data.Backup;
-using Backup.Infrastructure.Services.Media;
+using Backup.Infrastructure.Media.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;

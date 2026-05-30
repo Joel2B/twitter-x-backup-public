@@ -1,11 +1,11 @@
 using System.Text.RegularExpressions;
 using Backup.Infrastructure.Core.Media;
 using Backup.Infrastructure.Models.Config.Medias;
-using Backup.Infrastructure.Models.Media;
-using Backup.Infrastructure.Models.Media.Processors;
-using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Media.Models;
+using Backup.Infrastructure.Media.Models.Processors;
+using Backup.Infrastructure.Posts.Models;
 
-namespace Backup.Infrastructure.Services.Media.Processors;
+namespace Backup.Infrastructure.Media.Services.Processors;
 
 public class VideoProcessor(VideoConfig config, MediaProcessorContext context)
     : MediaProcessor(context)

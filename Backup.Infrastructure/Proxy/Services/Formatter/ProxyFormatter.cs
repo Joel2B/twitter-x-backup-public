@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 
-namespace Backup.Infrastructure.Services.Proxy.Formatter;
+namespace Backup.Infrastructure.Proxy.Services.Formatter;
 
 public class ProxyFormatter
 {

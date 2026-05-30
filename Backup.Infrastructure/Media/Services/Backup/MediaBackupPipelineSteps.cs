@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Media.Abstractions.Services;
 
-namespace Backup.Infrastructure.Services.Media;
+namespace Backup.Infrastructure.Media.Services;
 
 public sealed class MediaBackupCalculateStep : IMediaBackupPipelineStep
 {

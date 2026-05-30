@@ -1,12 +1,12 @@
 using Backup.Infrastructure.Core.Media;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
-using Backup.Infrastructure.Models.Media;
-using Backup.Infrastructure.Models.Posts;
-using Backup.Infrastructure.Services.Media.Processors;
+using Backup.Infrastructure.Media.Models;
+using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Media.Services.Processors;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Services.Media;
+namespace Backup.Infrastructure.Media.Services;
 
 public class MediaProcessing(ILogger<MediaProcessing> _logger, AppConfig _config) : IMediaProcessing
 {

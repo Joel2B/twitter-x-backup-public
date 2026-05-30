@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Bulk.Adapters;
-using Backup.Infrastructure.Models.Bulk;
+using Backup.Infrastructure.Bulk.Models;
 
 namespace Backup.Tests;
 

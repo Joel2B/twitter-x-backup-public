@@ -3,11 +3,11 @@ using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Models.Config;
-using Backup.Infrastructure.Models.Proxy;
+using Backup.Infrastructure.Proxy.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.Infrastructure.Services.Proxy;
+namespace Backup.Infrastructure.Proxy.Services;
 
 public class ProxyException(string? message = null) : Exception(message) { }
 

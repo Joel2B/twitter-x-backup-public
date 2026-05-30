@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Core.Stores;
-using Backup.Infrastructure.Models.Bulk;
+using Backup.Infrastructure.Bulk.Models;
 
 namespace Backup.Infrastructure.Bulk.Data;
 

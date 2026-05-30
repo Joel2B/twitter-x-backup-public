@@ -1,11 +1,11 @@
-using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Media.Models;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace Backup.Infrastructure.Utils;
 
 public class MediaProcessor
 {
-    public static DataDownload GetData(Models.Media.Processors.MediaProcessorInput image)
+    public static DataDownload GetData(Media.Models.Processors.MediaProcessorInput image)
     {
         List<string?> segments =
         [

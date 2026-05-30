@@ -1,7 +1,7 @@
 using Backup.Infrastructure.BackupRun.Adapters;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
-using Backup.Infrastructure.Models.Config.ApiRequest;
+using Backup.Infrastructure.Models.Config.Request;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Backup;
 using Backup.Infrastructure.Models.Config.Data.Bulk;

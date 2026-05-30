@@ -1,7 +1,7 @@
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Models.Config.Api;
 
-namespace Backup.Infrastructure.Models.Posts;
+namespace Backup.Infrastructure.Posts.Models;
 
 public interface IPostDownload
 {

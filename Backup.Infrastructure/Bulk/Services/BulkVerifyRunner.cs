@@ -1,10 +1,10 @@
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Abstractions.Services;
-using Backup.Infrastructure.Models.Bulk;
+using Backup.Infrastructure.Bulk.Models;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Services.Bulk;
+namespace Backup.Infrastructure.Bulk.Services;
 
 public sealed class BulkVerifyRunner(
     ILogger<BulkVerifyRunner> logger,

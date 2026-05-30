@@ -1,8 +1,8 @@
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Models.Config.Proxy;
-using Backup.Infrastructure.Models.Proxy;
+using Backup.Infrastructure.Proxy.Models;
 
-namespace Backup.Infrastructure.Services.Proxy.Downloader;
+namespace Backup.Infrastructure.Proxy.Services.Downloader;
 
 public class ProxyDownloaderInLineConfig(IProxyFormatter _formatter) : IProxyDownloader
 {

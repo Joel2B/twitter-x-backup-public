@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Models.Media;
+namespace Backup.Infrastructure.Media.Models;
 
 public class MediaCacheEntry
 {

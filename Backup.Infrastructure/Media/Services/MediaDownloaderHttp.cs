@@ -4,11 +4,11 @@ using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Utility.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
-using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Services.Media;
+namespace Backup.Infrastructure.Media.Services;
 
 public class MediaDownloaderHttp(
     ILogger<MediaDownloaderHttp> _logger,

@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Models.Proxy;
+namespace Backup.Infrastructure.Proxy.Models;
 
 public enum StatusEnum
 {

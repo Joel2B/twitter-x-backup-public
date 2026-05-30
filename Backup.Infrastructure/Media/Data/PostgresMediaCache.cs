@@ -1,10 +1,10 @@
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data.Media;
-using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Media.Models;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Data.Media;
+namespace Backup.Infrastructure.Media.Data;
 
 public class PostgresMediaCache(
     ILogger<PostgresMediaCache> _logger,

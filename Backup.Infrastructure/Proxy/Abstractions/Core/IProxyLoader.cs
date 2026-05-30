@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Models.Config.Proxy;
-using Backup.Infrastructure.Models.Proxy;
+using Backup.Infrastructure.Proxy.Models;
 
 namespace Backup.Infrastructure.Proxy.Abstractions.Core;
 

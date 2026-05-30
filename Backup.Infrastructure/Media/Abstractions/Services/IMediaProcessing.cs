@@ -1,5 +1,5 @@
-using Backup.Infrastructure.Models.Media;
-using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Media.Models;
+using Backup.Infrastructure.Posts.Models;
 
 namespace Backup.Infrastructure.Media.Abstractions.Services;
 

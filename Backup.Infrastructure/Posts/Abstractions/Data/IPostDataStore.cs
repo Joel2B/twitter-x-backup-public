@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Core.Abstractions.Data;
-using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Posts.Models;
 
 namespace Backup.Infrastructure.Posts.Abstractions.Data;
 

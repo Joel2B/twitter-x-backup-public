@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Bulk.Adapters;
 using Backup.Infrastructure.Bulk.Abstractions.Services;
-using Backup.Infrastructure.Services.Bulk;
+using Backup.Infrastructure.Bulk.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;

@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Core.Abstractions.Partition;
-using Backup.Infrastructure.Models.Bulk;
+using Backup.Infrastructure.Bulk.Models;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Bulk;
 using Microsoft.Extensions.Logging;

@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Models.Proxy;
+using Backup.Infrastructure.Proxy.Models;
 
 namespace Backup.Infrastructure.Proxy.Abstractions.Data;
 

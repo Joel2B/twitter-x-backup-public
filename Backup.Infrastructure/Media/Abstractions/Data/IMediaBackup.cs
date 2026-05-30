@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Models.Media.Backup;
+using Backup.Infrastructure.Media.Models.Backup;
 
 namespace Backup.Infrastructure.Media.Abstractions.Data;
 

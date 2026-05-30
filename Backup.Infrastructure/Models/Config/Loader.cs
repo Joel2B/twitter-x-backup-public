@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Models.Config.Api;
-using Backup.Infrastructure.Models.Config.ApiRequest;
+using Backup.Infrastructure.Models.Config.Request;
+using ApiRequest = Backup.Infrastructure.Models.Config.Request.Request;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Downloads;
 using Backup.Infrastructure.Models.Config.Medias;
@@ -171,7 +172,7 @@ public static class ConfigLoader
             if (!api.TryGetValue(kvp.Key, out ApiConfig? entry))
                 continue;
 
-            Request request = entry.Request;
+            ApiRequest request = entry.Request;
 
             if (!request.Query.Variables.ContainsKey("count"))
                 throw new Exception(
@@ -189,7 +190,7 @@ public static class ConfigLoader
         {
             string key = kvp.Key;
             ApiConfig entry = kvp.Value;
-            Request request = entry.Request;
+            ApiRequest request = entry.Request;
 
             if (string.IsNullOrWhiteSpace(request.Url))
                 throw new Exception(

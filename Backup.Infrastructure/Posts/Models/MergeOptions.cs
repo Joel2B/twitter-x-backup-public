@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Models.Posts;
+namespace Backup.Infrastructure.Posts.Models;
 
 public class MergeOptions
 {

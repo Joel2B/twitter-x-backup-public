@@ -2,7 +2,7 @@ using System.IO.Compression;
 using Backup.Infrastructure.Utility.Abstractions.Services;
 using Backup.Infrastructure.Models.Utils;
 
-namespace Backup.Infrastructure.Services.UtilsService;
+namespace Backup.Infrastructure.Services.Utils;
 
 public class ZipWriter : IZipWriter
 {

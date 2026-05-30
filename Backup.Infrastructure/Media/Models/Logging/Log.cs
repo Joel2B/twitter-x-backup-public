@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Models.Media.Logging;
+namespace Backup.Infrastructure.Media.Models.Logging;
 
 public class Logs
 {

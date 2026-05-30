@@ -8,7 +8,7 @@ using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Bulk;
 using Backup.Infrastructure.Models.Config.Data.Dump;
 using Backup.Infrastructure.Models.Dump;
-using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;

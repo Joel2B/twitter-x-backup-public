@@ -4,8 +4,8 @@ using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
-using Backup.Infrastructure.Models.Config.ApiRequest;
-using Backup.Infrastructure.Models.Media.Logging;
+using Backup.Infrastructure.Models.Config.Request;
+using Backup.Infrastructure.Media.Models.Logging;
 using Microsoft.Extensions.Logging;
 using ParseResult = Backup.Domain.Posts.ParseResult;
 

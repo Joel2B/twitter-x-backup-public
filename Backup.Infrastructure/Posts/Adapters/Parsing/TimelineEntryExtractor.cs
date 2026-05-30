@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Models.Posts.Response;
+using Backup.Infrastructure.Posts.Models;
 using Newtonsoft.Json.Linq;
 
 namespace Backup.Infrastructure.Posts.Adapters.Parsing;

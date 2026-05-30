@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
-using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Posts.Models;
 using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Utils;

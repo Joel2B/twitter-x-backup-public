@@ -1,6 +1,6 @@
 using Backup.Domain.BackupRun;
 using Backup.Infrastructure.BackupRun.Adapters;
-using Backup.Infrastructure.Models.Config.ApiRequest;
+using Backup.Infrastructure.Models.Config.Request;
 
 namespace Backup.Tests;
 

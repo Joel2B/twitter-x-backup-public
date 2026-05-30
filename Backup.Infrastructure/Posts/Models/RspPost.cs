@@ -1,6 +1,6 @@
 using Newtonsoft.Json;
 
-namespace Backup.Infrastructure.Models.Posts.Response;
+namespace Backup.Infrastructure.Posts.Models;
 
 public class AffiliatesHighlightedLabel { }
 

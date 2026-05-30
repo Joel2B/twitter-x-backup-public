@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Models.Media.Logging;
+using Backup.Infrastructure.Media.Models.Logging;
 
 namespace Backup.Infrastructure.Media.Abstractions.Services;
 

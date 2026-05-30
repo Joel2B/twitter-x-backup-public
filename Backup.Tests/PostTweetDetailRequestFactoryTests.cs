@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Models.Config.Api;
-using Backup.Infrastructure.Models.Config.ApiRequest;
+using Backup.Infrastructure.Models.Config.Request;
 using Backup.Infrastructure.Posts.Adapters;
 
 namespace Backup.Tests;

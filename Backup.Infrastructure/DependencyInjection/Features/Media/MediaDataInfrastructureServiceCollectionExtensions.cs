@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Data.Media;
+using Backup.Infrastructure.Media.Data;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;

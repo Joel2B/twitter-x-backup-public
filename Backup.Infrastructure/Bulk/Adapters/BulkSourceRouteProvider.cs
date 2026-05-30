@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Bulk.Abstractions.Services;
-using Backup.Infrastructure.Models.Bulk;
+using Backup.Infrastructure.Bulk.Models;
 
 namespace Backup.Infrastructure.Bulk.Adapters;
 

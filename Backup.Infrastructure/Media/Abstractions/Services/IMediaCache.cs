@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Core.Abstractions.Setup;
-using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Media.Models;
 
 namespace Backup.Infrastructure.Media.Abstractions.Services;
 

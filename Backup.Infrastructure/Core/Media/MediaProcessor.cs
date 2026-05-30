@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Models.Media;
+using Backup.Infrastructure.Media.Models;
 
 namespace Backup.Infrastructure.Core.Media;
 
