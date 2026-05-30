@@ -1,9 +1,11 @@
 using Backup.Infrastructure.Data.Media;
 using Backup.Infrastructure.Data.Proxy;
+using Backup.Infrastructure.Bulk.Adapters;
 using Backup.Infrastructure.BackupRun.Adapters;
 using Backup.Infrastructure.Interfaces;
 using Backup.Infrastructure.Interfaces.Data.Proxy;
 using Backup.Infrastructure.Interfaces.Proxy;
+using Backup.Infrastructure.Interfaces.Services.Bulk;
 using Backup.Infrastructure.Interfaces.Services.Media;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Interfaces.Services.UtilsService;
@@ -22,6 +24,7 @@ public static class RuntimeInfrastructureServiceCollectionExtensions
     {
         services.AddSingleton<IZipWriterFactory, ZipWriterFactory>();
         services.AddSingleton<IBandwidthLimiter, BandwidthLimiter>();
+        services.AddScoped<IBulkRequestFactory, BulkRequestFactory>();
         services.AddScoped<IPostService, PostService>();
         services.AddScoped<IMediaService, MediaService>();
         services.AddScoped<IBulkService, BulkService>();

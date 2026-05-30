@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Interfaces.Data.Bulk;
 using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Interfaces.Services.Bulk;
 using Backup.Infrastructure.Interfaces.Services.Media;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Models.Bulk;
@@ -18,6 +19,7 @@ public partial class BulkService(
     IPostDomainData _postData,
     IBulkSourceData _bulkSourceData,
     IBulkData _bulkData,
+    IBulkRequestFactory bulkRequestFactory,
     IPostDownloader _downloader,
     IPostDomainParser _parser
 ) : IBulkService
@@ -28,6 +30,7 @@ public partial class BulkService(
     private readonly IPostDomainData _postData = _postData;
     private readonly IBulkSourceData _bulkSourceData = _bulkSourceData;
     private readonly IBulkData _bulkData = _bulkData;
+    private readonly IBulkRequestFactory _bulkRequestFactory = bulkRequestFactory;
     private readonly IPostDownloader _downloader = _downloader;
     private readonly IPostDomainParser _parser = _parser;
 
@@ -52,7 +55,7 @@ public partial class BulkService(
 
     private async Task<ParseUser?> GetUserByUser(string userName)
     {
-        Request? request = RequestMerge.Build(Api, "UserByScreenName");
+        Request? request = _bulkRequestFactory.BuildUserByScreenName(Api);
 
         if (request is null)
         {
@@ -85,7 +88,7 @@ public partial class BulkService(
         string? cursor
     )
     {
-        Request? request = RequestMerge.Build(Api, "UserMedia");
+        Request? request = _bulkRequestFactory.BuildUserMedia(Api);
 
         if (request is null)
         {
