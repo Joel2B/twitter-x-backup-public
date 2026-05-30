@@ -1,6 +1,6 @@
 using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Models.Posts.Response;
-using Backup.Infrastructure.Posts.Parsing;
+using Backup.Infrastructure.Posts.Adapters.Parsing;
 
 namespace Backup.Infrastructure.Posts.ProjectionMapping;
 
