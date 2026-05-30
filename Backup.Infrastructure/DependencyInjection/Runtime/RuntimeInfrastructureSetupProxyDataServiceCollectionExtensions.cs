@@ -1,0 +1,18 @@
+using Backup.Infrastructure.Data.Proxy;
+using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Interfaces.Data.Proxy;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Backup.Infrastructure.DependencyInjection;
+
+public static class RuntimeInfrastructureSetupProxyDataServiceCollectionExtensions
+{
+    public static IServiceCollection AddProxyDataSetupInfrastructure(this IServiceCollection services)
+    {
+        services.AddScoped<LocalProxyData>();
+        services.AddScoped<IProxyData>(sp => sp.GetRequiredService<LocalProxyData>());
+        services.AddScoped<ISetup>(sp => sp.GetRequiredService<LocalProxyData>());
+        return services;
+    }
+}
+
