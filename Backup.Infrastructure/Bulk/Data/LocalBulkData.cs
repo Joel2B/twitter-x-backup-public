@@ -1,5 +1,7 @@
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
+using Backup.Application.Bulk;
+using Backup.Application.Bulk.Models;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Bulk.Models;
 using Backup.Infrastructure.Models.Config;
@@ -15,7 +17,8 @@ public class LocalBulkData(
     ILogger<LocalBulkData> _logger,
     AppConfig _appConfig,
     StorageBulk _config,
-    IPartition _partition
+    IPartition _partition,
+    IBulkPrunePolicyService bulkPrunePolicyService
 ) : IBulkDataStore, ISetup
 {
     public string? Id { get; set; }
@@ -25,6 +28,7 @@ public class LocalBulkData(
     private readonly AppConfig _appConfig = _appConfig;
     private readonly StorageBulk _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly IBulkPrunePolicyService _bulkPrunePolicyService = bulkPrunePolicyService;
 
     public Task Setup()
     {
@@ -117,15 +121,17 @@ public class LocalBulkData(
         string[] pathsFiles = Directory.GetFiles(basePath, "*.json", SearchOption.TopDirectoryOnly);
         _logger.LogInformation("base path: {path}", Path.GetFileName(basePath));
 
-        var pathsDate = pathsFiles
-            .Where(o => UtilsPath.ToDate(o) is not null)
-            .Select(o => new { Path = o, Date = UtilsPath.ToDate(o) })
-            .OrderBy(o => o.Date);
+        List<DatedPath> datedPaths = pathsFiles
+            .Select(path => new { Path = path, Date = UtilsPath.ToDate(path) })
+            .Where(entry => entry.Date is not null)
+            .Select(entry => new DatedPath(entry.Path, entry.Date!.Value))
+            .OrderBy(entry => entry.Date)
+            .ToList();
 
-        if (!pathsDate.Any())
+        if (datedPaths.Count == 0)
             return Task.CompletedTask;
 
-        DateTime? date = pathsDate.Last().Date?.AddDays(-_appConfig.Tasks.Prune.Data.Post.KeepDays);
+        DateTime date = datedPaths.Last().Date.AddDays(-_appConfig.Tasks.Prune.Data.Post.KeepDays);
 
         _logger.LogInformation(
             "prunning date: {date}, KeepDays: {keepDays}",
@@ -133,13 +139,13 @@ public class LocalBulkData(
             _appConfig.Tasks.Prune.Data.Post.KeepDays
         );
 
-        if (date is null)
-            return Task.CompletedTask;
-
-        List<string> pathsToRemove = pathsDate
-            .Where(o => o.Date < date)
-            .Select(o => o.Path)
-            .ToList();
+        List<string> pathsToRemove =
+        [
+            .. _bulkPrunePolicyService.GetPathsToRemove(
+                datedPaths,
+                _appConfig.Tasks.Prune.Data.Post.KeepDays
+            ),
+        ];
 
         _logger.LogInformation("prunning {value} paths", pathsToRemove.Count);
 
