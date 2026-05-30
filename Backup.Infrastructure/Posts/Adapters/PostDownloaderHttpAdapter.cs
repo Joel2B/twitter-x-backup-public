@@ -14,7 +14,8 @@ public class PostDownloaderHttp(
     ILogger<PostDownloaderHttp> _logger,
     AppConfig _config,
     IHttpRequestHeaderPolicyService httpRequestHeaderPolicyService,
-    IRateLimitDecisionService rateLimitDecisionService
+    IRateLimitDecisionService rateLimitDecisionService,
+    IRetryDelayPolicyService retryDelayPolicyService
 )
     : IPostDownloader
 {
@@ -24,6 +25,7 @@ public class PostDownloaderHttp(
     private readonly IHttpRequestHeaderPolicyService _httpRequestHeaderPolicyService =
         httpRequestHeaderPolicyService;
     private readonly IRateLimitDecisionService _rateLimitDecisionService = rateLimitDecisionService;
+    private readonly IRetryDelayPolicyService _retryDelayPolicyService = retryDelayPolicyService;
     private readonly HttpClient _client = new(
         new HttpClientHandler
         {
@@ -155,10 +157,10 @@ public class PostDownloaderHttp(
 
     private async Task Delay()
     {
-        int min = Math.Max(1, _config.Network.RateLimit.Wait.Min);
-        int max = Math.Max(min, _config.Network.RateLimit.Wait.Max);
-
-        int ms = Random.Shared.Next(min * 1000, max * 1000 + 1);
+        int ms = _retryDelayPolicyService.GetDelayMilliseconds(
+            _config.Network.RateLimit.Wait.Min,
+            _config.Network.RateLimit.Wait.Max
+        );
         _logger.LogInformation("delay: {delay} ms", ms);
 
         await Task.Delay(ms);
