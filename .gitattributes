@@ -1,6 +1,8 @@
 * text=auto
 
 # Source and config files
+.gitattributes text eol=lf
+.gitignore text eol=lf
 *.cs text eol=lf
 *.csproj text eol=lf
 *.sln text eol=lf
