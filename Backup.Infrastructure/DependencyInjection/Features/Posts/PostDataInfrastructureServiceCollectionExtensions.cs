@@ -72,7 +72,11 @@ public static class PostDataInfrastructureServiceCollectionExtensions
         }
 
         services.AddScoped<IPostData, PostDataMultiStore>();
-        services.AddScoped<IPostDomainData, PostDataDomainAdapter>();
+        services.AddScoped<IPostDomainData>(sp =>
+        {
+            IPostData postData = sp.GetRequiredService<IPostData>();
+            return postData as IPostDomainData ?? new PostDataDomainAdapter(postData);
+        });
         return services;
     }
 }

@@ -11,8 +11,10 @@ public static class PostIngestionAdaptersServiceCollectionExtensions
     public static IServiceCollection AddPostIngestionAdapters(this IServiceCollection services)
     {
         services.TryAddScoped<IPostDomainData>(sp =>
-            new PostDataDomainAdapter(sp.GetRequiredService<IPostData>())
-        );
+        {
+            IPostData postData = sp.GetRequiredService<IPostData>();
+            return postData as IPostDomainData ?? new PostDataDomainAdapter(postData);
+        });
         services.AddScoped<IRawPostParser, RawPostParserAdapter>();
         services.AddScoped<IPostStoreWriter, PostStoreWriterAdapter>();
         return services;

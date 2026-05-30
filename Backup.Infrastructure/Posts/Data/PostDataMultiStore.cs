@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Data.Posts;
 
-public class PostDataMultiStore(
+public partial class PostDataMultiStore(
     IEnumerable<IPostDataStore> stores,
     IPostReplication replication,
     IPostStoreParityService postStoreParityService,
