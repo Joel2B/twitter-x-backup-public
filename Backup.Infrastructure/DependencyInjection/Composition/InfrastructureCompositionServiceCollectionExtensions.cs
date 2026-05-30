@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;
 
-public static class InfrastructureCompositionServiceCollectionExtensions
+public static partial class InfrastructureCompositionServiceCollectionExtensions
 {
     public static IServiceCollection AddInfrastructureBase(this IServiceCollection services)
     {
@@ -13,20 +13,14 @@ public static class InfrastructureCompositionServiceCollectionExtensions
 
     public static IServiceCollection AddBackupApiFeatureSet(this IServiceCollection services)
     {
-        services.AddPostsInfrastructure();
-        services.AddSetupInfrastructure();
+        services.AddApiFeatureModules();
         return services;
     }
 
     public static IServiceCollection AddBackupCliFeatureSet(this IServiceCollection services)
     {
-        services.AddPostsInfrastructure();
-        services.AddDumpInfrastructure();
-        services.AddBulkInfrastructure();
-        services.AddMediaInfrastructure();
-        services.AddRuntimeServicesInfrastructure();
-        services.AddSetupInfrastructure();
-        services.AddBackupRunInfrastructure();
+        services.AddCliFeatureDataModules();
+        services.AddCliRuntimeModules();
         return services;
     }
 }
