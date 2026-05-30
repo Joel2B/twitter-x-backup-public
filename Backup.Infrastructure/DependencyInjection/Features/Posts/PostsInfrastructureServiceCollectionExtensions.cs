@@ -21,6 +21,7 @@ public static class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostRecovery, PostRecovery>();
         services.AddScoped<IPostDownload, PostDownload>();
         services.AddScoped<IPostExecutionService, PostExecutionService>();
+        services.AddScoped<IPostRuntimeService, PostRuntimeService>();
         services.AddScoped<IPostDownloadFlowService, PostDownloadFlowService>();
         services.AddScoped<IPostDownloadOrchestrationService, PostDownloadOrchestrationService>();
         services.AddScoped<IPostRecoveryOrchestrationService, PostRecoveryOrchestrationService>();
