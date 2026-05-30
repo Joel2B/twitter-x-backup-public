@@ -15,9 +15,11 @@ public static class PostIngestionAdaptersServiceCollectionExtensions
         services.TryAddScoped<IPostDomainParser>(sp =>
             new PostDomainParserAdapter(
                 sp.GetRequiredService<IPostParser>(),
+                sp.GetRequiredService<IPostProjectionComposer>(),
                 sp.GetRequiredService<IPostIndexingService>()
             )
         );
+        services.TryAddScoped<IPostProjectionComposer, PostProjectionComposer>();
         services.TryAddScoped<IPostIndexingService, PostIndexingService>();
         services.TryAddScoped<IPostDomainData>(sp =>
         {

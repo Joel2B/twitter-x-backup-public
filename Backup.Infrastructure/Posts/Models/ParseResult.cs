@@ -1,4 +1,6 @@
+using Backup.Application.Posts.Models;
+
 namespace Backup.Infrastructure.Models.Posts;
 
-public record ParseResult(List<Post> Posts, string? NextCursor);
+public record ParseResult(List<ParsedPostProjection> Posts, string? NextCursor);
 

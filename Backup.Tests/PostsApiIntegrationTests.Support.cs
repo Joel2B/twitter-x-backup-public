@@ -1,5 +1,6 @@
 using Backup.Api.Controllers;
 using Backup.Api.Services;
+using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Models.Posts;
@@ -12,17 +13,16 @@ namespace Backup.Tests;
 
 public partial class PostsApiIntegrationTests
 {
-    private static Post CreatePost(string id, string profileId) =>
+    private static ParsedPostProjection CreateParsedPost(string id, string profileId) =>
         new()
         {
             Id = id,
-            Profile = new PostProfile { Id = profileId, UserName = profileId },
+            Profile = new ParsedPostProfileProjection { Id = profileId, UserName = profileId },
             Description = "test",
             Retweeted = false,
             Favorited = false,
             Bookmarked = false,
             CreatedAt = "Sun May 24 04:00:00 +0000 2026",
-            Deleted = false,
         };
 
     private sealed class TestApiHost(HttpClient client, WebApplication app) : IAsyncDisposable

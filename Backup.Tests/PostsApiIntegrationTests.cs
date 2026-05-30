@@ -108,7 +108,7 @@ public partial class PostsApiIntegrationTests
         FakePostParser fakeParser = new()
         {
             NextResult = new ParseResult(
-                [CreatePost("r1", "u1"), CreatePost("r2", "u2")],
+                [CreateParsedPost("r1", "u1"), CreateParsedPost("r2", "u2")],
                 "CURSOR_123"
             ),
         };

@@ -1,10 +1,11 @@
+using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using PostMapper = Backup.Infrastructure.Posts.Mapping.PostMapper;
-using Backup.Infrastructure.Models.Posts;
 using Backup.Infrastructure.Models.Posts.Response;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ParseResult = Backup.Infrastructure.Models.Posts.ParseResult;
 using ParseUser = Backup.Domain.Posts.ParseUser;
 using PostUser = Backup.Domain.Posts.PostUser;
 
@@ -27,13 +28,13 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
         if (entries is null)
             entries = [];
 
-        List<Post> tweets = [];
+        List<ParsedPostProjection> tweets = [];
         List<Entry> debugTweets = [];
 
         foreach (Entry entry in entries)
             try
             {
-                Post post = PostMapper.Map(entry);
+                ParsedPostProjection post = PostMapper.Map(entry);
                 tweets.Add(post);
             }
             catch (Exception ex)
