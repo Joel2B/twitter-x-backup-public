@@ -1,3 +1,4 @@
+using Backup.Application.Bulk;
 using Backup.Infrastructure.Bulk.Adapters;
 using Backup.Infrastructure.Bulk.Abstractions.Services;
 using Backup.Infrastructure.Bulk.Services;
@@ -17,7 +18,7 @@ public static class RuntimeInfrastructureBulkServiceCollectionExtensions
         services.AddScoped<IBulkPhase1Runner, BulkPhase1Runner>();
         services.AddScoped<IBulkPhase2Runner, BulkPhase2Runner>();
         services.AddScoped<IBulkPhase2ResetRunner, BulkPhase2ResetRunner>();
-        services.AddScoped<IBulkService, BulkService>();
+        services.AddScoped<IBulkExecutionService, BulkExecutionService>();
         return services;
     }
 }
