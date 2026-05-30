@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Net;
 using Backup.Infrastructure.Interfaces.Proxy;
-using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Interfaces.Services.UtilsService;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Media;

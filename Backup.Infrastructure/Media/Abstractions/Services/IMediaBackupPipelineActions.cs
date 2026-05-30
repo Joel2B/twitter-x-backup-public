@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Interfaces.Services.Media;
+namespace Backup.Infrastructure.Media.Abstractions.Services;
 
 public interface IMediaBackupPipelineActions
 {

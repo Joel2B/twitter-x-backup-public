@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Data.Media;
 using Backup.Infrastructure.Interfaces;
-using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Media.Abstractions.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;

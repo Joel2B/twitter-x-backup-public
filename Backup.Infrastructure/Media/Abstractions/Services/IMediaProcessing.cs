@@ -1,7 +1,7 @@
 using Backup.Infrastructure.Models.Media;
 using Backup.Infrastructure.Models.Posts;
 
-namespace Backup.Infrastructure.Interfaces.Services.Media;
+namespace Backup.Infrastructure.Media.Abstractions.Services;
 
 public interface IMediaProcessing
 {

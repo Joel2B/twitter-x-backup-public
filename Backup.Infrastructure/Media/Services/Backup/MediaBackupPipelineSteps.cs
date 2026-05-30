@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Media.Abstractions.Services;
 
 namespace Backup.Infrastructure.Services.Media;
 

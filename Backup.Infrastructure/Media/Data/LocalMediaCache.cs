@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Backup.Infrastructure.Interfaces;
 using Backup.Infrastructure.Interfaces.Partition;
-using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
 using Backup.Infrastructure.Models.Media;

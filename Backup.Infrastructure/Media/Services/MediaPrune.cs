@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Media;
 using Microsoft.AspNetCore.WebUtilities;

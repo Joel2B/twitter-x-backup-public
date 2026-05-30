@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Logging;
-using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Interfaces.Services.UtilsService;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;

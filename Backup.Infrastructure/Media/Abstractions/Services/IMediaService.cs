@@ -1,3 +1,5 @@
-namespace Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Interfaces.Services;
+
+namespace Backup.Infrastructure.Media.Abstractions.Services;
 
 public interface IMediaService : IService { }

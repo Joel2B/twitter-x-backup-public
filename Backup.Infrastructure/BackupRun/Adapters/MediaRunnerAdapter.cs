@@ -1,5 +1,5 @@
 using Backup.Application.BackupRun.Ports;
-using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Logging;
 using Microsoft.Extensions.Logging;
 

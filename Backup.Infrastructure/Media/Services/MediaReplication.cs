@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Logging;
-using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Media;
 using Microsoft.Extensions.Logging;
 

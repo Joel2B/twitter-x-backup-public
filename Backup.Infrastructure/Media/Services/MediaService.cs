@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Posts.Abstractions.Data;
-using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Media;
 using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;

@@ -3,7 +3,7 @@ using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.Interfaces;
 using Backup.Infrastructure.Interfaces.Data.Media;
 using Backup.Infrastructure.Interfaces.Partition;
-using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Data.Backup;
 using Backup.Infrastructure.Services.Media;
 using Microsoft.Extensions.DependencyInjection;

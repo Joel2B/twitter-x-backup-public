@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using Backup.Infrastructure.Interfaces;
 using Backup.Infrastructure.Interfaces.Partition;
-using Backup.Infrastructure.Interfaces.Services.Media;
+using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Media.Logging;
