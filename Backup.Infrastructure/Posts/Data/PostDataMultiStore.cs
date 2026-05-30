@@ -14,7 +14,7 @@ public partial class PostDataMultiStore(
     IPostReplication replication,
     IPostStoreParityService postStoreParityService,
     ILogger<PostDataMultiStore> logger
-) : IPostData
+) : IPostData, IPostStoreParityVerifier
 {
     private readonly List<IPostDataStore> _stores = [.. stores];
     private readonly IPostReplication _replication = replication;

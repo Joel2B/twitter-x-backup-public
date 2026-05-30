@@ -1,3 +1,4 @@
+using Backup.Application.BackupRun;
 using Backup.Application.BackupRun.Ports;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Logging;
@@ -6,18 +7,24 @@ using Microsoft.Extensions.Logging;
 namespace Backup.Infrastructure.BackupRun.Adapters;
 
 public class MediaRunnerAdapter(
+    IBackupRunStepExecutor stepExecutor,
     IEnumerable<IMediaService> mediaServices,
     ILogger<MediaRunnerAdapter> logger
 ) : IMediaRunner
 {
+    private readonly IBackupRunStepExecutor _stepExecutor = stepExecutor;
     private readonly IEnumerable<IMediaService> _mediaServices = mediaServices;
     private readonly ILogger<MediaRunnerAdapter> _logger = logger;
 
-    public async Task Run()
+    public Task Run() =>
+        _stepExecutor.Run(_mediaServices.Select(service => new MediaStep(_logger, service)));
+
+    private sealed class MediaStep(ILogger<MediaRunnerAdapter> logger, IMediaService service)
+        : IBackupRunStep
     {
-        foreach (IMediaService service in _mediaServices)
+        public async Task Run()
         {
-            using (_logger.LogTimer($"media service: {service.GetType().Name}"))
+            using (logger.LogTimer($"media service: {service.GetType().Name}"))
                 await service.Download();
         }
     }

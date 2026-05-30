@@ -11,6 +11,9 @@ public static partial class PostDataInfrastructureServiceCollectionExtensions
     {
         services.AddScoped<IPostData, PostDataMultiStore>();
         services.AddScoped(sp => (PostDataMultiStore)sp.GetRequiredService<IPostData>());
+        services.AddScoped<IPostStoreParityVerifier>(sp =>
+            (PostDataMultiStore)sp.GetRequiredService<IPostData>()
+        );
         services.AddScoped<IPostDomainData>(sp =>
         {
             IPostData postData = sp.GetRequiredService<IPostData>();
