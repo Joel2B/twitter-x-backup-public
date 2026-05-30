@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Models.Posts;
+using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Models.Posts.Response;
 using Newtonsoft.Json.Linq;
 
@@ -6,7 +6,7 @@ namespace Backup.Infrastructure.Posts.Mapping;
 
 public static class MediaMapper
 {
-    public static List<PostMedia>? Map(Entry entry)
+    public static List<ParsedPostMediaProjection>? Map(Entry entry)
     {
         Result result = entry.Content.ItemContent.TweetResults!.Result;
 
@@ -16,8 +16,8 @@ public static class MediaMapper
         if (sourceMedia is null)
             return null;
 
-        List<PostMedia>? media = sourceMedia
-            .Select(o => new PostMedia
+        List<ParsedPostMediaProjection>? media = sourceMedia
+            .Select(o => new ParsedPostMediaProjection
             {
                 Id = o.IdStr,
                 Type = o.Type,
@@ -76,16 +76,16 @@ public static class MediaMapper
         return media;
     }
 
-    private static PostVideoInfo? GetVideoInfo(Medium medium)
+    private static ParsedPostVideoInfoProjection? GetVideoInfo(Medium medium)
     {
         if (medium.VideoInfo is null)
             return null;
 
-        PostVideoInfo videoInfo = new()
+        ParsedPostVideoInfoProjection videoInfo = new()
         {
             DurationMilis = medium.VideoInfo.DurationMillis,
             Variants = medium
-                .VideoInfo.Variants.Select(medium => new PostVariant
+                .VideoInfo.Variants.Select(medium => new ParsedPostVariantProjection
                 {
                     Bitrate = medium.Bitrate,
                     ContentType = medium.ContentType,

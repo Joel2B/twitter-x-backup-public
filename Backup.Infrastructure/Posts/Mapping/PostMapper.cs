@@ -11,53 +11,22 @@ public static class PostMapper
 
         Legacy legacy =
             entry.Content.ItemContent.TweetResults?.Result.Legacy ?? throw new Exception("Legacy");
-        Backup.Infrastructure.Models.Posts.PostProfile profile = ProfileMapper.Map(entry);
-        List<Backup.Infrastructure.Models.Posts.PostMedia>? media = MediaMapper.Map(entry);
+        ParsedPostProfileProjection profile = ProfileMapper.Map(entry);
+        List<ParsedPostMediaProjection>? media = MediaMapper.Map(entry);
 
         return new()
         {
             Id = legacy.IdStr ?? throw new Exception("Id"),
-            Profile = new ParsedPostProfileProjection
-            {
-                Id = profile.Id,
-                UserName = profile.UserName,
-                Name = profile.Name,
-                BannerUrl = profile.BannerUrl,
-                ImageUrl = profile.ImageUrl,
-                Following = profile.Following,
-                MediaCount = profile.Count?.Media,
-            },
+            Profile = profile,
             Description = legacy.FullText ?? throw new Exception("Description"),
             Retweeted = legacy.Retweeted,
             Favorited = legacy.Favorited,
             Bookmarked = legacy.Bookmarked ?? false,
             CreatedAt = legacy.CreatedAt ?? throw new Exception("CreatedAt"),
             Hashtags = HashtagMapper.Map(entry),
-            Medias = media?.Select(MapMedia).ToList(),
+            Medias = media,
         };
     }
-
-    private static ParsedPostMediaProjection MapMedia(Backup.Infrastructure.Models.Posts.PostMedia media) =>
-        new()
-        {
-            Id = media.Id,
-            Url = media.Url,
-            Type = media.Type,
-            VideoInfo = media.VideoInfo is null
-                ? null
-                : new ParsedPostVideoInfoProjection
-                {
-                    DurationMilis = media.VideoInfo.DurationMilis,
-                    Variants = media.VideoInfo.Variants?
-                        .Select(variant => new ParsedPostVariantProjection
-                        {
-                            ContentType = variant.ContentType,
-                            Bitrate = variant.Bitrate,
-                            Url = variant.Url,
-                        })
-                        .ToList(),
-                },
-        };
 
     private static void NormalizeResult(Entry entry)
     {

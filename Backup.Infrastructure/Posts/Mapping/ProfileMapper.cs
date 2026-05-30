@@ -1,11 +1,11 @@
-using Backup.Infrastructure.Models.Posts;
+using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Models.Posts.Response;
 
 namespace Backup.Infrastructure.Posts.Mapping;
 
 public static class ProfileMapper
 {
-    public static PostProfile Map(Entry entry)
+    public static ParsedPostProfileProjection Map(Entry entry)
     {
         TweetResults tweetResults =
             entry.Content.ItemContent.TweetResults ?? throw new Exception("tweetResults");
@@ -24,7 +24,7 @@ public static class ProfileMapper
 
         int? mediaCount = userResults?.Legacy?.MediaCount;
 
-        PostProfile profile = new()
+        return new ParsedPostProfileProjection
         {
             Id = id,
             UserName = userName,
@@ -34,11 +34,7 @@ public static class ProfileMapper
                 : userResults.Legacy.ProfileBannerUrl,
             ImageUrl = imageUrl,
             Following = following,
+            MediaCount = mediaCount,
         };
-
-        if (mediaCount is not null)
-            profile.Count = new() { Media = mediaCount };
-
-        return profile;
     }
 }
