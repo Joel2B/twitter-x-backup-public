@@ -1,6 +1,7 @@
 using Backup.Infrastructure.Data.Partition;
 using Backup.Application.Partition;
 using Backup.Application.Core;
+using Backup.Application.Dump;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Core.Abstractions.Config;
 using Backup.Infrastructure.Core.Abstractions.Partition;
@@ -19,6 +20,7 @@ public static class CoreInfrastructureServiceCollectionExtensions
         services.AddPartitionInfrastructure();
         services.AddSingleton<IPrimarySelectionService, PrimarySelectionService>();
         services.AddSingleton<IStorageRegistrationPolicyService, StorageRegistrationPolicyService>();
+        services.AddSingleton<IDumpProgressPolicyService, DumpProgressPolicyService>();
 
         return services;
     }

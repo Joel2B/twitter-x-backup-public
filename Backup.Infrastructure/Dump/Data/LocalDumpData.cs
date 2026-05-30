@@ -1,4 +1,6 @@
 using System.Text.RegularExpressions;
+using Backup.Application.Dump;
+using Backup.Application.Dump.Models;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Dump.Abstractions.Data;
 using Backup.Infrastructure.Core.Abstractions.Partition;
@@ -21,7 +23,8 @@ public class LocalDumpData(
     AppConfig _appConfig,
     IDumpsData _dumps,
     StorageDump _config,
-    IPartition _partition
+    IPartition _partition,
+    IDumpProgressPolicyService dumpProgressPolicyService
 ) : IDumpDataStore
 {
     public string? Id { get; set; }
@@ -31,6 +34,7 @@ public class LocalDumpData(
     private readonly AppConfig _appConfig = _appConfig;
     private readonly StorageDump _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly IDumpProgressPolicyService _dumpProgressPolicyService = dumpProgressPolicyService;
 
     private DumpData? _dumpData;
     private DumpData Data => _dumpData ?? throw new Exception("Dump data not initialized");
@@ -44,17 +48,15 @@ public class LocalDumpData(
     {
         DumpsData dumpsData = await _dumps.GetData();
 
-        if (dumpsData.Current is null)
+        string current = _dumpProgressPolicyService.EnsureCurrent(dumpsData.Current, DateTime.Now);
+
+        if (dumpsData.Current != current)
         {
-            dumpsData.Current = DateTime.Now.ToString("yyyy.MM.dd-HH.mm.ss");
+            dumpsData.Current = current;
             await _dumps.Save(dumpsData);
         }
 
-        string path = Path.Combine(
-            GetPath(_partition.GetPrimary()),
-            dumpsData.Current,
-            context.UserId
-        );
+        string path = Path.Combine(GetPath(_partition.GetPrimary()), current, context.UserId);
 
         Directory.CreateDirectory(path);
 
@@ -120,13 +122,17 @@ public class LocalDumpData(
 
     private async Task SetupDirectory(ApiContext context)
     {
-        int files = Data.Count / Data.QueryCount - 1;
-
-        if (Data.IndexFile == files || Data.Index == -1)
+        DumpProgressState state = new()
         {
-            Data.Index++;
-            Data.IndexFile = -1;
-        }
+            Index = Data.Index,
+            IndexFile = Data.IndexFile,
+            Count = Data.Count,
+            QueryCount = Data.QueryCount,
+        };
+
+        _dumpProgressPolicyService.AdvanceDirectoryIndex(state);
+        Data.Index = state.Index;
+        Data.IndexFile = state.IndexFile;
 
         string indexPath = await GetPathIndex(context);
         string apiPath = await GetPathApi(context);
