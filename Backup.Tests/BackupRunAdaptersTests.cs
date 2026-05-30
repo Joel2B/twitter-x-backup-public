@@ -1,3 +1,4 @@
+using Backup.Application.BackupRun;
 using Backup.Domain.BackupRun;
 using Backup.Infrastructure.BackupRun.Adapters;
 using Backup.Infrastructure.Posts.Abstractions.Services;
@@ -15,6 +16,7 @@ public class BackupRunAdaptersTests
         FakePostService serviceB = new();
 
         PostSourceRunnerAdapter runner = new(
+            new BackupRunStepExecutor(),
             [serviceA, serviceB],
             NullLogger<PostSourceRunnerAdapter>.Instance
         );
@@ -56,6 +58,7 @@ public class BackupRunAdaptersTests
         FakePostService serviceB = new();
 
         PostRecoveryRunnerAdapter runner = new(
+            new BackupRunStepExecutor(),
             [serviceA, serviceB],
             NullLogger<PostRecoveryRunnerAdapter>.Instance
         );
