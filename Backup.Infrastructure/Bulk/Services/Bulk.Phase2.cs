@@ -51,7 +51,7 @@ public partial class BulkService
             if (bulk.Order.Phase2 == 0)
                 bulk.Cursor = null;
 
-            bool valid = await _downloader.Verify();
+            bool valid = await _bulkApiClient.Verify();
 
             if (!valid)
             {
@@ -59,11 +59,13 @@ public partial class BulkService
                 break;
             }
 
-            ParseResult? result = await GetUserMedia(
+            ParseResult? result = await _bulkApiClient.GetUserMedia(
+                Api,
                 bulk.User.Id ?? throw new Exception(),
                 origin,
                 _config.Bulk.MediaPerApi,
-                bulk.Cursor
+                bulk.Cursor,
+                _tokenSource.Token
             );
 
             if (result is null)
@@ -101,7 +103,7 @@ public partial class BulkService
             {
                 _logger.LogInformation("index: {index}, count: {count}", index, count);
 
-                valid = await _downloader.Verify();
+                valid = await _bulkApiClient.Verify();
 
                 if (!valid)
                 {
@@ -113,11 +115,13 @@ public partial class BulkService
 
                 while (result is null && attempt < _config.Bulk.ApiRetryCount)
                 {
-                    result = await GetUserMedia(
+                    result = await _bulkApiClient.GetUserMedia(
+                        Api,
                         bulk.User.Id ?? throw new Exception(),
                         origin,
                         _config.Bulk.MediaPerApi,
-                        bulk.Cursor
+                        bulk.Cursor,
+                        _tokenSource.Token
                     );
 
                     if (result is not null)

@@ -40,7 +40,7 @@ public partial class BulkService
                 User = new() { Name = source.UserName, Status = StatusUser.None },
             };
 
-            bool valid = await _downloader.Verify();
+            bool valid = await _bulkApiClient.Verify();
 
             if (!valid)
             {
@@ -48,7 +48,11 @@ public partial class BulkService
                 break;
             }
 
-            ParseUser? result = await GetUserByUser(source.UserName);
+            ParseUser? result = await _bulkApiClient.GetUserByUser(
+                Api,
+                source.UserName,
+                _tokenSource.Token
+            );
 
             if (result is null)
             {
