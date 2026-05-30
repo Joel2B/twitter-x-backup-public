@@ -6,8 +6,8 @@ public interface IMediaReplication
 {
     public Task Replicate(
         List<Download> downloads,
-        IEnumerable<IMediaData> data,
-        IMediaData current
+        IEnumerable<IMediaStorage> data,
+        IMediaStorage current
     );
 }
 

@@ -4,6 +4,10 @@ namespace Backup.Infrastructure.Interfaces.Services.Media;
 
 public interface IMediaDownloader
 {
-    public Task<Stream> Download(DataDownload data, IMediaData mediaData, CancellationToken token);
+    public Task<Stream> Download(
+        DataDownload data,
+        IMediaStorage mediaData,
+        CancellationToken token
+    );
 }
 

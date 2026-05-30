@@ -21,8 +21,8 @@ public partial class MediaBackup(
 
     private readonly StorageBackup _config = _config;
     private List<string> _paths = [];
-    private IMediaData? _mediaData;
-    private IMediaData MediaData => _mediaData ?? throw new Exception("media data not initialized");
+    private IMediaStorage? _mediaData;
+    private IMediaStorage MediaData => _mediaData ?? throw new Exception("media data not initialized");
     private readonly IMediaBackupData _mediaBackupData = _mediaBackupData;
     private BackupChunks _backup = new()
     {
@@ -43,7 +43,7 @@ public partial class MediaBackup(
 
     private readonly bool _stop = false;
 
-    public async Task Backup(List<Download> downloads, IMediaData mediaData)
+    public async Task Backup(List<Download> downloads, IMediaStorage mediaData)
     {
         _mediaData = mediaData;
 

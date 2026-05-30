@@ -11,11 +11,11 @@ public class MediaReplication(ILogger<MediaReplication> _logger) : IMediaReplica
 
     public async Task Replicate(
         List<Download> downloads,
-        IEnumerable<IMediaData> data,
-        IMediaData target
+        IEnumerable<IMediaStorage> data,
+        IMediaStorage target
     )
     {
-        IMediaData source = data.First();
+        IMediaStorage source = data.First();
 
         if (target == source)
             return;

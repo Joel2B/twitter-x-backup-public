@@ -22,10 +22,10 @@ class MediaDownloadService(
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
     private readonly IProxyProvider _proxyProvider = proxyProvider;
 
-    private IMediaData? _mediaData;
-    private IMediaData Data => _mediaData ?? throw new Exception("media data not initialized");
+    private IMediaStorage? _mediaData;
+    private IMediaStorage Data => _mediaData ?? throw new Exception("media data not initialized");
 
-    public async Task Download(List<Download> downloads, IMediaData data)
+    public async Task Download(List<Download> downloads, IMediaStorage data)
     {
         if (!_config.Downloads.Enabled)
             return;

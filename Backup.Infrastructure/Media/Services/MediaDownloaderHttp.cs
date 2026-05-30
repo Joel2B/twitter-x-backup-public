@@ -25,7 +25,7 @@ public class MediaDownloaderHttp(
 
     public async Task<Stream> Download(
         DataDownload data,
-        IMediaData mediaData,
+        IMediaStorage mediaData,
         CancellationToken token
     )
     {

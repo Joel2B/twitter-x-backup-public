@@ -6,7 +6,7 @@ namespace Backup.Infrastructure.Services.Media;
 
 public class MediaIntegrity : IMediaIntegrity
 {
-    public async Task Check(List<Download> downloads, IMediaData data)
+    public async Task Check(List<Download> downloads, IMediaDataMaintenance data)
     {
         foreach (Download download in downloads)
         {
