@@ -1,6 +1,7 @@
 using Backup.Infrastructure.Media.Data;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Services;
+using Backup.Application.Media.Filter;
 using Backup.Application.Media.Integrity;
 using Backup.Application.Media.Prune;
 using Backup.Infrastructure.Models.Config;
@@ -21,6 +22,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
             return new MediaPrunePolicyService(config.Downloads.Prune.Filters);
         });
         services.AddScoped<IMediaPrune, MediaPrune>();
+        services.AddScoped<IMediaErrorFilterPolicyService, MediaErrorFilterPolicyService>();
         services.AddScoped<IMediaIntegrityPolicyService, MediaIntegrityPolicyService>();
         services.AddScoped<IMediaIntegrity, MediaIntegrity>();
         services.AddScoped<IMediaFilter, MediaFilter>();
