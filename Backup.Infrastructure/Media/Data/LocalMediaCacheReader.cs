@@ -20,9 +20,9 @@ public class LocalMediaCacheReader
         return null;
     }
 
-    public static async Task<Size?> ReadSizeAsync(JsonTextReader jr)
+    public static async Task<MediaCacheSize?> ReadSizeAsync(JsonTextReader jr)
     {
-        Size size = new();
+        MediaCacheSize size = new();
 
         while (await jr.ReadAsync().ConfigureAwait(false))
         {
@@ -93,7 +93,7 @@ public class LocalMediaCacheReader
             {
                 string? pathVal = null;
                 int? partitionIdl = null;
-                Size? size = null;
+                MediaCacheSize? size = null;
 
                 while (await jr.ReadAsync().ConfigureAwait(false))
                 {
