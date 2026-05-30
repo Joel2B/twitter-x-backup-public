@@ -14,6 +14,7 @@ namespace Backup.Infrastructure.Media.Services;
 public class MediaDownloaderHttp(
     ILogger<MediaDownloaderHttp> _logger,
     AppConfig _config,
+    IMediaDownloadExceptionPolicyService mediaDownloadExceptionPolicyService,
     IMediaDownloadPolicyService mediaDownloadPolicyService,
     IProxyProvider proxyProvider,
     IBandwidthLimiter bandwidthLimiter
@@ -21,6 +22,8 @@ public class MediaDownloaderHttp(
 {
     private readonly ILogger<MediaDownloaderHttp> _logger = _logger;
     private readonly AppConfig _config = _config;
+    private readonly IMediaDownloadExceptionPolicyService _mediaDownloadExceptionPolicyService =
+        mediaDownloadExceptionPolicyService;
     private readonly IMediaDownloadPolicyService _mediaDownloadPolicyService =
         mediaDownloadPolicyService;
 
@@ -183,7 +186,9 @@ public class MediaDownloaderHttp(
 
                 return stream;
             }
-            catch (Exception ex) when (ex is TaskCanceledException || ex is HttpRequestException)
+            catch (Exception ex) when (
+                _mediaDownloadExceptionPolicyService.ShouldRetryWithNextProxy(ex)
+            )
             {
                 stream?.Dispose();
 
