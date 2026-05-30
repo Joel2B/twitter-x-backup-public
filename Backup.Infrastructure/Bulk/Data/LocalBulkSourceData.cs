@@ -7,7 +7,7 @@ using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Bulk;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Data.Bulk;
+namespace Backup.Infrastructure.Bulk.Data;
 
 public class LocalBulkSourceData(
     ILogger<LocalBulkSourceData> _logger,

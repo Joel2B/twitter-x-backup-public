@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Data.Bulk;
+using Backup.Infrastructure.Bulk.Data;
 using Backup.Infrastructure.Interfaces.Data.Bulk;
 using Microsoft.Extensions.DependencyInjection;
 

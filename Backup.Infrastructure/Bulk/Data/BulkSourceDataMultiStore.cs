@@ -2,7 +2,7 @@ using Backup.Infrastructure.Interfaces.Data.Bulk;
 using Backup.Infrastructure.Core.Stores;
 using Backup.Infrastructure.Models.Bulk;
 
-namespace Backup.Infrastructure.Data.Bulk;
+namespace Backup.Infrastructure.Bulk.Data;
 
 public class BulkSourceDataMultiStore(IEnumerable<IBulkSourceDataStore> stores) : IBulkSourceData
 {
