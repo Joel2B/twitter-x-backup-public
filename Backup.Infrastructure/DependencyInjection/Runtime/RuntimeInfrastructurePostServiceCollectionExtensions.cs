@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Interfaces.Services.Posts;
-using Backup.Infrastructure.Services.Posts;
+using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;
@@ -12,4 +12,3 @@ public static class RuntimeInfrastructurePostServiceCollectionExtensions
         return services;
     }
 }
-

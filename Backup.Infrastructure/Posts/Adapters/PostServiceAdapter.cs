@@ -3,10 +3,9 @@ using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Posts;
-using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Services.Posts;
+namespace Backup.Infrastructure.Posts.Adapters;
 
 public class PostService(
     ILogger<PostService> _logger,
