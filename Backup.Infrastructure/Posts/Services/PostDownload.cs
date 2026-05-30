@@ -7,7 +7,7 @@ using Backup.Infrastructure.Models.Dump;
 using Backup.Infrastructure.Models.Posts;
 using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
-using DomainParseResult = Backup.Domain.Posts.ParseResult;
+using ParseResult = Backup.Domain.Posts.ParseResult;
 
 namespace Backup.Infrastructure.Services.Posts;
 
@@ -93,7 +93,7 @@ public class PostDownload(
                 const int maxAttempts = 3;
                 int attemptCount = 0;
 
-                DomainParseResult result = new([], null);
+                ParseResult result = new([], null);
                 string response = "";
 
                 while (true)

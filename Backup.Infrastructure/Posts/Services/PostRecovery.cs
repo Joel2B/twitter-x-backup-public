@@ -9,6 +9,7 @@ using Backup.Infrastructure.Models.Config.ApiRequest;
 using Backup.Infrastructure.Models.Media.Logging;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using DomainPost = Backup.Domain.Posts.Post;
 using ParseResult = Backup.Domain.Posts.ParseResult;
 
 namespace Backup.Infrastructure.Services.Posts;
@@ -37,7 +38,7 @@ public class PostRecovery(
     {
         try
         {
-            List<Backup.Domain.Posts.Post> posts = await Download(context);
+            List<DomainPost> posts = await Download(context);
 
             if (posts.Count == 0)
             {
@@ -57,9 +58,9 @@ public class PostRecovery(
         }
     }
 
-    private async Task<List<Backup.Domain.Posts.Post>> Download(UsersContext context)
+    private async Task<List<DomainPost>> Download(UsersContext context)
     {
-        List<Backup.Domain.Posts.Post> posts = [];
+        List<DomainPost> posts = [];
         List<Logs>? logs = await _mediaLogger.GetErrors();
 
         if (logs is null)
