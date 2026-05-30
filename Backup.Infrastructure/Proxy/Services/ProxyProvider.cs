@@ -1,5 +1,5 @@
 using System.Net;
-using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Models.Config;

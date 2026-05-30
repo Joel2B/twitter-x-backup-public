@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Data.Proxy;
-using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Interfaces;
+namespace Backup.Infrastructure.Core.Abstractions.Setup;
 
 public interface ISetup
 {

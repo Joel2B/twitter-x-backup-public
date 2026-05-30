@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Data.Media;
-using Backup.Infrastructure.Interfaces;
+using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Microsoft.Extensions.DependencyInjection;
 
