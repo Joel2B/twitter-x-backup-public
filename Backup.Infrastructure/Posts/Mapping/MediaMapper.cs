@@ -6,10 +6,8 @@ namespace Backup.Infrastructure.Posts.Mapping;
 
 public static class MediaMapper
 {
-    public static List<ParsedPostMediaProjection>? Map(Entry entry)
+    public static List<ParsedPostMediaProjection>? Map(Result result)
     {
-        Result result = entry.Content.ItemContent.TweetResults!.Result;
-
         List<Medium>? sourceMedia = result.Legacy!.Entities.Media;
         sourceMedia ??= GetMediaCard(result);
 

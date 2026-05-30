@@ -4,12 +4,8 @@ namespace Backup.Infrastructure.Posts.Mapping;
 
 public static class HashtagMapper
 {
-    public static List<string>? Map(Entry entry)
+    public static List<string>? Map(Result result)
     {
-        TweetResults tweetResults =
-            entry.Content.ItemContent.TweetResults ?? throw new Exception("tweetResults");
-
-        Result result = tweetResults.Result;
         Entities entities = result.Legacy?.Entities ?? throw new Exception();
 
         List<string> hashtags =

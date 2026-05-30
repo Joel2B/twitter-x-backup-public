@@ -5,12 +5,8 @@ namespace Backup.Infrastructure.Posts.Mapping;
 
 public static class ProfileMapper
 {
-    public static ParsedPostProfileProjection Map(Entry entry)
+    public static ParsedPostProfileProjection Map(Result result)
     {
-        TweetResults tweetResults =
-            entry.Content.ItemContent.TweetResults ?? throw new Exception("tweetResults");
-
-        Result result = tweetResults.Result;
         CoreUser resultCore = result.Core ?? throw new Exception("core");
         Result? userResults = resultCore.UserResults.Result;
 
