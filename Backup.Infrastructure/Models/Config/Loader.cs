@@ -81,11 +81,7 @@ public static class ConfigLoader
     )
     {
         string apiDirectory = Path.Combine(configDirectory, "Api");
-
-        if (!Directory.Exists(apiDirectory))
-            throw new Exception(
-                "error deserializing config folder 'Api': directory does not exist"
-            );
+        _apiFileSelection.ValidateApiDirectoryExists(Directory.Exists(apiDirectory));
 
         Dictionary<string, Dictionary<string, ApiConfig>> apiByUser = [];
         string[] files = Directory.GetFiles(apiDirectory, "*.json", SearchOption.TopDirectoryOnly);

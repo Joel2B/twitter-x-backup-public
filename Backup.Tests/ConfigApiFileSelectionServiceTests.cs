@@ -5,6 +5,16 @@ namespace Backup.Tests;
 public class ConfigApiFileSelectionServiceTests
 {
     [Fact]
+    public void ValidateApiDirectoryExists_Throws_WhenDirectoryMissing()
+    {
+        ConfigApiFileSelectionService sut = new();
+
+        Exception ex = Assert.Throws<Exception>(() => sut.ValidateApiDirectoryExists(false));
+
+        Assert.Contains("directory does not exist", ex.Message);
+    }
+
+    [Fact]
     public void SelectRequiredFiles_ReturnsMap_WhenAllUserFilesExist()
     {
         ConfigApiFileSelectionService sut = new();
