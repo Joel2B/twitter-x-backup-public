@@ -1,5 +1,5 @@
-using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Core.Stores;
+using Backup.Infrastructure.Interfaces.Data.Dump;
 using Backup.Infrastructure.Models.Dump;
 
 namespace Backup.Infrastructure.Data.Posts;

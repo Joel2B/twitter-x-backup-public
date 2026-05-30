@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Interfaces.Data.Dump;
 using Backup.Infrastructure.Interfaces.Partition;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;

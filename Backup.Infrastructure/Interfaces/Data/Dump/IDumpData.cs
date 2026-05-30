@@ -1,8 +1,9 @@
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Dump;
 using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Interfaces.Data.Posts;
 
-namespace Backup.Infrastructure.Interfaces.Data.Posts;
+namespace Backup.Infrastructure.Interfaces.Data.Dump;
 
 public interface IDumpData
 {

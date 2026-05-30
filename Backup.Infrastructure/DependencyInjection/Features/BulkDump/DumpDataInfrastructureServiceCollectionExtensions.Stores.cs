@@ -1,7 +1,7 @@
 using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.Data.Posts;
 using Backup.Infrastructure.Interfaces;
-using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Interfaces.Data.Dump;
 using Backup.Infrastructure.Interfaces.Partition;
 using Backup.Infrastructure.Models.Config.Data.Dump;
 using Microsoft.Extensions.DependencyInjection;
@@ -85,4 +85,3 @@ public static partial class DumpDataInfrastructureServiceCollectionExtensions
         return services;
     }
 }
-
