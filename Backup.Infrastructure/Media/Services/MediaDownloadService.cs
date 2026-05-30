@@ -13,6 +13,7 @@ class MediaDownloadService(
     ILogger<MediaDownloadService> _logger,
     AppConfig _config,
     IMediaParallelDownloadPolicyService mediaParallelDownloadPolicyService,
+    IMediaDownloadPathPriorityPolicyService mediaDownloadPathPriorityPolicyService,
     IMediaDownloader _downloader,
     IMediaLogger _mediaLogger,
     IProxyProvider proxyProvider
@@ -22,6 +23,8 @@ class MediaDownloadService(
     private readonly AppConfig _config = _config;
     private readonly IMediaParallelDownloadPolicyService _mediaParallelDownloadPolicyService =
         mediaParallelDownloadPolicyService;
+    private readonly IMediaDownloadPathPriorityPolicyService _mediaDownloadPathPriorityPolicyService =
+        mediaDownloadPathPriorityPolicyService;
     private readonly IMediaDownloader _downloader = _downloader;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
     private readonly IProxyProvider _proxyProvider = proxyProvider;
@@ -66,9 +69,7 @@ class MediaDownloadService(
         };
 
         var data = downloads.SelectMany(download => download.Data.Select(data => (data, download)));
-
-        HashSet<string> videoExtensions = new(StringComparer.OrdinalIgnoreCase) { ".mp4", ".webm" };
-        data = data.OrderBy(o => videoExtensions.Contains(Path.GetExtension(o.data.Path)) ? 1 : 0);
+        data = data.OrderBy(o => _mediaDownloadPathPriorityPolicyService.GetPriority(o.data.Path));
 
         if (_config.Downloads.Count >= 0)
             data = data.Take(_config.Downloads.Count);
