@@ -14,7 +14,8 @@ public class MediaProcessing(
     ILogger<MediaProcessing> _logger,
     AppConfig _config,
     IMediaDownloadFilterPolicyService downloadFilterPolicyService,
-    IMediaDownloadDataBuilderService mediaDownloadDataBuilderService
+    IMediaDownloadDataBuilderService mediaDownloadDataBuilderService,
+    IMediaVideoVariantPolicyService mediaVideoVariantPolicyService
 ) : IMediaProcessing
 {
     private readonly ILogger<MediaProcessing> _logger = _logger;
@@ -23,6 +24,8 @@ public class MediaProcessing(
         downloadFilterPolicyService;
     private readonly IMediaDownloadDataBuilderService _mediaDownloadDataBuilderService =
         mediaDownloadDataBuilderService;
+    private readonly IMediaVideoVariantPolicyService _mediaVideoVariantPolicyService =
+        mediaVideoVariantPolicyService;
 
     private readonly Dictionary<string, Download> _all = [];
     private readonly Dictionary<string, Download> _filtered = [];
@@ -51,7 +54,8 @@ public class MediaProcessing(
                 _config.Medias.Video,
                 context,
                 _downloadFilterPolicyService,
-                _mediaDownloadDataBuilderService
+                _mediaDownloadDataBuilderService,
+                _mediaVideoVariantPolicyService
             ),
         ];
 

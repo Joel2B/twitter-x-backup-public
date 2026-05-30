@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Backup.Infrastructure.Core.Media;
 using Backup.Application.Media;
 using Backup.Application.Media.Filter;
@@ -13,7 +12,8 @@ public class VideoProcessor(
     VideoConfig config,
     MediaProcessorContext context,
     IMediaDownloadFilterPolicyService downloadFilterPolicyService,
-    IMediaDownloadDataBuilderService mediaDownloadDataBuilderService
+    IMediaDownloadDataBuilderService mediaDownloadDataBuilderService,
+    IMediaVideoVariantPolicyService mediaVideoVariantPolicyService
 )
     : MediaProcessor(context)
 {
@@ -24,6 +24,8 @@ public class VideoProcessor(
     );
     private readonly IMediaDownloadDataBuilderService _mediaDownloadDataBuilderService =
         mediaDownloadDataBuilderService;
+    private readonly IMediaVideoVariantPolicyService _mediaVideoVariantPolicyService =
+        mediaVideoVariantPolicyService;
 
     public override void Process()
     {
@@ -108,12 +110,9 @@ public class VideoProcessor(
                     if (!config.Types.Contains(variant.ContentType))
                         continue;
 
-                    string? formatType = variant.ContentType switch
-                    {
-                        "application/x-mpegURL" => "m3u8",
-                        "video/mp4" => "mp4",
-                        _ => null,
-                    };
+                    string? formatType = _mediaVideoVariantPolicyService.GetFormatType(
+                        variant.ContentType
+                    );
 
                     if (formatType is null)
                         continue;
@@ -121,13 +120,10 @@ public class VideoProcessor(
                     string url = variant.Url.Split('?')[0];
                     string videoFileName = Path.GetFileName(url);
                     string VideoId = Path.GetFileNameWithoutExtension(videoFileName);
-                    string? resolution = null;
-
-                    if (formatType == "m3u8")
-                        resolution = "master";
-
-                    if (formatType == "mp4")
-                        resolution = Regex.Match(url, @"/(\d+x\d+)/").Groups[1].Value;
+                    string? resolution = _mediaVideoVariantPolicyService.GetResolution(
+                        formatType,
+                        url
+                    );
 
                     if (resolution is null)
                         throw new Exception();
