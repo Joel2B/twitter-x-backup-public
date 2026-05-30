@@ -1,0 +1,22 @@
+using Backup.Infrastructure.Data.Posts;
+using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Posts.Adapters;
+using Backup.Infrastructure.Services.Posts;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Backup.Infrastructure.DependencyInjection;
+
+public static partial class PostsInfrastructureServiceCollectionExtensions
+{
+    private static IServiceCollection AddPostParserInfrastructure(this IServiceCollection services)
+    {
+        services.AddScoped<IPostLogger, LocalPostLogger>();
+        services.AddScoped<IPostDownloader, PostDownloaderHttp>();
+        services.AddScoped<IPostParser, PostParser>();
+        services.AddScoped<IPostDomainParser, PostDomainParserAdapter>();
+        services.AddScoped<IPostTweetDetailRequestFactory, PostTweetDetailRequestFactory>();
+        return services;
+    }
+}
