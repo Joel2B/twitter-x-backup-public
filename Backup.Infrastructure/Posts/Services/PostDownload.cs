@@ -27,32 +27,24 @@ public class PostDownload(
     private readonly IPostLogger _postLogger = _postLogger;
     private readonly IPostDomainParser _parser = _parser;
 
-    private IPostDomainData? _postData;
-    private IPostDomainData PostData => _postData ?? throw new Exception("media data not initialized");
-
-    private ApiContext? _context;
-
-    private ApiContext Context => _context ?? throw new Exception("Post context not initialized");
-
-    private string UserId => Context.UserId;
-
-    private readonly CancellationTokenSource _tokenSource = new();
-
     public async Task Download(IPostDomainData postData, ApiContext context)
     {
-        _postData = postData;
-        _context = context;
         _logger.LogInformation("download loaded {count} posts", await postData.GetCount());
 
-        await ProcessDownloads();
-        await Save();
+        using CancellationTokenSource tokenSource = new();
+        await ProcessDownloads(postData, context, tokenSource.Token);
+        await Save(postData);
     }
 
-    private async Task ProcessDownloads()
+    private async Task ProcessDownloads(
+        IPostDomainData postData,
+        ApiContext context,
+        CancellationToken cancellationToken
+    )
     {
         try
         {
-            DumpData? data = await _dump.GetData(Context);
+            DumpData? data = await _dump.GetData(context);
             PostDownloadResumePoint? resumePoint = data is null
                 ? null
                 : new PostDownloadResumePoint
@@ -62,24 +54,24 @@ public class PostDownload(
                     Cursor = data.Cursor,
                 };
 
-            int defaultQueryCount = Convert.ToInt32(Context.Request.Query.Variables["count"]);
+            int defaultQueryCount = Convert.ToInt32(context.Request.Query.Variables["count"]);
             string? defaultCursor =
-                Context.Request.Query.Variables.TryGetValue("cursor", out object? cursorValue)
+                context.Request.Query.Variables.TryGetValue("cursor", out object? cursorValue)
                     ? cursorValue?.ToString()
                     : null;
 
             PostDownloadPlan plan = _downloadFlowService.CreatePlan(
                 defaultQueryCount,
-                Context.Count,
+                context.Count,
                 defaultCursor,
                 resumePoint
             );
 
-            Context.Request.Query.Variables["count"] = plan.QueryCount.ToString();
-            Context.Count = plan.TotalCount;
+            context.Request.Query.Variables["count"] = plan.QueryCount.ToString();
+            context.Count = plan.TotalCount;
 
             if (!string.IsNullOrEmpty(plan.Cursor))
-                Context.Request.Query.Variables["cursor"] = plan.Cursor;
+                context.Request.Query.Variables["cursor"] = plan.Cursor;
 
             while (_downloadFlowService.ShouldContinue(plan))
             {
@@ -103,7 +95,7 @@ public class PostDownload(
 
                     try
                     {
-                        response = await _downloader.Download(Context.Request, _tokenSource.Token);
+                        response = await _downloader.Download(context.Request, cancellationToken);
                     }
                     catch (Exception ex)
                     {
@@ -113,12 +105,12 @@ public class PostDownload(
                     if (!string.IsNullOrEmpty(response))
                     {
                         await _postLogger.Save(
-                            $"{UserId}_{Context.Id}",
+                            $"{context.UserId}_{context.Id}",
                             response,
-                            _tokenSource.Token
+                            cancellationToken
                         );
 
-                        result = _parser.Parse(UserId, Context.Id, response);
+                        result = _parser.Parse(context.UserId, context.Id, response);
                     }
 
                     bool hasValidPage = result.Posts.Count > 0 && result.NextCursor is not null;
@@ -139,7 +131,7 @@ public class PostDownload(
                     if (decision.Outcome == PostDownloadPageOutcome.Abort)
                     {
                         if (decision.ShouldFlushDump && data is not null)
-                            await _dump.Flush(PostData, UserId, Context);
+                            await _dump.Flush(postData, context.UserId, context);
 
                         return;
                     }
@@ -149,20 +141,20 @@ public class PostDownload(
                             response,
                             result.Posts.Select(PostReplicationMapper.ToApp).ToList(),
                             result.NextCursor!,
-                            Context
+                            context
                         );
 
                     break;
                 }
 
-                await PostData.AddPosts(
-                    UserId,
-                    Context.Id,
+                await postData.AddPosts(
+                    context.UserId,
+                    context.Id,
                     result.Posts
                 );
 
                 _downloadFlowService.ApplySuccess(plan, result.NextCursor!);
-                Context.Request.Query.Variables["cursor"] = plan.Cursor!;
+                context.Request.Query.Variables["cursor"] = plan.Cursor!;
 
                 await Task.Delay(5 * 1000);
             }
@@ -177,10 +169,10 @@ public class PostDownload(
         }
     }
 
-    private async Task Save()
+    private async Task Save(IPostDomainData postData)
     {
         _logger.LogInformation("saving posts");
-        await PostData.Save();
+        await postData.Save();
     }
 }
 
