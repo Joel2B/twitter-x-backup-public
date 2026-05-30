@@ -53,7 +53,7 @@ public class LocalMediaData(
         {
             download.Data.RemoveAll(data =>
             {
-                Cache? cache = _mediaCache.Get(data.Path);
+                MediaCacheEntry? cache = _mediaCache.Get(data.Path);
 
                 return cache is not null && cache?.Size?.File is long sz && sz != 0;
             });
@@ -216,7 +216,7 @@ public class LocalMediaData(
     public async Task<string?> GetHash(string path) =>
         await Backup.Infrastructure.Utils.FileHasher.GetFileHash(await _mediaCache.GetPath(path));
 
-    public Task<Cache?> GetCache(string path) => Task.FromResult(_mediaCache.Get(path));
+    public Task<MediaCacheEntry?> GetCache(string path) => Task.FromResult(_mediaCache.Get(path));
 
     public Stream GetTempStream()
     {

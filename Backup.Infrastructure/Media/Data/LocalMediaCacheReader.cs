@@ -59,7 +59,7 @@ public class LocalMediaCacheReader
         return size;
     }
 
-    public static async IAsyncEnumerable<Cache> Get(string file, int bufferSize = 1 << 20)
+    public static async IAsyncEnumerable<MediaCacheEntry> Get(string file, int bufferSize = 1 << 20)
     {
         await using FileStream fs = new(
             file,
@@ -139,7 +139,7 @@ public class LocalMediaCacheReader
                     else if (jr.TokenType == JsonToken.EndObject)
                     {
                         if (pathVal != null)
-                            yield return new Cache
+                            yield return new MediaCacheEntry
                             {
                                 Path = pathVal,
                                 PartitionId = partitionIdl,
@@ -156,7 +156,7 @@ public class LocalMediaCacheReader
         }
     }
 
-    public static async Task Save(string file, List<Cache> lstCache, int bufferSize = 1 << 20)
+    public static async Task Save(string file, List<MediaCacheEntry> lstCache, int bufferSize = 1 << 20)
     {
         string tmpPath = $"{file}.tmp";
 
@@ -168,7 +168,7 @@ public class LocalMediaCacheReader
             File.Move(tmpPath, file, true);
     }
 
-    private static async Task Write(string file, List<Cache> lstCache, int bufferSize)
+    private static async Task Write(string file, List<MediaCacheEntry> lstCache, int bufferSize)
     {
         await using FileStream fs = new(
             file,
@@ -189,7 +189,7 @@ public class LocalMediaCacheReader
 
         await jw.WriteStartArrayAsync().ConfigureAwait(false);
 
-        foreach (Cache cache in lstCache.ToArray())
+        foreach (MediaCacheEntry cache in lstCache.ToArray())
         {
             await jw.WriteStartObjectAsync().ConfigureAwait(false);
 

@@ -45,7 +45,7 @@ public partial class MediaBackup : IMediaBackup
 
             foreach (ChunkData item in kvp.Value.Data)
             {
-                Cache? cache = await MediaData.GetCache(item.Path);
+                MediaCacheEntry? cache = await MediaData.GetCache(item.Path);
                 entries.TryGetValue(item.Path.Replace('\\', '/'), out ZipEntry? value2);
 
                 IntegrityChange change = new()

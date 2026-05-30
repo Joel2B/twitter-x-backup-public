@@ -13,7 +13,7 @@ public interface IMediaData
     public Task<Stream> Read(string path);
     public Task<Stream> Write(string path);
     public Task<string?> GetHash(string path);
-    public Task<Cache?> GetCache(string path);
+    public Task<MediaCacheEntry?> GetCache(string path);
     public Stream GetTempStream();
 }
 

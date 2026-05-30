@@ -1,6 +1,6 @@
 namespace Backup.Infrastructure.Models.Media;
 
-public class Cache
+public class MediaCacheEntry
 {
     public required string Path { get; set; }
     public MediaCacheSize? Size { get; set; }

@@ -22,7 +22,7 @@ public class LocalMediaCache(
     private readonly StorageMedia _config = _config;
     private readonly IPartition _partition = _partition;
 
-    private readonly ConcurrentDictionary<string, Cache> _cache = new(
+    private readonly ConcurrentDictionary<string, MediaCacheEntry> _cache = new(
         StringComparer.OrdinalIgnoreCase
     );
 
@@ -89,13 +89,13 @@ public class LocalMediaCache(
             {
                 await LoadCache();
 
-                await foreach (Cache entry in LocalMediaCacheReader.Get(file))
+                await foreach (MediaCacheEntry entry in LocalMediaCacheReader.Get(file))
                     _cache[entry.Path] = entry;
             }
 
             _logger.LogWarning("cache: {count}", _cache.Count);
 
-            foreach (Cache entry in _cache.Values)
+            foreach (MediaCacheEntry entry in _cache.Values)
             {
                 if (
                     entry.Size?.Stream is null
@@ -120,7 +120,7 @@ public class LocalMediaCache(
             {
                 try
                 {
-                    Cache? cache = Get(path);
+                    MediaCacheEntry? cache = Get(path);
 
                     if (cache is null || cache.Size is null)
                         throw new Exception();
@@ -145,7 +145,7 @@ public class LocalMediaCache(
                         return;
                     }
 
-                    Cache newCache = new()
+                    MediaCacheEntry newCache = new()
                     {
                         Path = path,
                         PartitionId = cache.PartitionId,
@@ -191,7 +191,7 @@ public class LocalMediaCache(
         )
         {
             string json = await File.ReadAllTextAsync(path);
-            Cache? cache = JsonConvert.DeserializeObject<Cache>(json);
+            MediaCacheEntry? cache = JsonConvert.DeserializeObject<MediaCacheEntry>(json);
 
             if (cache is null)
                 continue;
@@ -218,7 +218,7 @@ public class LocalMediaCache(
         }
     }
 
-    private async Task SaveCache(Cache cache, CancellationToken ct)
+    private async Task SaveCache(MediaCacheEntry cache, CancellationToken ct)
     {
         PartitionConfig primary = _partition.GetPrimary();
         string pathCache = GetPathCacheDownload(primary);
@@ -263,7 +263,7 @@ public class LocalMediaCache(
 
     public async Task<string> GetPath(string path, long size = 0, CancellationToken ct = default)
     {
-        Cache? cache = Get(path);
+        MediaCacheEntry? cache = Get(path);
         PartitionConfig? partition = null;
 
         if (size > 0 && size >= _config.SizeHeavy)
@@ -275,7 +275,7 @@ public class LocalMediaCache(
         {
             string normalizedPath = UtilsPath.NormalizePath(path, true);
 
-            Cache newCache = new()
+            MediaCacheEntry newCache = new()
             {
                 Path = normalizedPath,
                 PartitionId = partition.Id,
@@ -300,10 +300,10 @@ public class LocalMediaCache(
         return Path.Combine([GetPathMedia(partition), path]);
     }
 
-    public Cache? Get(string path)
+    public MediaCacheEntry? Get(string path)
     {
         path = UtilsPath.NormalizePath(path, true);
-        _cache.TryGetValue(path, out Cache? cache);
+        _cache.TryGetValue(path, out MediaCacheEntry? cache);
 
         return cache;
     }
