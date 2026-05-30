@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Interfaces.Services.UtilsService;
+namespace Backup.Infrastructure.Utility.Abstractions.Services;
 
 public interface IBandwidthLimiter
 {

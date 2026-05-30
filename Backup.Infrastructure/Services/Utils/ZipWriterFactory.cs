@@ -1,5 +1,5 @@
 using System.IO.Compression;
-using Backup.Infrastructure.Interfaces.Services.UtilsService;
+using Backup.Infrastructure.Utility.Abstractions.Services;
 
 namespace Backup.Infrastructure.Services.UtilsService;
 

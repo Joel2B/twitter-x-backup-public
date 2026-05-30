@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Interfaces.Data.Media;
 using Backup.Infrastructure.Media.Abstractions.Services;
-using Backup.Infrastructure.Interfaces.Services.UtilsService;
+using Backup.Infrastructure.Utility.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Data.Backup;
 using Backup.Infrastructure.Models.Media;
 using Backup.Infrastructure.Models.Media.Backup;
