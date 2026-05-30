@@ -22,6 +22,10 @@ This project is under active personal development. Structure and configuration f
 
 Note: files in `Backup.Infrastructure/App/Config/` are intended for local use and should not be committed.
 
+Media cache backend:
+- `Data.Media[].CacheBackend.Type` defaults to `json` (or omit `CacheBackend` entirely).
+- `redis` and `postgres` are reserved for future implementation and currently fail fast on startup.
+
 ## Run Locally
 
 ```bash
