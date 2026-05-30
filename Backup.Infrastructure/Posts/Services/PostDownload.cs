@@ -1,8 +1,8 @@
 using Backup.Application.Posts;
 using Backup.Application.Posts.Models;
 using Backup.Application.Posts.Ports;
-using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Data.Dump;
+using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Dump;
@@ -15,7 +15,7 @@ namespace Backup.Infrastructure.Services.Posts;
 
 public class PostDownload(
     ILogger<PostDownload> _logger,
-    IPostDownloadOrchestrationService postDownloadOrchestrationService,
+    IPostDownloadCommandService postDownloadCommandService,
     IPostDownloader _downloader,
     IPostLogger _postLogger,
     IPostDomainParser _parser,
@@ -23,50 +23,51 @@ public class PostDownload(
 ) : IPostDownload
 {
     private readonly ILogger<PostDownload> _logger = _logger;
-    private readonly IPostDownloadOrchestrationService _postDownloadOrchestrationService =
-        postDownloadOrchestrationService;
+    private readonly IPostDownloadCommandService _postDownloadCommandService =
+        postDownloadCommandService;
     private readonly IPostDownloader _downloader = _downloader;
-
     private readonly IPostLogger _postLogger = _postLogger;
     private readonly IPostDomainParser _parser = _parser;
     private readonly IDumpData _dump = _dump;
 
     public async Task Download(IPostDomainData postData, ApiContext context)
     {
-        _logger.LogInformation("download loaded {count} posts", await postData.GetCount());
-
         using CancellationTokenSource tokenSource = new();
-        try
-        {
-            await _postDownloadOrchestrationService.Run(
-                new PostDownloadSession(
-                    _logger,
-                    _downloader,
-                    _postLogger,
-                    _parser,
-                    _dump,
-                    postData,
-                    context
-                ),
-                tokenSource.Token
-            );
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error: {error}", ex.Message);
-        }
-        finally
-        {
-            await _postLogger.Prune();
-        }
 
-        await Save(postData);
+        await _postDownloadCommandService.Execute(
+            new PostDownloadCommand(_logger, _downloader, _postLogger, _parser, _dump, postData, context),
+            tokenSource.Token
+        );
     }
 
-    private async Task Save(IPostDomainData postData)
+    private sealed class PostDownloadCommand(
+        ILogger<PostDownload> logger,
+        IPostDownloader downloader,
+        IPostLogger postLogger,
+        IPostDomainParser parser,
+        IDumpData dump,
+        IPostDomainData postData,
+        ApiContext context
+    ) : IPostDownloadCommand
     {
-        _logger.LogInformation("saving posts");
-        await postData.Save();
+        public Task<int> GetLoadedCount() => postData.GetCount();
+
+        public IPostDownloadSession CreateSession() =>
+            new PostDownloadSession(logger, downloader, postLogger, parser, dump, postData, context);
+
+        public void OnLoadedCount(int count) =>
+            logger.LogInformation("download loaded {count} posts", count);
+
+        public void OnError(Exception exception) =>
+            logger.LogError("Error: {error}", exception.Message);
+
+        public Task PruneLogs() => postLogger.Prune();
+
+        public async Task SavePosts()
+        {
+            logger.LogInformation("saving posts");
+            await postData.Save();
+        }
     }
 
     private sealed class PostDownloadSession(
@@ -121,8 +122,7 @@ public class PostDownload(
                 _context.Request.Query.Variables["cursor"] = plan.Cursor;
         }
 
-        public void SetCursor(string cursor) =>
-            _context.Request.Query.Variables["cursor"] = cursor;
+        public void SetCursor(string cursor) => _context.Request.Query.Variables["cursor"] = cursor;
 
         public void OnPageCycle(PostDownloadPlan plan)
         {
@@ -191,9 +191,7 @@ public class PostDownload(
             await _dump.Flush(_postData, _context.UserId, _context);
         }
 
-        public async Task AddPosts(IReadOnlyCollection<Backup.Domain.Posts.Post> posts)
-            => await _postData.AddPosts(_context.UserId, _context.Id, [.. posts]);
+        public async Task AddPosts(IReadOnlyCollection<Backup.Domain.Posts.Post> posts) =>
+            await _postData.AddPosts(_context.UserId, _context.Id, [.. posts]);
     }
 }
-
-

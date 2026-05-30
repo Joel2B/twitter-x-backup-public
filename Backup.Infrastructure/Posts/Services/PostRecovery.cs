@@ -11,7 +11,6 @@ using Backup.Infrastructure.Models.Media.Logging;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using LogEntry = Backup.Infrastructure.Models.Media.Logging.Logs;
-using DomainPost = Backup.Domain.Posts.Post;
 using ParseResult = Backup.Domain.Posts.ParseResult;
 
 namespace Backup.Infrastructure.Services.Posts;
@@ -19,7 +18,7 @@ namespace Backup.Infrastructure.Services.Posts;
 public class PostRecovery(
     ILogger<PostRecovery> _logger,
     AppConfig _config,
-    IPostRecoveryOrchestrationService postRecoveryOrchestrationService,
+    IPostRecoveryCommandService postRecoveryCommandService,
     IPostTweetDetailRequestFactory tweetDetailRequestFactory,
     IMediaLogger _mediaLogger,
     IPostDownloader _downloader,
@@ -30,8 +29,7 @@ public class PostRecovery(
 
     private readonly ILogger<PostRecovery> _logger = _logger;
     private readonly AppConfig _config = _config;
-    private readonly IPostRecoveryOrchestrationService _postRecoveryOrchestrationService =
-        postRecoveryOrchestrationService;
+    private readonly IPostRecoveryCommandService _postRecoveryCommandService = postRecoveryCommandService;
     private readonly IPostTweetDetailRequestFactory _tweetDetailRequestFactory =
         tweetDetailRequestFactory;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
@@ -40,38 +38,62 @@ public class PostRecovery(
 
     public async Task Recovery(IPostDomainData postData, UsersContext context)
     {
-        try
-        {
-            using CancellationTokenSource tokenSource = new();
-            IReadOnlyCollection<DomainPost> posts = await _postRecoveryOrchestrationService.Recover(
-                new RecoverySession(
-                    _logger,
-                    _config,
-                    _mediaLogger,
-                    _downloader,
-                    _parser,
-                    _tweetDetailRequestFactory,
-                    context
-                ),
-                tokenSource.Token
+        using CancellationTokenSource tokenSource = new();
+
+        await _postRecoveryCommandService.Execute(
+            new PostRecoveryCommand(
+                _logger,
+                _config,
+                _mediaLogger,
+                _downloader,
+                _parser,
+                _tweetDetailRequestFactory,
+                postData,
+                context
+            ),
+            tokenSource.Token
+        );
+    }
+
+    private sealed class PostRecoveryCommand(
+        ILogger<PostRecovery> logger,
+        AppConfig config,
+        IMediaLogger mediaLogger,
+        IPostDownloader downloader,
+        IPostDomainParser parser,
+        IPostTweetDetailRequestFactory tweetDetailRequestFactory,
+        IPostDomainData postData,
+        UsersContext context
+    ) : IPostRecoveryCommand
+    {
+        public IPostRecoverySession CreateSession() =>
+            new RecoverySession(
+                logger,
+                config,
+                mediaLogger,
+                downloader,
+                parser,
+                tweetDetailRequestFactory,
+                context
             );
 
-            if (posts.Count == 0)
-            {
-                _logger.LogInformation("recovery has no posts to merge");
-                return;
-            }
-
+        public async Task MergeRecoveredPosts(IReadOnlyCollection<Backup.Domain.Posts.Post> posts)
+        {
             await postData.AddPosts(context.UserId, RecoveryOrigin, [.. posts], new() { Index = false });
-            _logger.LogInformation("post {post} merged", posts.Count);
+        }
 
-            _logger.LogInformation("saving posts");
+        public async Task SavePosts()
+        {
+            logger.LogInformation("saving posts");
             await postData.Save();
         }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error: {error}", JsonConvert.SerializeObject(ex));
-        }
+
+        public void OnNoPostsRecovered() => logger.LogInformation("recovery has no posts to merge");
+
+        public void OnPostsMerged(int count) => logger.LogInformation("post {post} merged", count);
+
+        public void OnError(Exception exception) =>
+            logger.LogError("Error: {error}", JsonConvert.SerializeObject(exception));
     }
 
     private sealed class RecoverySession(
@@ -118,7 +140,10 @@ public class PostRecovery(
                 .ToList();
         }
 
-        public async Task<DomainPost?> DownloadPost(string postId, CancellationToken cancellationToken)
+        public async Task<Backup.Domain.Posts.Post?> DownloadPost(
+            string postId,
+            CancellationToken cancellationToken
+        )
         {
             if (_request is null)
                 return null;
@@ -145,12 +170,13 @@ public class PostRecovery(
             _errorLogs.RemoveAll(entry => entry.Id == postId);
         }
 
-        public async Task DelayBetweenDownloads(CancellationToken cancellationToken)
-            => await Task.Delay(5 * 1000, cancellationToken);
+        public async Task DelayBetweenDownloads(CancellationToken cancellationToken) =>
+            await Task.Delay(5 * 1000, cancellationToken);
 
         public void OnRecoveryDisabled() => _logger.LogInformation("post recovery disabled");
 
-        public void OnSelectedPosts(int count) => _logger.LogInformation("{count} posts with errors", count);
+        public void OnSelectedPosts(int count) =>
+            _logger.LogInformation("{count} posts with errors", count);
 
         public void OnTweetDetailUnavailable() =>
             _logger.LogWarning("api 'TweetDetail' is disabled or not configured");
@@ -159,5 +185,3 @@ public class PostRecovery(
             _logger.LogInformation("post {post} downloaded", postId);
     }
 }
-
-

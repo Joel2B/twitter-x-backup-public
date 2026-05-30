@@ -11,6 +11,8 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
     {
         services.AddScoped<IPostExecutionService, PostExecutionService>();
         services.AddScoped<IPostRuntimeService, PostRuntimeService>();
+        services.AddScoped<IPostDownloadCommandService, PostDownloadCommandService>();
+        services.AddScoped<IPostRecoveryCommandService, PostRecoveryCommandService>();
         services.AddScoped<IPostDownloadFlowService, PostDownloadFlowService>();
         services.AddScoped<IPostDownloadOrchestrationService, PostDownloadOrchestrationService>();
         services.AddScoped<IPostRecoveryOrchestrationService, PostRecoveryOrchestrationService>();
@@ -22,4 +24,3 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         return services;
     }
 }
-
