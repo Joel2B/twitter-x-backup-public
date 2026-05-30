@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Interfaces.Config;
+using Backup.Infrastructure.Core.Abstractions.Config;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
 

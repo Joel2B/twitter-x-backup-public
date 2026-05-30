@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Models.Config.Data;
 
-namespace Backup.Infrastructure.Interfaces.Config;
+namespace Backup.Infrastructure.Core.Abstractions.Config;
 
 public interface IAppConfigService
 {

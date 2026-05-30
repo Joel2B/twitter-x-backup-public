@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.Interfaces;
-using Backup.Infrastructure.Interfaces.Config;
+using Backup.Infrastructure.Core.Abstractions.Config;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Services.Config;

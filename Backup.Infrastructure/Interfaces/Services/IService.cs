@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Interfaces.Services;
+namespace Backup.Infrastructure.Core.Abstractions.Services;
 
 public interface IService
 {
