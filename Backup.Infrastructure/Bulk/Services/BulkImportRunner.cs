@@ -1,10 +1,11 @@
+using Backup.Application.Bulk;
+using Backup.Application.Bulk.Models;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Abstractions.Services;
-using Backup.Infrastructure.Bulk.Models;
+using Backup.Infrastructure.Bulk.Adapters;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Microsoft.Extensions.Logging;
-using ParseUser = Backup.Domain.Posts.ParseUser;
 
 namespace Backup.Infrastructure.Bulk.Services;
 
@@ -13,7 +14,8 @@ public sealed class BulkImportRunner(
     AppConfig config,
     IBulkSourceData bulkSourceData,
     IBulkData bulkData,
-    IBulkApiClient bulkApiClient
+    IBulkApiClient bulkApiClient,
+    IBulkImportService bulkImportService
 ) : IBulkImportRunner
 {
     private readonly ILogger<BulkImportRunner> _logger = logger;
@@ -21,72 +23,18 @@ public sealed class BulkImportRunner(
     private readonly IBulkSourceData _bulkSourceData = bulkSourceData;
     private readonly IBulkData _bulkData = bulkData;
     private readonly IBulkApiClient _bulkApiClient = bulkApiClient;
+    private readonly IBulkImportService _bulkImportService = bulkImportService;
 
     public async Task Run(IReadOnlyDictionary<string, ApiConfig> api, CancellationToken cancellationToken)
     {
         _logger.LogInformation("running import");
-        _logger.LogInformation("getting sources");
-        List<Source> sources = await _bulkSourceData.GetSources();
 
-        _logger.LogInformation("getting bulks");
-        List<BulkData> bulks = await _bulkData.GetBulks() ?? [];
+        BulkImportOptions options = new() { UsersPerCycle = _config.Bulk.UsersPerCycle };
 
-        _logger.LogInformation("filtering sources");
-        sources.RemoveAll(source =>
-            source.Type is not SourceType.Media || bulks.Any(o => o.User.Name == source.UserName)
+        await _bulkImportService.Run(
+            new BulkImportCommandAdapter(api, _bulkSourceData, _bulkData, _bulkApiClient),
+            options,
+            cancellationToken
         );
-
-        if (_config.Bulk.UsersPerCycle > 0)
-            sources = sources.Take(_config.Bulk.UsersPerCycle).ToList();
-
-        int progress = 1;
-
-        foreach (Source source in sources)
-        {
-            _logger.LogInformation(
-                "progress: {progress}/{total}",
-                progress,
-                _config.Bulk.UsersPerCycle
-            );
-
-            _logger.LogInformation("import user: {user}", source.UserName);
-
-            BulkData bulk = new()
-            {
-                User = new() { Name = source.UserName, Status = StatusUser.None },
-            };
-
-            bool valid = await _bulkApiClient.Verify();
-
-            if (!valid)
-            {
-                _logger.LogInformation("downloader is not valid");
-                break;
-            }
-
-            ParseUser? result = await _bulkApiClient.GetUserByUser(
-                api,
-                source.UserName,
-                cancellationToken
-            );
-
-            if (result is null)
-            {
-                _logger.LogInformation("error in GetUserByUser");
-                continue;
-            }
-
-            if (result.User is not null)
-            {
-                bulk.User.Id = result.User.Id;
-                bulk.User.Status = StatusUser.Active;
-                bulk.Total = result.User.MediaCount;
-            }
-
-            bulks.Add(bulk);
-            progress++;
-        }
-
-        await _bulkData.Save(bulks);
     }
 }

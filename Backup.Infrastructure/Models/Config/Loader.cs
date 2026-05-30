@@ -1,6 +1,8 @@
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.Request;
 using ApiRequest = Backup.Infrastructure.Models.Config.Request.Request;
+using Backup.Application.Config;
+using Backup.Application.Config.Models;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Downloads;
 using Backup.Infrastructure.Models.Config.Medias;
@@ -13,6 +15,8 @@ namespace Backup.Infrastructure.Models.Config;
 
 public static class ConfigLoader
 {
+    private static readonly ConfigNormalizationService _normalization = new();
+
     public static string GetConfigDirectory() => Path.Combine(AppContext.BaseDirectory, "config");
 
     public static AppConfig Load() => LoadSplit(GetConfigDirectory());
@@ -31,7 +35,11 @@ public static class ConfigLoader
     private static AppConfig LoadSplit(string configDirectory)
     {
         ServicesConfig services = LoadFile<ServicesConfig>(configDirectory, "Services.json");
-        ValidateServices(services);
+        List<ConfigUser> users = services.Users.Select(user => new ConfigUser { Id = user.Id }).ToList();
+        _normalization.ValidateUsers(users);
+
+        for (int index = 0; index < users.Count; index++)
+            services.Users[index].Id = users[index].Id;
 
         Dictionary<string, Dictionary<string, ApiConfig>> apiByUser = LoadApiFiles(
             configDirectory,
@@ -39,12 +47,12 @@ public static class ConfigLoader
         );
 
         foreach (Dictionary<string, ApiConfig> api in apiByUser.Values)
-            ValidateAndNormalizeApi(api);
+            NormalizeApi(api);
 
         Dictionary<string, FetchItem> fetch = LoadFetchFile(configDirectory);
 
         foreach (var api in apiByUser)
-            ApplyFetchToApi(api.Key, api.Value, fetch);
+            ApplyFetchToApi(api.Value, fetch);
 
         List<UsersContext> contexts = services
             .Users.Select(user => new UsersContext { UserId = user.Id, Api = apiByUser[user.Id] })
@@ -134,122 +142,92 @@ public static class ConfigLoader
             "Fetch.json"
         );
 
-        foreach (var kvp in fetch)
+        List<ConfigFetchEntry> entries = fetch
+            .Select(kvp => new ConfigFetchEntry
+            {
+                Key = kvp.Key,
+                CountRaw = kvp.Value.Count,
+                ApiRaw = kvp.Value.Api,
+            })
+            .ToList();
+
+        _normalization.NormalizeFetch(entries);
+
+        foreach (ConfigFetchEntry entry in entries)
         {
-            string key = kvp.Key;
-            FetchItem value = kvp.Value;
+            if (!fetch.TryGetValue(entry.Key, out FetchItem? value))
+                continue;
 
-            if (value is null)
-                throw new Exception(
-                    $"error deserializing config file 'Fetch.json': key '{key}' is null"
-                );
-
-            if (!TryReadCount(value.Count, out int normalizedCount) || normalizedCount <= 0)
-                throw new Exception(
-                    $"error deserializing config file 'Fetch.json': key '{key}' has invalid field 'Count' (must be positive integer)"
-                );
-
-            if (!TryReadCount(value.Api, out int normalizedApiCount) || normalizedApiCount <= 0)
-                throw new Exception(
-                    $"error deserializing config file 'Fetch.json': key '{key}' has invalid field 'Api' (must be positive integer)"
-                );
-
-            value.Count = normalizedCount;
-            value.Api = normalizedApiCount;
+            value.Count = entry.Count;
+            value.Api = entry.Api;
         }
 
         return fetch;
     }
 
+    private static void NormalizeApi(IReadOnlyDictionary<string, ApiConfig> api)
+    {
+        List<ConfigApiEntry> entries = api
+            .Select(kvp => ToConfigApiEntry(kvp.Key, kvp.Value))
+            .ToList();
+
+        _normalization.ValidateAndNormalizeApi(entries);
+        ApplyConfigApiEntries(api, entries);
+    }
+
     private static void ApplyFetchToApi(
-        string userId,
         IReadOnlyDictionary<string, ApiConfig> api,
         IReadOnlyDictionary<string, FetchItem> fetch
     )
     {
-        foreach (var kvp in fetch)
-        {
-            if (!api.TryGetValue(kvp.Key, out ApiConfig? entry))
-                continue;
+        List<ConfigApiEntry> apiEntries = api
+            .Select(kvp => ToConfigApiEntry(kvp.Key, kvp.Value))
+            .ToList();
 
-            ApiRequest request = entry.Request;
+        List<ConfigFetchEntry> fetchEntries = fetch
+            .Select(kvp => new ConfigFetchEntry
+            {
+                Key = kvp.Key,
+                CountRaw = kvp.Value.Count,
+                ApiRaw = kvp.Value.Api,
+                Count = kvp.Value.Count,
+                Api = kvp.Value.Api,
+            })
+            .ToList();
 
-            if (!request.Query.Variables.ContainsKey("count"))
-                throw new Exception(
-                    $"error deserializing config file 'Fetch.json': key '{kvp.Key}' requires 'Request:Query:Variables:count' in api config"
-                );
-
-            request.Query.Variables["count"] = kvp.Value.Api;
-            request.Query.Variables["cursor"] = null;
-        }
+        _normalization.ApplyFetchToApi(apiEntries, fetchEntries);
+        ApplyConfigApiEntries(api, apiEntries);
     }
 
-    private static void ValidateAndNormalizeApi(IReadOnlyDictionary<string, ApiConfig> api)
-    {
-        foreach (var kvp in api)
+    private static ConfigApiEntry ToConfigApiEntry(string key, ApiConfig value) =>
+        new()
         {
-            string key = kvp.Key;
-            ApiConfig entry = kvp.Value;
-            ApiRequest request = entry.Request;
+            Key = key,
+            Id = value.Id,
+            Url = value.Request?.Url ?? string.Empty,
+            Variables = value.Request?.Query?.Variables ?? [],
+            Features = value.Request?.Query?.Features,
+            FieldToggles = value.Request?.Query?.FieldToggles,
+            Headers = value.Request?.Headers,
+        };
 
-            if (string.IsNullOrWhiteSpace(request.Url))
-                throw new Exception(
-                    $"error deserializing api file: entry '{key}' is missing required field 'Request:Url'"
-                );
-
-            if (request.Query is null)
-                throw new Exception(
-                    $"error deserializing api file: entry '{key}' is missing required field 'Request:Query'"
-                );
-
-            if (request.Query.Variables is null)
-                throw new Exception(
-                    $"error deserializing api file: entry '{key}' is missing required field 'Request:Query:Variables'"
-                );
-
-            RequestMergeUtils.NormalizeVariables(request.Query.Variables);
-
-            request.Query.Features ??= [];
-            request.Query.FieldToggles ??= [];
-            request.Headers ??= [];
-
-            if (!request.Query.Variables.TryGetValue("count", out object? countValue))
+    private static void ApplyConfigApiEntries(
+        IReadOnlyDictionary<string, ApiConfig> api,
+        IReadOnlyList<ConfigApiEntry> entries
+    )
+    {
+        foreach (ConfigApiEntry entry in entries)
+        {
+            if (!api.TryGetValue(entry.Key, out ApiConfig? config))
                 continue;
 
-            if (!TryReadCount(countValue, out int normalizedCount))
-                throw new Exception(
-                    $"error deserializing api file: entry '{key}' has invalid 'Request:Query:Variables:count' (must be positive integer or -1)"
-                );
+            ApiRequest request = config.Request;
 
-            request.Query.Variables["count"] = normalizedCount;
-            request.Query.Variables["cursor"] = null;
-        }
-    }
-
-    private static void ValidateServices(ServicesConfig services)
-    {
-        if (services.Users.Count == 0)
-            throw new Exception(
-                "error deserializing config file 'Services.json': section 'Users' is required"
-            );
-
-        HashSet<string> userIds = [];
-
-        foreach (UserService user in services.Users)
-        {
-            string userId = user.Id?.Trim() ?? string.Empty;
-
-            if (string.IsNullOrWhiteSpace(userId))
-                throw new Exception(
-                    "error deserializing config file 'Services.json': field 'Users:Id' is required"
-                );
-
-            if (!userIds.Add(userId))
-                throw new Exception(
-                    $"error deserializing config file 'Services.json': duplicate user id '{userId}'"
-                );
-
-            user.Id = userId;
+            request.Url = entry.Url;
+            request.Query.Variables = entry.Variables;
+            request.Query.Features = entry.Features ?? [];
+            request.Query.FieldToggles = entry.FieldToggles ?? [];
+            request.Headers = entry.Headers ?? [];
         }
     }
 
@@ -275,27 +253,4 @@ public static class ConfigLoader
             ?? throw new Exception($"error deserializing config file '{fileName}'");
     }
 
-    private static bool TryReadCount(object? value, out int count)
-    {
-        count = 0;
-
-        if (value is null)
-            return false;
-
-        switch (value)
-        {
-            case int intValue:
-                count = intValue;
-                break;
-            case long longValue when longValue is >= int.MinValue and <= int.MaxValue:
-                count = (int)longValue;
-                break;
-            default:
-                if (!int.TryParse(value.ToString(), out count))
-                    return false;
-                break;
-        }
-
-        return count > 0 || count == -1;
-    }
 }

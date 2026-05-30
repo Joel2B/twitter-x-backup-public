@@ -1,0 +1,213 @@
+using Backup.Application.Media.Models;
+using Backup.Application.Media.Ports;
+using Backup.Infrastructure.Media.Abstractions.Services;
+using Backup.Infrastructure.Media.Models;
+using Backup.Infrastructure.Posts.Abstractions.Data;
+using Backup.Infrastructure.Posts.Adapters;
+using Microsoft.Extensions.Logging;
+
+namespace Backup.Infrastructure.Media.Services;
+
+public sealed class MediaOrchestrationCommandAdapter(
+    ILogger<MediaOrchestrationCommandAdapter> logger,
+    IPostDomainData postData,
+    IMediaProcessing mediaProcessing,
+    IMediaPrune mediaPrune,
+    IEnumerable<IMediaStorage> mediaData,
+    IEnumerable<IMediaDataMaintenance> mediaMaintenance,
+    IMediaIntegrity mediaIntegrity,
+    IMediaFilter mediaFilter,
+    IMediaReplication mediaReplication,
+    IEnumerable<IMediaBackupStrategy> mediaBackups,
+    IMediaDownloadService mediaDownload
+) : IMediaOrchestrationCommand
+{
+    private readonly ILogger<MediaOrchestrationCommandAdapter> _logger = logger;
+    private readonly IPostDomainData _postData = postData;
+    private readonly IMediaProcessing _mediaProcessing = mediaProcessing;
+    private readonly IMediaPrune _mediaPrune = mediaPrune;
+    private readonly List<IMediaStorage> _mediaData = mediaData.ToList();
+    private readonly Dictionary<string, IMediaDataMaintenance> _mediaMaintenance = mediaMaintenance
+        .Where(item => item.Id is not null)
+        .ToDictionary(item => item.Id!, item => item, StringComparer.OrdinalIgnoreCase);
+    private readonly IMediaIntegrity _mediaIntegrity = mediaIntegrity;
+    private readonly IMediaFilter _mediaFilter = mediaFilter;
+    private readonly IMediaReplication _mediaReplication = mediaReplication;
+    private readonly List<IMediaBackupStrategy> _mediaBackups = mediaBackups.ToList();
+    private readonly IMediaDownloadService _mediaDownload = mediaDownload;
+
+    public async Task<IReadOnlyList<Backup.Domain.Posts.MediaInput>> GetMediaInputs() =>
+        await _postData.GetMediaInputs() ?? [];
+
+    public async Task<MediaProcessingResult> Process(IReadOnlyList<Backup.Domain.Posts.MediaInput> posts)
+    {
+        List<Backup.Infrastructure.Posts.Models.MediaInput> appPosts = posts
+            .Select(PostReplicationMapper.ToApp)
+            .ToList();
+
+        await _mediaProcessing.Process(appPosts);
+
+        return new()
+        {
+            All = _mediaProcessing.GetMedia().Select(ToApplication).ToList(),
+            Filtered = _mediaProcessing.GetFilteredMedia().Select(ToApplication).ToList(),
+        };
+    }
+
+    public async Task Prune(List<MediaDownload> downloads)
+    {
+        List<Download> infra = ToInfrastructure(downloads);
+        await _mediaPrune.Prune(infra);
+        Sync(downloads, infra);
+    }
+
+    public async Task Filter(List<MediaDownload> downloads)
+    {
+        List<Download> infra = ToInfrastructure(downloads);
+        await _mediaFilter.Check(infra);
+        Sync(downloads, infra);
+    }
+
+    public IReadOnlyList<string> GetStorageIds() =>
+        _mediaData.Where(item => !string.IsNullOrWhiteSpace(item.Id)).Select(item => item.Id!).ToList();
+
+    public bool HasMaintenance(string storageId)
+    {
+        bool has = _mediaMaintenance.ContainsKey(storageId);
+
+        if (!has)
+            _logger.LogWarning("no media maintenance configured for media data {storageId}", storageId);
+
+        return has;
+    }
+
+    public async Task PruneStorage(string storageId, List<MediaDownload> downloads)
+    {
+        IMediaDataMaintenance? maintenance = GetMaintenance(storageId);
+
+        if (maintenance is null)
+            return;
+
+        List<Download> infra = ToInfrastructure(downloads);
+        await maintenance.Prune(infra);
+        Sync(downloads, infra);
+    }
+
+    public async Task CheckStorageData(string storageId, List<MediaDownload> downloads)
+    {
+        IMediaDataMaintenance? maintenance = GetMaintenance(storageId);
+
+        if (maintenance is null)
+            return;
+
+        List<Download> infra = ToInfrastructure(downloads);
+        await maintenance.CheckData(infra);
+        Sync(downloads, infra);
+    }
+
+    public async Task CheckStorageIntegrity(string storageId, List<MediaDownload> downloads)
+    {
+        IMediaDataMaintenance? maintenance = GetMaintenance(storageId);
+
+        if (maintenance is null)
+            return;
+
+        List<Download> infra = ToInfrastructure(downloads);
+        await _mediaIntegrity.Check(infra, maintenance);
+        Sync(downloads, infra);
+    }
+
+    public async Task DownloadToStorage(string storageId, List<MediaDownload> downloads)
+    {
+        IMediaStorage? storage = GetStorage(storageId);
+
+        if (storage is null)
+            return;
+
+        List<Download> infra = ToInfrastructure(downloads);
+        await _mediaDownload.Download(infra, storage);
+        Sync(downloads, infra);
+    }
+
+    public async Task ReplicateFromStorage(string storageId, List<MediaDownload> downloads)
+    {
+        IMediaStorage? storage = GetStorage(storageId);
+
+        if (storage is null)
+            return;
+
+        List<Download> infra = ToInfrastructure(downloads);
+        await _mediaReplication.Replicate(infra, _mediaData, storage);
+        Sync(downloads, infra);
+    }
+
+    public async Task RunBackups(List<MediaDownload> downloads)
+    {
+        IMediaStorage? backupSource = _mediaData.FirstOrDefault();
+
+        if (backupSource is null)
+        {
+            foreach (IMediaBackupStrategy backup in _mediaBackups)
+                _logger.LogWarning("no media data configured for backup source for backup {backupId}", backup.Id);
+
+            return;
+        }
+
+        List<Download> infra = ToInfrastructure(downloads);
+
+        foreach (IMediaBackupStrategy backup in _mediaBackups)
+            await backup.Backup(infra, backupSource);
+    }
+
+    private IMediaStorage? GetStorage(string storageId)
+    {
+        IMediaStorage? storage = _mediaData.FirstOrDefault(item =>
+            string.Equals(item.Id, storageId, StringComparison.OrdinalIgnoreCase)
+        );
+
+        if (storage is not null)
+            return storage;
+
+        _logger.LogWarning("media storage not found: {storageId}", storageId);
+        return null;
+    }
+
+    private IMediaDataMaintenance? GetMaintenance(string storageId)
+    {
+        IMediaDataMaintenance? maintenance;
+
+        if (_mediaMaintenance.TryGetValue(storageId, out maintenance))
+            return maintenance;
+
+        _logger.LogWarning("media maintenance not found: {storageId}", storageId);
+        return null;
+    }
+
+    private static List<Download> ToInfrastructure(IEnumerable<MediaDownload> downloads) =>
+        downloads
+            .Select(download =>
+                new Download
+                {
+                    Id = download.Id,
+                    Data = download
+                        .Data.Select(item => new DataDownload { Url = item.Url, Path = item.Path })
+                        .ToList(),
+                }
+            )
+            .ToList();
+
+    private static MediaDownload ToApplication(Download download) =>
+        new()
+        {
+            Id = download.Id,
+            Data = download
+                .Data.Select(item => new MediaDownloadData { Url = item.Url, Path = item.Path })
+                .ToList(),
+        };
+
+    private static void Sync(List<MediaDownload> target, List<Download> source)
+    {
+        target.Clear();
+        target.AddRange(source.Select(ToApplication));
+    }
+}

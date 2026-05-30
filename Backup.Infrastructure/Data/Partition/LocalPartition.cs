@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using System.Text;
+using Backup.Application.Partition;
+using Backup.Application.Partition.Models;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config;
@@ -13,12 +15,14 @@ namespace Backup.Infrastructure.Data.Partition;
 public class LocalPartition(
     AppConfig _appConfig,
     ILogger<LocalPartition> _logger,
+    IPartitionPolicyService partitionPolicyService,
     Storage? _config = null
 ) : IPartition, ISetup
 {
     private readonly ILogger<LocalPartition> _logger = _logger;
     private readonly Storage? _config = _config;
     private readonly AppConfig _appConfig = _appConfig;
+    private readonly IPartitionPolicyService _partitionPolicyService = partitionPolicyService;
 
     private readonly ConcurrentDictionary<int, PartitionSize> _partitions = new(
         _appConfig
@@ -152,71 +156,68 @@ public class LocalPartition(
     public List<PartitionConfig> GetPartitions(List<int>? ids = null)
     {
         List<int>? selectedIds = ids ?? _config?.Partitions;
-        HashSet<int>? idSet = selectedIds is null ? null : [.. selectedIds];
-
-        return
-        [
-            .. _appConfig.Data.Partitions.Where(o =>
-                o.Enabled && (idSet is null || idSet.Contains(o.Id))
-            ),
-        ];
+        List<PartitionState> states = BuildPartitionStates(_appConfig.Data.Partitions);
+        IReadOnlyList<PartitionState> filtered = _partitionPolicyService.FilterEnabled(
+            states,
+            selectedIds
+        );
+        HashSet<int> filteredIds = [.. filtered.Select(state => state.Id)];
+        return [.. _appConfig.Data.Partitions.Where(partition => filteredIds.Contains(partition.Id))];
     }
 
     public PartitionConfig GetPath(int? id = null, long size = 0)
     {
-        int? idIndex;
+        List<PartitionConfig> available = GetPartitions();
+        List<PartitionState> states = BuildPartitionStates(available);
+        int selectedId = _partitionPolicyService.ResolvePartitionId(states, id, size);
 
-        if (id is null)
-        {
-            if (size == 0)
-                idIndex = GetPrimary().Id;
-            else
-            {
-                PartitionConfig? partitionAvailable = CheckSpace(size);
+        if (!_partitions.TryGetValue(selectedId, out PartitionSize? partition))
+            throw new InvalidOperationException($"not exist partition id {selectedId}");
 
-                if (partitionAvailable is null)
-                    throw new Exception("no space available");
+        if (id is null && size > 0)
+            partition.Add(size);
 
-                idIndex = partitionAvailable.Id;
-            }
-        }
-        else
-            idIndex = id;
-
-        if (idIndex is null)
-            throw new Exception($"not exist partition id {idIndex}");
-
-        return _partitions[(int)idIndex].Partition;
-    }
-
-    private PartitionConfig? CheckSpace(long size)
-    {
-        PartitionConfig primary = GetPartitions().First(o => o.Type == "primary");
-        List<PartitionConfig> extensions = [.. GetPartitions().Where(o => o.Type == "extension")];
-        List<PartitionConfig> partitions = [primary, .. extensions];
-
-        foreach (PartitionConfig partition in partitions)
-        {
-            long usableSize = 1_000_000_000L * partition.UsableSpace / 100 * partition.Size;
-
-            if ((_partitions[partition.Id].Size + size) > usableSize)
-                continue;
-
-            _partitions[partition.Id].Add(size);
-
-            return partition;
-        }
-
-        return null;
+        return partition.Partition;
     }
 
     public List<PartitionConfig> GetCache() =>
-        [
-            .. GetPartitions()
-                .Where(o => o.Type == "cache" || (o.Tags is not null && o.Tags.Contains("cache"))),
-        ];
+        [.. GetPartitions().Where(partition => _partitionPolicyService.IsCachePartition(ToState(partition)))];
 
-    public PartitionConfig GetPrimary() => GetPartitions().First(o => o.Type == "primary");
+    public PartitionConfig GetPrimary()
+    {
+        List<PartitionConfig> available = GetPartitions();
+        int id = _partitionPolicyService.GetRequiredPartitionIdByType(
+            BuildPartitionStates(available),
+            "primary"
+        );
+        return _partitions[id].Partition;
+    }
 
-    public PartitionConfig GetHeavy() => GetPartitions().First(o => o.Type == "heavy");
+    public PartitionConfig GetHeavy()
+    {
+        List<PartitionConfig> available = GetPartitions();
+        int id = _partitionPolicyService.GetRequiredPartitionIdByType(
+            BuildPartitionStates(available),
+            "heavy"
+        );
+        return _partitions[id].Partition;
+    }
+
+    private List<PartitionState> BuildPartitionStates(IReadOnlyList<PartitionConfig> partitions) =>
+        partitions.Select(ToState).ToList();
+
+    private PartitionState ToState(PartitionConfig partition)
+    {
+        _partitions.TryGetValue(partition.Id, out PartitionSize? current);
+        return new PartitionState
+        {
+            Id = partition.Id,
+            Type = partition.Type,
+            Tags = partition.Tags,
+            Size = partition.Size,
+            UsableSpace = partition.UsableSpace,
+            Enabled = partition.Enabled,
+            CurrentSize = current?.Size ?? 0,
+        };
+    }
 }

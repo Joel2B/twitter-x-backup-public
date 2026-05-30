@@ -1,7 +1,9 @@
+using Backup.Application.Bulk;
+using Backup.Application.Bulk.Models;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Abstractions.Services;
-using Backup.Infrastructure.Bulk.Models;
+using Backup.Infrastructure.Bulk.Adapters;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Bulk.Services;
@@ -9,50 +11,24 @@ namespace Backup.Infrastructure.Bulk.Services;
 public sealed class BulkVerifyRunner(
     ILogger<BulkVerifyRunner> logger,
     IPostDomainData postData,
-    IBulkData bulkData
+    IBulkData bulkData,
+    IBulkVerifyService bulkVerifyService
 ) : IBulkVerifyRunner
 {
     private readonly ILogger<BulkVerifyRunner> _logger = logger;
     private readonly IPostDomainData _postData = postData;
     private readonly IBulkData _bulkData = bulkData;
+    private readonly IBulkVerifyService _bulkVerifyService = bulkVerifyService;
 
     public async Task Run()
     {
         _logger.LogInformation("running verify");
-        _logger.LogInformation("getting bulks");
-        List<BulkData>? bulks = await _bulkData.GetBulks();
 
-        if (bulks is null)
-        {
-            _logger.LogInformation("bulk data is null");
-            return;
-        }
+        IReadOnlyList<BulkVerifyRow> rows = await _bulkVerifyService.Run(
+            new BulkVerifyCommandAdapter(_postData, _bulkData)
+        );
 
-        List<BulkData> bulksFiltered = bulks
-            .Where(o => o.User.Status == StatusUser.Active && o.Order.Phase1 is null)
-            .ToList();
-
-        List<string> userIds = bulksFiltered
-            .Select(o => o.User.Id ?? "")
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
-
-        _logger.LogInformation("getting post counts by profile ids: {count}", userIds.Count);
-        Dictionary<string, int> postCounts = await _postData.GetPostCountsByProfileIds(userIds);
-
-        var data = bulksFiltered.Select(bulk => new
-        {
-            UserId = bulk.User.Id,
-            UserName = bulk.User.Name,
-            TotalBulk = bulk.Total,
-            TotalPost = !string.IsNullOrWhiteSpace(bulk.User.Id)
-            && postCounts.TryGetValue(bulk.User.Id, out int totalPost)
-                ? totalPost
-                : 0,
-        });
-
-        foreach (var item in data)
+        foreach (BulkVerifyRow item in rows)
         {
             _logger.LogInformation(
                 "{userId,-19} {userName,-20} {totalBulk,-4} {totalPost,-4}",
