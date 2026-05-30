@@ -17,7 +17,11 @@ public sealed class PostDomainParserAdapter(
 
     public ParseResult Parse(string userId, string origin, string response)
     {
-        Backup.Infrastructure.Models.Posts.ParseResult parsed = _parser.Parse(userId, origin, response);
+        Backup.Application.Posts.Models.ParsedPostBatch parsed = _parser.Parse(
+            userId,
+            origin,
+            response
+        );
         List<Post> posts = _projectionComposer.ComposeMany(parsed.Posts);
         _postIndexingService.ApplySequenceIndex(posts, userId, origin);
         return new ParseResult(posts, parsed.NextCursor);

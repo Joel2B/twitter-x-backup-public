@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Models.Posts;
 
 namespace Backup.Tests;
@@ -107,7 +108,7 @@ public partial class PostsApiIntegrationTests
         FakePostData fakePostData = new();
         FakePostParser fakeParser = new()
         {
-            NextResult = new ParseResult(
+            NextResult = new ParsedPostBatch(
                 [CreateParsedPost("r1", "u1"), CreateParsedPost("r2", "u2")],
                 "CURSOR_123"
             ),

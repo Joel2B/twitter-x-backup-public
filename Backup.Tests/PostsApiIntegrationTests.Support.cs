@@ -56,11 +56,11 @@ public partial class PostsApiIntegrationTests
 
     private sealed class FakePostParser : IPostParser
     {
-        public ParseResult NextResult { get; set; } = new([], null);
+        public ParsedPostBatch NextResult { get; set; } = new([], null);
 
         public List<(string UserId, string Origin, string ResponseBody)> ParseCalls { get; } = [];
 
-        public ParseResult Parse(string userId, string origin, string response)
+        public ParsedPostBatch Parse(string userId, string origin, string response)
         {
             ParseCalls.Add((userId, origin, response));
             return NextResult;

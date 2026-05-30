@@ -1,5 +1,5 @@
 using ParseUser = Backup.Domain.Posts.ParseUser;
-using ParseResult = Backup.Infrastructure.Models.Posts.ParseResult;
+using ParseResult = Backup.Application.Posts.Models.ParsedPostBatch;
 
 namespace Backup.Infrastructure.Interfaces.Services.Posts;
 

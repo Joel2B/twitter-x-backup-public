@@ -6,7 +6,7 @@ using Backup.Infrastructure.Models.Posts.Response;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using ParseResult = Backup.Infrastructure.Models.Posts.ParseResult;
+using ParseResult = Backup.Application.Posts.Models.ParsedPostBatch;
 using ParseUser = Backup.Domain.Posts.ParseUser;
 using PostUser = Backup.Domain.Posts.PostUser;
 
