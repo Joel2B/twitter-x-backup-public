@@ -1,6 +1,7 @@
 using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using PostMapper = Backup.Infrastructure.Posts.Mapping.PostMapper;
+using TimelineEntryExtractor = Backup.Infrastructure.Posts.Mapping.TimelineEntryExtractor;
 using Backup.Infrastructure.Models.Posts.Response;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -17,16 +18,8 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
 
     public ParseResult Parse(string userId, string origin, string response)
     {
-        List<Entry>? entries = GetEntries(response);
-
-        if (entries is null || entries.Count == 0)
-            entries = GetEntriesModule(response);
-
-        if (entries is null || entries.Count == 0)
-            entries = GetEntriesModuleItems(response);
-
-        if (entries is null)
-            entries = [];
+        JObject root = JObject.Parse(response);
+        List<Entry> entries = TimelineEntryExtractor.ExtractEntries(root);
 
         List<ParsedPostProjection> tweets = [];
         List<Entry> debugTweets = [];
@@ -54,151 +47,9 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
                 );
             }
 
-        string? cursor = GetCursor(response);
+        string? cursor = TimelineEntryExtractor.ExtractCursor(root);
 
         return new ParseResult(tweets, cursor);
-    }
-
-    private static List<Entry>? GetEntries(string response)
-    {
-        JObject root = JObject.Parse(response);
-        JToken? token = root.SelectToken("..entries");
-
-        if (token is not JArray tokenArray)
-            throw new Exception();
-
-        List<Entry>? entries = tokenArray.ToObject<List<Entry>>();
-
-        if (entries is null)
-            throw new Exception();
-
-        Dictionary<string, List<Entry>> entriesDict = entries
-            .GroupBy(o => o.Content.EntryType)
-            .ToDictionary(o => o.Key, o => o.ToList());
-
-        if (!entriesDict.TryGetValue("TimelineTimelineItem", out List<Entry>? entriesItem))
-            return null;
-
-        List<Entry> entriesTweets = entriesItem
-            .Where(e =>
-                e.Content?.ItemContent?.TweetResults?.Result?.Core is not null
-                || e.Content?.ItemContent?.TweetResults?.Result?.Tweet is not null
-            )
-            .ToList();
-
-        return entriesTweets;
-    }
-
-    private string? GetCursor(string response)
-    {
-        JObject root = JObject.Parse(response);
-        JToken? token = root.SelectToken("..entries");
-
-        if (token is not JArray tokenArray)
-            throw new Exception();
-
-        List<Entry>? entries = tokenArray.ToObject<List<Entry>>();
-
-        if (entries is null)
-            throw new Exception();
-
-        Dictionary<string, List<Entry>> entriesDict = entries
-            .GroupBy(o => o.Content.EntryType)
-            .ToDictionary(o => o.Key, o => o.ToList());
-
-        if (!entriesDict.TryGetValue("TimelineTimelineCursor", out List<Entry>? entriesCursor))
-            return null;
-
-        string? cursor = entriesCursor
-            .FirstOrDefault(cursor => cursor.Content.CursorType == "Bottom")
-            ?.Content.Value;
-
-        return cursor;
-    }
-
-    private List<Entry>? GetEntriesModule(string response)
-    {
-        JObject root = JObject.Parse(response);
-        JToken? token = root.SelectToken("..entries");
-
-        if (token is not JArray tokenArray)
-            throw new Exception();
-
-        List<Entry>? entries = tokenArray.ToObject<List<Entry>>();
-
-        if (entries is null)
-            throw new Exception();
-
-        Dictionary<string, List<Entry>> entriesDict = entries
-            .GroupBy(o => o.Content.EntryType)
-            .ToDictionary(o => o.Key, o => o.ToList());
-
-        if (!entriesDict.TryGetValue("TimelineTimelineModule", out List<Entry>? entriesModule))
-            return null;
-
-        if (entriesModule is null || entriesModule.Count > 1)
-            throw new Exception();
-
-        List<Entry>? items = entriesModule[0].Content.Items;
-
-        if (items is null)
-            throw new Exception();
-
-        List<Entry> entriesTweets = items
-            .Where(e =>
-                e.Item?.ItemContent?.TweetResults?.Result?.Core is not null
-                || e.Item?.ItemContent?.TweetResults?.Result?.Tweet is not null
-            )
-            .Select(o =>
-            {
-                o.Content = new()
-                {
-                    EntryType = "",
-                    ItemContent = o.Item?.ItemContent ?? throw new Exception("Item is null"),
-                };
-
-                o.Item = null;
-
-                return o;
-            })
-            .ToList();
-
-        return entriesTweets;
-    }
-
-    private List<Entry>? GetEntriesModuleItems(string response)
-    {
-        JObject root = JObject.Parse(response);
-        JToken? token = root.SelectToken("..moduleItems");
-
-        if (token is not JArray tokenArray)
-            return null;
-
-        List<Entry>? entries = tokenArray.ToObject<List<Entry>>();
-
-        if (entries is null)
-            return null;
-
-        List<Entry> entriesTweets = entries
-            .Where(e =>
-                e.Item?.ItemContent?.TweetResults?.Result?.Core is not null
-                || e.Item?.ItemContent?.TweetResults?.Result?.Tweet is not null
-            )
-            .Select(o =>
-            {
-                o.Content = new()
-                {
-                    EntryType = "",
-                    ItemContent = o.Item?.ItemContent ?? throw new Exception("Item is null"),
-                };
-
-                o.Item = null;
-
-                return o;
-            })
-            .ToList();
-
-        return entriesTweets;
     }
 
     public ParseUser ParseUser(string response)
