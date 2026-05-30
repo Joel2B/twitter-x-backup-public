@@ -17,6 +17,7 @@ public class MediaDownloaderHttp(
     IMediaDownloadExceptionPolicyService mediaDownloadExceptionPolicyService,
     IMediaDownloadPolicyService mediaDownloadPolicyService,
     IMediaDownloadStreamingPolicyService mediaDownloadStreamingPolicyService,
+    IMediaDownloadProgressPolicyService mediaDownloadProgressPolicyService,
     IProxyProvider proxyProvider,
     IBandwidthLimiter bandwidthLimiter
 ) : IMediaDownloader
@@ -29,6 +30,8 @@ public class MediaDownloaderHttp(
         mediaDownloadPolicyService;
     private readonly IMediaDownloadStreamingPolicyService _mediaDownloadStreamingPolicyService =
         mediaDownloadStreamingPolicyService;
+    private readonly IMediaDownloadProgressPolicyService _mediaDownloadProgressPolicyService =
+        mediaDownloadProgressPolicyService;
 
     private readonly IProxyProvider _proxy = proxyProvider;
     private readonly IBandwidthLimiter _bandwidthLimiter = bandwidthLimiter;
@@ -138,9 +141,17 @@ public class MediaDownloaderHttp(
                         await stream.WriteAsync(buffer.AsMemory(0, read), token);
                         totalRead += read;
 
-                        int percent = (int)(totalRead * 100 / knownContentLength);
+                        int percent = _mediaDownloadProgressPolicyService.CalculatePercent(
+                            totalRead,
+                            knownContentLength
+                        );
 
-                        if (percent >= nextPercent)
+                        if (
+                            _mediaDownloadProgressPolicyService.ShouldEmitProgressLog(
+                                percent,
+                                nextPercent
+                            )
+                        )
                         {
                             _logger.LogInformation(
                                 "{url}, {path}: {percent}% ({bytes}/{total})",
@@ -151,7 +162,10 @@ public class MediaDownloaderHttp(
                                 UtilsStorage.FormatBytes(knownContentLength)
                             );
 
-                            nextPercent += streamingSettings.ProgressStepPercent;
+                            nextPercent = _mediaDownloadProgressPolicyService.GetNextThreshold(
+                                nextPercent,
+                                streamingSettings.ProgressStepPercent
+                            );
                         }
                     }
                 else
