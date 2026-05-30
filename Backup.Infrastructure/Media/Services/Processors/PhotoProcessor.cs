@@ -1,14 +1,23 @@
 using Backup.Infrastructure.Core.Media;
+using Backup.Application.Media.Filter;
 using Backup.Infrastructure.Models.Config.Medias;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Media.Models.Processors;
 
 namespace Backup.Infrastructure.Media.Services.Processors;
 
-public class PhotoProcessor(PhotoConfig config, MediaProcessorContext context)
+public class PhotoProcessor(
+    PhotoConfig config,
+    MediaProcessorContext context,
+    IMediaDownloadFilterPolicyService downloadFilterPolicyService
+)
     : MediaProcessor(context)
 {
-    private readonly global::Backup.Infrastructure.Utils.MediaFilter _filters = new(config.Filters);
+    private readonly IMediaDownloadFilterPolicyService _downloadFilterPolicyService =
+        downloadFilterPolicyService;
+    private readonly IReadOnlyList<MediaExclusionRule> _filters = downloadFilterPolicyService.Parse(
+        config.Filters
+    );
 
     public override void Process()
     {
@@ -60,7 +69,8 @@ public class PhotoProcessor(PhotoConfig config, MediaProcessorContext context)
                             }
                         );
 
-                        bool include = !_filters.IsExcluded(
+                        bool include = !_downloadFilterPolicyService.IsExcluded(
+                            _filters,
                             Path.GetExtension(media.Url).Trim('.'),
                             type,
                             resolution.Name

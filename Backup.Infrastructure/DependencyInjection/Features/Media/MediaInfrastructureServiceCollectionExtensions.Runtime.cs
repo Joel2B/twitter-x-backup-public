@@ -23,6 +23,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         });
         services.AddScoped<IMediaPrune, MediaPrune>();
         services.AddScoped<IMediaErrorFilterPolicyService, MediaErrorFilterPolicyService>();
+        services.AddScoped<IMediaDownloadFilterPolicyService, MediaDownloadFilterPolicyService>();
         services.AddScoped<IMediaIntegrityPolicyService, MediaIntegrityPolicyService>();
         services.AddScoped<IMediaIntegrity, MediaIntegrity>();
         services.AddScoped<IMediaFilter, MediaFilter>();

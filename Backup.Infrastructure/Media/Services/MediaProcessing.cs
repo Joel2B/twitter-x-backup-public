@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Core.Media;
+using Backup.Application.Media.Filter;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Media.Models;
@@ -8,10 +9,16 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
 
-public class MediaProcessing(ILogger<MediaProcessing> _logger, AppConfig _config) : IMediaProcessing
+public class MediaProcessing(
+    ILogger<MediaProcessing> _logger,
+    AppConfig _config,
+    IMediaDownloadFilterPolicyService downloadFilterPolicyService
+) : IMediaProcessing
 {
     private readonly ILogger<MediaProcessing> _logger = _logger;
     private readonly AppConfig _config = _config;
+    private readonly IMediaDownloadFilterPolicyService _downloadFilterPolicyService =
+        downloadFilterPolicyService;
 
     private readonly Dictionary<string, Download> _all = [];
     private readonly Dictionary<string, Download> _filtered = [];
@@ -22,11 +29,11 @@ public class MediaProcessing(ILogger<MediaProcessing> _logger, AppConfig _config
 
         List<MediaProcessor> processors =
         [
-            new PhotoProcessor(_config.Medias.Photo, context),
-            new GifProcessor(_config.Medias.Gif, context),
+            new PhotoProcessor(_config.Medias.Photo, context, _downloadFilterPolicyService),
+            new GifProcessor(_config.Medias.Gif, context, _downloadFilterPolicyService),
             new ProfileProcessor(_config.Medias.Profile, context),
             new BannerProcessor(_config.Medias.Banner, context),
-            new VideoProcessor(_config.Medias.Video, context),
+            new VideoProcessor(_config.Medias.Video, context, _downloadFilterPolicyService),
         ];
 
         foreach (MediaProcessor processor in processors)

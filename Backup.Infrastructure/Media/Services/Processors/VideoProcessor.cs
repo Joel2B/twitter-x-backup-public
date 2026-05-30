@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Backup.Infrastructure.Core.Media;
+using Backup.Application.Media.Filter;
 using Backup.Infrastructure.Models.Config.Medias;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Media.Models.Processors;
@@ -7,10 +8,18 @@ using Backup.Infrastructure.Posts.Models;
 
 namespace Backup.Infrastructure.Media.Services.Processors;
 
-public class VideoProcessor(VideoConfig config, MediaProcessorContext context)
+public class VideoProcessor(
+    VideoConfig config,
+    MediaProcessorContext context,
+    IMediaDownloadFilterPolicyService downloadFilterPolicyService
+)
     : MediaProcessor(context)
 {
-    private readonly global::Backup.Infrastructure.Utils.MediaFilter _filters = new(config.Thumb.Filters);
+    private readonly IMediaDownloadFilterPolicyService _downloadFilterPolicyService =
+        downloadFilterPolicyService;
+    private readonly IReadOnlyList<MediaExclusionRule> _filters = downloadFilterPolicyService.Parse(
+        config.Thumb.Filters
+    );
 
     public override void Process()
     {
@@ -78,7 +87,8 @@ public class VideoProcessor(VideoConfig config, MediaProcessorContext context)
                             }
                         );
 
-                        bool include = !_filters.IsExcluded(
+                        bool include = !_downloadFilterPolicyService.IsExcluded(
+                            _filters,
                             Path.GetExtension(media.Url).Trim('.'),
                             type,
                             resolution.Name
