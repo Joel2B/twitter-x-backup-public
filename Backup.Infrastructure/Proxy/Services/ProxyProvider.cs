@@ -19,7 +19,8 @@ public class ProxyProvider(
     AppConfig _config,
     IProxyData _data,
     IProxyRuntimePolicyService proxyRuntimePolicyService,
-    IProxyHealthCheckPolicyService proxyHealthCheckPolicyService
+    IProxyHealthCheckPolicyService proxyHealthCheckPolicyService,
+    IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService
 )
     : IProxyProvider,
         ISetup,
@@ -31,6 +32,8 @@ public class ProxyProvider(
     private readonly IProxyRuntimePolicyService _proxyRuntimePolicyService = proxyRuntimePolicyService;
     private readonly IProxyHealthCheckPolicyService _proxyHealthCheckPolicyService =
         proxyHealthCheckPolicyService;
+    private readonly IProxyHttpClientHeaderPolicyService _proxyHttpClientHeaderPolicyService =
+        proxyHttpClientHeaderPolicyService;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
     private int _proxyIndex = 0;
@@ -259,34 +262,7 @@ public class ProxyProvider(
             Timeout = TimeSpan.FromSeconds(_config.Downloads.Timeout),
         };
 
-        client.DefaultRequestHeaders.UserAgent.Clear();
-
-        client.DefaultRequestHeaders.TryAddWithoutValidation(
-            "User-Agent",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36"
-        );
-
-        client.DefaultRequestHeaders.Accept.Clear();
-        client.DefaultRequestHeaders.Accept.ParseAdd(
-            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
-        );
-
-        client.DefaultRequestHeaders.AcceptLanguage.Clear();
-        client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("en-US,en;q=0.9");
-
-        client.DefaultRequestHeaders.TryAddWithoutValidation("Priority", "u=0, i");
-        client.DefaultRequestHeaders.TryAddWithoutValidation(
-            "Sec-ch-ua",
-            "\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\""
-        );
-
-        client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-ch-ua-mobile", "?0");
-        client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-ch-ua-platform", "Windows");
-        client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-fetch-dest", "document");
-        client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-fetch-mode", "navigate");
-        client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-fetch-site", "none");
-        client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-fetch-user", "?1");
-        client.DefaultRequestHeaders.TryAddWithoutValidation("Sec-gpc", "1");
+        _proxyHttpClientHeaderPolicyService.Apply(client.DefaultRequestHeaders);
 
         HttpClient? oldClient = Interlocked.Exchange(ref _client, client);
         oldClient?.Dispose();
