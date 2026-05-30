@@ -1,26 +1,39 @@
+using Backup.Application.Media.Integrity;
+using Backup.Application.Media.Models;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
-using Backup.Infrastructure.Models.Utils;
 
 namespace Backup.Infrastructure.Media.Services;
 
-public class MediaIntegrity : IMediaIntegrity
+public class MediaIntegrity(IMediaIntegrityPolicyService integrityPolicyService) : IMediaIntegrity
 {
+    private readonly IMediaIntegrityPolicyService _integrityPolicyService = integrityPolicyService;
+
     public async Task Check(List<Download> downloads, IMediaDataMaintenance data)
     {
-        foreach (Download download in downloads)
-        {
-            download.Data.RemoveAll(data =>
+        List<MediaDownload> appDownloads = downloads
+            .Select(download => new MediaDownload
             {
-                string extension = Path.GetExtension(data.Path);
+                Id = download.Id,
+                Data = download
+                    .Data.Select(item => new MediaDownloadData { Url = item.Url, Path = item.Path })
+                    .ToList(),
+            })
+            .ToList();
 
-                return extension != FileExtension.JPG
-                    && extension != FileExtension.PNG
-                    && extension != FileExtension.MP4;
-            });
-        }
+        _integrityPolicyService.KeepSupported(appDownloads);
 
-        downloads.RemoveAll(dl => dl.Data.Count == 0);
+        downloads.Clear();
+        downloads.AddRange(
+            appDownloads.Select(download => new Download
+            {
+                Id = download.Id,
+                Data = download
+                    .Data.Select(item => new DataDownload { Url = item.Url, Path = item.Path })
+                    .ToList(),
+            })
+        );
+
         await data.CheckIntegrity(downloads);
     }
 }

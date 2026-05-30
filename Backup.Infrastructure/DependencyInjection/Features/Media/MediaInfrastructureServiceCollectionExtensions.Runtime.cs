@@ -1,6 +1,7 @@
 using Backup.Infrastructure.Media.Data;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Services;
+using Backup.Application.Media.Integrity;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection.Features.Media;
@@ -13,6 +14,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
     {
         services.AddScoped<IMediaProcessing, MediaProcessing>();
         services.AddScoped<IMediaPrune, MediaPrune>();
+        services.AddScoped<IMediaIntegrityPolicyService, MediaIntegrityPolicyService>();
         services.AddScoped<IMediaIntegrity, MediaIntegrity>();
         services.AddScoped<IMediaFilter, MediaFilter>();
         services.AddScoped<IMediaReplication, MediaReplication>();
