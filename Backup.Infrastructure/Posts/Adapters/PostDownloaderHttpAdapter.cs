@@ -15,7 +15,8 @@ public class PostDownloaderHttp(
     AppConfig _config,
     IHttpRequestHeaderPolicyService httpRequestHeaderPolicyService,
     IRateLimitDecisionService rateLimitDecisionService,
-    IRetryDelayPolicyService retryDelayPolicyService
+    IRetryDelayPolicyService retryDelayPolicyService,
+    IRequestQueryStringPolicyService requestQueryStringPolicyService
 )
     : IPostDownloader
 {
@@ -26,6 +27,8 @@ public class PostDownloaderHttp(
         httpRequestHeaderPolicyService;
     private readonly IRateLimitDecisionService _rateLimitDecisionService = rateLimitDecisionService;
     private readonly IRetryDelayPolicyService _retryDelayPolicyService = retryDelayPolicyService;
+    private readonly IRequestQueryStringPolicyService _requestQueryStringPolicyService =
+        requestQueryStringPolicyService;
     private readonly HttpClient _client = new(
         new HttpClientHandler
         {
@@ -45,27 +48,12 @@ public class PostDownloaderHttp(
         _request = null;
         _headers = null;
 
-        List<string> keysToRemove = request
-            .Query.Variables.Where(kv => kv.Value == null)
-            .Select(kv => kv.Key)
-            .ToList();
-
-        foreach (string key in keysToRemove)
-            request.Query.Variables.Remove(key);
-
-        Dictionary<string, string> queryBuilder = new()
-        {
-            { "variables", JsonConvert.SerializeObject(request.Query.Variables) },
-            { "features", JsonConvert.SerializeObject(request.Query.Features) },
-            { "fieldToggles", JsonConvert.SerializeObject(request.Query.FieldToggles) },
-        };
-
-        string queryUri = queryBuilder.Aggregate(
-            "?",
-            (query, current) => $"{query}{current.Key}={Uri.EscapeDataString(current.Value)}&"
-        )[..^1];
-
-        string url = $"{request.Url}{queryUri}";
+        string url = _requestQueryStringPolicyService.Build(
+            request.Url,
+            request.Query.Variables,
+            request.Query.Features,
+            request.Query.FieldToggles
+        );
 
         using HttpRequestMessage requestHttp = new()
         {
