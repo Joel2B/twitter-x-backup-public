@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Data.Posts;
+using Backup.Infrastructure.Posts.Data;
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Models.Posts;

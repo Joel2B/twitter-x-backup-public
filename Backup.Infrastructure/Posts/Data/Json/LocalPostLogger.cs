@@ -5,7 +5,7 @@ using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Data.Posts;
+namespace Backup.Infrastructure.Posts.Data;
 
 public class LocalPostLogger(
     ILogger<LocalPostLogger> _logger,

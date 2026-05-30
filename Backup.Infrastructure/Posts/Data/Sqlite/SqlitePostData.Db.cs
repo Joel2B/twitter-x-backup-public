@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Data.Posts;
+namespace Backup.Infrastructure.Posts.Data;
 
 public partial class SqlitePostData
 {

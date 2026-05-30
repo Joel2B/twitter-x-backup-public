@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Data.Posts;
+using Backup.Infrastructure.Posts.Data;
 using Backup.Infrastructure.Interfaces.Partition;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Posts;

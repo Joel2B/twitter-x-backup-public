@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Data.Partition;
-using Backup.Infrastructure.Data.Posts;
+using Backup.Infrastructure.Posts.Data;
 using Backup.Infrastructure.Interfaces;
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Partition;

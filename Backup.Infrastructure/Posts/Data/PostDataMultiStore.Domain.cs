@@ -2,7 +2,7 @@ using Backup.Domain.Posts;
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Posts.Adapters;
 
-namespace Backup.Infrastructure.Data.Posts;
+namespace Backup.Infrastructure.Posts.Data;
 
 public partial class PostDataMultiStore : IPostDomainData
 {
