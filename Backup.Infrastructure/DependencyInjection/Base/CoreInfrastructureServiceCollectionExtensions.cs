@@ -22,6 +22,7 @@ public static class CoreInfrastructureServiceCollectionExtensions
         services.AddSingleton<IStorageRegistrationPolicyService, StorageRegistrationPolicyService>();
         services.AddSingleton<IDumpProgressPolicyService, DumpProgressPolicyService>();
         services.AddSingleton<IDumpIndexFilePolicyService, DumpIndexFilePolicyService>();
+        services.AddSingleton<IDumpContextGuardService, DumpContextGuardService>();
 
         return services;
     }

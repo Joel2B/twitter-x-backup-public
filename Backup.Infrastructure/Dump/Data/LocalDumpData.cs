@@ -24,7 +24,8 @@ public class LocalDumpData(
     StorageDump _config,
     IPartition _partition,
     IDumpProgressPolicyService dumpProgressPolicyService,
-    IDumpIndexFilePolicyService dumpIndexFilePolicyService
+    IDumpIndexFilePolicyService dumpIndexFilePolicyService,
+    IDumpContextGuardService dumpContextGuardService
 ) : IDumpDataStore
 {
     public string? Id { get; set; }
@@ -36,6 +37,7 @@ public class LocalDumpData(
     private readonly IPartition _partition = _partition;
     private readonly IDumpProgressPolicyService _dumpProgressPolicyService = dumpProgressPolicyService;
     private readonly IDumpIndexFilePolicyService _dumpIndexFilePolicyService = dumpIndexFilePolicyService;
+    private readonly IDumpContextGuardService _dumpContextGuardService = dumpContextGuardService;
 
     private DumpData? _dumpData;
     private DumpData Data => _dumpData ?? throw new Exception("Dump data not initialized");
@@ -151,10 +153,7 @@ public class LocalDumpData(
         await CreateData(context);
         await SetupData(context);
 
-        if (dumpsData.Current is not null && context.Id != Data.Type)
-            throw new Exception();
-
-        Data.Type = context.Id;
+        Data.Type = _dumpContextGuardService.ResolveType(dumpsData.Current, context.Id, Data.Type);
 
         return Data;
     }
