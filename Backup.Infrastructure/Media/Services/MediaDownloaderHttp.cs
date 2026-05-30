@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net;
+using Backup.Application.Media;
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Utility.Abstractions.Services;
@@ -13,12 +14,15 @@ namespace Backup.Infrastructure.Media.Services;
 public class MediaDownloaderHttp(
     ILogger<MediaDownloaderHttp> _logger,
     AppConfig _config,
+    IMediaDownloadPolicyService mediaDownloadPolicyService,
     IProxyProvider proxyProvider,
     IBandwidthLimiter bandwidthLimiter
 ) : IMediaDownloader
 {
     private readonly ILogger<MediaDownloaderHttp> _logger = _logger;
     private readonly AppConfig _config = _config;
+    private readonly IMediaDownloadPolicyService _mediaDownloadPolicyService =
+        mediaDownloadPolicyService;
 
     private readonly IProxyProvider _proxy = proxyProvider;
     private readonly IBandwidthLimiter _bandwidthLimiter = bandwidthLimiter;
@@ -56,14 +60,11 @@ public class MediaDownloaderHttp(
 
                 long? contentLength = response.Content.Headers.ContentLength;
 
-                if (
-                    contentLength is not null
-                    && _config.Downloads.MaxBytes > 0
-                    && contentLength >= _config.Downloads.MaxBytes
-                )
-                    throw new SystemException(
-                        $">= {UtilsStorage.FormatBytes(_config.Downloads.MaxBytes)}"
-                    );
+                _mediaDownloadPolicyService.EnsureAllowedContentLength(
+                    contentLength,
+                    _config.Downloads.MaxBytes,
+                    UtilsStorage.FormatBytes
+                );
 
                 await using Stream content = await response.Content.ReadAsStreamAsync(token);
 
@@ -71,15 +72,21 @@ public class MediaDownloaderHttp(
                     throw new SystemException("content is empty.");
 
                 long inMemoryThreshold = int.MaxValue;
+                long knownContentLength = contentLength ?? -1;
 
-                if (contentLength is not null && contentLength <= inMemoryThreshold)
-                    stream = new MemoryStream((int)contentLength.Value);
+                if (
+                    contentLength is long length
+                    && _mediaDownloadPolicyService.ShouldUseMemoryStream(
+                        contentLength,
+                        inMemoryThreshold
+                    )
+                )
+                    stream = new MemoryStream((int)length);
                 else
                     stream = mediaData.GetTempStream();
 
                 const int BufferSize = 128 * 1024;
 
-                bool progress = true;
                 long progressThreshold = 10L * 1024 * 1024;
                 byte[] buffer = new byte[BufferSize];
                 long totalRead = 0;
@@ -111,7 +118,13 @@ public class MediaDownloaderHttp(
                     return await readTask;
                 }
 
-                if (progress && contentLength is not null && contentLength >= progressThreshold)
+                if (
+                    knownContentLength >= 0
+                    && _mediaDownloadPolicyService.ShouldReportProgress(
+                        contentLength,
+                        progressThreshold
+                    )
+                )
                     while ((read = await Read()) > 0)
                     {
                         await _bandwidthLimiter.Throttle(read, token);
@@ -119,7 +132,7 @@ public class MediaDownloaderHttp(
                         await stream.WriteAsync(buffer.AsMemory(0, read), token);
                         totalRead += read;
 
-                        int percent = (int)(totalRead * 100 / contentLength.Value);
+                        int percent = (int)(totalRead * 100 / knownContentLength);
 
                         if (percent >= nextPercent)
                         {
@@ -129,7 +142,7 @@ public class MediaDownloaderHttp(
                                 data.Path,
                                 percent,
                                 UtilsStorage.FormatBytes(totalRead),
-                                UtilsStorage.FormatBytes(contentLength.Value)
+                                UtilsStorage.FormatBytes(knownContentLength)
                             );
 
                             nextPercent += StepPercent;
@@ -155,7 +168,7 @@ public class MediaDownloaderHttp(
                 long totalMs = sw.ElapsedMilliseconds;
                 long downloadMs = totalMs - headersMs;
 
-                if (_config.Downloads.Threads.Start == 1)
+                if (_mediaDownloadPolicyService.ShouldLogTiming(_config.Downloads.Threads.Start))
                     _logger.LogInformation(
                         "TTFB: {ttfb} ms, Download: {download} ms, Total: {total} ms, Size: {bytes} Bytes ({kib} KiB)",
                         headersMs,
