@@ -45,11 +45,26 @@ public partial class MediaBackup(
 
     public async Task Backup(List<Download> downloads, IMediaStorage mediaData)
     {
-        _mediaData = mediaData;
+        SetMediaData(mediaData);
+        LoadPaths(downloads);
+        await LoadBackupState();
+        await LoadChunks();
+        await RunPipeline();
+    }
 
+    private void SetMediaData(IMediaStorage mediaData)
+    {
+        _mediaData = mediaData;
+    }
+
+    private void LoadPaths(List<Download> downloads)
+    {
         using (_logger.LogTimer(Id, "processing paths"))
             _paths = [.. downloads.SelectMany(o => o.Data).Select(o => o.Path)];
+    }
 
+    private async Task LoadBackupState()
+    {
         BackupChunks? backup = await _mediaBackupData.GetBackup();
 
         if (backup is not null)
@@ -57,13 +72,19 @@ public partial class MediaBackup(
 
         _backup.Chunks.Total = _config.Chunk.Count;
         _backup.Chunks.Path.Increase = _config.Chunk.Path.Increase;
+    }
 
+    private async Task LoadChunks()
+    {
         using (_logger.LogTimer(Id, "processing chunks"))
         {
             List<Chunk>? chunks = await _mediaBackupData.GetChunks();
             _chunks = chunks?.ToDictionary(o => o.Id) ?? [];
         }
+    }
 
+    private async Task RunPipeline()
+    {
         using (_logger.LogTimer(Id, "calculate"))
             await Calculate();
 

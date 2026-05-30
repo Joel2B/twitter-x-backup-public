@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Media;
 
-public partial class MediaBackup : IMediaBackupStrategy
+public partial class MediaBackup
 {
     private async Task Calculate()
     {
@@ -166,7 +166,7 @@ public partial class MediaBackup : IMediaBackupStrategy
         _logger.LogInformation("{paths1}/{paths2} new paths", newPathsCount, newPaths.Count);
     }
 
-    public async Task CalculateDirect()
+    private async Task CalculateDirect()
     {
         CancellationTokenSource cts = new();
 

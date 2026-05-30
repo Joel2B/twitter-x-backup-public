@@ -8,9 +8,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Media;
 
-public partial class MediaBackup : IMediaBackupStrategy
+public partial class MediaBackup
 {
-    public async Task CheckIntegrity()
+    private async Task CheckIntegrity()
     {
         _logger.LogInformation("checking integrity backup");
 
@@ -91,7 +91,7 @@ public partial class MediaBackup : IMediaBackupStrategy
         }
     }
 
-    public async Task FixIntegrity()
+    private async Task FixIntegrity()
     {
         var changes = _changes
             .GroupBy(o => o.Id)

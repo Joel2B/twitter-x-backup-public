@@ -7,9 +7,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Media;
 
-public partial class MediaBackup : IMediaBackupStrategy
+public partial class MediaBackup
 {
-    public async Task SetFileSizes()
+    private async Task SetFileSizes()
     {
         _logger.LogInformation("setting file sizes");
 

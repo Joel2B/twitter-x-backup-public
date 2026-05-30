@@ -8,9 +8,9 @@ using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Services.Media;
 
-public partial class MediaBackup : IMediaBackupStrategy
+public partial class MediaBackup
 {
-    public async Task Apply()
+    private async Task Apply()
     {
         foreach (var kvp in _chunks)
         {
