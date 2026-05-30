@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Models.Posts.Response;
-using Backup.Infrastructure.Posts.Mapping;
+using Backup.Infrastructure.Posts.Parsing;
 using Newtonsoft.Json.Linq;
 
 namespace Backup.Tests;

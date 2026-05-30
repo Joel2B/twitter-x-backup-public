@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Models.Posts.Response;
 
-namespace Backup.Infrastructure.Posts.Mapping;
+namespace Backup.Infrastructure.Posts.Parsing;
 
 internal static class TweetResultResolver
 {

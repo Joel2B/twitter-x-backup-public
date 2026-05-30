@@ -1,7 +1,8 @@
 using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Models.Posts.Response;
+using Backup.Infrastructure.Posts.Parsing;
 
-namespace Backup.Infrastructure.Posts.Mapping;
+namespace Backup.Infrastructure.Posts.ProjectionMapping;
 
 public static class PostMapper
 {

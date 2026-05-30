@@ -1,7 +1,7 @@
 using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Interfaces.Services.Posts;
-using PostMapper = Backup.Infrastructure.Posts.Mapping.PostMapper;
-using TimelineEntryExtractor = Backup.Infrastructure.Posts.Mapping.TimelineEntryExtractor;
+using PostMapper = Backup.Infrastructure.Posts.ProjectionMapping.PostMapper;
+using TimelineEntryExtractor = Backup.Infrastructure.Posts.Parsing.TimelineEntryExtractor;
 using Backup.Infrastructure.Models.Posts.Response;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;

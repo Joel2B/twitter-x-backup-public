@@ -1,7 +1,7 @@
 using Backup.Infrastructure.Models.Posts.Response;
 using Newtonsoft.Json.Linq;
 
-namespace Backup.Infrastructure.Posts.Mapping;
+namespace Backup.Infrastructure.Posts.Parsing;
 
 internal static class TimelineEntryExtractor
 {
