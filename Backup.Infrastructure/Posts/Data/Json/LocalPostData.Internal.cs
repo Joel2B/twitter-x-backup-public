@@ -84,13 +84,13 @@ public partial class LocalPostData
 
         long currentLength = new FileInfo(currentPath).Length;
         long historyLength = new FileInfo(historyPath).Length;
-        long diff = historyLength - currentLength;
-        long threshold = Math.Max(0, _config.Tasks.VerifyMaxSizeDiffBytes);
-
-        if (diff > threshold)
-            throw new Exception(
-                $"current '{NormalizedPostsFileName}' is smaller than latest history beyond threshold: current={currentLength}, history={historyLength}, shrink={diff}, threshold={threshold}, historyDir='{Path.GetFileName(latestHistory.Path)}'"
-            );
+        _postSnapshotSizeGuardService.EnsureNotShrunkBeyondThreshold(
+            currentLength,
+            historyLength,
+            _config.Tasks.VerifyMaxSizeDiffBytes,
+            NormalizedPostsFileName,
+            Path.GetFileName(latestHistory.Path) ?? string.Empty
+        );
 
         return Task.CompletedTask;
     }
