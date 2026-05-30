@@ -14,8 +14,9 @@ public partial class MediaBackup(
     ILogger<MediaBackup> _logger,
     StorageBackup _config,
     IZipWriterFactory _zipWriterFactory,
-    IMediaBackupData _mediaBackupData
-) : IMediaBackupStrategy
+    IMediaBackupData _mediaBackupData,
+    IEnumerable<IMediaBackupPipelineStep> _pipelineSteps
+) : IMediaBackupStrategy, IMediaBackupPipelineActions
 {
     public string? Id { get; set; }
 
@@ -40,6 +41,10 @@ public partial class MediaBackup(
 
     private readonly ILogger<MediaBackup> _logger = _logger;
     private readonly IZipWriterFactory _zipWriterFactory = _zipWriterFactory;
+    private readonly List<IMediaBackupPipelineStep> _pipelineSteps = _pipelineSteps
+        .OrderBy(step => step.Order)
+        .ThenBy(step => step.TimerName, StringComparer.Ordinal)
+        .ToList();
 
     private readonly bool _stop = false;
 
@@ -85,35 +90,25 @@ public partial class MediaBackup(
 
     private async Task RunPipeline()
     {
-        using (_logger.LogTimer(Id, "calculate"))
-            await Calculate();
+        foreach (IMediaBackupPipelineStep step in _pipelineSteps)
+        {
+            if (_stop && step.SkipWhenStopped)
+                break;
 
-        using (_logger.LogTimer(Id, "calculate direct"))
-            await CalculateDirect();
-
-        using (_logger.LogTimer(Id, "apply direct"))
-            await ApplyDirect();
-
-        using (_logger.LogTimer(Id, "apply"))
-            await Apply();
-
-        using (_logger.LogTimer(Id, "check duplicates"))
-            await CheckDuplicates();
-
-        using (_logger.LogTimer(Id, "set files sizes"))
-            await SetFileSizes();
-
-        if (_stop)
-            return;
-
-        using (_logger.LogTimer(Id, "check integrity"))
-            await CheckIntegrity();
-
-        using (_logger.LogTimer(Id, "fix integrity"))
-            await FixIntegrity();
-
-        using (_logger.LogTimer(Id, "check integrity"))
-            await CheckIntegrity();
+            using (_logger.LogTimer(Id, step.TimerName))
+                await step.Execute(this);
+        }
     }
+
+    bool IMediaBackupPipelineActions.ShouldStop => _stop;
+
+    Task IMediaBackupPipelineActions.CalculateAsync() => Calculate();
+    Task IMediaBackupPipelineActions.CalculateDirectAsync() => CalculateDirect();
+    Task IMediaBackupPipelineActions.ApplyDirectAsync() => ApplyDirect();
+    Task IMediaBackupPipelineActions.ApplyAsync() => Apply();
+    Task IMediaBackupPipelineActions.CheckDuplicatesAsync() => CheckDuplicates();
+    Task IMediaBackupPipelineActions.SetFileSizesAsync() => SetFileSizes();
+    Task IMediaBackupPipelineActions.CheckIntegrityAsync() => CheckIntegrity();
+    Task IMediaBackupPipelineActions.FixIntegrityAsync() => FixIntegrity();
 }
 

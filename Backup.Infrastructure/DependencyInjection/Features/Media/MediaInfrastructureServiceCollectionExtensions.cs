@@ -18,6 +18,15 @@ public static class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaDownloadService, MediaDownloadService>();
         services.AddScoped<IMediaDownloader, MediaDownloaderHttp>();
         services.AddScoped<IMediaLogger, LocalMediaLogger>();
+        services.AddScoped<IMediaBackupPipelineStep, MediaBackupCalculateStep>();
+        services.AddScoped<IMediaBackupPipelineStep, MediaBackupCalculateDirectStep>();
+        services.AddScoped<IMediaBackupPipelineStep, MediaBackupApplyDirectStep>();
+        services.AddScoped<IMediaBackupPipelineStep, MediaBackupApplyStep>();
+        services.AddScoped<IMediaBackupPipelineStep, MediaBackupCheckDuplicatesStep>();
+        services.AddScoped<IMediaBackupPipelineStep, MediaBackupSetFileSizesStep>();
+        services.AddScoped<IMediaBackupPipelineStep, MediaBackupCheckIntegrityStep>();
+        services.AddScoped<IMediaBackupPipelineStep, MediaBackupFixIntegrityStep>();
+        services.AddScoped<IMediaBackupPipelineStep, MediaBackupCheckIntegrityAfterFixStep>();
         services.AddMediaBackupInfrastructure();
 
         return services;
