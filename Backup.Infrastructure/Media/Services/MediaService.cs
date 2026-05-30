@@ -17,7 +17,7 @@ public class MediaService(
     IMediaFilter _mediaFilter,
     IMediaReplication _mediaReplication,
     IEnumerable<IMediaBackupStrategy> _mediaBackup,
-    IMediaDownload _mediaDownload
+    IMediaDownloadService _mediaDownload
 ) : IMediaService
 {
     private readonly ILogger<MediaService> _logger = _logger;
@@ -29,7 +29,7 @@ public class MediaService(
     private readonly IMediaFilter _mediaFilter = _mediaFilter;
     private readonly IMediaReplication _mediaReplication = _mediaReplication;
     private readonly IEnumerable<IMediaBackupStrategy> _mediaBackups = _mediaBackup;
-    private readonly IMediaDownload _mediaDownload = _mediaDownload;
+    private readonly IMediaDownloadService _mediaDownload = _mediaDownload;
 
     public async Task Download()
     {

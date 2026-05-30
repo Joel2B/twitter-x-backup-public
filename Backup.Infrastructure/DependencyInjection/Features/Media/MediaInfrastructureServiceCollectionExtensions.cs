@@ -15,7 +15,7 @@ public static class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaIntegrity, MediaIntegrity>();
         services.AddScoped<IMediaFilter, MediaFilter>();
         services.AddScoped<IMediaReplication, MediaReplication>();
-        services.AddScoped<IMediaDownload, MediaDownload>();
+        services.AddScoped<IMediaDownloadService, MediaDownloadService>();
         services.AddScoped<IMediaDownloader, MediaDownloaderHttp>();
         services.AddScoped<IMediaLogger, LocalMediaLogger>();
         services.AddMediaBackupInfrastructure();

@@ -8,15 +8,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Media;
 
-class MediaDownload(
-    ILogger<MediaDownload> _logger,
+class MediaDownloadService(
+    ILogger<MediaDownloadService> _logger,
     AppConfig _config,
     IMediaDownloader _downloader,
     IMediaLogger _mediaLogger,
     IProxyProvider proxyProvider
-) : IMediaDownload
+) : IMediaDownloadService
 {
-    private readonly ILogger<MediaDownload> _logger = _logger;
+    private readonly ILogger<MediaDownloadService> _logger = _logger;
     private readonly AppConfig _config = _config;
     private readonly IMediaDownloader _downloader = _downloader;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
