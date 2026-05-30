@@ -4,6 +4,15 @@ namespace Backup.Application.Config;
 
 public sealed class ConfigNormalizationService
 {
+    public IReadOnlyList<string> NormalizeUserIds(IReadOnlyList<string?> userIds)
+    {
+        List<ConfigUser> users = userIds
+            .Select(userId => new ConfigUser { Id = userId ?? string.Empty })
+            .ToList();
+        ValidateUsers(users);
+        return users.Select(user => user.Id).ToList();
+    }
+
     public void ValidateApiFileEntries(
         string apiFileName,
         IReadOnlyDictionary<string, ConfigApiFileEntry?> api

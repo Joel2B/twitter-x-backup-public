@@ -6,6 +6,16 @@ namespace Backup.Tests;
 public class ConfigNormalizationServiceTests
 {
     [Fact]
+    public void NormalizeUserIds_TrimsValues()
+    {
+        ConfigNormalizationService sut = new();
+
+        IReadOnlyList<string> users = sut.NormalizeUserIds(["  user-1  ", "user-2"]);
+
+        Assert.Equal(["user-1", "user-2"], users);
+    }
+
+    [Fact]
     public void ValidateUsers_TrimsIds()
     {
         ConfigNormalizationService sut = new();

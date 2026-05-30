@@ -37,11 +37,12 @@ public static class ConfigLoader
     private static AppConfig LoadSplit(string configDirectory)
     {
         ServicesConfig services = LoadFile<ServicesConfig>(configDirectory, "Services.json");
-        List<ConfigUser> users = services.Users.Select(user => new ConfigUser { Id = user.Id }).ToList();
-        _normalization.ValidateUsers(users);
+        IReadOnlyList<string> normalizedUserIds = _normalization.NormalizeUserIds(
+            services.Users.Select(user => user.Id).ToList()
+        );
 
-        for (int index = 0; index < users.Count; index++)
-            services.Users[index].Id = users[index].Id;
+        for (int index = 0; index < normalizedUserIds.Count; index++)
+            services.Users[index].Id = normalizedUserIds[index];
 
         Dictionary<string, Dictionary<string, ApiConfig>> apiByUser = LoadApiFiles(
             configDirectory,
