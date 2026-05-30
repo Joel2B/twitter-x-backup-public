@@ -12,4 +12,3 @@ public class Paths : PathConfig
     public required PathConfig Bulk { get; set; }
     public required PathConfig Sources { get; set; }
 }
-

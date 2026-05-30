@@ -14,4 +14,3 @@ public enum SourceType
     Status,
     Notifications,
 }
-

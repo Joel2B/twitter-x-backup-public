@@ -89,4 +89,3 @@ public class PostTweetDetailRequestFactoryTests
             Headers = new Dictionary<string, string> { ["authorization"] = "Bearer token" },
         };
 }
-

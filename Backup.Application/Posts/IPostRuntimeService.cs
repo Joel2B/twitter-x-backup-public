@@ -7,4 +7,3 @@ public interface IPostRuntimeService
     Task Download(IPostDownloadRuntimeCommand command);
     Task Recover(IPostRecoveryRuntimeCommand command);
 }
-

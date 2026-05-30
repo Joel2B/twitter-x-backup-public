@@ -17,4 +17,3 @@ public class PathChunks
 {
     public int Increase { get; set; }
 }
-

@@ -23,4 +23,3 @@ public class MediaFilter(IMediaLogger _mediaLogger) : IMediaFilter
         downloads.RemoveAll(dl => dl.Data.Count == 0);
     }
 }
-

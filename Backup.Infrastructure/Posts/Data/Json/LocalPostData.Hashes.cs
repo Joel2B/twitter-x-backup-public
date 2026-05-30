@@ -74,5 +74,3 @@ public partial class LocalPostData
         return Backup.Infrastructure.Utils.PostHash.Compute(post);
     }
 }
-
-

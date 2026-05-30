@@ -8,4 +8,3 @@ public interface IAppConfigService
     public AppConfigSnapshot Refresh();
     public void SaveData(DataConfig data, bool refreshSnapshot = false);
 }
-

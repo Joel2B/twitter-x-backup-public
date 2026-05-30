@@ -22,5 +22,3 @@ public partial class LocalPostData
             Deleted = data.Deleted,
         };
 }
-
-

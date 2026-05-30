@@ -1,7 +1,7 @@
 using Backup.Application.Posts.Models;
 using Backup.Application.Posts.Ports;
 using Backup.Infrastructure.Interfaces.Services.Media;
-using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.ApiRequest;

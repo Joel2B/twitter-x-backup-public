@@ -11,4 +11,3 @@ public interface IPartition
     public PartitionConfig GetHeavy();
     public void SetupSizes(Dictionary<int, long> sizes);
 }
-

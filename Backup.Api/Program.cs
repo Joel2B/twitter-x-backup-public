@@ -33,4 +33,3 @@ app.MapControllers();
 
 Console.Error.WriteLine("[startup] running api");
 await app.RunAsync();
-

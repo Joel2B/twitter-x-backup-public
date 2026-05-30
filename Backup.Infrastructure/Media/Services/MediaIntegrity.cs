@@ -24,4 +24,3 @@ public class MediaIntegrity : IMediaIntegrity
         await data.CheckIntegrity(downloads);
     }
 }
-

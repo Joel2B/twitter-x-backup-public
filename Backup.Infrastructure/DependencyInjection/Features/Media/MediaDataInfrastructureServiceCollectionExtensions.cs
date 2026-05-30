@@ -30,6 +30,3 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
         };
     }
 }
-
-
-

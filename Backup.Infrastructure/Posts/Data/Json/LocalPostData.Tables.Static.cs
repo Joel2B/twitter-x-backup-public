@@ -318,5 +318,3 @@ public partial class LocalPostData
         await File.WriteAllTextAsync(targetPath, json);
     }
 }
-
-

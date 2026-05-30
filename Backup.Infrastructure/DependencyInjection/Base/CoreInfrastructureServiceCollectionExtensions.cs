@@ -56,5 +56,3 @@ public static class CoreInfrastructureServiceCollectionExtensions
         return services;
     }
 }
-
-

@@ -20,4 +20,3 @@ public class AppConfig
     public required BulkConfig Bulk { get; set; }
     public required NetworkConfig Network { get; set; }
 }
-

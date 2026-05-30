@@ -103,4 +103,3 @@ internal sealed class ShortSourceContextEnricher : ILogEventEnricher
         }
     }
 }
-

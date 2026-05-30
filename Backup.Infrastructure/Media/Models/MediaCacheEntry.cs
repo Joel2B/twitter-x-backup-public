@@ -12,4 +12,3 @@ public class MediaCacheSize
     public long? Stream { get; set; }
     public long? File { get; set; }
 }
-

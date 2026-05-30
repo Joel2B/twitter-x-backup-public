@@ -7,4 +7,3 @@ public interface IProxyDownloader
 {
     public Task<List<ProxyDataConfig>?> Load(Resource resource);
 }
-

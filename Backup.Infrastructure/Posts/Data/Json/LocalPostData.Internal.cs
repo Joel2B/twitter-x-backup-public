@@ -197,5 +197,3 @@ public partial class LocalPostData
         return Task.CompletedTask;
     }
 }
-
-

@@ -171,5 +171,3 @@ public partial class LocalPostData
         return CloneIndex(userIndex);
     }
 }
-
-

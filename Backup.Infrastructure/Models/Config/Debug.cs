@@ -19,4 +19,3 @@ public class DebugPrune
     public bool Enabled { get; set; }
     public int RetainedCountLimit { get; set; }
 }
-

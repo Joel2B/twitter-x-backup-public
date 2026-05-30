@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Core.Stores;
-using Backup.Infrastructure.Interfaces.Data.Dump;
+using Backup.Infrastructure.Dump.Abstractions.Data;
 using Backup.Infrastructure.Models.Dump;
 
 namespace Backup.Infrastructure.Dump.Data;
@@ -25,5 +25,3 @@ public class DumpsDataMultiStore(IEnumerable<IDumpsDataStore> stores) : IDumpsDa
             await store.Save(dumps);
     }
 }
-
-

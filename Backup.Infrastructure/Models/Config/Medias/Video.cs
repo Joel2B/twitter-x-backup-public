@@ -4,4 +4,3 @@ public class VideoConfig : MediaConfig
 {
     public required MediaConfig Thumb { get; set; }
 }
-

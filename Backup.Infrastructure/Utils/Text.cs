@@ -15,4 +15,3 @@ public class Text
         return new() { Diff1 = diff1, Diff2 = diff2 };
     }
 }
-

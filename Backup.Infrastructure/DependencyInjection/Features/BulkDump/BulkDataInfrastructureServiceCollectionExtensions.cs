@@ -11,6 +11,3 @@ public static partial class BulkDataInfrastructureServiceCollectionExtensions
         return services;
     }
 }
-
-
-

@@ -12,4 +12,3 @@ public class ErrorMessage
     public required string Short { get; set; }
     public required string Extended { get; set; }
 }
-

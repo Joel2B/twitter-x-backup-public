@@ -110,7 +110,3 @@ public class GifProcessor(GifConfig config, MediaProcessorContext context) : Med
         }
     }
 }
-
-
-
-

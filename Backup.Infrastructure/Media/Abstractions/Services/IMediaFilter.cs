@@ -6,4 +6,3 @@ public interface IMediaFilter
 {
     public Task Check(List<Download> downloads);
 }
-

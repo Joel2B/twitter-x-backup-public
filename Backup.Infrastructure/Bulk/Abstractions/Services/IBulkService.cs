@@ -6,4 +6,3 @@ public interface IBulkService
 {
     public Task Download(UsersContext context);
 }
-

@@ -13,5 +13,3 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         return services;
     }
 }
-
-

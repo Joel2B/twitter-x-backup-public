@@ -44,4 +44,3 @@ public class MediaProcessor
         return new() { Url = url, Path = path };
     }
 }
-

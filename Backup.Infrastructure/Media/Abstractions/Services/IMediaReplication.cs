@@ -10,4 +10,3 @@ public interface IMediaReplication
         IMediaStorage current
     );
 }
-

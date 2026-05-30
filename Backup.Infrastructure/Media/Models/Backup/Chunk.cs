@@ -24,4 +24,3 @@ public class ChunkData
             Crc32 = Crc32,
         };
 }
-

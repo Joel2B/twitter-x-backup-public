@@ -6,4 +6,3 @@ public class MediaConfig : Filter
     public List<string>? Dimensions { get; set; }
     public List<string>? Sizes { get; set; }
 }
-

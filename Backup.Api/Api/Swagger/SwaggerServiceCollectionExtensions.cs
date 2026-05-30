@@ -37,4 +37,3 @@ public static class SwaggerServiceCollectionExtensions
             options.IncludeXmlComments(xmlPath, includeControllerXmlComments: true);
     }
 }
-

@@ -14,4 +14,3 @@ public interface IMediaBackupData
     public Task<bool> Exists(string path);
     public Task<Stream> Write(string path);
 }
-

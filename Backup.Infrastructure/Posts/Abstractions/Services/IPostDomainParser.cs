@@ -1,6 +1,6 @@
 using Backup.Domain.Posts;
 
-namespace Backup.Infrastructure.Interfaces.Services.Posts;
+namespace Backup.Infrastructure.Posts.Abstractions.Services;
 
 public interface IPostDomainParser
 {

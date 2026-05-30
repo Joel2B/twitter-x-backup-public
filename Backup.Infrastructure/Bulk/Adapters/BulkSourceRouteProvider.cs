@@ -29,4 +29,3 @@ public sealed class BulkSourceRouteProvider : IBulkSourceRouteProvider
         return $"{baseUrl}{url}";
     }
 }
-

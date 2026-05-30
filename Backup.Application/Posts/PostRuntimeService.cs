@@ -35,4 +35,3 @@ public sealed class PostRuntimeService(IPostExecutionService postExecutionServic
         public Task Recover() => command.RunRecovery();
     }
 }
-

@@ -141,5 +141,3 @@ public partial class SqlitePostData
         return new SqliteConnection(connection.ToString());
     }
 }
-
-

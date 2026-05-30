@@ -15,4 +15,3 @@ public class Data
 {
     public required PruneConfig Post { get; set; }
 }
-

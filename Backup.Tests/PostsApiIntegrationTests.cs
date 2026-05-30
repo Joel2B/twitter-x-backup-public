@@ -157,4 +157,3 @@ public partial class PostsApiIntegrationTests
         Assert.Equal(0, fakePostData.SaveCalls);
     }
 }
-

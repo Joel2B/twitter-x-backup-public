@@ -758,4 +758,3 @@ public class RelationshipPerspectives
     [JsonProperty("following", NullValueHandling = NullValueHandling.Ignore)]
     public required bool Following { get; set; }
 }
-

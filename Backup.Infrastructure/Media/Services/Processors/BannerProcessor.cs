@@ -55,7 +55,3 @@ public class BannerProcessor(BannerConfig config, MediaProcessorContext context)
         }
     }
 }
-
-
-
-

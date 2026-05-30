@@ -23,4 +23,3 @@ public class MediaCacheBackend
     public string? KeyPrefix { get; set; }
     public int? Database { get; set; }
 }
-

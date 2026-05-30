@@ -1,5 +1,5 @@
-using Backup.Infrastructure.Interfaces.Data.Bulk;
-using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Bulk.Abstractions.Data;
+using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Interfaces.Services.Bulk;
 using Backup.Infrastructure.Models.Bulk;
 using Backup.Infrastructure.Models.Config;
@@ -172,4 +172,3 @@ public sealed class BulkPhase1Runner(
         await _bulkData.Save(bulks);
     }
 }
-

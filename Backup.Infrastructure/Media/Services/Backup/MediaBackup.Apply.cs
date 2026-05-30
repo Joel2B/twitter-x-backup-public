@@ -246,4 +246,3 @@ public partial class MediaBackup
         catch (OperationCanceledException) { }
     }
 }
-

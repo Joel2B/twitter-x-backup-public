@@ -1,9 +1,9 @@
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Dump;
 using Backup.Infrastructure.Models.Posts;
-using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Data;
 
-namespace Backup.Infrastructure.Interfaces.Data.Dump;
+namespace Backup.Infrastructure.Dump.Abstractions.Data;
 
 public interface IDumpData
 {
@@ -14,4 +14,5 @@ public interface IDumpData
 
     public Task Flush(IPostDomainData postData, string userId, ApiContext context);
 }
+
 

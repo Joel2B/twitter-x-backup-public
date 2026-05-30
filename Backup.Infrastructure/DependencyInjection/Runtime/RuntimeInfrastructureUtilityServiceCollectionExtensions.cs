@@ -13,4 +13,3 @@ public static class RuntimeInfrastructureUtilityServiceCollectionExtensions
         return services;
     }
 }
-

@@ -9,4 +9,3 @@ public interface IProxyProvider
     public void OnError(Exception ex);
     public Task SaveData();
 }
-

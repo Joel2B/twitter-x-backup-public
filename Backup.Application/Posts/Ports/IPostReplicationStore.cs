@@ -14,4 +14,3 @@ public interface IPostReplicationStore
     Task Save();
     Task Prune();
 }
-

@@ -81,5 +81,3 @@ public class LocalProxyData(AppConfig _config, IPartition _partition) : IProxyDa
         await File.WriteAllTextAsync(path, json);
     }
 }
-
-

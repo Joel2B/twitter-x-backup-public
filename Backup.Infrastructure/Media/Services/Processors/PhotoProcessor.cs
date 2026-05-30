@@ -73,7 +73,3 @@ public class PhotoProcessor(PhotoConfig config, MediaProcessorContext context)
         }
     }
 }
-
-
-
-

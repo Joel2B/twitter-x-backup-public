@@ -298,4 +298,3 @@ public static class ConfigLoader
         return count > 0 || count == -1;
     }
 }
-

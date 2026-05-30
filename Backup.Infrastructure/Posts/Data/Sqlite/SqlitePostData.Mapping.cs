@@ -210,5 +210,3 @@ public partial class SqlitePostData
         };
     }
 }
-
-

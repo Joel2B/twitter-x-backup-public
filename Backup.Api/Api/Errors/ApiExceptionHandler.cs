@@ -33,4 +33,3 @@ public class ApiExceptionHandler(ILogger<ApiExceptionHandler> logger) : IExcepti
         return true;
     }
 }
-

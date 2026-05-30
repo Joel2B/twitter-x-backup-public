@@ -29,4 +29,3 @@ public class PostCount
 
     public PostCount Clone() => new() { Media = Media };
 }
-

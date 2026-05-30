@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Interfaces;
-using Backup.Infrastructure.Interfaces.Data.Dump;
+using Backup.Infrastructure.Dump.Abstractions.Data;
 using Backup.Infrastructure.Interfaces.Partition;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Dump;
@@ -73,5 +73,3 @@ public class LocalDumpsData(StorageDump _config, IPartition _partition) : IDumps
         await File.WriteAllTextAsync(path, content);
     }
 }
-
-

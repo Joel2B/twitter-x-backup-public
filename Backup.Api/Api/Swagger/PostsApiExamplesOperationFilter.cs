@@ -253,4 +253,3 @@ public class PostsApiExamplesOperationFilter : IOperationFilter
         JsonNode.Parse(json)
         ?? throw new InvalidOperationException("Failed to parse Swagger example JSON.");
 }
-

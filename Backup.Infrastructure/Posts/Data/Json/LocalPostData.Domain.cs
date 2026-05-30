@@ -1,5 +1,5 @@
 using Backup.Domain.Posts;
-using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Adapters;
 using AppPosts = Backup.Infrastructure.Models.Posts;
 

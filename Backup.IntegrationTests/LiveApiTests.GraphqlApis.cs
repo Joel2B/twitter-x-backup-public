@@ -1,7 +1,7 @@
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.ApiRequest;
-using Backup.Infrastructure.Services.Posts;
+using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Backup.IntegrationTests;
@@ -55,4 +55,3 @@ public partial class LiveApiTests
         Assert.Contains("\"data\"", response, StringComparison.OrdinalIgnoreCase);
     }
 }
-

@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
-using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.ApiRequest;
 using Backup.Infrastructure.Utils;
@@ -148,5 +148,3 @@ public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, AppConfig _
         await Task.Delay(ms);
     }
 }
-
-

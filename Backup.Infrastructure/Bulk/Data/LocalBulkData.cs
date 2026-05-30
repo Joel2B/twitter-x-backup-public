@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Interfaces;
-using Backup.Infrastructure.Interfaces.Data.Bulk;
+using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Interfaces.Partition;
 using Backup.Infrastructure.Models.Bulk;
 using Backup.Infrastructure.Models.Config;
@@ -173,5 +173,3 @@ public class LocalBulkData(
         }
     }
 }
-
-

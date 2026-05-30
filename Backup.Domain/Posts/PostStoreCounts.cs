@@ -12,4 +12,3 @@ public class PostStoreCounts
     public int ChangeFields { get; set; }
     public int HashMeta { get; set; }
 }
-

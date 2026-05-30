@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Interfaces.Data.Bulk;
+using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Interfaces.Services.Bulk;
 using Backup.Infrastructure.Models.Bulk;
 using Backup.Infrastructure.Models.Config;
@@ -90,4 +90,3 @@ public sealed class BulkImportRunner(
         await _bulkData.Save(bulks);
     }
 }
-

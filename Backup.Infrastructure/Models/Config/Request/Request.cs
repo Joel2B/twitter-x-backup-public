@@ -14,4 +14,3 @@ public class Request
             Headers = (Headers ?? []).ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
         };
 }
-

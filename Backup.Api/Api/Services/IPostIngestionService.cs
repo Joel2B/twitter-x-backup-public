@@ -12,4 +12,3 @@ public interface IPostIngestionService
         IReadOnlyCollection<ProcessedPostInput> posts
     );
 }
-

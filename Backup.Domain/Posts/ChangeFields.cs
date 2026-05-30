@@ -42,4 +42,3 @@ internal static class ChangeFields
         return string.IsNullOrWhiteSpace(userId) ? null : userId;
     }
 }
-

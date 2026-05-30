@@ -44,4 +44,3 @@ public class PostVariant
             Url = Url,
         };
 }
-

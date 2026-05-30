@@ -96,4 +96,3 @@ internal sealed class PostChangeFieldRow
     public string? OldValueJson { get; set; }
     public string? NewValueJson { get; set; }
 }
-

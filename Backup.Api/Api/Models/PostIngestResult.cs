@@ -6,4 +6,3 @@ public record PostIngestResult(
     string? NextCursor = null,
     PostIngestDiagnostics? Diagnostics = null
 );
-

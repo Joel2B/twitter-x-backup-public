@@ -23,4 +23,3 @@ public class UtilsStorage
         return $"{size:0.##} {units[unitIndex]}";
     }
 }
-

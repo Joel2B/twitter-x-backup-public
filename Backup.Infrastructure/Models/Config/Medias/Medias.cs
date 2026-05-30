@@ -15,4 +15,3 @@ public class BannerConfig : MediaConfig;
 public class ProfileConfig : MediaConfig;
 
 public class PhotoConfig : MediaConfig;
-

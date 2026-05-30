@@ -8,4 +8,3 @@ public interface IBulkRequestFactory
     Request? BuildUserByScreenName(IReadOnlyDictionary<string, ApiConfig> api);
     Request? BuildUserMedia(IReadOnlyDictionary<string, ApiConfig> api);
 }
-

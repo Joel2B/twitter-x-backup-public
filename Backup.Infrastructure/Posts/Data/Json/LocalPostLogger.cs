@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Interfaces.Partition;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
@@ -102,5 +102,3 @@ public class LocalPostLogger(
         return Task.CompletedTask;
     }
 }
-
-

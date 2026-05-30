@@ -1,4 +1,4 @@
-﻿using Backup.App.Models.Media.Backup;
+using Backup.App.Models.Media.Backup;
 
 namespace Backup.App.Interfaces.Data.Media;
 

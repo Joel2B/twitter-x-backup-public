@@ -6,4 +6,3 @@ public interface IPostDownloadRuntimeCommand
     Task RunDownload();
     Task RunPrune();
 }
-

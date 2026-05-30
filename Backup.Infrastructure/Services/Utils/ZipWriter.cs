@@ -98,5 +98,3 @@ public class ZipWriter : IZipWriter
         _disposed = true;
     }
 }
-
-

@@ -72,4 +72,3 @@ public class Post : PostData
         throw new NotImplementedException();
     }
 }
-

@@ -14,4 +14,3 @@ public class Query
             FieldToggles = (FieldToggles ?? []).ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
         };
 }
-

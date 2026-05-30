@@ -21,4 +21,3 @@ public class ProxyDataConfig
 
     public override string ToString() => $"{Protocol}://{Ip}:{Port}";
 }
-

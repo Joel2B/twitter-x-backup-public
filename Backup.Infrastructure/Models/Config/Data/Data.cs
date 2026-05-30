@@ -16,4 +16,3 @@ public class DataConfig
     public required List<StorageMedia> Media { get; set; }
     public required List<StorageBackup> Backup { get; set; }
 }
-

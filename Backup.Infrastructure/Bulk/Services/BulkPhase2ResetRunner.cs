@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Interfaces.Data.Bulk;
+using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Interfaces.Services.Bulk;
 using Backup.Infrastructure.Models.Bulk;
 using Microsoft.Extensions.Logging;
@@ -31,4 +31,3 @@ public sealed class BulkPhase2ResetRunner(ILogger<BulkPhase2ResetRunner> logger,
         await _bulkData.Save(data);
     }
 }
-

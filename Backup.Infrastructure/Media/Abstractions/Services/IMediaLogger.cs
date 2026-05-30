@@ -10,4 +10,3 @@ public interface IMediaLogger
     public void Log(Logs log);
     public Task Save();
 }
-

@@ -14,5 +14,3 @@ public class MediaProcessorContext(
     public Dictionary<string, Download> All = all;
     public Dictionary<string, Download> Filtered = filtered;
 }
-
-

@@ -8,4 +8,3 @@ public class ApiConfig
     public bool Enabled { get; set; } = true;
     public required Request Request { get; set; }
 }
-

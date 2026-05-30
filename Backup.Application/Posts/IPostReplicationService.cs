@@ -6,4 +6,3 @@ public interface IPostReplicationService
 {
     Task Replicate(IEnumerable<IPostReplicationStore> stores);
 }
-

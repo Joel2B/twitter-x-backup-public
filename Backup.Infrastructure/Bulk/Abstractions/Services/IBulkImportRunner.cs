@@ -6,4 +6,3 @@ public interface IBulkImportRunner
 {
     Task Run(IReadOnlyDictionary<string, ApiConfig> api, CancellationToken cancellationToken);
 }
-

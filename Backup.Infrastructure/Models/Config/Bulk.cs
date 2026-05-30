@@ -14,4 +14,3 @@ public class BulkConfig
     public int MaxCountPost { get; set; }
     public int ApiRetryCount { get; set; }
 }
-

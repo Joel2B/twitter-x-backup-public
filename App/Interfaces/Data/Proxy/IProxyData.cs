@@ -1,4 +1,4 @@
-﻿using Backup.App.Models.Proxy;
+using Backup.App.Models.Proxy;
 
 namespace Backup.App.Interfaces.Data.Proxy;
 

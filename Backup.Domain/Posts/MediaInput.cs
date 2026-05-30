@@ -16,4 +16,3 @@ public class MediaInput
             Deleted = Deleted,
         };
 }
-

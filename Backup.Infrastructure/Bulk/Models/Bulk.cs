@@ -13,4 +13,3 @@ public class Order
     public int? Phase1 { get; set; } = 0;
     public int? Phase2 { get; set; } = 0;
 }
-

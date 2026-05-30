@@ -7,4 +7,3 @@ public record PostIngestDiagnostics(
     int IgnoredPosts,
     long DurationMs
 );
-

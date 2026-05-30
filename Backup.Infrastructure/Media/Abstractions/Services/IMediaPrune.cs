@@ -6,4 +6,3 @@ public interface IMediaPrune
 {
     public Task Prune(List<Download> downloads);
 }
-

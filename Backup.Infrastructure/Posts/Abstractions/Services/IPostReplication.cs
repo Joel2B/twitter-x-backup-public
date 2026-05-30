@@ -1,9 +1,8 @@
-using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Data;
 
-namespace Backup.Infrastructure.Interfaces.Services.Posts;
+namespace Backup.Infrastructure.Posts.Abstractions.Services;
 
 public interface IPostReplication
 {
     public Task Replicate(IEnumerable<IPostDataStore> stores);
 }
-

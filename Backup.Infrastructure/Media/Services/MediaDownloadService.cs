@@ -124,5 +124,3 @@ class MediaDownloadService(
         await _mediaLogger.Save();
     }
 }
-
-

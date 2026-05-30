@@ -1,4 +1,4 @@
-﻿using Backup.App.Models.Posts;
+using Backup.App.Models.Posts;
 
 namespace Backup.App.Interfaces.Data.Posts;
 

@@ -1,6 +1,6 @@
 using Backup.Application.BackupRun.Ports;
 using Backup.Domain.BackupRun;
-using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Logging;
 using Microsoft.Extensions.Logging;
 

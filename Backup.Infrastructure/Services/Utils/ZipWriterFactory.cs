@@ -9,5 +9,3 @@ public class ZipWriterFactory : IZipWriterFactory
 
     public IZipWriter Open(Stream stream) => new ZipWriter(stream, ZipArchiveMode.Read);
 }
-
-

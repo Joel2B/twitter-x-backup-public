@@ -1,8 +1,8 @@
 using Backup.Api.Controllers;
 using Backup.Api.Services;
 using Backup.Application.Posts.Models;
-using Backup.Infrastructure.Interfaces.Data.Posts;
-using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Data;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Posts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
@@ -123,5 +123,3 @@ public partial class PostsApiIntegrationTests
         public Task Prune() => Task.CompletedTask;
     }
 }
-
-

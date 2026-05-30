@@ -15,6 +15,3 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         return services;
     }
 }
-
-
-

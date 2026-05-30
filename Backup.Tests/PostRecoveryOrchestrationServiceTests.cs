@@ -143,4 +143,3 @@ public class PostRecoveryOrchestrationServiceTests
         public void OnRecoveredPost(string postId) => RecoveredPostNotifications.Add(postId);
     }
 }
-

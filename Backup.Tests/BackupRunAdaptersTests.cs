@@ -1,6 +1,6 @@
 using Backup.Domain.BackupRun;
 using Backup.Infrastructure.BackupRun.Adapters;
-using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Api;
 using Microsoft.Extensions.Logging.Abstractions;
 

@@ -19,4 +19,3 @@ public class Crc32
     public long? Diff1 { get; set; }
     public long? Diff2 { get; set; }
 }
-

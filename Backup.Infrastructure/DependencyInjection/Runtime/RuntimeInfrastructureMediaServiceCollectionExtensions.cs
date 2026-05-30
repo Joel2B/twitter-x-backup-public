@@ -12,4 +12,3 @@ public static class RuntimeInfrastructureMediaServiceCollectionExtensions
         return services;
     }
 }
-

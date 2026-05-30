@@ -111,4 +111,3 @@ public partial class MediaBackup(
     Task IMediaBackupPipelineActions.CheckIntegrityAsync() => CheckIntegrity();
     Task IMediaBackupPipelineActions.FixIntegrityAsync() => FixIntegrity();
 }
-

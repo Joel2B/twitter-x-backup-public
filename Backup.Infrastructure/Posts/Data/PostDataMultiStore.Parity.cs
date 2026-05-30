@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;

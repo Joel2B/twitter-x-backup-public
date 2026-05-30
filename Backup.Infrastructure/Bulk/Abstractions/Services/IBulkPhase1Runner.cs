@@ -6,4 +6,3 @@ public interface IBulkPhase1Runner
 {
     Task Run(IReadOnlyDictionary<string, ApiConfig> api, CancellationToken cancellationToken);
 }
-

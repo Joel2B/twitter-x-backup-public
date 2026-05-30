@@ -9,4 +9,3 @@ public interface IAppConfigStore
     public DataConfig LoadData();
     public void SaveData(DataConfig data);
 }
-

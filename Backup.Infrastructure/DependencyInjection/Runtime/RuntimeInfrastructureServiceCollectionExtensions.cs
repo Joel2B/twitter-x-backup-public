@@ -32,10 +32,3 @@ public static class RuntimeInfrastructureServiceCollectionExtensions
         return services;
     }
 }
-
-
-
-
-
-
-

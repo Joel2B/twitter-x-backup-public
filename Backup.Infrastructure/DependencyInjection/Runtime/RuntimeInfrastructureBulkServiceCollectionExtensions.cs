@@ -22,4 +22,3 @@ public static class RuntimeInfrastructureBulkServiceCollectionExtensions
         return services;
     }
 }
-

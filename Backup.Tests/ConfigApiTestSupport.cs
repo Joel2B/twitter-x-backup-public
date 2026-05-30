@@ -45,4 +45,3 @@ internal static class ConfigApiTestSupport
         throw new Exception("Repository root not found.");
     }
 }
-

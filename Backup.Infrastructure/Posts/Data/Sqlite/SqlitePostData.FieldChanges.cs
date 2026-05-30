@@ -242,5 +242,3 @@ public partial class SqlitePostData
         return JsonSerializer.Deserialize<T>(json, JsonOptions);
     }
 }
-
-

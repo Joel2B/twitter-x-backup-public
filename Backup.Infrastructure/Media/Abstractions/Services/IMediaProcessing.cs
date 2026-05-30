@@ -9,4 +9,3 @@ public interface IMediaProcessing
     public List<Download> GetMedia();
     public List<Download> GetFilteredMedia();
 }
-

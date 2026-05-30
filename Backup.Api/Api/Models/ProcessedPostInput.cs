@@ -81,4 +81,3 @@ public class ProcessedPostVariantInput
     [RegularExpression(@".*\S.*", ErrorMessage = "variant.url is required.")]
     public string Url { get; set; } = string.Empty;
 }
-

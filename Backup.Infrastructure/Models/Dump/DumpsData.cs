@@ -4,4 +4,3 @@ public class DumpsData
 {
     public string? Current = null;
 }
-

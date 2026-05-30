@@ -45,6 +45,3 @@ public class MediaProcessing(ILogger<MediaProcessing> _logger, AppConfig _config
 
     public List<Download> GetFilteredMedia() => [.. _filtered.Values];
 }
-
-
-

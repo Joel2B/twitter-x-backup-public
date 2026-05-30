@@ -1,4 +1,4 @@
-﻿using Backup.App.Models.Bulk;
+using Backup.App.Models.Bulk;
 
 namespace Backup.App.Interfaces.Data.Bulk;
 

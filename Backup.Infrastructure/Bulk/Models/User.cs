@@ -13,4 +13,3 @@ public enum StatusUser
     Active,
     Inactive,
 }
-

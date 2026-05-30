@@ -18,5 +18,3 @@ public class ProxyDownloader(ILogger _logger, IProxyFormatter _formatter)
         };
     }
 }
-
-

@@ -1,8 +1,8 @@
 using Backup.Infrastructure.Logging;
 using Backup.Application.Posts;
 using Backup.Infrastructure.Core.Stores;
-using Backup.Infrastructure.Interfaces.Data.Posts;
-using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Data;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Posts;
 using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
@@ -93,5 +93,3 @@ public partial class PostDataMultiStore(
         LogStoreParity(parity);
     }
 }
-
-

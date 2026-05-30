@@ -28,4 +28,3 @@ public class PostData
             Deleted = Deleted,
         };
 }
-

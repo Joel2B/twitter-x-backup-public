@@ -4,4 +4,3 @@ public class TasksConfig
 {
     public required Prune Prune { get; set; }
 }
-

@@ -10,4 +10,3 @@ public sealed class PostDownloadPageResult
 
     public bool HasValidPage => Posts.Count > 0 && NextCursor is not null;
 }
-

@@ -36,5 +36,3 @@ public class ProxyLoader(ILogger _logger, AppConfig _config)
         return _proxies;
     }
 }
-
-

@@ -12,4 +12,3 @@ public class PartitionConfig : PathConfig
     public required int UsableSpace { get; set; }
     public bool Enabled { get; set; } = true;
 }
-

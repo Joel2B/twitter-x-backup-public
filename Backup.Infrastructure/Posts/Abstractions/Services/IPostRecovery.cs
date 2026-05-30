@@ -1,10 +1,9 @@
-using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Models.Config.Api;
 
-namespace Backup.Infrastructure.Interfaces.Services.Posts;
+namespace Backup.Infrastructure.Posts.Abstractions.Services;
 
 public interface IPostRecovery
 {
     public Task Recovery(IPostDomainData postData, UsersContext context);
 }
-

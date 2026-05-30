@@ -1,5 +1,5 @@
 using Backup.Application.Posts.Models;
-using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using PostMapper = Backup.Infrastructure.Posts.Adapters.ProjectionMapping.PostMapper;
 using TimelineEntryExtractor = Backup.Infrastructure.Posts.Adapters.Parsing.TimelineEntryExtractor;
 using Backup.Infrastructure.Models.Posts.Response;
@@ -84,5 +84,3 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
         return new ParseUser(user);
     }
 }
-
-

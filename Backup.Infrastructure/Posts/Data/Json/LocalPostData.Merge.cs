@@ -207,5 +207,3 @@ public partial class LocalPostData
         );
     }
 }
-
-

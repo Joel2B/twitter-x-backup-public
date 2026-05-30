@@ -86,6 +86,3 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
         return instance;
     }
 }
-
-
-

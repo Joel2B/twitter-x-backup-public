@@ -26,4 +26,3 @@ public class MediaDebug : PathConfig
     public required PathConfig Log { get; set; }
     public required PathConfig Error { get; set; }
 }
-

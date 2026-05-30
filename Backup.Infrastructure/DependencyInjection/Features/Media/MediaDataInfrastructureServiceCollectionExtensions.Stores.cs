@@ -103,4 +103,3 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
         return services;
     }
 }
-

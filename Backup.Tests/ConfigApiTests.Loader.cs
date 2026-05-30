@@ -245,4 +245,3 @@ public partial class ConfigApiTests
         return Directory.GetFiles(folderPath, "*.json", SearchOption.TopDirectoryOnly).Length > 0;
     }
 }
-

@@ -9,4 +9,3 @@ public class Storage
     public required List<int> Partitions { get; set; }
     public required Tasks Tasks { get; set; }
 }
-

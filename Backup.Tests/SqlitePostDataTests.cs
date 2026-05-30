@@ -390,5 +390,3 @@ public class SqlitePostDataTests
         public void SetupSizes(Dictionary<int, long> sizes) { }
     }
 }
-
-

@@ -17,4 +17,3 @@ public interface IPostRecoverySession
     void OnTweetDetailUnavailable();
     void OnRecoveredPost(string postId);
 }
-

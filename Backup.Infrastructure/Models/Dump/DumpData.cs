@@ -10,4 +10,3 @@ public class DumpData
     public int Count { get; set; } = 0;
     public DateTime LastUpdate { get; set; } = DateTime.Now;
 }
-

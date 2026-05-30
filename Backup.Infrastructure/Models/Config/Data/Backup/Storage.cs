@@ -13,4 +13,3 @@ public class Paths : PathConfig
 {
     public required PathConfig Cache { get; set; }
 }
-

@@ -110,4 +110,3 @@ public partial class SqlitePostData
         public bool Deleted { get; set; }
     }
 }
-

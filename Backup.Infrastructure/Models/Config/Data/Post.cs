@@ -11,4 +11,3 @@ public class Paths : PathConfig
 {
     public required PathConfig Post { get; set; }
 }
-

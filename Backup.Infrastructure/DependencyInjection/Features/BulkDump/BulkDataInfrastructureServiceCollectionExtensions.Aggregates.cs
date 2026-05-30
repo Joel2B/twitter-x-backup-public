@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Bulk.Data;
-using Backup.Infrastructure.Interfaces.Data.Bulk;
+using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;
@@ -13,4 +13,3 @@ public static partial class BulkDataInfrastructureServiceCollectionExtensions
         return services;
     }
 }
-

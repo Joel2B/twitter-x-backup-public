@@ -15,4 +15,3 @@ public class DataDownload
 
     public DataDownload Clone() => new() { Url = Url, Path = Path };
 }
-

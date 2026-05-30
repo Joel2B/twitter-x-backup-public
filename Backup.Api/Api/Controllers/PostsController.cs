@@ -94,4 +94,3 @@ public class PostsController(IPostIngestionService postIngestionService) : Contr
         return Ok(result);
     }
 }
-

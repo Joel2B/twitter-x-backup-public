@@ -26,4 +26,3 @@ public static class FileHasher
         return Convert.ToHexString(hashBytes);
     }
 }
-

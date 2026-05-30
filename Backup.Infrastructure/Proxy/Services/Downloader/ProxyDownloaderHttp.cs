@@ -47,5 +47,3 @@ public class ProxyDownloaderHttp(ILogger _logger, IProxyFormatter _formatter) : 
         return proxies;
     }
 }
-
-

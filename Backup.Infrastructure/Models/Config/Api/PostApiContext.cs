@@ -9,4 +9,3 @@ public sealed class ApiContext
     public required int Count { get; set; }
     public required string UserId { get; init; }
 }
-

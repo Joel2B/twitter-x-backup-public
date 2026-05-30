@@ -38,4 +38,3 @@ public class MediaFilter(List<string>? _rawFilters)
         return false;
     }
 }
-

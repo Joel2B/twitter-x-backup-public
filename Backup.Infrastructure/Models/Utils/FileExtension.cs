@@ -7,4 +7,3 @@ public static class FileExtension
     public const string PNG = ".png";
     public const string MP4 = ".mp4";
 }
-

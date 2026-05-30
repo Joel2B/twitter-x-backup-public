@@ -4,4 +4,3 @@ public interface IBulkPhase2ResetRunner
 {
     Task Run();
 }
-

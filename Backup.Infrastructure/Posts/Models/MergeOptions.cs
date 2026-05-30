@@ -4,4 +4,3 @@ public class MergeOptions
 {
     public bool Index { get; set; } = true;
 }
-

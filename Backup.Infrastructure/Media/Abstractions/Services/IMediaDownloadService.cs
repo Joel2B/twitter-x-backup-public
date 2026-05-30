@@ -6,4 +6,3 @@ public interface IMediaDownloadService
 {
     public Task Download(List<Download> downloads, IMediaStorage data);
 }
-

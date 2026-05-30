@@ -220,5 +220,3 @@ public class LocalPartition(
 
     public PartitionConfig GetHeavy() => GetPartitions().First(o => o.Type == "heavy");
 }
-
-

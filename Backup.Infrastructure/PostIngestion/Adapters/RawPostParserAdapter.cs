@@ -1,6 +1,6 @@
 using Backup.Application.PostIngestion.Models;
 using Backup.Application.PostIngestion.Ports;
-using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using ParseResult = Backup.Domain.Posts.ParseResult;
 
 namespace Backup.Infrastructure.PostIngestion.Adapters;
@@ -15,4 +15,3 @@ public class RawPostParserAdapter(IPostDomainParser postParser) : IRawPostParser
         return new RawPostParseResult(parsed.Posts, parsed.NextCursor);
     }
 }
-

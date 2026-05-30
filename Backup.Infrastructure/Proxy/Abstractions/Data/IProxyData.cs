@@ -8,4 +8,3 @@ public interface IProxyData
     public Task<Dictionary<ProxyDataConfig, ProxyData>?> GetAllAsDictionary();
     public Task Save(List<ProxyData> datas);
 }
-

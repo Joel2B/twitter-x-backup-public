@@ -1,7 +1,7 @@
 using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.Dump.Data;
 using Backup.Infrastructure.Interfaces;
-using Backup.Infrastructure.Interfaces.Data.Dump;
+using Backup.Infrastructure.Dump.Abstractions.Data;
 using Backup.Infrastructure.Interfaces.Partition;
 using Backup.Infrastructure.Models.Config.Data.Dump;
 using Microsoft.Extensions.DependencyInjection;

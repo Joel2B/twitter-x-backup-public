@@ -62,4 +62,3 @@ public class MediaReplication(ILogger<MediaReplication> _logger) : IMediaReplica
         downloads.RemoveAll(dl => dl.Data.Count == 0);
     }
 }
-

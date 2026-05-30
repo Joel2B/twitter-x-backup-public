@@ -379,5 +379,3 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, AppConfig _config, IP
         GC.SuppressFinalize(this);
     }
 }
-
-

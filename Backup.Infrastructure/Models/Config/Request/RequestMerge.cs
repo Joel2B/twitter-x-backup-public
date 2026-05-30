@@ -16,4 +16,3 @@ public static class RequestMerge
         return request;
     }
 }
-

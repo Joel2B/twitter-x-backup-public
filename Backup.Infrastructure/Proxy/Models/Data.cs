@@ -8,4 +8,3 @@ public class ProxyData
     public DateTime Date { get; set; } = DateTime.Now;
     public Status Status { get; set; } = new();
 }
-

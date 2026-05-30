@@ -16,5 +16,3 @@ public class ProxyDownloaderInLineConfig(IProxyFormatter _formatter) : IProxyDow
         return Task.FromResult(proxies);
     }
 }
-
-

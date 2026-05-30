@@ -13,4 +13,3 @@ public class RateLimitWait
     public int Max { get; set; }
     public bool Reset { get; set; }
 }
-

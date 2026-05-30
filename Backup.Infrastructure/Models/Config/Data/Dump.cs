@@ -21,4 +21,3 @@ public class Dump : PathConfig
 {
     public required PathConfig Api { get; set; }
 }
-

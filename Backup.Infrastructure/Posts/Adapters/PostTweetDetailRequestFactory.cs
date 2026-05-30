@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Interfaces.Services.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.ApiRequest;
 
@@ -9,4 +9,3 @@ public sealed class PostTweetDetailRequestFactory : IPostTweetDetailRequestFacto
     public Request? Build(UsersContext context) =>
         RequestMerge.Build(context.Api, "TweetDetail");
 }
-

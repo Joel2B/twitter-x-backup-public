@@ -12,4 +12,3 @@ public sealed class JsonAppConfigStore : IAppConfigStore
 
     public void SaveData(DataConfig data) => ConfigLoader.SaveData(data);
 }
-

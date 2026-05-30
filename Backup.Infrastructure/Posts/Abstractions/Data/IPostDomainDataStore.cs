@@ -1,6 +1,6 @@
 using Backup.Domain.Posts;
 
-namespace Backup.Infrastructure.Interfaces.Data.Posts;
+namespace Backup.Infrastructure.Posts.Abstractions.Data;
 
 public interface IPostDomainDataStore : IPostDomainData
 {

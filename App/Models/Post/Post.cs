@@ -1,4 +1,4 @@
-﻿namespace Backup.App.Models.Posts;
+namespace Backup.App.Models.Posts;
 
 public class Post : PostData
 {

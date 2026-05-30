@@ -20,4 +20,3 @@ public class IndexData
         throw new NotImplementedException();
     }
 }
-

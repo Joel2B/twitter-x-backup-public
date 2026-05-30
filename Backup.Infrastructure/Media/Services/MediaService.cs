@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Logging;
-using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Interfaces.Services.Media;
 using Backup.Infrastructure.Models.Media;
 using Backup.Infrastructure.Posts.Adapters;
@@ -134,4 +134,3 @@ public class MediaService(
     private static int GetCount(List<Download> downloads) =>
         downloads.SelectMany(o => o.Data).Count();
 }
-

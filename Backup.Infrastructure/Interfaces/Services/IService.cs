@@ -4,4 +4,3 @@ public interface IService
 {
     public Task Download();
 }
-

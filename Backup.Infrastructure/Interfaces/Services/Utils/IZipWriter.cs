@@ -8,4 +8,3 @@ public interface IZipWriter : IDisposable
     public bool RemoveEntry(string entryName, bool duplicate = false, int skip = 1);
     public IEnumerable<ZipEntry> GetEntries();
 }
-

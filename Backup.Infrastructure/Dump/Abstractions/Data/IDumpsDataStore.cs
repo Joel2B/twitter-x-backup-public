@@ -1,8 +1,9 @@
 using Backup.Infrastructure.Interfaces.Data;
 
-namespace Backup.Infrastructure.Interfaces.Data.Dump;
+namespace Backup.Infrastructure.Dump.Abstractions.Data;
 
 public interface IDumpsDataStore : IDumpsData, IDefaultStore
 {
 }
+
 

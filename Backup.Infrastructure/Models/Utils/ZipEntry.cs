@@ -7,4 +7,3 @@ public class ZipEntry
     public required uint Crc32 { get; set; }
     public required DateTimeOffset LastWriteTime { get; set; }
 }
-

@@ -12,4 +12,3 @@ public sealed class BulkRequestFactory : IBulkRequestFactory
     public Request? BuildUserMedia(IReadOnlyDictionary<string, ApiConfig> api) =>
         RequestMerge.Build(api, "UserMedia");
 }
-

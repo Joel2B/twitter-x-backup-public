@@ -48,4 +48,3 @@ public sealed class AppConfigService(IAppConfigStore store) : IAppConfigService
     private static AppConfigSnapshot BuildSnapshot(long version, AppConfig config) =>
         new(version, DateTimeOffset.UtcNow, config);
 }
-

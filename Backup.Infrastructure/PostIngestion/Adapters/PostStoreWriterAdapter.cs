@@ -1,5 +1,5 @@
 using Backup.Application.PostIngestion.Ports;
-using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Domain.Posts;
 
 namespace Backup.Infrastructure.PostIngestion.Adapters;
@@ -15,4 +15,3 @@ public class PostStoreWriterAdapter(IPostDomainData postData) : IPostStoreWriter
 
     public Task Save() => _postData.Save();
 }
-

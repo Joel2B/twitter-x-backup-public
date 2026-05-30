@@ -7,4 +7,3 @@ public class Tasks
     public bool Fix { get; set; } = false;
     public long VerifyMaxSizeDiffBytes { get; set; } = 1024;
 }
-

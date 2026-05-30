@@ -21,4 +21,3 @@ public class DumpService
 {
     public int Count { get; set; }
 }
-

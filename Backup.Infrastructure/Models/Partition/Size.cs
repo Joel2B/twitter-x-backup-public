@@ -17,4 +17,3 @@ public class PartitionSize
         Interlocked.Add(ref _size, size);
     }
 }
-

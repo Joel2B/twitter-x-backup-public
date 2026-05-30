@@ -28,5 +28,3 @@ public partial class LocalPostData
         return JsonSerializer.Deserialize<T>(json, ChangeJsonOptions);
     }
 }
-
-

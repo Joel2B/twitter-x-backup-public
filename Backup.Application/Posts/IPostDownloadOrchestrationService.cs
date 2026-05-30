@@ -6,4 +6,3 @@ public interface IPostDownloadOrchestrationService
 {
     Task Run(IPostDownloadSession session, CancellationToken cancellationToken);
 }
-
