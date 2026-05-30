@@ -1,16 +1,21 @@
 using Backup.Infrastructure.Bulk.Abstractions.Data;
-using Backup.Infrastructure.Core.Stores;
+using Backup.Application.Core;
 using Backup.Infrastructure.Bulk.Models;
 
 namespace Backup.Infrastructure.Bulk.Data;
 
-public class BulkDataMultiStore(IEnumerable<IBulkDataStore> stores) : IBulkData
+public class BulkDataMultiStore(
+    IEnumerable<IBulkDataStore> stores,
+    IPrimarySelectionService primarySelectionService
+) : IBulkData
 {
     private readonly List<IBulkDataStore> _stores = [.. stores];
+    private readonly IPrimarySelectionService _primarySelectionService = primarySelectionService;
 
     private IBulkDataStore Primary
-        => DefaultStoreResolver.ResolvePrimary(
+        => _primarySelectionService.ResolvePrimary(
             _stores,
+            store => store.IsDefault,
             "No bulk data stores are configured.",
             "Only one bulk data store can be marked as default."
         );

@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Logging;
 using Backup.Application.Posts;
-using Backup.Infrastructure.Core.Stores;
+using Backup.Application.Core;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Posts.Models;
@@ -13,17 +13,20 @@ public partial class PostDataMultiStore(
     IEnumerable<IPostDataStore> stores,
     IPostReplication replication,
     IPostStoreParityService postStoreParityService,
+    IPrimarySelectionService primarySelectionService,
     ILogger<PostDataMultiStore> logger
 ) : IPostData, IPostStoreParityVerifier
 {
     private readonly List<IPostDataStore> _stores = [.. stores];
     private readonly IPostReplication _replication = replication;
     private readonly IPostStoreParityService _postStoreParityService = postStoreParityService;
+    private readonly IPrimarySelectionService _primarySelectionService = primarySelectionService;
     private readonly ILogger<PostDataMultiStore> _logger = logger;
 
     private IPostDataStore Primary
-        => DefaultStoreResolver.ResolvePrimary(
+        => _primarySelectionService.ResolvePrimary(
             _stores,
+            store => store.IsDefault,
             "No post data stores are configured.",
             "Only one post data store can be marked as default."
         );

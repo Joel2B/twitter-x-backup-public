@@ -1,16 +1,21 @@
-using Backup.Infrastructure.Core.Stores;
+using Backup.Application.Core;
 using Backup.Infrastructure.Dump.Abstractions.Data;
 using Backup.Infrastructure.Models.Dump;
 
 namespace Backup.Infrastructure.Dump.Data;
 
-public class DumpsDataMultiStore(IEnumerable<IDumpsDataStore> stores) : IDumpsData
+public class DumpsDataMultiStore(
+    IEnumerable<IDumpsDataStore> stores,
+    IPrimarySelectionService primarySelectionService
+) : IDumpsData
 {
     private readonly List<IDumpsDataStore> _stores = [.. stores];
+    private readonly IPrimarySelectionService _primarySelectionService = primarySelectionService;
 
     private IDumpsDataStore Primary
-        => DefaultStoreResolver.ResolvePrimary(
+        => _primarySelectionService.ResolvePrimary(
             _stores,
+            store => store.IsDefault,
             "No dumps data stores are configured.",
             "Only one dumps data store can be marked as default."
         );
