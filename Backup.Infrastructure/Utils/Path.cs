@@ -8,17 +8,7 @@ public class UtilsPath
 {
     public static string GetPath(List<string> paths)
     {
-        List<string> _paths = [.. paths];
-
-        string root = "";
-
-        if (_paths.Contains("#Abs"))
-        {
-            root = AppDomain.CurrentDomain.BaseDirectory;
-            _paths.RemoveAt(0);
-        }
-
-        return Path.Combine([root, .. _paths]);
+        return PathCompositionPolicy.ComposePath(paths, AppDomain.CurrentDomain.BaseDirectory);
     }
 
     public static DateTime? ToDate(string path, bool isDir = false)
