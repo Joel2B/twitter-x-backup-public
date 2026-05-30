@@ -110,27 +110,22 @@ public static class ConfigLoader
     private static Dictionary<string, ApiConfig> LoadApiFile(string path)
     {
         Dictionary<string, ApiConfig> api = LoadFileByPath<Dictionary<string, ApiConfig>>(path);
+        string fileName = Path.GetFileName(path);
 
-        foreach (var kvp in api)
-        {
-            string key = kvp.Key;
-            ApiConfig value = kvp.Value;
+        IReadOnlyDictionary<string, ConfigApiFileEntry?> entries = api.ToDictionary(
+            kvp => kvp.Key,
+            kvp =>
+                kvp.Value is null
+                    ? null
+                    : new ConfigApiFileEntry
+                    {
+                        Key = kvp.Key,
+                        Id = kvp.Value.Id,
+                        HasRequest = kvp.Value.Request is not null,
+                    }
+        );
 
-            if (value is null)
-                throw new Exception(
-                    $"error deserializing api file '{Path.GetFileName(path)}': entry '{key}' is null"
-                );
-
-            if (string.IsNullOrWhiteSpace(value.Id))
-                throw new Exception(
-                    $"error deserializing api file '{Path.GetFileName(path)}': entry '{key}' is missing required field 'Id'"
-                );
-
-            if (value.Request is null)
-                throw new Exception(
-                    $"error deserializing api file '{Path.GetFileName(path)}': entry '{key}' is missing required field 'Request'"
-                );
-        }
+        _normalization.ValidateApiFileEntries(fileName, entries);
 
         return api;
     }

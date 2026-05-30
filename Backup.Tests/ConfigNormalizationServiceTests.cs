@@ -73,4 +73,46 @@ public class ConfigNormalizationServiceTests
         Assert.Equal(10, Assert.IsType<int>(api.Variables["count"]));
         Assert.True(api.Variables.ContainsKey("cursor"));
     }
+
+    [Fact]
+    public void ValidateApiFileEntries_Throws_WhenIdMissing()
+    {
+        ConfigNormalizationService sut = new();
+        Dictionary<string, ConfigApiFileEntry?> api = new()
+        {
+            ["Api.SearchTimeline"] = new ConfigApiFileEntry
+            {
+                Key = "Api.SearchTimeline",
+                Id = null,
+                HasRequest = true,
+            },
+        };
+
+        Exception ex = Assert.Throws<Exception>(() =>
+            sut.ValidateApiFileEntries("1122205668801257472.json", api)
+        );
+
+        Assert.Contains("missing required field 'Id'", ex.Message);
+    }
+
+    [Fact]
+    public void ValidateApiFileEntries_Throws_WhenRequestMissing()
+    {
+        ConfigNormalizationService sut = new();
+        Dictionary<string, ConfigApiFileEntry?> api = new()
+        {
+            ["Api.SearchTimeline"] = new ConfigApiFileEntry
+            {
+                Key = "Api.SearchTimeline",
+                Id = "api-id",
+                HasRequest = false,
+            },
+        };
+
+        Exception ex = Assert.Throws<Exception>(() =>
+            sut.ValidateApiFileEntries("1122205668801257472.json", api)
+        );
+
+        Assert.Contains("missing required field 'Request'", ex.Message);
+    }
 }

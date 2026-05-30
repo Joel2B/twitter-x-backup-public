@@ -4,6 +4,33 @@ namespace Backup.Application.Config;
 
 public sealed class ConfigNormalizationService
 {
+    public void ValidateApiFileEntries(
+        string apiFileName,
+        IReadOnlyDictionary<string, ConfigApiFileEntry?> api
+    )
+    {
+        foreach (KeyValuePair<string, ConfigApiFileEntry?> kvp in api)
+        {
+            string key = kvp.Key;
+            ConfigApiFileEntry? value = kvp.Value;
+
+            if (value is null)
+                throw new Exception(
+                    $"error deserializing api file '{apiFileName}': entry '{key}' is null"
+                );
+
+            if (string.IsNullOrWhiteSpace(value.Id))
+                throw new Exception(
+                    $"error deserializing api file '{apiFileName}': entry '{key}' is missing required field 'Id'"
+                );
+
+            if (!value.HasRequest)
+                throw new Exception(
+                    $"error deserializing api file '{apiFileName}': entry '{key}' is missing required field 'Request'"
+                );
+        }
+    }
+
     public void ValidateUsers(IReadOnlyList<ConfigUser> users)
     {
         if (users.Count == 0)
