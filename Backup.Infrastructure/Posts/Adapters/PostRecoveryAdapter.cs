@@ -4,10 +4,9 @@ using Backup.Infrastructure.Interfaces.Services.Media;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
-using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Services.Posts;
+namespace Backup.Infrastructure.Posts.Adapters;
 
 public class PostRecovery(
     ILogger<PostRecovery> _logger,
