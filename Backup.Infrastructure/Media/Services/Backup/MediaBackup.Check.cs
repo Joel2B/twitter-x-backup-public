@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Services.Media;
 
-public partial class MediaBackup : IMediaBackup
+public partial class MediaBackup : IMediaBackupStrategy
 {
     public async Task CheckDuplicates()
     {

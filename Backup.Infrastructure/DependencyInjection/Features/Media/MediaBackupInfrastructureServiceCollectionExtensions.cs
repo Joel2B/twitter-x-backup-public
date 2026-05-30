@@ -60,7 +60,7 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
                 {
                     IMediaBackupData mediaBackup = sp.GetRequiredKeyedService<IMediaBackupData>(key);
 
-                    IMediaBackup instance = (IMediaBackup)
+                    IMediaBackupStrategy instance = (IMediaBackupStrategy)
                         ActivatorUtilities.CreateInstance(sp, type, storage, mediaBackup);
 
                     instance.Id = registration.Id;
@@ -69,7 +69,7 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
             );
 
             services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IMediaBackupData>(key));
-            services.AddScoped(sp => sp.GetRequiredKeyedService<IMediaBackup>(key));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IMediaBackupStrategy>(key));
         }
 
         return services;

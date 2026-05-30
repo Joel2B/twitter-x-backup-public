@@ -16,7 +16,7 @@ public class MediaService(
     IMediaIntegrity _mediaIntegrity,
     IMediaFilter _mediaFilter,
     IMediaReplication _mediaReplication,
-    IEnumerable<IMediaBackup> _mediaBackup,
+    IEnumerable<IMediaBackupStrategy> _mediaBackup,
     IMediaDownload _mediaDownload
 ) : IMediaService
 {
@@ -28,7 +28,7 @@ public class MediaService(
     private readonly IMediaIntegrity _mediaIntegrity = _mediaIntegrity;
     private readonly IMediaFilter _mediaFilter = _mediaFilter;
     private readonly IMediaReplication _mediaReplication = _mediaReplication;
-    private readonly IEnumerable<IMediaBackup> _mediaBackups = _mediaBackup;
+    private readonly IEnumerable<IMediaBackupStrategy> _mediaBackups = _mediaBackup;
     private readonly IMediaDownload _mediaDownload = _mediaDownload;
 
     public async Task Download()
@@ -106,7 +106,7 @@ public class MediaService(
             await _mediaFilter.Check(filtered);
         }
 
-        foreach (IMediaBackup backup in _mediaBackups)
+        foreach (IMediaBackupStrategy backup in _mediaBackups)
         {
             IMediaData? backupSource = _mediaData.FirstOrDefault();
 

@@ -15,7 +15,7 @@ public partial class MediaBackup(
     StorageBackup _config,
     IZipWriterFactory _zipWriterFactory,
     IMediaBackupData _mediaBackupData
-) : IMediaBackup
+) : IMediaBackupStrategy
 {
     public string? Id { get; set; }
 

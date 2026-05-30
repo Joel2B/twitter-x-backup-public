@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Media;
 
-public partial class MediaBackup : IMediaBackup
+public partial class MediaBackup : IMediaBackupStrategy
 {
     private async Task<IZipWriter?> OpenChunkZipRead(Chunk chunk, string stage)
     {
