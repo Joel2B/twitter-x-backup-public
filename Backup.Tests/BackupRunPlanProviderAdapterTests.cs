@@ -1,3 +1,4 @@
+using Backup.Application.BackupRun;
 using Backup.Infrastructure.BackupRun.Adapters;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
@@ -21,7 +22,7 @@ public class BackupRunPlanProviderAdapterTests
     public void GetPlan_BuildsExpectedUsersSourcesAndRunFlags()
     {
         AppConfig config = CreateConfig();
-        BackupRunPlanProviderAdapter adapter = new(config);
+        BackupRunPlanProviderAdapter adapter = new(config, new BackupRunPlanBuilder());
 
         var plan = adapter.GetPlan();
 
@@ -66,7 +67,7 @@ public class BackupRunPlanProviderAdapterTests
             Request = CreateRequest("https://x.com/graphql/disabled"),
         };
 
-        BackupRunPlanProviderAdapter adapter = new(config);
+        BackupRunPlanProviderAdapter adapter = new(config, new BackupRunPlanBuilder());
         var plan = adapter.GetPlan();
 
         var firstUser = plan.Users[0];
