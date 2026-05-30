@@ -2,6 +2,8 @@ using Backup.Infrastructure.Media.Data;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Services;
 using Backup.Application.Media.Integrity;
+using Backup.Application.Media.Prune;
+using Backup.Infrastructure.Models.Config;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection.Features.Media;
@@ -13,6 +15,11 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
     )
     {
         services.AddScoped<IMediaProcessing, MediaProcessing>();
+        services.AddScoped<IMediaPrunePolicyService>(sp =>
+        {
+            AppConfig config = sp.GetRequiredService<AppConfig>();
+            return new MediaPrunePolicyService(config.Downloads.Prune.Filters);
+        });
         services.AddScoped<IMediaPrune, MediaPrune>();
         services.AddScoped<IMediaIntegrityPolicyService, MediaIntegrityPolicyService>();
         services.AddScoped<IMediaIntegrity, MediaIntegrity>();

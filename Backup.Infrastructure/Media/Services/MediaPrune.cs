@@ -1,13 +1,13 @@
+using Backup.Application.Media.Prune;
 using Backup.Infrastructure.Media.Abstractions.Services;
-using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Media.Models;
 using Microsoft.AspNetCore.WebUtilities;
 
 namespace Backup.Infrastructure.Media.Services;
 
-public class MediaPrune(AppConfig _config) : IMediaPrune
+public class MediaPrune(IMediaPrunePolicyService prunePolicyService) : IMediaPrune
 {
-    private readonly Utils.MediaFilter _filter = new(_config.Downloads.Prune.Filters);
+    private readonly IMediaPrunePolicyService _prunePolicyService = prunePolicyService;
 
     public Task Prune(List<Download> downloads)
     {
@@ -33,7 +33,7 @@ public class MediaPrune(AppConfig _config) : IMediaPrune
                     ? nameValue.ToString()
                     : string.Empty;
 
-                return !_filter.IsExcluded(extension, format, name);
+                return !_prunePolicyService.ShouldKeep(extension, format, name);
             });
         }
 
