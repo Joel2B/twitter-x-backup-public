@@ -2,14 +2,14 @@ using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Services.Media;
 using Backup.Infrastructure.Models.Media;
-using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Media;
 
 public class MediaService(
     ILogger<MediaService> _logger,
-    IPostData _postData,
+    IPostDomainData _postData,
     IMediaProcessing _mediaProcessing,
     IMediaPrune _mediaPrune,
     IEnumerable<IMediaData> _mediaData,
@@ -21,7 +21,7 @@ public class MediaService(
 ) : IMediaService
 {
     private readonly ILogger<MediaService> _logger = _logger;
-    private readonly IPostData _postData = _postData;
+    private readonly IPostDomainData _postData = _postData;
     private readonly IMediaProcessing _mediaProcessing = _mediaProcessing;
     private readonly IMediaPrune _mediaPrune = _mediaPrune;
     private readonly IEnumerable<IMediaData> _mediaData = _mediaData;
@@ -33,7 +33,7 @@ public class MediaService(
 
     public async Task Download()
     {
-        List<MediaInput>? posts;
+        List<Backup.Domain.Posts.MediaInput>? posts;
 
         using (_logger.LogTimer("getting posts"))
             posts = await _postData.GetMediaInputs();
@@ -41,9 +41,13 @@ public class MediaService(
         if (posts is null)
             return;
 
-        _logger.LogInformation("processing {posts} posts", posts.Count);
+        List<Backup.Infrastructure.Models.Posts.MediaInput> appPosts = posts
+            .Select(PostReplicationMapper.ToApp)
+            .ToList();
 
-        await _mediaProcessing.Process(posts);
+        _logger.LogInformation("processing {posts} posts", appPosts.Count);
+
+        await _mediaProcessing.Process(appPosts);
 
         List<Download> all = _mediaProcessing.GetMedia();
         List<Download> filtered = _mediaProcessing.GetFilteredMedia();

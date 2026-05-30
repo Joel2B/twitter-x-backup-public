@@ -7,6 +7,7 @@ using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.ApiRequest;
 using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Bulk;
@@ -14,7 +15,7 @@ namespace Backup.Infrastructure.Services.Bulk;
 public partial class BulkService(
     ILogger<BulkService> _logger,
     AppConfig _config,
-    IPostData _postData,
+    IPostDomainData _postData,
     IBulkSourceData _bulkSourceData,
     IBulkData _bulkData,
     IPostDownloader _downloader,
@@ -24,7 +25,7 @@ public partial class BulkService(
     private readonly ILogger<BulkService> _logger = _logger;
 
     private readonly AppConfig _config = _config;
-    private readonly IPostData _postData = _postData;
+    private readonly IPostDomainData _postData = _postData;
     private readonly IBulkSourceData _bulkSourceData = _bulkSourceData;
     private readonly IBulkData _bulkData = _bulkData;
     private readonly IPostDownloader _downloader = _downloader;

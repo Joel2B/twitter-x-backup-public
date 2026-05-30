@@ -1,6 +1,7 @@
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Models.Bulk;
 using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Bulk;
@@ -11,7 +12,7 @@ public partial class BulkService
     {
         _logger.LogInformation("running phase 1");
 
-        IPostData postData = _postData;
+        IPostDomainData postData = _postData;
         int postCount = await postData.GetCount();
 
         _logger.LogInformation("post count: {count}", postCount);
@@ -115,7 +116,11 @@ public partial class BulkService
                 }
 
                 _logger.LogInformation("ParseResult return {count} posts", result.Posts.Count);
-                await postData.AddPosts(bulk.User.Id, origin, result.Posts);
+                await postData.AddPosts(
+                    bulk.User.Id,
+                    origin,
+                    result.Posts.Select(PostReplicationMapper.ToDomain).ToList()
+                );
 
                 if (result.Posts.Count == 0 || result.NextCursor is null)
                 {
