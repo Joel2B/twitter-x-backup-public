@@ -451,21 +451,6 @@ public class Medium
     public MediaResults? MediaResults { get; set; }
 }
 
-public class Medium2
-{
-    [JsonProperty("faces", NullValueHandling = NullValueHandling.Ignore)]
-    public List<Face>? Faces { get; set; }
-
-    [JsonProperty("h", NullValueHandling = NullValueHandling.Ignore)]
-    public int? H { get; set; }
-
-    [JsonProperty("w", NullValueHandling = NullValueHandling.Ignore)]
-    public int? W { get; set; }
-
-    [JsonProperty("resize", NullValueHandling = NullValueHandling.Ignore)]
-    public string? Resize { get; set; }
-}
-
 public class Metadata
 {
     [JsonProperty("scribeConfig", NullValueHandling = NullValueHandling.Ignore)]
@@ -631,12 +616,6 @@ public class Result
     public string? Reason { get; set; }
 }
 
-public class RspPosts
-{
-    [JsonProperty("data", NullValueHandling = NullValueHandling.Ignore)]
-    public required DataUser Data { get; set; }
-}
-
 public class ScribeConfig
 {
     [JsonProperty("page", NullValueHandling = NullValueHandling.Ignore)]
@@ -730,12 +709,6 @@ public class UrlDetails
 
     [JsonProperty("indices", NullValueHandling = NullValueHandling.Ignore)]
     public List<int?>? Indices { get; set; }
-}
-
-public class Url2
-{
-    [JsonProperty("urls", NullValueHandling = NullValueHandling.Ignore)]
-    public List<UrlDetails>? Urls { get; set; }
 }
 
 public class User
