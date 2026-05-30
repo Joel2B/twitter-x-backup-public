@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backup.Infrastructure.Posts.Data.Sqlite;
@@ -27,12 +28,6 @@ public partial class SqlitePostData
         if (scopedIds.Count == 0)
             return 0;
 
-        if (keep.Count > 0)
-            scopedIds = scopedIds.Where(id => !keep.Contains(id)).ToList();
-
-        if (scopedIds.Count == 0)
-            return 0;
-
         Dictionary<string, PostHashMetaEntity> metaById = new(StringComparer.Ordinal);
 
         foreach (List<string> chunk in ChunkStrings(scopedIds))
@@ -53,6 +48,19 @@ public partial class SqlitePostData
         if (sourceEntities.Count == 0)
             return 0;
 
+        List<Backup.Domain.Posts.Post> domainPosts = sourceEntities
+            .Where(entity => metaById.ContainsKey(entity.Id))
+            .Select(entity => ToModel(entity, metaById[entity.Id].Deleted))
+            .Select(PostReplicationMapper.ToDomain)
+            .ToList();
+
+        HashSet<string> idsToDelete = _postSoftDeleteSelectionService
+            .SelectIds(userId, origin, keep, domainPosts)
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (idsToDelete.Count == 0)
+            return 0;
+
         int marked = 0;
         DateTime changeDate = DateTime.Now;
 
@@ -62,6 +70,9 @@ public partial class SqlitePostData
                 continue;
 
             if (meta.Deleted)
+                continue;
+
+            if (!idsToDelete.Contains(entity.Id))
                 continue;
 
             PostChangeEntity change = new()

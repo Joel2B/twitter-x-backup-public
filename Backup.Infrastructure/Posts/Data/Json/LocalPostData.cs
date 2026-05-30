@@ -5,6 +5,7 @@ using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Posts;
 using Backup.Infrastructure.Models.Data.Json;
+using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Posts.Models;
 using Backup.Application.Posts;
 using Microsoft.Extensions.Logging;
@@ -16,7 +17,8 @@ public partial class LocalPostData(
     AppConfig _appConfig,
     StoragePost _config,
     IPartition _partition,
-    IPostMergeService postMergeService
+    IPostMergeService postMergeService,
+    IPostSoftDeleteSelectionService postSoftDeleteSelectionService
 ) : IPostDataStore, ISetup
 {
     public string? Id { get; set; }
@@ -27,6 +29,8 @@ public partial class LocalPostData(
     private readonly StoragePost _config = _config;
     private readonly IPartition _partition = _partition;
     private readonly IPostMergeService _postMergeService = postMergeService;
+    private readonly IPostSoftDeleteSelectionService _postSoftDeleteSelectionService =
+        postSoftDeleteSelectionService;
 
     private Dictionary<string, Post>? _postsCache = null;
     private Dictionary<string, PostMetaRow>? _postMetaCache = null;
@@ -185,28 +189,33 @@ public partial class LocalPostData(
         if (_postsCache is null)
             return 0;
 
-        HashSet<string> keep = keepPostIds
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.Ordinal);
+        List<Backup.Domain.Posts.Post> domainPosts = _postsCache
+            .Values.Select(PostReplicationMapper.ToDomain)
+            .ToList();
 
-        List<Post> deletedPosts = [];
+        IReadOnlyCollection<string> idsToDelete = _postSoftDeleteSelectionService.SelectIds(
+            userId,
+            origin,
+            keepPostIds,
+            domainPosts
+        );
 
-        foreach (Post post in _postsCache.Values)
-        {
-            bool hasScope =
-                post.Index.TryGetValue(userId, out Dictionary<string, IndexData>? index)
-                && index.ContainsKey(origin);
+        if (idsToDelete.Count == 0)
+            return 0;
 
-            if (!hasScope)
-                continue;
+        List<Post> deletedPosts = idsToDelete
+            .Select(id =>
+            {
+                if (!_postsCache.TryGetValue(id, out Post? existing))
+                    return null;
 
-            if (keep.Contains(post.Id) || post.Deleted)
-                continue;
-
-            Post deletedPost = post.Clone();
-            deletedPost.Deleted = true;
-            deletedPosts.Add(deletedPost);
-        }
+                Post deletedPost = existing.Clone();
+                deletedPost.Deleted = true;
+                return deletedPost;
+            })
+            .Where(post => post is not null)
+            .Select(post => post!)
+            .ToList();
 
         if (deletedPosts.Count == 0)
             return 0;

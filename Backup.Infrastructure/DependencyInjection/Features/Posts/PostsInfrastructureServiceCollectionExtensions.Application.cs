@@ -19,6 +19,7 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostReplicationService, PostReplicationService>();
         services.AddScoped<IPostRecoverySelectionService, PostRecoverySelectionService>();
         services.AddScoped<IPostMergeService, PostMergeService>();
+        services.AddScoped<IPostSoftDeleteSelectionService, PostSoftDeleteSelectionService>();
         services.AddScoped<IPostProjectionComposer, PostProjectionComposer>();
         services.AddScoped<IPostIndexingService, PostIndexingService>();
         services.AddScoped<IPostStoreParityService, PostStoreParityService>();

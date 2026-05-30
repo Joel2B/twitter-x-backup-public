@@ -289,7 +289,8 @@ public class SqlitePostDataTests
             NullLogger<SqlitePostData>.Instance,
             storage,
             partition,
-            new PostMergeService()
+            new PostMergeService(),
+            new PostSoftDeleteSelectionService()
         );
         return (sut, root);
     }
