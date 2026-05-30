@@ -4,6 +4,7 @@ using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Posts;
 using Backup.Infrastructure.Posts.Models;
+using Backup.Application.Posts;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Data.Sqlite;
@@ -11,7 +12,8 @@ namespace Backup.Infrastructure.Posts.Data.Sqlite;
 public partial class SqlitePostData(
     ILogger<SqlitePostData> logger,
     StoragePost config,
-    IPartition partition
+    IPartition partition,
+    IPostMergeService postMergeService
 ) : IPostDataStore, ISetup, IAsyncDisposable
 {
     public string? Id { get; set; }
@@ -20,6 +22,7 @@ public partial class SqlitePostData(
     private readonly ILogger<SqlitePostData> _logger = logger;
     private readonly StoragePost _config = config;
     private readonly IPartition _partition = partition;
+    private readonly IPostMergeService _postMergeService = postMergeService;
     private PostsDbContext? _db;
     private const int SqlInChunkSize = 5000;
 

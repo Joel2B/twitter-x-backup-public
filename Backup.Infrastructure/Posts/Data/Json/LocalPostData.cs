@@ -6,6 +6,7 @@ using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Posts;
 using Backup.Infrastructure.Models.Data.Json;
 using Backup.Infrastructure.Posts.Models;
+using Backup.Application.Posts;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Data.Json;
@@ -14,7 +15,8 @@ public partial class LocalPostData(
     ILogger<LocalPostData> _logger,
     AppConfig _appConfig,
     StoragePost _config,
-    IPartition _partition
+    IPartition _partition,
+    IPostMergeService postMergeService
 ) : IPostDataStore, ISetup
 {
     public string? Id { get; set; }
@@ -24,6 +26,7 @@ public partial class LocalPostData(
     private readonly AppConfig _appConfig = _appConfig;
     private readonly StoragePost _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly IPostMergeService _postMergeService = postMergeService;
 
     private Dictionary<string, Post>? _postsCache = null;
     private Dictionary<string, PostMetaRow>? _postMetaCache = null;

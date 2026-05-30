@@ -66,6 +66,9 @@ internal static class PostReplicationMapper
     public static AppPosts.MergeOptions? ToApp(MergeOptions? source) =>
         source is null ? null : new AppPosts.MergeOptions { Index = source.Index };
 
+    public static MergeOptions ToDomain(AppPosts.MergeOptions? source) =>
+        source is null ? new MergeOptions() : new MergeOptions { Index = source.Index };
+
     public static PostStoreCounts ToDomain(AppPosts.PostStoreCounts source) =>
         new()
         {

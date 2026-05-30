@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Models.Data.Json;
+using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Posts.Models;
 using Microsoft.Extensions.Logging;
 
@@ -35,40 +36,26 @@ public partial class LocalPostData
                 continue;
             }
 
-            Change change = new() { UserId = userId };
-            MergeData(post, result, change);
-            IndexData? incomingIndexData = null;
+            Backup.Domain.Posts.Post currentDomain = PostReplicationMapper.ToDomain(post);
+            Backup.Domain.Posts.Post incomingDomain = PostReplicationMapper.ToDomain(result);
+            Backup.Domain.Posts.MergeOptions domainOptions = PostReplicationMapper.ToDomain(options);
 
-            if (options.Index)
-            {
-                Dictionary<string, IndexData> incomingUserIndex = result.Index.TryGetValue(
-                    userId,
-                    out Dictionary<string, IndexData>? userIndex
-                )
-                    ? userIndex
-                    : [];
+            Backup.Application.Posts.Models.PostMergeOutcome merge = _postMergeService.Merge(
+                userId,
+                origin,
+                currentDomain,
+                incomingDomain,
+                domainOptions
+            );
 
-                incomingIndexData = incomingUserIndex.TryGetValue(origin, out IndexData? indexData)
-                    ? indexData.Clone()
-                    : new();
-            }
+            Post merged = PostReplicationMapper.ToApp(merge.MergedPost);
 
-            result.Index = post.CloneIndex();
-            result.Changes = post.CloneChanges();
+            if (merge.HasDataChange)
+                LogDataChange(post, merged, userId);
 
-            if (options.Index)
-            {
-                if (!result.Index.ContainsKey(userId))
-                    result.Index[userId] = [];
+            if (merge.HasIndexChange)
+                LogIndexChange(post, merged, userId, origin);
 
-                result.Index[userId][origin] = incomingIndexData ?? new();
-                MergeIndex(post, result, change, origin);
-            }
-
-            if (change.Data is not null || change.Index is not null)
-                result.Changes.Add(change);
-
-            Post merged = result.Clone();
             posts[result.Id] = merged;
 
             postMeta[result.Id] = new()
@@ -132,70 +119,43 @@ public partial class LocalPostData
         _postMetaCache = postMeta;
     }
 
-    private void MergeData(Post post, Post result, Change change)
+    private void LogDataChange(Post current, Post merged, string userId)
     {
-        result.Profile.UserName ??= post.Profile.UserName;
-        result.Profile.Name ??= post.Profile.Name;
-        result.Profile.BannerUrl ??= post.Profile.BannerUrl;
-        result.Profile.ImageUrl ??= post.Profile.ImageUrl;
-        result.Profile.Following ??= post.Profile.Following;
-
-        if (post.Equals(result))
-            return;
-
-        change.Data = post.Clone();
-
         _logger.LogInformation(
             "id: {id}, userId: {userId}, userName: {userName}",
-            post.Id,
-            change.UserId,
-            result.Profile.UserName
+            current.Id,
+            userId,
+            merged.Profile.UserName
         );
 
         Backup.Infrastructure.Logging.LoggingExtensions.LogAsJsonDiff(
             _logger,
             "old data",
             "new data",
-            ((PostData)post).Clone(),
-            ((PostData)result).Clone()
+            ((PostData)current).Clone(),
+            ((PostData)merged).Clone()
         );
     }
 
-    private void MergeIndex(Post post, Post result, Change change, string origin)
+    private void LogIndexChange(Post current, Post merged, string userId, string origin)
     {
-        if (!post.Index.TryGetValue(change.UserId, out Dictionary<string, IndexData>? oldUserIndex))
+        if (!current.Index.TryGetValue(userId, out Dictionary<string, IndexData>? oldUserIndex))
             return;
 
-        if (!oldUserIndex.TryGetValue(origin, out IndexData? oldIndex))
+        if (!oldUserIndex.ContainsKey(origin))
             return;
 
-        if (
-            !result.Index.TryGetValue(
-                change.UserId,
-                out Dictionary<string, IndexData>? newUserIndex
-            )
-        )
+        if (!merged.Index.TryGetValue(userId, out Dictionary<string, IndexData>? newUserIndex))
             return;
 
-        if (!newUserIndex.TryGetValue(origin, out IndexData? newIndex))
+        if (!newUserIndex.ContainsKey(origin))
             return;
-
-        if (
-            oldIndex.Previous is null
-            || oldIndex.Next is null
-            || newIndex.Previous is null
-            || newIndex.Next is null
-            || oldIndex.Equals(newIndex)
-        )
-            return;
-
-        change.Index = post.CloneIndex()[change.UserId];
 
         _logger.LogInformation(
             "id: {id}, userId: {userId}, userName: {userName}",
-            post.Id,
-            change.UserId,
-            result.Profile.UserName
+            current.Id,
+            userId,
+            merged.Profile.UserName
         );
 
         Backup.Infrastructure.Logging.LoggingExtensions.LogAsJsonDiff(

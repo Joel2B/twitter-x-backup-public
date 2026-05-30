@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -35,6 +36,7 @@ public partial class SqlitePostData
         );
 
         List<Post> resolved = [];
+        Backup.Domain.Posts.MergeOptions domainOptions = PostReplicationMapper.ToDomain(options);
 
         foreach (Post result in posts)
         {
@@ -44,46 +46,27 @@ public partial class SqlitePostData
                 continue;
             }
 
-            Post merged = result.Clone();
-            Change change = new() { UserId = userId };
-            MergeData(current, merged, change);
+            Backup.Domain.Posts.Post currentDomain = PostReplicationMapper.ToDomain(current);
+            Backup.Domain.Posts.Post incomingDomain = PostReplicationMapper.ToDomain(result);
 
-            IndexData? incomingIndexData = null;
+            Backup.Application.Posts.Models.PostMergeOutcome merge = _postMergeService.Merge(
+                userId,
+                origin,
+                currentDomain,
+                incomingDomain,
+                domainOptions
+            );
 
-            if (options.Index)
-            {
-                Dictionary<string, IndexData> incomingUserIndex = merged.Index.TryGetValue(
-                    userId,
-                    out Dictionary<string, IndexData>? userIndex
-                )
-                    ? userIndex
-                    : [];
-
-                incomingIndexData = incomingUserIndex.TryGetValue(origin, out IndexData? indexData)
-                    ? indexData.Clone()
-                    : new();
-            }
-
-            merged.Index = current.CloneIndex();
-            merged.Changes = current.CloneChanges();
-
-            if (options.Index)
-            {
-                if (!merged.Index.ContainsKey(userId))
-                    merged.Index[userId] = [];
-
-                merged.Index[userId][origin] = incomingIndexData ?? new();
-                MergeIndex(current, merged, change, origin);
-            }
-
-            bool hasDataChange = change.Data is not null;
-            bool hasIndexChange = options.Index && change.Index is not null;
-
-            if (!hasDataChange && !hasIndexChange)
+            if (!merge.HasChanges)
                 continue;
 
-            if (change.Data is not null || change.Index is not null)
-                merged.Changes.Add(change);
+            Post merged = PostReplicationMapper.ToApp(merge.MergedPost);
+
+            if (merge.HasDataChange)
+                LogDataChange(current, merged, userId);
+
+            if (merge.HasIndexChange)
+                LogIndexChange(current, merged, userId);
 
             resolved.Add(merged);
         }
@@ -92,6 +75,48 @@ public partial class SqlitePostData
             return;
 
         await UpsertPosts(resolved);
+    }
+
+    private void LogDataChange(Post current, Post merged, string userId)
+    {
+        _logger.LogInformation(
+            "id: {id}, userId: {userId}, userName: {userName}",
+            current.Id,
+            userId,
+            merged.Profile.UserName
+        );
+
+        Backup.Infrastructure.Logging.LoggingExtensions.LogAsJsonDiff(
+            _logger,
+            "old data",
+            "new data",
+            current.Clone(),
+            merged.Clone()
+        );
+    }
+
+    private void LogIndexChange(Post current, Post merged, string userId)
+    {
+        if (!current.Index.TryGetValue(userId, out Dictionary<string, IndexData>? currentUserIndex))
+            return;
+
+        if (!merged.Index.TryGetValue(userId, out Dictionary<string, IndexData>? mergedUserIndex))
+            return;
+
+        _logger.LogInformation(
+            "id: {id}, userId: {userId}, userName: {userName}",
+            current.Id,
+            userId,
+            merged.Profile.UserName
+        );
+
+        Backup.Infrastructure.Logging.LoggingExtensions.LogAsJsonDiff(
+            _logger,
+            "old index",
+            "new index",
+            currentUserIndex,
+            mergedUserIndex
+        );
     }
 
     private async Task UpsertPostsInternal(List<Post> posts)

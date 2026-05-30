@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Posts.Data.Sqlite;
+using Backup.Application.Posts;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Posts;
@@ -284,7 +285,12 @@ public class SqlitePostDataTests
             },
         };
 
-        SqlitePostData sut = new(NullLogger<SqlitePostData>.Instance, storage, partition);
+        SqlitePostData sut = new(
+            NullLogger<SqlitePostData>.Instance,
+            storage,
+            partition,
+            new PostMergeService()
+        );
         return (sut, root);
     }
 
