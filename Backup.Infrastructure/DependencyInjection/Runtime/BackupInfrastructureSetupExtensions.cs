@@ -2,7 +2,7 @@ using Backup.Infrastructure.Core.Abstractions.Setup;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Runtime;
 
 public static class BackupInfrastructureSetupExtensions
 {

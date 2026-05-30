@@ -1,7 +1,8 @@
 using Backup.Api.Errors;
 using Backup.Api.Services;
 using Backup.Api.Swagger;
-using Backup.Infrastructure.DependencyInjection;
+using Backup.Infrastructure.DependencyInjection.Composition;
+using Backup.Infrastructure.DependencyInjection.Runtime;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -1,6 +1,10 @@
+using Backup.Infrastructure.DependencyInjection.Features.BulkDump;
+using Backup.Infrastructure.DependencyInjection.Features.Media;
+using Backup.Infrastructure.DependencyInjection.Features.Posts;
+using Backup.Infrastructure.DependencyInjection.Runtime;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Composition;
 
 public static partial class InfrastructureCompositionServiceCollectionExtensions
 {

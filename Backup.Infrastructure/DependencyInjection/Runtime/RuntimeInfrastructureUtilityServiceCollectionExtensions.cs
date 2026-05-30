@@ -2,7 +2,7 @@ using Backup.Infrastructure.Utility.Abstractions.Services;
 using Backup.Infrastructure.Services.Utils;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Runtime;
 
 public static class RuntimeInfrastructureUtilityServiceCollectionExtensions
 {

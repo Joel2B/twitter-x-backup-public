@@ -6,7 +6,7 @@ using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Services.Config;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Base;
 
 public static class CoreInfrastructureServiceCollectionExtensions
 {

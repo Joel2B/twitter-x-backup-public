@@ -7,7 +7,7 @@ using Serilog;
 using Serilog.Core;
 using Serilog.Events;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Base;
 
 public static class StructuredLoggingInfrastructureServiceCollectionExtensions
 {

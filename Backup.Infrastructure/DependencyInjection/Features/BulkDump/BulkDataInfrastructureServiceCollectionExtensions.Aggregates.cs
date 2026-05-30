@@ -2,7 +2,7 @@ using Backup.Infrastructure.Bulk.Data;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Features.BulkDump;
 
 public static partial class BulkDataInfrastructureServiceCollectionExtensions
 {

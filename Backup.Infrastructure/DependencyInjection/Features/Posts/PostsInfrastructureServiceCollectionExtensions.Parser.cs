@@ -5,7 +5,7 @@ using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Features.Posts;
 
 public static partial class PostsInfrastructureServiceCollectionExtensions
 {

@@ -2,7 +2,7 @@ using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Runtime;
 
 public static class RuntimeInfrastructurePostServiceCollectionExtensions
 {

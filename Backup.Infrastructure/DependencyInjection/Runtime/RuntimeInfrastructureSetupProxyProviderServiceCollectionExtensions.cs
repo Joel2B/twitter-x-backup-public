@@ -3,7 +3,7 @@ using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Services;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Runtime;
 
 public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExtensions
 {

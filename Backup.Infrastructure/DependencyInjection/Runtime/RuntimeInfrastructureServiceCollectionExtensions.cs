@@ -1,7 +1,7 @@
 using Backup.Infrastructure.BackupRun.Adapters;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Runtime;
 
 public static class RuntimeInfrastructureServiceCollectionExtensions
 {

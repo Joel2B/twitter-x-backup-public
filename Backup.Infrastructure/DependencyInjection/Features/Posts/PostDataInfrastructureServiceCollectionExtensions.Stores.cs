@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Data.Partition;
+using Backup.Infrastructure.DependencyInjection.Base;
 using Backup.Infrastructure.Posts.Data.Json;
 using Backup.Infrastructure.Posts.Data.Sqlite;
 using Backup.Infrastructure.Core.Abstractions.Setup;
@@ -7,7 +8,7 @@ using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data.Posts;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Features.Posts;
 
 public static partial class PostDataInfrastructureServiceCollectionExtensions
 {

@@ -1,12 +1,13 @@
 using Backup.Infrastructure.Media.Data;
 using Backup.Infrastructure.Data.Partition;
+using Backup.Infrastructure.DependencyInjection.Base;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Data.Media;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Features.Media;
 
 public static partial class MediaDataInfrastructureServiceCollectionExtensions
 {

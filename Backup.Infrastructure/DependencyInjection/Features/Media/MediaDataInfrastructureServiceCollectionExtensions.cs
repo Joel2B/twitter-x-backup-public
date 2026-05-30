@@ -1,7 +1,7 @@
 using Backup.Infrastructure.Media.Data;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Features.Media;
 
 public static partial class MediaDataInfrastructureServiceCollectionExtensions
 {

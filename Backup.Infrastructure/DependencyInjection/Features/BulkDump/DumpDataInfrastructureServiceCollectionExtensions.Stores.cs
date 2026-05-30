@@ -1,12 +1,13 @@
 using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.Dump.Data;
+using Backup.Infrastructure.DependencyInjection.Base;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Dump.Abstractions.Data;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data.Dump;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Features.BulkDump;
 
 public static partial class DumpDataInfrastructureServiceCollectionExtensions
 {

@@ -1,6 +1,7 @@
+using Backup.Infrastructure.DependencyInjection.Base;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Backup.Infrastructure.DependencyInjection;
+namespace Backup.Infrastructure.DependencyInjection.Composition;
 
 public static partial class InfrastructureCompositionServiceCollectionExtensions
 {
