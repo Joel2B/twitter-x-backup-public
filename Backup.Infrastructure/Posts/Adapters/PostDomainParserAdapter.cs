@@ -19,14 +19,5 @@ public sealed class PostDomainParserAdapter(IPostParser parser, IPostIndexingSer
     }
 
     public ParseUser ParseUser(string response)
-    {
-        Backup.Infrastructure.Models.Posts.ParseUser parsed = _parser.ParseUser(response);
-
-        if (parsed.User is null)
-            return new ParseUser(null);
-
-        return new ParseUser(
-            new PostUser { Id = parsed.User.Id, MediaCount = parsed.User.MediaCount }
-        );
-    }
+        => _parser.ParseUser(response);
 }

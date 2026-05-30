@@ -6,6 +6,7 @@ using Backup.Infrastructure.Models.Posts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using ParseUser = Backup.Domain.Posts.ParseUser;
 
 namespace Backup.Tests;
 

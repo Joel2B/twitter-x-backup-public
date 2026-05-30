@@ -5,6 +5,8 @@ using Backup.Infrastructure.Models.Posts.Response;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using ParseUser = Backup.Domain.Posts.ParseUser;
+using PostUser = Backup.Domain.Posts.PostUser;
 
 namespace Backup.Infrastructure.Services.Posts;
 
