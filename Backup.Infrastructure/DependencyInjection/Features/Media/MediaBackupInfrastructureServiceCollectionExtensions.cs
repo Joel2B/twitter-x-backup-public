@@ -32,40 +32,17 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
 
             services.AddKeyedScoped(
                 key,
-                (sp, _) =>
-                    (IPartition)ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
+                (sp, _) => CreatePartition(sp, storage)
             );
 
             services.AddKeyedScoped(
                 key,
-                (sp, _) =>
-                {
-                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
-
-                    IMediaBackupData instance = (IMediaBackupData)
-                        ActivatorUtilities.CreateInstance(
-                            sp,
-                            typeof(LocalMediaBackup),
-                            storage,
-                            partition
-                        );
-
-                    return instance;
-                }
+                (sp, _) => CreateMediaBackupData(sp, key, storage)
             );
 
             services.AddKeyedScoped(
                 key,
-                (sp, _) =>
-                {
-                    IMediaBackupData mediaBackup = sp.GetRequiredKeyedService<IMediaBackupData>(key);
-
-                    IMediaBackupStrategy instance = (IMediaBackupStrategy)
-                        ActivatorUtilities.CreateInstance(sp, type, storage, mediaBackup);
-
-                    instance.Id = registration.Id;
-                    return instance;
-                }
+                (sp, _) => CreateMediaBackupStrategy(sp, key, type, storage, registration.Id)
             );
 
             services.AddScoped(sp => (ISetup)sp.GetRequiredKeyedService<IMediaBackupData>(key));
@@ -73,6 +50,40 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
         }
 
         return services;
+    }
+
+    private static IPartition CreatePartition(IServiceProvider sp, StorageBackup storage) =>
+        (IPartition)ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage);
+
+    private static IMediaBackupData CreateMediaBackupData(
+        IServiceProvider sp,
+        string key,
+        StorageBackup storage
+    )
+    {
+        IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
+
+        IMediaBackupData instance = (IMediaBackupData)
+            ActivatorUtilities.CreateInstance(sp, typeof(LocalMediaBackup), storage, partition);
+
+        return instance;
+    }
+
+    private static IMediaBackupStrategy CreateMediaBackupStrategy(
+        IServiceProvider sp,
+        string key,
+        Type backupType,
+        StorageBackup storage,
+        string id
+    )
+    {
+        IMediaBackupData mediaBackup = sp.GetRequiredKeyedService<IMediaBackupData>(key);
+
+        IMediaBackupStrategy instance = (IMediaBackupStrategy)
+            ActivatorUtilities.CreateInstance(sp, backupType, storage, mediaBackup);
+
+        instance.Id = id;
+        return instance;
     }
 }
 
