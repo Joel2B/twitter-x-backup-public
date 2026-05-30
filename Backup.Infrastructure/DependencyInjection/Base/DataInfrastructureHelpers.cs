@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Core.Abstractions.Setup;
+using Backup.Application.Core;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
 using Microsoft.Extensions.DependencyInjection;
@@ -7,6 +8,9 @@ namespace Backup.Infrastructure.DependencyInjection.Base;
 
 internal static class DataInfrastructureHelpers
 {
+    private static readonly IStorageRegistrationPolicyService StorageRegistrationPolicy =
+        new StorageRegistrationPolicyService();
+
     internal readonly record struct DataRegistration<TStorage>(
         string Key,
         string Id,
@@ -23,25 +27,12 @@ internal static class DataInfrastructureHelpers
     )
         where TStorage : Storage
     {
-        List<TStorage> enabled = storages
-            .Where(storage => storage.Enabled && types.ContainsKey(storage.Type))
-            .ToList();
-
-        int defaultCount = enabled.Count(storage => storage.Default);
-
-        if (enabled.Count > 0 && defaultCount == 0)
-        {
-            throw new InvalidOperationException(
-                "At least one enabled storage must have Default=true in the same data collection."
-            );
-        }
-
-        if (defaultCount > 1)
-        {
-            throw new InvalidOperationException(
-                "Only one enabled storage can have Default=true in the same data collection."
-            );
-        }
+        IReadOnlyList<TStorage> enabled = StorageRegistrationPolicy.SelectEnabled(
+            storages,
+            storage => storage.Enabled,
+            storage => types.ContainsKey(storage.Type),
+            storage => storage.Default
+        );
 
         List<DataRegistration<TStorage>> registrations = new(enabled.Count);
 

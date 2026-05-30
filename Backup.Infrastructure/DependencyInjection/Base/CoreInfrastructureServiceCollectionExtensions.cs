@@ -18,6 +18,7 @@ public static class CoreInfrastructureServiceCollectionExtensions
         services.AddCoreLoggingInfrastructure();
         services.AddPartitionInfrastructure();
         services.AddSingleton<IPrimarySelectionService, PrimarySelectionService>();
+        services.AddSingleton<IStorageRegistrationPolicyService, StorageRegistrationPolicyService>();
 
         return services;
     }
