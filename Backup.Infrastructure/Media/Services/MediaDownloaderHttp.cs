@@ -16,6 +16,7 @@ public class MediaDownloaderHttp(
     AppConfig _config,
     IMediaDownloadExceptionPolicyService mediaDownloadExceptionPolicyService,
     IMediaDownloadPolicyService mediaDownloadPolicyService,
+    IMediaDownloadContentValidationPolicyService mediaDownloadContentValidationPolicyService,
     IMediaDownloadStreamingPolicyService mediaDownloadStreamingPolicyService,
     IMediaDownloadProgressPolicyService mediaDownloadProgressPolicyService,
     IProxyProvider proxyProvider,
@@ -28,6 +29,8 @@ public class MediaDownloaderHttp(
         mediaDownloadExceptionPolicyService;
     private readonly IMediaDownloadPolicyService _mediaDownloadPolicyService =
         mediaDownloadPolicyService;
+    private readonly IMediaDownloadContentValidationPolicyService _mediaDownloadContentValidationPolicyService =
+        mediaDownloadContentValidationPolicyService;
     private readonly IMediaDownloadStreamingPolicyService _mediaDownloadStreamingPolicyService =
         mediaDownloadStreamingPolicyService;
     private readonly IMediaDownloadProgressPolicyService _mediaDownloadProgressPolicyService =
@@ -63,9 +66,7 @@ public class MediaDownloaderHttp(
                 long headersMs = sw.ElapsedMilliseconds;
 
                 HttpStatusCode code = response.StatusCode;
-
-                if (code is not HttpStatusCode.OK)
-                    throw new SystemException(code.ToString());
+                _mediaDownloadContentValidationPolicyService.EnsureSuccessStatusCode(code);
 
                 long? contentLength = response.Content.Headers.ContentLength;
 
@@ -76,9 +77,7 @@ public class MediaDownloaderHttp(
                 );
 
                 await using Stream content = await response.Content.ReadAsStreamAsync(token);
-
-                if (!content.CanRead)
-                    throw new SystemException("content is empty.");
+                _mediaDownloadContentValidationPolicyService.EnsureReadable(content);
 
                 long inMemoryThreshold = int.MaxValue;
                 long knownContentLength = contentLength ?? -1;
@@ -177,11 +176,11 @@ public class MediaDownloaderHttp(
                         totalRead += read;
                     }
 
-                if (stream.Length == 0)
-                    throw new SystemException("content is empty.");
-
-                if (contentLength is not null && stream.Length != contentLength.Value)
-                    throw new SystemException("incomplete download");
+                _mediaDownloadContentValidationPolicyService.EnsureNotEmpty(stream.Length);
+                _mediaDownloadContentValidationPolicyService.EnsureComplete(
+                    contentLength,
+                    stream.Length
+                );
 
                 stream.Position = 0;
 
