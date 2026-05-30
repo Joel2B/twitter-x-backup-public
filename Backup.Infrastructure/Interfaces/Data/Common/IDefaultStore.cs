@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Interfaces.Data;
+namespace Backup.Infrastructure.Core.Abstractions.Data;
 
 public interface IDefaultStore
 {

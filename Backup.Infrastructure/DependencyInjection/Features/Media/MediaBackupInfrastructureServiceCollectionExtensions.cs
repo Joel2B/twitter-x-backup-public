@@ -2,7 +2,7 @@ using Backup.Infrastructure.Data.Media;
 using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.Interfaces;
 using Backup.Infrastructure.Media.Abstractions.Data;
-using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Data.Backup;
 using Backup.Infrastructure.Services.Media;

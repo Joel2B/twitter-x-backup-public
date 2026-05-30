@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Interfaces.Data;
+using Backup.Infrastructure.Core.Abstractions.Data;
 using Backup.Infrastructure.Models.Posts;
 
 namespace Backup.Infrastructure.Posts.Abstractions.Data;

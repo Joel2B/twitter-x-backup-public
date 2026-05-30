@@ -1,7 +1,7 @@
 using System.Text.RegularExpressions;
 using Backup.Infrastructure.Interfaces;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
-using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Bulk;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Bulk;

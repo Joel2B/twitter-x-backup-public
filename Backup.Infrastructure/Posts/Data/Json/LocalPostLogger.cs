@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Posts.Abstractions.Data;
-using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Utils;

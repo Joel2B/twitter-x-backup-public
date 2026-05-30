@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Models.Config.Data;
 
-namespace Backup.Infrastructure.Interfaces.Partition;
+namespace Backup.Infrastructure.Core.Abstractions.Partition;
 
 public interface IPartition
 {

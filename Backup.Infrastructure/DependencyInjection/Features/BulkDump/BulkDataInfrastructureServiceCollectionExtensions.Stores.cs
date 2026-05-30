@@ -2,7 +2,7 @@ using Backup.Infrastructure.Bulk.Data;
 using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.Interfaces;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
-using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data.Bulk;
 using Microsoft.Extensions.DependencyInjection;
 

@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Media.Abstractions.Services;
-using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data.Media;
 using Backup.Infrastructure.Models.Media;
 using Microsoft.Extensions.Logging;
