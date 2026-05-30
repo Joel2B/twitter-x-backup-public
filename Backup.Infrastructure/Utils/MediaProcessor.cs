@@ -5,7 +5,7 @@ namespace Backup.Infrastructure.Utils;
 
 public class MediaProcessor
 {
-    public static DataDownload GetData(Models.Media.Processors.Data image)
+    public static DataDownload GetData(Models.Media.Processors.MediaProcessorInput image)
     {
         List<string?> segments =
         [

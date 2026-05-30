@@ -1,6 +1,6 @@
 namespace Backup.Infrastructure.Models.Media.Processors;
 
-public class Data
+public class MediaProcessorInput
 {
     public string? Id { get; set; }
     public required string PostId { get; set; }
