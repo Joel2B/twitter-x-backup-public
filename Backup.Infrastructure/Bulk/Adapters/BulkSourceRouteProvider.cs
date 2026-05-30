@@ -1,31 +1,28 @@
+using Backup.Application.Bulk;
+using Backup.Application.Bulk.Models;
 using Backup.Infrastructure.Bulk.Abstractions.Services;
 using Backup.Infrastructure.Bulk.Models;
 
 namespace Backup.Infrastructure.Bulk.Adapters;
 
-public sealed class BulkSourceRouteProvider : IBulkSourceRouteProvider
+public sealed class BulkSourceRouteProvider(IBulkSourceRouteService routeService) : IBulkSourceRouteProvider
 {
-    public string? GetOrigin(SourceType sourceType) =>
-        sourceType switch
-        {
-            SourceType.Media => "media",
-            SourceType.Notifications => "notifications",
-            _ => null,
-        };
+    private readonly IBulkSourceRouteService _routeService = routeService;
+
+    public string? GetOrigin(SourceType sourceType) => _routeService.GetOrigin(ToApplication(sourceType));
 
     public string GetReferer(
         SourceType sourceType = SourceType.Notifications,
         string? userName = null
-    )
-    {
-        string baseUrl = "https://x.com/";
-        string? origin = GetOrigin(sourceType);
-        string url = "{origin}";
+    ) => _routeService.GetReferer(ToApplication(sourceType), userName);
 
-        if (userName is not null)
-            url = "{userName}/{origin}";
-
-        url = url.Replace("{userName}", userName).Replace("{origin}", origin);
-        return $"{baseUrl}{url}";
-    }
+    private static BulkSourceType ToApplication(SourceType sourceType) =>
+        sourceType switch
+        {
+            SourceType.None => BulkSourceType.None,
+            SourceType.Media => BulkSourceType.Media,
+            SourceType.Status => BulkSourceType.Status,
+            SourceType.Notifications => BulkSourceType.Notifications,
+            _ => BulkSourceType.None,
+        };
 }

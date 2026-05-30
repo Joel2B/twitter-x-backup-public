@@ -1,3 +1,4 @@
+using Backup.Application.Bulk;
 using Backup.Infrastructure.Bulk.Adapters;
 using Backup.Infrastructure.Bulk.Models;
 
@@ -5,7 +6,7 @@ namespace Backup.Tests;
 
 public class BulkSourceRouteProviderTests
 {
-    private readonly BulkSourceRouteProvider _sut = new();
+    private readonly BulkSourceRouteProvider _sut = new(new BulkSourceRouteService());
 
     [Fact]
     public void GetOrigin_ReturnsExpectedValues()
