@@ -26,6 +26,10 @@ public static class RuntimeInfrastructureServiceCollectionExtensions
     {
         services.AddBackupRunAdapters();
         services.AddScoped<
+            Backup.Application.BackupRun.IBackupRunExecutionMapper,
+            Backup.Application.BackupRun.BackupRunExecutionMapper
+        >();
+        services.AddScoped<
             Backup.Application.BackupRun.IBackupRunStepExecutor,
             Backup.Application.BackupRun.BackupRunStepExecutor
         >();

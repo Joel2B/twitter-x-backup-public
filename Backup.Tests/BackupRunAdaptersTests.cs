@@ -1,4 +1,5 @@
 using Backup.Application.BackupRun;
+using Backup.Application.BackupRun.Models;
 using Backup.Domain.BackupRun;
 using Backup.Infrastructure.BackupRun.Adapters;
 using Backup.Infrastructure.Posts.Abstractions.Services;
@@ -21,12 +22,13 @@ public class BackupRunAdaptersTests
             NullLogger<PostSourceRunnerAdapter>.Instance
         );
 
-        BackupRunSourcePlan source = new()
+        BackupRunSourceExecution execution = new()
         {
+            UserId = "user-123",
             SourceId = "Api.SearchTimeline",
             ApiId = "SearchTimeline",
             Count = 55,
-            Request = new BackupRunRequestPlan
+            Request = new BackupRunRequestExecution
             {
                 Url = "https://x.com/graphql",
                 Variables = new Dictionary<string, object?> { ["count"] = 20, ["cursor"] = "A1" },
@@ -36,7 +38,7 @@ public class BackupRunAdaptersTests
             },
         };
 
-        await runner.Run("user-123", source);
+        await runner.Run(execution);
 
         ApiContext context = Assert.Single(serviceA.DownloadCalls);
         Assert.Single(serviceB.DownloadCalls);
@@ -63,16 +65,16 @@ public class BackupRunAdaptersTests
             NullLogger<PostRecoveryRunnerAdapter>.Instance
         );
 
-        BackupRunUserPlan user = new()
+        BackupRunRecoveryExecution execution = new()
         {
             UserId = "user-42",
-            Api = new Dictionary<string, BackupRunApiPlan>
+            Api = new Dictionary<string, BackupRunApiExecution>
             {
-                ["TweetDetail"] = new BackupRunApiPlan
+                ["TweetDetail"] = new BackupRunApiExecution
                 {
                     Id = "TweetDetail",
                     Enabled = true,
-                    Request = new BackupRunRequestPlan
+                    Request = new BackupRunRequestExecution
                     {
                         Url = "https://x.com/graphql/tweet",
                         Variables = new Dictionary<string, object?> { ["focalTweetId"] = "100" },
@@ -82,12 +84,9 @@ public class BackupRunAdaptersTests
                     },
                 },
             },
-            Sources = [],
-            RunRecovery = true,
-            RunBulk = false,
         };
 
-        await runner.Run(user);
+        await runner.Run(execution);
 
         UsersContext context = Assert.Single(serviceA.RecoverCalls);
         Assert.Single(serviceB.RecoverCalls);

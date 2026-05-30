@@ -1,8 +1,10 @@
 using Backup.Application.BackupRun;
+using Backup.Application.BackupRun.Models;
 using Backup.Application.BackupRun.Ports;
-using Backup.Domain.BackupRun;
 using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Logging;
+using Backup.Infrastructure.Models.Config.Api;
+using Backup.Infrastructure.Models.Config.Request;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.BackupRun.Adapters;
@@ -17,14 +19,39 @@ public class PostRecoveryRunnerAdapter(
     private readonly IEnumerable<IPostService> _postServices = postServices;
     private readonly ILogger<PostRecoveryRunnerAdapter> _logger = logger;
 
-    public async Task Run(BackupRunUserPlan user)
+    public async Task Run(BackupRunRecoveryExecution execution)
     {
-        var userContext = BackupRunPlanMapper.ToUsersContext(user);
+        UsersContext userContext = new()
+        {
+            UserId = execution.UserId,
+            Api = execution.Api.ToDictionary(kvp => kvp.Key, kvp => ToApiConfig(kvp.Value)),
+        };
 
         await _stepExecutor.Run(
             _postServices.Select(service => new PostRecoveryStep(_logger, service, userContext))
         );
     }
+
+    private static ApiConfig ToApiConfig(BackupRunApiExecution api) =>
+        new()
+        {
+            Id = api.Id,
+            Enabled = api.Enabled,
+            Request = ToRequest(api.Request),
+        };
+
+    private static Request ToRequest(BackupRunRequestExecution request) =>
+        new()
+        {
+            Url = request.Url,
+            Query = new Query
+            {
+                Variables = request.Variables.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+                Features = request.Features.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+                FieldToggles = request.FieldToggles.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            },
+            Headers = request.Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+        };
 
     private sealed class PostRecoveryStep(
         ILogger<PostRecoveryRunnerAdapter> logger,

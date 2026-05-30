@@ -5,6 +5,7 @@ namespace Backup.Application.BackupRun;
 
 public class BackupRunService(
     IBackupRunPlanProvider planProvider,
+    IBackupRunExecutionMapper executionMapper,
     IPostSourceRunner postSourceRunner,
     IPostRecoveryRunner postRecoveryRunner,
     IBulkRunner bulkRunner,
@@ -13,6 +14,7 @@ public class BackupRunService(
 ) : IBackupRunService
 {
     private readonly IBackupRunPlanProvider _planProvider = planProvider;
+    private readonly IBackupRunExecutionMapper _executionMapper = executionMapper;
     private readonly IPostSourceRunner _postSourceRunner = postSourceRunner;
     private readonly IPostRecoveryRunner _postRecoveryRunner = postRecoveryRunner;
     private readonly IBulkRunner _bulkRunner = bulkRunner;
@@ -26,11 +28,11 @@ public class BackupRunService(
         foreach (BackupRunUserPlan user in plan.Users)
         {
             foreach (BackupRunSourcePlan source in user.Sources)
-                await _postSourceRunner.Run(user.UserId, source);
+                await _postSourceRunner.Run(_executionMapper.MapSource(user.UserId, source));
         }
 
         foreach (BackupRunUserPlan user in plan.Users.Where(user => user.RunRecovery))
-            await _postRecoveryRunner.Run(user);
+            await _postRecoveryRunner.Run(_executionMapper.MapRecovery(user));
 
         if (plan.IsBulkEnabled)
         {

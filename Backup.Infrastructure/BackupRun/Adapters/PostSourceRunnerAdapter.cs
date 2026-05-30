@@ -1,8 +1,10 @@
 using Backup.Application.BackupRun;
+using Backup.Application.BackupRun.Models;
 using Backup.Application.BackupRun.Ports;
-using Backup.Domain.BackupRun;
 using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Logging;
+using Backup.Infrastructure.Models.Config.Api;
+using Backup.Infrastructure.Models.Config.Request;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.BackupRun.Adapters;
@@ -17,9 +19,15 @@ public class PostSourceRunnerAdapter(
     private readonly IEnumerable<IPostService> _postServices = postServices;
     private readonly ILogger<PostSourceRunnerAdapter> _logger = logger;
 
-    public async Task Run(string userId, BackupRunSourcePlan source)
+    public async Task Run(BackupRunSourceExecution execution)
     {
-        var apiContext = BackupRunPlanMapper.ToApiContext(userId, source);
+        ApiContext apiContext = new()
+        {
+            Id = execution.ApiId,
+            Count = execution.Count,
+            UserId = execution.UserId,
+            Request = ToRequest(execution.Request),
+        };
 
         _logger.LogInfo("source: {source}", apiContext.Id);
 
@@ -27,6 +35,19 @@ public class PostSourceRunnerAdapter(
             _postServices.Select(service => new PostSourceStep(_logger, service, apiContext))
         );
     }
+
+    private static Request ToRequest(BackupRunRequestExecution request) =>
+        new()
+        {
+            Url = request.Url,
+            Query = new Query
+            {
+                Variables = request.Variables.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+                Features = request.Features.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+                FieldToggles = request.FieldToggles.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            },
+            Headers = request.Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+        };
 
     private sealed class PostSourceStep(
         ILogger<PostSourceRunnerAdapter> logger,
