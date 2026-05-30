@@ -8,22 +8,6 @@ public class DumpProgressPolicyServiceTests
     private readonly DumpProgressPolicyService _sut = new();
 
     [Fact]
-    public void EnsureCurrent_UsesExisting_WhenProvided()
-    {
-        string current = _sut.EnsureCurrent("2026.05.30-10.00.00", new DateTime(2026, 1, 1));
-
-        Assert.Equal("2026.05.30-10.00.00", current);
-    }
-
-    [Fact]
-    public void EnsureCurrent_Generates_WhenMissing()
-    {
-        string current = _sut.EnsureCurrent(null, new DateTime(2026, 5, 30, 4, 5, 6));
-
-        Assert.Equal("2026.05.30-04.05.06", current);
-    }
-
-    [Fact]
     public void AdvanceDirectoryIndex_Initializes_WhenIndexIsMinusOne()
     {
         DumpProgressState state = new()

@@ -25,7 +25,8 @@ public class LocalDumpData(
     IPartition _partition,
     IDumpProgressPolicyService dumpProgressPolicyService,
     IDumpIndexFilePolicyService dumpIndexFilePolicyService,
-    IDumpContextGuardService dumpContextGuardService
+    IDumpContextGuardService dumpContextGuardService,
+    IDumpSessionNamingPolicyService dumpSessionNamingPolicyService
 ) : IDumpDataStore
 {
     public string? Id { get; set; }
@@ -38,6 +39,8 @@ public class LocalDumpData(
     private readonly IDumpProgressPolicyService _dumpProgressPolicyService = dumpProgressPolicyService;
     private readonly IDumpIndexFilePolicyService _dumpIndexFilePolicyService = dumpIndexFilePolicyService;
     private readonly IDumpContextGuardService _dumpContextGuardService = dumpContextGuardService;
+    private readonly IDumpSessionNamingPolicyService _dumpSessionNamingPolicyService =
+        dumpSessionNamingPolicyService;
 
     private DumpData? _dumpData;
     private DumpData Data => _dumpData ?? throw new Exception("Dump data not initialized");
@@ -51,7 +54,8 @@ public class LocalDumpData(
     {
         DumpsData dumpsData = await _dumps.GetData();
 
-        string current = _dumpProgressPolicyService.EnsureCurrent(dumpsData.Current, DateTime.Now);
+        string current =
+            dumpsData.Current ?? _dumpSessionNamingPolicyService.CreateCurrentSessionName(DateTime.Now);
 
         if (dumpsData.Current != current)
         {
