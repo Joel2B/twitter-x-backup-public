@@ -17,6 +17,7 @@ public static class ConfigLoader
 {
     private static readonly ConfigNormalizationService _normalization = new();
     private static readonly ConfigApiFileSelectionService _apiFileSelection = new();
+    private static readonly ConfigDeserializationGuardService _deserializationGuard = new();
 
     public static string GetConfigDirectory() => Path.Combine(AppContext.BaseDirectory, "config");
 
@@ -242,8 +243,8 @@ public static class ConfigLoader
 
         IConfigurationRoot config = builder.Build();
 
-        return config.Get<T>()
-            ?? throw new Exception($"error deserializing config file '{fileName}'");
+        T? value = config.Get<T>();
+        return _deserializationGuard.RequireConfig(value, fileName);
     }
 
 }
