@@ -32,13 +32,12 @@ public class PostRecovery(
     private readonly IPostDownloader _downloader = _downloader;
     private readonly IPostDomainParser _parser = _parser;
 
-    private readonly CancellationTokenSource _tokenSource = new();
-
     public async Task Recovery(IPostDomainData postData, UsersContext context)
     {
         try
         {
-            List<DomainPost> posts = await Download(context);
+            using CancellationTokenSource tokenSource = new();
+            List<DomainPost> posts = await Download(context, tokenSource.Token);
 
             if (posts.Count == 0)
             {
@@ -58,7 +57,10 @@ public class PostRecovery(
         }
     }
 
-    private async Task<List<DomainPost>> Download(UsersContext context)
+    private async Task<List<DomainPost>> Download(
+        UsersContext context,
+        CancellationToken cancellationToken
+    )
     {
         List<DomainPost> posts = [];
         List<Logs>? logs = await _mediaLogger.GetErrors();
@@ -105,7 +107,7 @@ public class PostRecovery(
         {
             request.Query.Variables["focalTweetId"] = id;
 
-            string response = await _downloader.Download(request, _tokenSource.Token);
+            string response = await _downloader.Download(request, cancellationToken);
             ParseResult result = _parser.Parse(context.UserId, RecoveryOrigin, response);
 
             if (result.Posts.Count == 0)
