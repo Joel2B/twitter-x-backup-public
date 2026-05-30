@@ -1,6 +1,7 @@
-using System.Text.RegularExpressions;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
+using Backup.Application.Bulk;
+using Backup.Application.Bulk.Models;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Bulk.Models;
 using Backup.Infrastructure.Models.Config.Data;
@@ -12,13 +13,15 @@ namespace Backup.Infrastructure.Bulk.Data;
 public class LocalBulkSourceData(
     ILogger<LocalBulkSourceData> _logger,
     StorageBulk _config,
-    IPartition _partition
+    IPartition _partition,
+    IBulkSourceExtractionService bulkSourceExtractionService
 ) : IBulkSourceDataStore, ISetup
 {
     public bool IsDefault { get; set; }
     private readonly ILogger<LocalBulkSourceData> _logger = _logger;
     private readonly StorageBulk _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly IBulkSourceExtractionService _bulkSourceExtractionService = bulkSourceExtractionService;
 
     public Task Setup()
     {
@@ -49,58 +52,27 @@ public class LocalBulkSourceData(
     {
         string path = GetPathSources();
         string[] files = Directory.GetFiles(path);
-
-        Regex rx = new(
-            @"(?<link>https?:\/\/(?:www\.)?x\.com\/(?<user>[^\/\s?#""'\\<>]+)(?:\/(?<type>[^\/\s?#""'\\<>]+))?(?:\/[^\s""'<>\\]*)?(?:\?[^\s""'<>\\#]*)?(?:\#[^\s""'<>\\]*)?)(?=[\s""'<>),;]|$)",
-            RegexOptions.IgnoreCase
-                | RegexOptions.Compiled
-                | RegexOptions.Multiline
-                | RegexOptions.ECMAScript
-        );
-
-        Dictionary<string, Source> data = [];
-
+        List<string> lines = [];
         foreach (string file in files)
-        {
             await foreach (string line in File.ReadLinesAsync(file))
-            {
-                foreach (Match match in rx.Matches(line))
-                {
-                    if (!match.Success)
-                        continue;
+                lines.Add(line);
 
-                    string link = match.Groups["link"].Value;
-                    string user = match.Groups["user"].Value;
-                    string type = match.Groups["type"].Value;
-
-                    if (
-                        string.IsNullOrEmpty(link)
-                        || string.IsNullOrEmpty(user)
-                        || string.IsNullOrEmpty(type)
-                    )
-                        continue;
-
-                    Source source = new()
-                    {
-                        Link = link,
-                        UserName = user,
-                        Type = GetType(type),
-                    };
-
-                    data.TryAdd(user, source);
-                }
-            }
-        }
-
-        return [.. data.Values];
+        IReadOnlyList<BulkSourceLinkItem> extracted = _bulkSourceExtractionService.Extract(lines);
+        return [.. extracted.Select(ToSource)];
     }
 
-    private static SourceType GetType(string type) =>
-        type switch
+    private static Source ToSource(BulkSourceLinkItem item) =>
+        new()
         {
-            "media" => SourceType.Media,
-            "status" => SourceType.Status,
-            _ => SourceType.None,
+            Link = item.Link,
+            UserName = item.UserName,
+            Type = item.Type switch
+            {
+                BulkSourceType.Media => SourceType.Media,
+                BulkSourceType.Status => SourceType.Status,
+                BulkSourceType.Notifications => SourceType.Notifications,
+                _ => SourceType.None,
+            },
         };
 
     private void Replicate()
