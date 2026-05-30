@@ -20,6 +20,7 @@ public partial class BulkService(
     IBulkSourceData _bulkSourceData,
     IBulkData _bulkData,
     IBulkRequestFactory bulkRequestFactory,
+    IBulkSourceRouteProvider bulkSourceRouteProvider,
     IPostDownloader _downloader,
     IPostDomainParser _parser
 ) : IBulkService
@@ -31,6 +32,7 @@ public partial class BulkService(
     private readonly IBulkSourceData _bulkSourceData = _bulkSourceData;
     private readonly IBulkData _bulkData = _bulkData;
     private readonly IBulkRequestFactory _bulkRequestFactory = bulkRequestFactory;
+    private readonly IBulkSourceRouteProvider _bulkSourceRouteProvider = bulkSourceRouteProvider;
     private readonly IPostDownloader _downloader = _downloader;
     private readonly IPostDomainParser _parser = _parser;
 
@@ -64,7 +66,7 @@ public partial class BulkService(
         }
 
         request.Query.Variables["screen_name"] = userName;
-        request.Headers["Referer"] = GetReferer(SourceType.Notifications);
+        request.Headers["Referer"] = _bulkSourceRouteProvider.GetReferer(SourceType.Notifications);
 
         string response = "";
 
@@ -100,7 +102,7 @@ public partial class BulkService(
         request.Query.Variables["count"] = count;
         request.Query.Variables["cursor"] = cursor;
 
-        request.Headers["Referer"] = GetReferer(SourceType.Notifications);
+        request.Headers["Referer"] = _bulkSourceRouteProvider.GetReferer(SourceType.Notifications);
 
         string response = "";
 
@@ -120,32 +122,6 @@ public partial class BulkService(
         }
 
         return null;
-    }
-
-    private static string? GetType(SourceType sourceType) =>
-        sourceType switch
-        {
-            SourceType.Media => "media",
-            SourceType.Notifications => "notifications",
-            _ => null,
-        };
-
-    private static string GetReferer(
-        SourceType sourceType = SourceType.Notifications,
-        string? userName = null
-    )
-    {
-        string baseUrl = "https://x.com/";
-        string? type = GetType(sourceType);
-        string url = "{type}";
-
-        if (userName is not null)
-            url = "{userName}/{type}";
-
-        url = url.Replace("{userName}", userName).Replace("{type}", type);
-        url = $"{baseUrl}{url}";
-
-        return url;
     }
 }
 

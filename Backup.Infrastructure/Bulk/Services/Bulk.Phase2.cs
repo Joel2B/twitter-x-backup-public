@@ -21,7 +21,7 @@ public partial class BulkService
             .Take(_config.Bulk.UsersPerPhase2)
             .ToList();
 
-        string? origin = GetType(SourceType.Media);
+        string? origin = _bulkSourceRouteProvider.GetOrigin(SourceType.Media);
 
         if (origin is null)
         {

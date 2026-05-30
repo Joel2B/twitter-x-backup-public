@@ -25,6 +25,7 @@ public static class RuntimeInfrastructureServiceCollectionExtensions
         services.AddSingleton<IZipWriterFactory, ZipWriterFactory>();
         services.AddSingleton<IBandwidthLimiter, BandwidthLimiter>();
         services.AddScoped<IBulkRequestFactory, BulkRequestFactory>();
+        services.AddScoped<IBulkSourceRouteProvider, BulkSourceRouteProvider>();
         services.AddScoped<IPostService, PostService>();
         services.AddScoped<IMediaService, MediaService>();
         services.AddScoped<IBulkService, BulkService>();

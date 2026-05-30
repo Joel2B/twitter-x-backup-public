@@ -44,7 +44,7 @@ public partial class BulkService
 
         List<BulkData> bulksFiltered = query.ToList();
 
-        string? origin = GetType(SourceType.Media);
+        string? origin = _bulkSourceRouteProvider.GetOrigin(SourceType.Media);
 
         if (origin is null)
         {
