@@ -7,7 +7,7 @@ using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.Infrastructure.Services.Posts;
+namespace Backup.Infrastructure.Posts.Adapters;
 
 public class PostDownloaderHttp(ILogger<PostDownloaderHttp> _logger, AppConfig _config)
     : IPostDownloader

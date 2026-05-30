@@ -10,7 +10,7 @@ using ParseResult = Backup.Application.Posts.Models.ParsedPostBatch;
 using ParseUser = Backup.Domain.Posts.ParseUser;
 using PostUser = Backup.Domain.Posts.PostUser;
 
-namespace Backup.Infrastructure.Services.Posts;
+namespace Backup.Infrastructure.Posts.Adapters;
 
 public class PostParser(ILogger<PostParser> _logger) : IPostParser
 {
