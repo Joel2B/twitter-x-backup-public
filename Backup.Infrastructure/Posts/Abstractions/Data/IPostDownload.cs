@@ -5,6 +5,6 @@ namespace Backup.Infrastructure.Models.Posts;
 
 public interface IPostDownload
 {
-    public Task Download(IPostData postData, ApiContext context);
+    public Task Download(IPostDomainData postData, ApiContext context);
 }
 

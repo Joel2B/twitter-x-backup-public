@@ -8,6 +8,7 @@ using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.ApiRequest;
 using Backup.Infrastructure.Models.Media.Logging;
 using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -33,11 +34,11 @@ public class PostRecovery(
 
     private readonly CancellationTokenSource _tokenSource = new();
 
-    public async Task Recovery(IPostData postData, UsersContext context)
+    public async Task Recovery(IPostDomainData postData, UsersContext context)
     {
         try
         {
-            List<Post> posts = await Download(context);
+            List<Backup.Domain.Posts.Post> posts = await Download(context);
 
             if (posts.Count == 0)
             {
@@ -57,9 +58,9 @@ public class PostRecovery(
         }
     }
 
-    private async Task<List<Post>> Download(UsersContext context)
+    private async Task<List<Backup.Domain.Posts.Post>> Download(UsersContext context)
     {
-        List<Post> posts = [];
+        List<Backup.Domain.Posts.Post> posts = [];
         List<Logs>? logs = await _mediaLogger.GetErrors();
 
         if (logs is null)
@@ -110,7 +111,7 @@ public class PostRecovery(
             if (result.Posts.Count == 0)
                 continue;
 
-            posts.Add(result.Posts[0]);
+            posts.Add(PostReplicationMapper.ToDomain(result.Posts[0]));
             await _mediaLogger.RemoveErrors([.. logs.Where(o => o.Id == result.Posts[0].Id)]);
 
             _logger.LogInformation("post {post} downloaded", id);

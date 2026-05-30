@@ -5,6 +5,6 @@ namespace Backup.Infrastructure.Interfaces.Services.Posts;
 
 public interface IPostRecovery
 {
-    public Task Recovery(IPostData postData, UsersContext context);
+    public Task Recovery(IPostDomainData postData, UsersContext context);
 }
 

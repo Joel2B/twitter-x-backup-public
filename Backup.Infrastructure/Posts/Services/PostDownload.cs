@@ -5,6 +5,7 @@ using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Dump;
 using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Posts;
@@ -25,8 +26,8 @@ public class PostDownload(
     private readonly IPostLogger _postLogger = _postLogger;
     private readonly IPostParser _parser = _parser;
 
-    private IPostData? _postData;
-    private IPostData PostData => _postData ?? throw new Exception("media data not initialized");
+    private IPostDomainData? _postData;
+    private IPostDomainData PostData => _postData ?? throw new Exception("media data not initialized");
 
     private ApiContext? _context;
 
@@ -36,7 +37,7 @@ public class PostDownload(
 
     private readonly CancellationTokenSource _tokenSource = new();
 
-    public async Task Download(IPostData postData, ApiContext context)
+    public async Task Download(IPostDomainData postData, ApiContext context)
     {
         _postData = postData;
         _context = context;
@@ -148,7 +149,11 @@ public class PostDownload(
                     break;
                 }
 
-                await PostData.AddPosts(UserId, Context.Id, result.Posts);
+                await PostData.AddPosts(
+                    UserId,
+                    Context.Id,
+                    result.Posts.Select(PostReplicationMapper.ToDomain).ToList()
+                );
 
                 _downloadFlowService.ApplySuccess(plan, result.NextCursor!);
                 Context.Request.Query.Variables["cursor"] = plan.Cursor!;

@@ -8,6 +8,7 @@ using Backup.Infrastructure.Models.Config.Data.Bulk;
 using Backup.Infrastructure.Models.Config.Data.Dump;
 using Backup.Infrastructure.Models.Dump;
 using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -184,7 +185,7 @@ public class LocalDumpData(
         await File.WriteAllTextAsync(path, content);
     }
 
-    public async Task Flush(IPostData postData, string userId, ApiContext context)
+    public async Task Flush(IPostDomainData postData, string userId, ApiContext context)
     {
         _logger.LogInformation("dumping data");
 
@@ -216,7 +217,11 @@ public class LocalDumpData(
 
         string sourceId = Data.Type ?? context.Id;
 
-        await postData.AddPosts(userId, sourceId, dumpPosts);
+        await postData.AddPosts(
+            userId,
+            sourceId,
+            dumpPosts.Select(PostReplicationMapper.ToDomain).ToList()
+        );
         _logger.LogInformation("{posts} posts loaded from dump", dumpPosts.Count);
 
         HashSet<string> newIds = [.. dumpPosts.Select(post => post.Id)];

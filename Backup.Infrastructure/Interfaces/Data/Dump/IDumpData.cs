@@ -11,6 +11,6 @@ public interface IDumpData
 
     public Task Save(string response, List<Post> posts, string cursor, ApiContext context);
 
-    public Task Flush(IPostData postData, string userId, ApiContext context);
+    public Task Flush(IPostDomainData postData, string userId, ApiContext context);
 }
 

@@ -43,7 +43,7 @@ public class DumpDataMultiStore(IEnumerable<IDumpDataStore> stores) : IDumpData
             await store.Save(response, posts, cursor, context);
     }
 
-    public Task Flush(IPostData postData, string userId, ApiContext context) =>
+    public Task Flush(IPostDomainData postData, string userId, ApiContext context) =>
         Primary.Flush(postData, userId, context);
 }
 
