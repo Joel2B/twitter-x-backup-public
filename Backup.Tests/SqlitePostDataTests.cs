@@ -291,7 +291,8 @@ public class SqlitePostDataTests
             partition,
             new PostMergeService(),
             new PostSoftDeleteSelectionService(),
-            new PostSnapshotNormalizationService()
+            new PostSnapshotNormalizationService(),
+            new PostMediaInputsCompositionService()
         );
         return (sut, root);
     }

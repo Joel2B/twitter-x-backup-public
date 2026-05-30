@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backup.Infrastructure.Posts.Data.Sqlite;
@@ -69,27 +70,19 @@ public partial class SqlitePostData
             entities.Select(entity => entity.Id)
         );
 
-        List<MediaInput> current = entities
-            .Select(entity => ToMediaInput(entity, GetDeleted(deletedById, entity.Id)))
+        List<Post> posts = entities
+            .Select(entity => ToModel(entity, GetDeleted(deletedById, entity.Id)))
             .ToList();
 
-        List<MediaInput> history = [];
+        List<Backup.Domain.Posts.Post> domainPosts = posts
+            .Select(PostReplicationMapper.ToDomain)
+            .ToList();
 
-        foreach (PostEntity entity in entities)
-        {
-            if (entity.Changes.Count == 0)
-                continue;
+        IReadOnlyList<Backup.Domain.Posts.MediaInput> composed = _postMediaInputsCompositionService.Compose(
+            domainPosts
+        );
 
-            Post post = ToModel(entity, GetDeleted(deletedById, entity.Id));
-
-            history.AddRange(
-                post.Changes.Where(change => change.Data is not null)
-                    .Select(change => ToMediaInput(change.Data!))
-            );
-        }
-
-        current.AddRange(history);
-        return current;
+        return composed.Select(PostReplicationMapper.ToApp).ToList();
     }
 
     public async Task<Dictionary<string, string>> GetHashesById()

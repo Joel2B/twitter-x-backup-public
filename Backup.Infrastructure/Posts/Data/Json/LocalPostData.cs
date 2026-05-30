@@ -19,7 +19,8 @@ public partial class LocalPostData(
     IPartition _partition,
     IPostMergeService postMergeService,
     IPostSoftDeleteSelectionService postSoftDeleteSelectionService,
-    IPostSnapshotNormalizationService postSnapshotNormalizationService
+    IPostSnapshotNormalizationService postSnapshotNormalizationService,
+    IPostMediaInputsCompositionService postMediaInputsCompositionService
 ) : IPostDataStore, ISetup
 {
     public string? Id { get; set; }
@@ -34,6 +35,8 @@ public partial class LocalPostData(
         postSoftDeleteSelectionService;
     private readonly IPostSnapshotNormalizationService _postSnapshotNormalizationService =
         postSnapshotNormalizationService;
+    private readonly IPostMediaInputsCompositionService _postMediaInputsCompositionService =
+        postMediaInputsCompositionService;
 
     private Dictionary<string, Post>? _postsCache = null;
     private Dictionary<string, PostMetaRow>? _postMetaCache = null;
@@ -233,16 +236,15 @@ public partial class LocalPostData(
         if (posts is null)
             return null;
 
-        List<MediaInput> current = [.. posts.Values.Select(ToMediaInput)];
-
-        List<MediaInput> history = posts
-            .Values.SelectMany(post => post.Changes)
-            .Where(change => change.Data is not null)
-            .Select(change => ToMediaInput(change.Data!))
+        List<Backup.Domain.Posts.Post> domainPosts = posts
+            .Values.Select(PostReplicationMapper.ToDomain)
             .ToList();
 
-        current.AddRange(history);
-        return current;
+        IReadOnlyList<Backup.Domain.Posts.MediaInput> composed = _postMediaInputsCompositionService.Compose(
+            domainPosts
+        );
+
+        return composed.Select(PostReplicationMapper.ToApp).ToList();
     }
 
     public async Task<Dictionary<string, int>> GetPostCountsByProfileIds(

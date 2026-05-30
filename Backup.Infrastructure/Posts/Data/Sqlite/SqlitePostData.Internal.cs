@@ -124,39 +124,6 @@ public partial class SqlitePostData
     private static bool GetDeleted(IReadOnlyDictionary<string, bool> deletedById, string id) =>
         deletedById.TryGetValue(id, out bool deleted) && deleted;
 
-    private static MediaInput ToMediaInput(PostEntity entity, bool deleted) =>
-        new()
-        {
-            Id = entity.Id,
-            Profile = new()
-            {
-                Id = entity.Profile.Id,
-                UserName = entity.Profile.UserName,
-                Name = entity.Profile.Name,
-                BannerUrl = entity.Profile.BannerUrl,
-                ImageUrl = entity.Profile.ImageUrl,
-                Following = entity.Profile.Following,
-                Count = entity.Profile.CountMedia.HasValue
-                    ? new PostCount { Media = entity.Profile.CountMedia }
-                    : null,
-            },
-            Medias = entity
-                .Medias.OrderBy(o => o.Ordinal)
-                .Select(ToModel)
-                .Select(media => media.Clone())
-                .ToList(),
-            Deleted = deleted,
-        };
-
-    private static MediaInput ToMediaInput(PostData data) =>
-        new()
-        {
-            Id = data.Id,
-            Profile = data.Profile.Clone(),
-            Medias = data.Medias?.Select(media => media.Clone()).ToList(),
-            Deleted = data.Deleted,
-        };
-
     private static async Task DeletePostGraphByIds(
         PostsDbContext db,
         IReadOnlyCollection<string> ids
