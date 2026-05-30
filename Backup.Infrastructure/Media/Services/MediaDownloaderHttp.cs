@@ -16,6 +16,7 @@ public class MediaDownloaderHttp(
     AppConfig _config,
     IMediaDownloadExceptionPolicyService mediaDownloadExceptionPolicyService,
     IMediaDownloadPolicyService mediaDownloadPolicyService,
+    IMediaDownloadStreamingPolicyService mediaDownloadStreamingPolicyService,
     IProxyProvider proxyProvider,
     IBandwidthLimiter bandwidthLimiter
 ) : IMediaDownloader
@@ -26,6 +27,8 @@ public class MediaDownloaderHttp(
         mediaDownloadExceptionPolicyService;
     private readonly IMediaDownloadPolicyService _mediaDownloadPolicyService =
         mediaDownloadPolicyService;
+    private readonly IMediaDownloadStreamingPolicyService _mediaDownloadStreamingPolicyService =
+        mediaDownloadStreamingPolicyService;
 
     private readonly IProxyProvider _proxy = proxyProvider;
     private readonly IBandwidthLimiter _bandwidthLimiter = bandwidthLimiter;
@@ -88,14 +91,12 @@ public class MediaDownloaderHttp(
                 else
                     stream = mediaData.GetTempStream();
 
-                const int BufferSize = 128 * 1024;
-
-                long progressThreshold = 10L * 1024 * 1024;
-                byte[] buffer = new byte[BufferSize];
+                Backup.Application.Media.Models.MediaDownloadStreamingSettings streamingSettings =
+                    _mediaDownloadStreamingPolicyService.GetSettings();
+                byte[] buffer = new byte[streamingSettings.BufferSizeBytes];
                 long totalRead = 0;
                 int read;
-                const int StepPercent = 10;
-                int nextPercent = StepPercent;
+                int nextPercent = streamingSettings.ProgressStepPercent;
 
                 async Task<int> Read()
                 {
@@ -103,7 +104,7 @@ public class MediaDownloaderHttp(
                         CancellationTokenSource.CreateLinkedTokenSource(token);
 
                     Task<int> readTask = content
-                        .ReadAsync(buffer.AsMemory(0, BufferSize), cts.Token)
+                        .ReadAsync(buffer.AsMemory(0, streamingSettings.BufferSizeBytes), cts.Token)
                         .AsTask();
 
                     Task delayTask = Task.Delay(_config.Downloads.NoDataTimeout, token);
@@ -114,7 +115,9 @@ public class MediaDownloaderHttp(
                         cts.Cancel();
 
                         throw new TaskCanceledException(
-                            $"No data received in {_config.Downloads.NoDataTimeout} ms."
+                            _mediaDownloadStreamingPolicyService.BuildNoDataTimeoutMessage(
+                                _config.Downloads.NoDataTimeout
+                            )
                         );
                     }
 
@@ -125,7 +128,7 @@ public class MediaDownloaderHttp(
                     knownContentLength >= 0
                     && _mediaDownloadPolicyService.ShouldReportProgress(
                         contentLength,
-                        progressThreshold
+                        streamingSettings.ProgressThresholdBytes
                     )
                 )
                     while ((read = await Read()) > 0)
@@ -148,7 +151,7 @@ public class MediaDownloaderHttp(
                                 UtilsStorage.FormatBytes(knownContentLength)
                             );
 
-                            nextPercent += StepPercent;
+                            nextPercent += streamingSettings.ProgressStepPercent;
                         }
                     }
                 else
