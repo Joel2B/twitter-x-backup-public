@@ -20,7 +20,8 @@ public class ProxyProvider(
     IProxyData _data,
     IProxyRuntimePolicyService proxyRuntimePolicyService,
     IProxyHealthCheckPolicyService proxyHealthCheckPolicyService,
-    IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService
+    IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService,
+    IProxyConnectionWindowPolicyService proxyConnectionWindowPolicyService
 )
     : IProxyProvider,
         ISetup,
@@ -34,6 +35,8 @@ public class ProxyProvider(
         proxyHealthCheckPolicyService;
     private readonly IProxyHttpClientHeaderPolicyService _proxyHttpClientHeaderPolicyService =
         proxyHttpClientHeaderPolicyService;
+    private readonly IProxyConnectionWindowPolicyService _proxyConnectionWindowPolicyService =
+        proxyConnectionWindowPolicyService;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
     private int _proxyIndex = 0;
@@ -277,11 +280,10 @@ public class ProxyProvider(
 
         lock (proxy)
         {
-            string format = "yyyy-MM-dd, HH";
-            string date = DateTime.Now.ToString(format);
+            DateTime now = DateTime.Now;
 
             Connection? conn = proxy.Connections.LastOrDefault(conn =>
-                conn.Date.ToString(format) == date
+                _proxyConnectionWindowPolicyService.IsSameWindow(conn.Date, now)
             );
 
             if (conn is null)
