@@ -6,7 +6,7 @@ using Backup.Infrastructure.Models.Config.Data.Dump;
 using Backup.Infrastructure.Models.Dump;
 using Newtonsoft.Json;
 
-namespace Backup.Infrastructure.Data.Posts;
+namespace Backup.Infrastructure.Data.Dump;
 
 public class LocalDumpsData(StorageDump _config, IPartition _partition) : IDumpsDataStore, ISetup
 {

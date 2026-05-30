@@ -14,7 +14,7 @@ using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
-namespace Backup.Infrastructure.Data.Posts;
+namespace Backup.Infrastructure.Data.Dump;
 
 public class LocalDumpData(
     ILogger<LocalDumpData> _logger,

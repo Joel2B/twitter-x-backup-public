@@ -2,7 +2,7 @@ using Backup.Infrastructure.Core.Stores;
 using Backup.Infrastructure.Interfaces.Data.Dump;
 using Backup.Infrastructure.Models.Dump;
 
-namespace Backup.Infrastructure.Data.Posts;
+namespace Backup.Infrastructure.Data.Dump;
 
 public class DumpsDataMultiStore(IEnumerable<IDumpsDataStore> stores) : IDumpsData
 {

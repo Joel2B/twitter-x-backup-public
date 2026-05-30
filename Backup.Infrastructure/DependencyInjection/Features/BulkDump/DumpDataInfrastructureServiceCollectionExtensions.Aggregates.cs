@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Data.Posts;
+using Backup.Infrastructure.Data.Dump;
 using Backup.Infrastructure.Interfaces.Data.Dump;
 using Microsoft.Extensions.DependencyInjection;
 

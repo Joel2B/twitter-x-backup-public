@@ -5,7 +5,7 @@ using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Dump;
 using Backup.Infrastructure.Models.Posts;
 
-namespace Backup.Infrastructure.Data.Posts;
+namespace Backup.Infrastructure.Data.Dump;
 
 public class DumpDataMultiStore(IEnumerable<IDumpDataStore> stores) : IDumpData
 {
