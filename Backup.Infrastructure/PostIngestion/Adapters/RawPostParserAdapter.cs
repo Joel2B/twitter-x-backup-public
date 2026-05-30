@@ -10,11 +10,7 @@ public class RawPostParserAdapter(IPostDomainParser postParser) : IRawPostParser
 
     public RawPostParseResult Parse(string userId, string origin, string rawRequestBody)
     {
-        Backup.Infrastructure.Models.Posts.DomainParseResult parsed = _postParser.Parse(
-            userId,
-            origin,
-            rawRequestBody
-        );
+        Backup.Domain.Posts.ParseResult parsed = _postParser.Parse(userId, origin, rawRequestBody);
         return new RawPostParseResult(parsed.Posts, parsed.NextCursor);
     }
 }

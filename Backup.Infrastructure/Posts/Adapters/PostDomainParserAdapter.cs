@@ -1,24 +1,32 @@
+using Backup.Application.Posts;
+using Backup.Domain.Posts;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 
 namespace Backup.Infrastructure.Posts.Adapters;
 
-public sealed class PostDomainParserAdapter(IPostParser parser) : IPostDomainParser
+public sealed class PostDomainParserAdapter(IPostParser parser, IPostIndexingService postIndexingService)
+    : IPostDomainParser
 {
     private readonly IPostParser _parser = parser;
+    private readonly IPostIndexingService _postIndexingService = postIndexingService;
 
-    public Backup.Infrastructure.Models.Posts.DomainParseResult Parse(
-        string userId,
-        string origin,
-        string response
-    )
+    public ParseResult Parse(string userId, string origin, string response)
     {
         Backup.Infrastructure.Models.Posts.ParseResult parsed = _parser.Parse(userId, origin, response);
-        return new Backup.Infrastructure.Models.Posts.DomainParseResult(
-            parsed.Posts.Select(PostReplicationMapper.ToDomain).ToList(),
-            parsed.NextCursor
-        );
+        List<Post> posts = parsed.Posts.Select(PostReplicationMapper.ToDomain).ToList();
+        _postIndexingService.ApplySequenceIndex(posts, userId, origin);
+        return new ParseResult(posts, parsed.NextCursor);
     }
 
-    public Backup.Infrastructure.Models.Posts.ParseUser ParseUser(string response) =>
-        _parser.ParseUser(response);
+    public ParseUser ParseUser(string response)
+    {
+        Backup.Infrastructure.Models.Posts.ParseUser parsed = _parser.ParseUser(response);
+
+        if (parsed.User is null)
+            return new ParseUser(null);
+
+        return new ParseUser(
+            new PostUser { Id = parsed.User.Id, MediaCount = parsed.User.MediaCount }
+        );
+    }
 }

@@ -1,4 +1,5 @@
 using Backup.Application.PostIngestion.Ports;
+using Backup.Application.Posts;
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Posts.Adapters;
@@ -12,8 +13,12 @@ public static class PostIngestionAdaptersServiceCollectionExtensions
     public static IServiceCollection AddPostIngestionAdapters(this IServiceCollection services)
     {
         services.TryAddScoped<IPostDomainParser>(sp =>
-            new PostDomainParserAdapter(sp.GetRequiredService<IPostParser>())
+            new PostDomainParserAdapter(
+                sp.GetRequiredService<IPostParser>(),
+                sp.GetRequiredService<IPostIndexingService>()
+            )
         );
+        services.TryAddScoped<IPostIndexingService, PostIndexingService>();
         services.TryAddScoped<IPostDomainData>(sp =>
         {
             IPostData postData = sp.GetRequiredService<IPostData>();

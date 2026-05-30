@@ -51,18 +51,6 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
                 );
             }
 
-        for (int i = 0; i < tweets.Count; i++)
-        {
-            IndexData index = new()
-            {
-                Previous = i == 0 ? null : tweets[i - 1].Id,
-                Next = i == tweets.Count - 1 ? null : tweets[i + 1].Id,
-            };
-
-            tweets[i].Index[userId] = [];
-            tweets[i].Index[userId][origin] = index;
-        }
-
         string? cursor = GetCursor(response);
 
         return new ParseResult(tweets, cursor);

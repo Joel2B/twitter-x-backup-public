@@ -6,8 +6,9 @@ using Backup.Infrastructure.Models.Bulk;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.ApiRequest;
-using Backup.Infrastructure.Models.Posts;
 using Microsoft.Extensions.Logging;
+using ParseUser = Backup.Domain.Posts.ParseUser;
+using ParseResult = Backup.Domain.Posts.ParseResult;
 
 namespace Backup.Infrastructure.Services.Bulk;
 
@@ -77,7 +78,7 @@ public partial class BulkService(
         return null;
     }
 
-    private async Task<DomainParseResult?> GetUserMedia(
+    private async Task<ParseResult?> GetUserMedia(
         string id,
         string origin,
         int count,
@@ -103,7 +104,7 @@ public partial class BulkService(
         try
         {
             response = await _downloader.Download(request, _tokenSource.Token);
-            DomainParseResult parseResult = _parser.Parse(id, origin, response);
+            ParseResult parseResult = _parser.Parse(id, origin, response);
 
             if (parseResult.Posts.Count == 0)
                 _logger.LogInformation("response: {response}", response);

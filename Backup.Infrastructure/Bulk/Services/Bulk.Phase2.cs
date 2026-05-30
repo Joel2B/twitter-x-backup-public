@@ -1,7 +1,7 @@
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Models.Bulk;
-using Backup.Infrastructure.Models.Posts;
 using Microsoft.Extensions.Logging;
+using ParseResult = Backup.Domain.Posts.ParseResult;
 
 namespace Backup.Infrastructure.Services.Bulk;
 
@@ -59,7 +59,7 @@ public partial class BulkService
                 break;
             }
 
-            DomainParseResult? result = await GetUserMedia(
+            ParseResult? result = await GetUserMedia(
                 bulk.User.Id ?? throw new Exception(),
                 origin,
                 _config.Bulk.MediaPerApi,

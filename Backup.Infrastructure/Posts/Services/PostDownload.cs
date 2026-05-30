@@ -7,6 +7,7 @@ using Backup.Infrastructure.Models.Dump;
 using Backup.Infrastructure.Models.Posts;
 using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
+using DomainParseResult = Backup.Domain.Posts.ParseResult;
 
 namespace Backup.Infrastructure.Services.Posts;
 

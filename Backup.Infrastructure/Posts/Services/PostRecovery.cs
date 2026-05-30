@@ -7,9 +7,9 @@ using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.ApiRequest;
 using Backup.Infrastructure.Models.Media.Logging;
-using Backup.Infrastructure.Models.Posts;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using ParseResult = Backup.Domain.Posts.ParseResult;
 
 namespace Backup.Infrastructure.Services.Posts;
 
@@ -105,7 +105,7 @@ public class PostRecovery(
             request.Query.Variables["focalTweetId"] = id;
 
             string response = await _downloader.Download(request, _tokenSource.Token);
-            DomainParseResult result = _parser.Parse(context.UserId, RecoveryOrigin, response);
+            ParseResult result = _parser.Parse(context.UserId, RecoveryOrigin, response);
 
             if (result.Posts.Count == 0)
                 continue;

@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Models.Bulk;
-using Backup.Infrastructure.Models.Posts;
 using Microsoft.Extensions.Logging;
+using ParseUser = Backup.Domain.Posts.ParseUser;
 
 namespace Backup.Infrastructure.Services.Bulk;
 
