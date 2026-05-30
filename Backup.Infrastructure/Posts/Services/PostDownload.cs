@@ -15,7 +15,7 @@ public class PostDownload(
     IPostDownloadFlowService downloadFlowService,
     IPostDownloader _downloader,
     IPostLogger _postLogger,
-    IPostParser _parser,
+    IPostDomainParser _parser,
     IDumpData _dump
 ) : IPostDownload
 {
@@ -24,7 +24,7 @@ public class PostDownload(
     private readonly IPostDownloader _downloader = _downloader;
 
     private readonly IPostLogger _postLogger = _postLogger;
-    private readonly IPostParser _parser = _parser;
+    private readonly IPostDomainParser _parser = _parser;
 
     private IPostDomainData? _postData;
     private IPostDomainData PostData => _postData ?? throw new Exception("media data not initialized");
@@ -92,7 +92,7 @@ public class PostDownload(
                 const int maxAttempts = 3;
                 int attemptCount = 0;
 
-                ParseResult result = new([], null);
+                DomainParseResult result = new([], null);
                 string response = "";
 
                 while (true)
@@ -144,7 +144,12 @@ public class PostDownload(
                     }
 
                     if (data is not null)
-                        await _dump.Save(response, result.Posts, result.NextCursor!, Context);
+                        await _dump.Save(
+                            response,
+                            result.Posts.Select(PostReplicationMapper.ToApp).ToList(),
+                            result.NextCursor!,
+                            Context
+                        );
 
                     break;
                 }
@@ -152,7 +157,7 @@ public class PostDownload(
                 await PostData.AddPosts(
                     UserId,
                     Context.Id,
-                    result.Posts.Select(PostReplicationMapper.ToDomain).ToList()
+                    result.Posts
                 );
 
                 _downloadFlowService.ApplySuccess(plan, result.NextCursor!);

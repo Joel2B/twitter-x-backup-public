@@ -8,7 +8,6 @@ using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.ApiRequest;
 using Backup.Infrastructure.Models.Media.Logging;
 using Backup.Infrastructure.Models.Posts;
-using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -20,7 +19,7 @@ public class PostRecovery(
     IPostRecoverySelectionService recoverySelectionService,
     IMediaLogger _mediaLogger,
     IPostDownloader _downloader,
-    IPostParser _parser
+    IPostDomainParser _parser
 ) : IPostRecovery
 {
     private const string RecoveryOrigin = "recovery";
@@ -30,7 +29,7 @@ public class PostRecovery(
     private readonly IPostRecoverySelectionService _recoverySelectionService = recoverySelectionService;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
     private readonly IPostDownloader _downloader = _downloader;
-    private readonly IPostParser _parser = _parser;
+    private readonly IPostDomainParser _parser = _parser;
 
     private readonly CancellationTokenSource _tokenSource = new();
 
@@ -106,12 +105,12 @@ public class PostRecovery(
             request.Query.Variables["focalTweetId"] = id;
 
             string response = await _downloader.Download(request, _tokenSource.Token);
-            ParseResult result = _parser.Parse(context.UserId, RecoveryOrigin, response);
+            DomainParseResult result = _parser.Parse(context.UserId, RecoveryOrigin, response);
 
             if (result.Posts.Count == 0)
                 continue;
 
-            posts.Add(PostReplicationMapper.ToDomain(result.Posts[0]));
+            posts.Add(result.Posts[0]);
             await _mediaLogger.RemoveErrors([.. logs.Where(o => o.Id == result.Posts[0].Id)]);
 
             _logger.LogInformation("post {post} downloaded", id);

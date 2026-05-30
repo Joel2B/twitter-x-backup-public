@@ -7,7 +7,6 @@ using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.ApiRequest;
 using Backup.Infrastructure.Models.Posts;
-using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Bulk;
@@ -19,7 +18,7 @@ public partial class BulkService(
     IBulkSourceData _bulkSourceData,
     IBulkData _bulkData,
     IPostDownloader _downloader,
-    IPostParser _parser
+    IPostDomainParser _parser
 ) : IBulkService
 {
     private readonly ILogger<BulkService> _logger = _logger;
@@ -29,7 +28,7 @@ public partial class BulkService(
     private readonly IBulkSourceData _bulkSourceData = _bulkSourceData;
     private readonly IBulkData _bulkData = _bulkData;
     private readonly IPostDownloader _downloader = _downloader;
-    private readonly IPostParser _parser = _parser;
+    private readonly IPostDomainParser _parser = _parser;
 
     private readonly CancellationTokenSource _tokenSource = new();
     private UsersContext? _context;
@@ -78,7 +77,7 @@ public partial class BulkService(
         return null;
     }
 
-    private async Task<ParseResult?> GetUserMedia(
+    private async Task<DomainParseResult?> GetUserMedia(
         string id,
         string origin,
         int count,
@@ -104,7 +103,7 @@ public partial class BulkService(
         try
         {
             response = await _downloader.Download(request, _tokenSource.Token);
-            ParseResult parseResult = _parser.Parse(id, origin, response);
+            DomainParseResult parseResult = _parser.Parse(id, origin, response);
 
             if (parseResult.Posts.Count == 0)
                 _logger.LogInformation("response: {response}", response);

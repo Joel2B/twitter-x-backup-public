@@ -1,7 +1,6 @@
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Models.Bulk;
 using Backup.Infrastructure.Models.Posts;
-using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Bulk;
@@ -60,7 +59,7 @@ public partial class BulkService
                 break;
             }
 
-            ParseResult? result = await GetUserMedia(
+            DomainParseResult? result = await GetUserMedia(
                 bulk.User.Id ?? throw new Exception(),
                 origin,
                 _config.Bulk.MediaPerApi,
@@ -137,11 +136,7 @@ public partial class BulkService
                 }
 
                 _logger.LogInformation("ParseResult return {count} posts", result.Posts.Count);
-                await postData.AddPosts(
-                    bulk.User.Id,
-                    origin,
-                    result.Posts.Select(PostReplicationMapper.ToDomain).ToList()
-                );
+                await postData.AddPosts(bulk.User.Id, origin, result.Posts);
 
                 index++;
                 count += result.Posts.Count;
