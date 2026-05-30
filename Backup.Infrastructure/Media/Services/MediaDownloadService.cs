@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Media.Abstractions.Services;
+using Backup.Application.Media;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Media.Models.Logging;
@@ -11,6 +12,7 @@ namespace Backup.Infrastructure.Media.Services;
 class MediaDownloadService(
     ILogger<MediaDownloadService> _logger,
     AppConfig _config,
+    IMediaParallelDownloadPolicyService mediaParallelDownloadPolicyService,
     IMediaDownloader _downloader,
     IMediaLogger _mediaLogger,
     IProxyProvider proxyProvider
@@ -18,6 +20,8 @@ class MediaDownloadService(
 {
     private readonly ILogger<MediaDownloadService> _logger = _logger;
     private readonly AppConfig _config = _config;
+    private readonly IMediaParallelDownloadPolicyService _mediaParallelDownloadPolicyService =
+        mediaParallelDownloadPolicyService;
     private readonly IMediaDownloader _downloader = _downloader;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
     private readonly IProxyProvider _proxyProvider = proxyProvider;
@@ -39,20 +43,26 @@ class MediaDownloadService(
     private async Task ProcessDownloads(List<Download> downloads)
     {
         using CancellationTokenSource cts = new();
+        Backup.Application.Media.Models.MediaParallelDownloadSettings settings =
+            _mediaParallelDownloadPolicyService.Create(
+                _config.Downloads.Threads.Min,
+                _config.Downloads.Threads.Max,
+                _config.Downloads.Threads.Start
+            );
 
         DynamicParallelOptions options = new()
         {
-            MinDegreeOfParallelism = _config.Downloads.Threads.Min,
-            MaxDegreeOfParallelism = _config.Downloads.Threads.Max,
-            StartDegreeOfParallelism = _config.Downloads.Threads.Start,
-            TargetDuration = TimeSpan.FromSeconds(5),
-            JumpToMaxOnFastAverage = false,
-            EnableHeavyCut = true,
-            HeavyThreshold = TimeSpan.FromSeconds(30),
+            MinDegreeOfParallelism = settings.MinDegreeOfParallelism,
+            MaxDegreeOfParallelism = settings.MaxDegreeOfParallelism,
+            StartDegreeOfParallelism = settings.StartDegreeOfParallelism,
+            TargetDuration = settings.TargetDuration,
+            JumpToMaxOnFastAverage = settings.JumpToMaxOnFastAverage,
+            EnableHeavyCut = settings.EnableHeavyCut,
+            HeavyThreshold = settings.HeavyThreshold,
             CancellationToken = cts.Token,
-            EnableDebug = true,
+            EnableDebug = settings.EnableDebug,
             DebugSink = msg => _logger.LogInformation("{msg}", msg),
-            StrictDecreaseGate = true,
+            StrictDecreaseGate = settings.StrictDecreaseGate,
         };
 
         var data = downloads.SelectMany(download => download.Data.Select(data => (data, download)));
