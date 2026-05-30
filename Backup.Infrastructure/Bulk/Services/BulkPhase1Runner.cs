@@ -1,23 +1,35 @@
+using Backup.Infrastructure.Interfaces.Data.Bulk;
 using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Interfaces.Services.Bulk;
 using Backup.Infrastructure.Models.Bulk;
+using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Microsoft.Extensions.Logging;
 using ParseResult = Backup.Domain.Posts.ParseResult;
 
 namespace Backup.Infrastructure.Services.Bulk;
 
-public partial class BulkService
+public sealed class BulkPhase1Runner(
+    ILogger<BulkPhase1Runner> logger,
+    AppConfig config,
+    IPostDomainData postData,
+    IBulkData bulkData,
+    IBulkSourceRouteProvider bulkSourceRouteProvider,
+    IBulkApiClient bulkApiClient
+) : IBulkPhase1Runner
 {
-    private async Task Phase1(
-        IReadOnlyDictionary<string, ApiConfig> api,
-        CancellationToken cancellationToken
-    )
+    private readonly ILogger<BulkPhase1Runner> _logger = logger;
+    private readonly AppConfig _config = config;
+    private readonly IPostDomainData _postData = postData;
+    private readonly IBulkData _bulkData = bulkData;
+    private readonly IBulkSourceRouteProvider _bulkSourceRouteProvider = bulkSourceRouteProvider;
+    private readonly IBulkApiClient _bulkApiClient = bulkApiClient;
+
+    public async Task Run(IReadOnlyDictionary<string, ApiConfig> api, CancellationToken cancellationToken)
     {
         _logger.LogInformation("running phase 1");
 
-        IPostDomainData postData = _postData;
-        int postCount = await postData.GetCount();
-
+        int postCount = await _postData.GetCount();
         _logger.LogInformation("post count: {count}", postCount);
 
         List<BulkData>? bulks = await _bulkData.GetBulks();
@@ -109,7 +121,6 @@ public partial class BulkService
                         break;
 
                     attempt++;
-
                     _logger.LogWarning("attempt: {attempt}", attempt);
                 }
 
@@ -121,7 +132,7 @@ public partial class BulkService
                 }
 
                 _logger.LogInformation("ParseResult return {count} posts", result.Posts.Count);
-                await postData.AddPosts(bulk.User.Id, origin, result.Posts);
+                await _postData.AddPosts(bulk.User.Id, origin, result.Posts);
 
                 if (result.Posts.Count == 0 || result.NextCursor is null)
                 {
@@ -145,7 +156,7 @@ public partial class BulkService
             if (progress % _config.Bulk.SavePerAction == 0)
             {
                 _logger.LogInformation("saving posts");
-                await postData.Save();
+                await _postData.Save();
 
                 _logger.LogInformation("saving bulks");
                 await _bulkData.Save(bulks);
@@ -155,11 +166,10 @@ public partial class BulkService
         }
 
         _logger.LogInformation("saving posts");
-        await postData.Save();
+        await _postData.Save();
 
         _logger.LogInformation("saving bulks");
         await _bulkData.Save(bulks);
     }
 }
-
 
