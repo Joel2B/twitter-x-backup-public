@@ -2,6 +2,7 @@ using Backup.Infrastructure.Data.Partition;
 using Backup.Application.Partition;
 using Backup.Application.Core;
 using Backup.Application.Dump;
+using Backup.Application.Bulk;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Core.Abstractions.Config;
 using Backup.Infrastructure.Core.Abstractions.Partition;
@@ -23,6 +24,7 @@ public static class CoreInfrastructureServiceCollectionExtensions
         services.AddSingleton<IDumpProgressPolicyService, DumpProgressPolicyService>();
         services.AddSingleton<IDumpIndexFilePolicyService, DumpIndexFilePolicyService>();
         services.AddSingleton<IDumpContextGuardService, DumpContextGuardService>();
+        services.AddSingleton<IBulkArchiveFilePolicyService, BulkArchiveFilePolicyService>();
 
         return services;
     }

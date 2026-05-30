@@ -18,7 +18,8 @@ public class LocalBulkData(
     AppConfig _appConfig,
     StorageBulk _config,
     IPartition _partition,
-    IBulkPrunePolicyService bulkPrunePolicyService
+    IBulkPrunePolicyService bulkPrunePolicyService,
+    IBulkArchiveFilePolicyService bulkArchiveFilePolicyService
 ) : IBulkDataStore, ISetup
 {
     public string? Id { get; set; }
@@ -29,6 +30,8 @@ public class LocalBulkData(
     private readonly StorageBulk _config = _config;
     private readonly IPartition _partition = _partition;
     private readonly IBulkPrunePolicyService _bulkPrunePolicyService = bulkPrunePolicyService;
+    private readonly IBulkArchiveFilePolicyService _bulkArchiveFilePolicyService =
+        bulkArchiveFilePolicyService;
 
     public Task Setup()
     {
@@ -93,9 +96,7 @@ public class LocalBulkData(
         if (!File.Exists(path))
             return;
 
-        string date = DateTime.Now.ToString("yyyy.MM.dd-HH.mm.ss");
-        string fileName = $"{date}.json";
-        string newPath = path.Replace(Path.GetFileName(path), fileName);
+        string newPath = _bulkArchiveFilePolicyService.BuildArchivePath(path, DateTime.Now);
 
         await Task.Delay(1000);
         File.Move(path, newPath);
