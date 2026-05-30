@@ -14,6 +14,7 @@ public class PostDownloaderHttp(
     ILogger<PostDownloaderHttp> _logger,
     AppConfig _config,
     IHttpRequestHeaderPolicyService httpRequestHeaderPolicyService,
+    IRateLimitHeaderParserService rateLimitHeaderParserService,
     IRateLimitDecisionService rateLimitDecisionService,
     IRetryDelayPolicyService retryDelayPolicyService,
     IRequestQueryStringPolicyService requestQueryStringPolicyService
@@ -25,6 +26,8 @@ public class PostDownloaderHttp(
     private readonly AppConfig _config = _config;
     private readonly IHttpRequestHeaderPolicyService _httpRequestHeaderPolicyService =
         httpRequestHeaderPolicyService;
+    private readonly IRateLimitHeaderParserService _rateLimitHeaderParserService =
+        rateLimitHeaderParserService;
     private readonly IRateLimitDecisionService _rateLimitDecisionService = rateLimitDecisionService;
     private readonly IRetryDelayPolicyService _retryDelayPolicyService = retryDelayPolicyService;
     private readonly IRequestQueryStringPolicyService _requestQueryStringPolicyService =
@@ -99,16 +102,17 @@ public class PostDownloaderHttp(
         _headers.TryGetValues("x-rate-limit-remaining", out var rawRemaining);
         _headers.TryGetValues("x-rate-limit-reset", out var rawReset);
 
-        if (!int.TryParse(rawLimit?.FirstOrDefault(), out var limit))
-            throw new Exception("no limit");
+        RateLimitHeaders parsedHeaders = _rateLimitHeaderParserService.Parse(
+            rawLimit?.FirstOrDefault(),
+            rawRemaining?.FirstOrDefault(),
+            rawReset?.FirstOrDefault()
+        );
 
-        if (!int.TryParse(rawRemaining?.FirstOrDefault(), out var remaining))
-            throw new Exception("no remaining");
+        int limit = parsedHeaders.Limit;
+        int remaining = parsedHeaders.Remaining;
+        int reset = parsedHeaders.ResetUnixSeconds;
 
-        if (!int.TryParse(rawReset?.FirstOrDefault(), out var reset))
-            throw new Exception("no reset");
-
-        DateTimeOffset resetAt = DateTimeOffset.FromUnixTimeSeconds(reset);
+        DateTimeOffset resetAt = DateTimeOffset.FromUnixTimeSeconds(parsedHeaders.ResetUnixSeconds);
         DateTimeOffset now = DateTimeOffset.Now;
         TimeSpan diff = resetAt - now;
         RateLimitDecision decision = _rateLimitDecisionService.Evaluate(
