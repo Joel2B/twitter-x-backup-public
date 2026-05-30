@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Core.Media;
+using Backup.Application.Media;
 using Backup.Application.Media.Filter;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
@@ -12,13 +13,16 @@ namespace Backup.Infrastructure.Media.Services;
 public class MediaProcessing(
     ILogger<MediaProcessing> _logger,
     AppConfig _config,
-    IMediaDownloadFilterPolicyService downloadFilterPolicyService
+    IMediaDownloadFilterPolicyService downloadFilterPolicyService,
+    IMediaDownloadDataBuilderService mediaDownloadDataBuilderService
 ) : IMediaProcessing
 {
     private readonly ILogger<MediaProcessing> _logger = _logger;
     private readonly AppConfig _config = _config;
     private readonly IMediaDownloadFilterPolicyService _downloadFilterPolicyService =
         downloadFilterPolicyService;
+    private readonly IMediaDownloadDataBuilderService _mediaDownloadDataBuilderService =
+        mediaDownloadDataBuilderService;
 
     private readonly Dictionary<string, Download> _all = [];
     private readonly Dictionary<string, Download> _filtered = [];
@@ -29,11 +33,26 @@ public class MediaProcessing(
 
         List<MediaProcessor> processors =
         [
-            new PhotoProcessor(_config.Medias.Photo, context, _downloadFilterPolicyService),
-            new GifProcessor(_config.Medias.Gif, context, _downloadFilterPolicyService),
-            new ProfileProcessor(_config.Medias.Profile, context),
-            new BannerProcessor(_config.Medias.Banner, context),
-            new VideoProcessor(_config.Medias.Video, context, _downloadFilterPolicyService),
+            new PhotoProcessor(
+                _config.Medias.Photo,
+                context,
+                _downloadFilterPolicyService,
+                _mediaDownloadDataBuilderService
+            ),
+            new GifProcessor(
+                _config.Medias.Gif,
+                context,
+                _downloadFilterPolicyService,
+                _mediaDownloadDataBuilderService
+            ),
+            new ProfileProcessor(_config.Medias.Profile, context, _mediaDownloadDataBuilderService),
+            new BannerProcessor(_config.Medias.Banner, context, _mediaDownloadDataBuilderService),
+            new VideoProcessor(
+                _config.Medias.Video,
+                context,
+                _downloadFilterPolicyService,
+                _mediaDownloadDataBuilderService
+            ),
         ];
 
         foreach (MediaProcessor processor in processors)

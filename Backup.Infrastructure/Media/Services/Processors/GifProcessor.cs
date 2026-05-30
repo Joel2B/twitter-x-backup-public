@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Core.Media;
+using Backup.Application.Media;
 using Backup.Application.Media.Filter;
 using Backup.Infrastructure.Models.Config.Medias;
 using Backup.Infrastructure.Media.Models;
@@ -10,7 +11,8 @@ namespace Backup.Infrastructure.Media.Services.Processors;
 public class GifProcessor(
     GifConfig config,
     MediaProcessorContext context,
-    IMediaDownloadFilterPolicyService downloadFilterPolicyService
+    IMediaDownloadFilterPolicyService downloadFilterPolicyService,
+    IMediaDownloadDataBuilderService mediaDownloadDataBuilderService
 ) : MediaProcessor(context)
 {
     private readonly IMediaDownloadFilterPolicyService _downloadFilterPolicyService =
@@ -18,6 +20,8 @@ public class GifProcessor(
     private readonly IReadOnlyList<MediaExclusionRule> _filters = downloadFilterPolicyService.Parse(
         config.Thumb.Filters
     );
+    private readonly IMediaDownloadDataBuilderService _mediaDownloadDataBuilderService =
+        mediaDownloadDataBuilderService;
 
     public override void Process()
     {
@@ -65,7 +69,7 @@ public class GifProcessor(
                 {
                     foreach (Resolution resolution in resolutions)
                     {
-                        DataDownload dataDownload = global::Backup.Infrastructure.Utils.MediaProcessor.GetData(
+                        Backup.Application.Media.Models.MediaDownloadData built = _mediaDownloadDataBuilderService.Build(
                             new()
                             {
                                 PostId = post.Id,
@@ -78,6 +82,7 @@ public class GifProcessor(
                                 Url = media.Url,
                             }
                         );
+                        DataDownload dataDownload = new() { Url = built.Url, Path = built.Path };
 
                         bool include = !_downloadFilterPolicyService.IsExcluded(
                             _filters,
@@ -100,7 +105,7 @@ public class GifProcessor(
                     string VideoExtension = Path.GetExtension(videoFileName);
                     string VideoId = Path.GetFileNameWithoutExtension(videoFileName);
 
-                    DataDownload dataDownload = global::Backup.Infrastructure.Utils.MediaProcessor.GetData(
+                    Backup.Application.Media.Models.MediaDownloadData builtVideo = _mediaDownloadDataBuilderService.Build(
                         new()
                         {
                             PostId = post.Id,
@@ -110,9 +115,10 @@ public class GifProcessor(
                             ResolutionType = VideoId,
                             Name = "index",
                             Url = url,
-                            Options = { Query = false },
+                            IncludeQuery = false,
                         }
                     );
+                    DataDownload dataDownload = new() { Url = builtVideo.Url, Path = builtVideo.Path };
 
                     AddDataDownload(post.Id, dataDownload, true);
                 }

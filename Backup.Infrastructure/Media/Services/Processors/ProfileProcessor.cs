@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Core.Media;
+using Backup.Application.Media;
 using Backup.Infrastructure.Models.Config.Medias;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Media.Models.Processors;
@@ -6,9 +7,16 @@ using Backup.Infrastructure.Posts.Models;
 
 namespace Backup.Infrastructure.Media.Services.Processors;
 
-public class ProfileProcessor(ProfileConfig config, MediaProcessorContext context)
+public class ProfileProcessor(
+    ProfileConfig config,
+    MediaProcessorContext context,
+    IMediaDownloadDataBuilderService mediaDownloadDataBuilderService
+)
     : MediaProcessor(context)
 {
+    private readonly IMediaDownloadDataBuilderService _mediaDownloadDataBuilderService =
+        mediaDownloadDataBuilderService;
+
     public override void Process()
     {
         if (config.Dimensions is null || config.Sizes is null)
@@ -41,7 +49,7 @@ public class ProfileProcessor(ProfileConfig config, MediaProcessorContext contex
 
             foreach (Resolution resolution in resolutions)
             {
-                DataDownload dataDownload = Backup.Infrastructure.Utils.MediaProcessor.GetData(
+                Backup.Application.Media.Models.MediaDownloadData built = _mediaDownloadDataBuilderService.Build(
                     new()
                     {
                         PostId = "profiles",
@@ -52,9 +60,10 @@ public class ProfileProcessor(ProfileConfig config, MediaProcessorContext contex
                         ResolutionType = resolution.Type,
                         Name = resolution.Name,
                         Url = url.Replace("normal", resolution.Name),
-                        Options = { Query = false },
+                        IncludeQuery = false,
                     }
                 );
+                DataDownload dataDownload = new() { Url = built.Url, Path = built.Path };
 
                 AddDataDownload(post.Id, dataDownload, true);
             }

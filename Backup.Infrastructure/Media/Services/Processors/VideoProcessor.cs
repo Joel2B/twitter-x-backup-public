@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using Backup.Infrastructure.Core.Media;
+using Backup.Application.Media;
 using Backup.Application.Media.Filter;
 using Backup.Infrastructure.Models.Config.Medias;
 using Backup.Infrastructure.Media.Models;
@@ -11,7 +12,8 @@ namespace Backup.Infrastructure.Media.Services.Processors;
 public class VideoProcessor(
     VideoConfig config,
     MediaProcessorContext context,
-    IMediaDownloadFilterPolicyService downloadFilterPolicyService
+    IMediaDownloadFilterPolicyService downloadFilterPolicyService,
+    IMediaDownloadDataBuilderService mediaDownloadDataBuilderService
 )
     : MediaProcessor(context)
 {
@@ -20,6 +22,8 @@ public class VideoProcessor(
     private readonly IReadOnlyList<MediaExclusionRule> _filters = downloadFilterPolicyService.Parse(
         config.Thumb.Filters
     );
+    private readonly IMediaDownloadDataBuilderService _mediaDownloadDataBuilderService =
+        mediaDownloadDataBuilderService;
 
     public override void Process()
     {
@@ -73,7 +77,7 @@ public class VideoProcessor(
                 {
                     foreach (Resolution resolution in resolutions)
                     {
-                        DataDownload dataDownload = global::Backup.Infrastructure.Utils.MediaProcessor.GetData(
+                        Backup.Application.Media.Models.MediaDownloadData built = _mediaDownloadDataBuilderService.Build(
                             new()
                             {
                                 PostId = post.Id,
@@ -86,6 +90,7 @@ public class VideoProcessor(
                                 Url = media.Url,
                             }
                         );
+                        DataDownload dataDownload = new() { Url = built.Url, Path = built.Path };
 
                         bool include = !_downloadFilterPolicyService.IsExcluded(
                             _filters,
@@ -127,7 +132,7 @@ public class VideoProcessor(
                     if (resolution is null)
                         throw new Exception();
 
-                    DataDownload dataDownload = global::Backup.Infrastructure.Utils.MediaProcessor.GetData(
+                    Backup.Application.Media.Models.MediaDownloadData builtVideo = _mediaDownloadDataBuilderService.Build(
                         new()
                         {
                             PostId = post.Id,
@@ -137,9 +142,10 @@ public class VideoProcessor(
                             ResolutionType = VideoId,
                             Name = resolution,
                             Url = url,
-                            Options = { Query = false },
+                            IncludeQuery = false,
                         }
                     );
+                    DataDownload dataDownload = new() { Url = builtVideo.Url, Path = builtVideo.Path };
 
                     AddDataDownload(post.Id, dataDownload, true);
                 }
