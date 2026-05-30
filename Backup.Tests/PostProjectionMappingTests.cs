@@ -1,6 +1,6 @@
 using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Models.Posts.Response;
-using Backup.Infrastructure.Posts.ProjectionMapping;
+using Backup.Infrastructure.Posts.Adapters.ProjectionMapping;
 
 namespace Backup.Tests;
 

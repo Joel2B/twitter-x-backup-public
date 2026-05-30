@@ -1,6 +1,6 @@
 using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Interfaces.Services.Posts;
-using PostMapper = Backup.Infrastructure.Posts.ProjectionMapping.PostMapper;
+using PostMapper = Backup.Infrastructure.Posts.Adapters.ProjectionMapping.PostMapper;
 using TimelineEntryExtractor = Backup.Infrastructure.Posts.Adapters.Parsing.TimelineEntryExtractor;
 using Backup.Infrastructure.Models.Posts.Response;
 using Microsoft.Extensions.Logging;

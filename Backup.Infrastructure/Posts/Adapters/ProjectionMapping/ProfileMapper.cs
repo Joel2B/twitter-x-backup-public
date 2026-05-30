@@ -1,7 +1,7 @@
 using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Models.Posts.Response;
 
-namespace Backup.Infrastructure.Posts.ProjectionMapping;
+namespace Backup.Infrastructure.Posts.Adapters.ProjectionMapping;
 
 public static class ProfileMapper
 {

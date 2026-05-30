@@ -2,7 +2,7 @@ using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Models.Posts.Response;
 using Backup.Infrastructure.Posts.Adapters.Parsing;
 
-namespace Backup.Infrastructure.Posts.ProjectionMapping;
+namespace Backup.Infrastructure.Posts.Adapters.ProjectionMapping;
 
 public static class PostMapper
 {
