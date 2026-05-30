@@ -1,5 +1,5 @@
 using System.Net;
-using Backup.Infrastructure.Interfaces.Proxy;
+using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Models.Config.Proxy;
 using Backup.Infrastructure.Models.Proxy;
 using Microsoft.Extensions.Logging;

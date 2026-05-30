@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Interfaces.Proxy;
+namespace Backup.Infrastructure.Proxy.Abstractions.Core;
 
 public interface IProxyProvider
 {

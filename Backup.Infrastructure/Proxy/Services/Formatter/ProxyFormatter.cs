@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Interfaces.Proxy;
+using Backup.Infrastructure.Proxy.Abstractions.Core;
 
 namespace Backup.Infrastructure.Services.Proxy.Formatter;
 

@@ -1,7 +1,7 @@
 using Backup.Infrastructure.Models.Config.Proxy;
 using Backup.Infrastructure.Models.Proxy;
 
-namespace Backup.Infrastructure.Interfaces.Proxy;
+namespace Backup.Infrastructure.Proxy.Abstractions.Core;
 
 public interface IProxyDownloader
 {

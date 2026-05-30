@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Interfaces;
-using Backup.Infrastructure.Interfaces.Data.Proxy;
+using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Backup.Infrastructure.Interfaces.Partition;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;

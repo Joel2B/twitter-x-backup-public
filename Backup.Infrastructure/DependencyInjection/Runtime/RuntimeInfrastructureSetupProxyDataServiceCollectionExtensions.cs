@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Data.Proxy;
 using Backup.Infrastructure.Interfaces;
-using Backup.Infrastructure.Interfaces.Data.Proxy;
+using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection;
