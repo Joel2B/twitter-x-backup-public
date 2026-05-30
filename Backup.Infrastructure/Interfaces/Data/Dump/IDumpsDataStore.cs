@@ -1,7 +1,8 @@
+using Backup.Infrastructure.Interfaces.Data;
+
 namespace Backup.Infrastructure.Interfaces.Data.Posts;
 
-public interface IDumpsDataStore : IDumpsData
+public interface IDumpsDataStore : IDumpsData, IDefaultStore
 {
-    public bool IsDefault { get; set; }
 }
 

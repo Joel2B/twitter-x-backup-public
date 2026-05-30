@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Interfaces.Data.Bulk;
+using Backup.Infrastructure.Core.Stores;
 using Backup.Infrastructure.Models.Bulk;
 
 namespace Backup.Infrastructure.Data.Bulk;
@@ -8,22 +9,11 @@ public class BulkDataMultiStore(IEnumerable<IBulkDataStore> stores) : IBulkData
     private readonly List<IBulkDataStore> _stores = [.. stores];
 
     private IBulkDataStore Primary
-    {
-        get
-        {
-            if (_stores.Count == 0)
-                throw new InvalidOperationException("No bulk data stores are configured.");
-
-            List<IBulkDataStore> defaults = _stores.Where(store => store.IsDefault).ToList();
-
-            if (defaults.Count > 1)
-                throw new InvalidOperationException(
-                    "Only one bulk data store can be marked as default."
-                );
-
-            return defaults.FirstOrDefault() ?? _stores.First();
-        }
-    }
+        => DefaultStoreResolver.ResolvePrimary(
+            _stores,
+            "No bulk data stores are configured.",
+            "Only one bulk data store can be marked as default."
+        );
 
     public string? Id
     {

@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Core.Stores;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Dump;
 using Backup.Infrastructure.Models.Posts;
@@ -10,22 +11,11 @@ public class DumpDataMultiStore(IEnumerable<IDumpDataStore> stores) : IDumpData
     private readonly List<IDumpDataStore> _stores = [.. stores];
 
     private IDumpDataStore Primary
-    {
-        get
-        {
-            if (_stores.Count == 0)
-                throw new InvalidOperationException("No dump data stores are configured.");
-
-            List<IDumpDataStore> defaults = _stores.Where(store => store.IsDefault).ToList();
-
-            if (defaults.Count > 1)
-                throw new InvalidOperationException(
-                    "Only one dump data store can be marked as default."
-                );
-
-            return defaults.FirstOrDefault() ?? _stores.First();
-        }
-    }
+        => DefaultStoreResolver.ResolvePrimary(
+            _stores,
+            "No dump data stores are configured.",
+            "Only one dump data store can be marked as default."
+        );
 
     public string? Id
     {

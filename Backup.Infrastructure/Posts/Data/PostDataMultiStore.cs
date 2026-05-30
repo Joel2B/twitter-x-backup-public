@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Logging;
 using Backup.Application.Posts;
+using Backup.Infrastructure.Core.Stores;
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Models.Posts;
@@ -21,22 +22,11 @@ public partial class PostDataMultiStore(
     private readonly ILogger<PostDataMultiStore> _logger = logger;
 
     private IPostDataStore Primary
-    {
-        get
-        {
-            if (_stores.Count == 0)
-                throw new InvalidOperationException("No post data stores are configured.");
-
-            List<IPostDataStore> defaults = _stores.Where(store => store.IsDefault).ToList();
-
-            if (defaults.Count > 1)
-                throw new InvalidOperationException(
-                    "Only one post data store can be marked as default."
-                );
-
-            return defaults.FirstOrDefault() ?? _stores.First();
-        }
-    }
+        => DefaultStoreResolver.ResolvePrimary(
+            _stores,
+            "No post data stores are configured.",
+            "Only one post data store can be marked as default."
+        );
 
     public string? Id
     {
