@@ -1,3 +1,4 @@
+using Backup.Application.IO;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
 
@@ -21,36 +22,10 @@ public class UtilsPath
     }
 
     public static DateTime? ToDate(string path, bool isDir = false)
-    {
-        string name = Path.GetFileNameWithoutExtension(path);
-
-        if (isDir)
-            name = Path.GetFileName(path);
-
-        bool isDate = DateTime.TryParseExact(
-            name,
-            "yyyy.MM.dd-HH.mm.ss",
-            System.Globalization.CultureInfo.InvariantCulture,
-            System.Globalization.DateTimeStyles.None,
-            out DateTime parsed
-        );
-
-        if (!isDate)
-            return null;
-
-        return parsed;
-    }
+        => PathFormattingPolicy.ParseTimestampFromPath(path, isDir);
 
     public static string GetPathFormatted(string path)
-    {
-        string fileName = Path.GetFileNameWithoutExtension(path);
-        string extension = Path.GetExtension(path);
-
-        fileName = $"{fileName}.formatted{extension}";
-        path = path.Replace(Path.GetFileName(path), fileName);
-
-        return path;
-    }
+        => PathFormattingPolicy.GetFormattedPath(path);
 
     public static void CopyDirectory(string sourceDir, string destDir, bool overwrite = true)
     {
@@ -73,18 +48,7 @@ public class UtilsPath
     }
 
     public static string NormalizePath(string path, bool save = false)
-    {
-        if (OperatingSystem.IsWindows())
-            return path;
-
-        if (OperatingSystem.IsLinux())
-            if (save)
-                return path.Replace('/', '\\');
-            else
-                return path.Replace('\\', '/');
-
-        throw new Exception();
-    }
+        => PathFormattingPolicy.NormalizePathForCurrentOs(path, save);
 
     public static string GetPartitionPath(AppConfig config, PartitionConfig partition)
     {
