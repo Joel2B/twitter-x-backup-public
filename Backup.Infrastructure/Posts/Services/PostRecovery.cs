@@ -20,6 +20,7 @@ public class PostRecovery(
     ILogger<PostRecovery> _logger,
     AppConfig _config,
     IPostRecoveryOrchestrationService postRecoveryOrchestrationService,
+    IPostTweetDetailRequestFactory tweetDetailRequestFactory,
     IMediaLogger _mediaLogger,
     IPostDownloader _downloader,
     IPostDomainParser _parser
@@ -31,6 +32,8 @@ public class PostRecovery(
     private readonly AppConfig _config = _config;
     private readonly IPostRecoveryOrchestrationService _postRecoveryOrchestrationService =
         postRecoveryOrchestrationService;
+    private readonly IPostTweetDetailRequestFactory _tweetDetailRequestFactory =
+        tweetDetailRequestFactory;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
     private readonly IPostDownloader _downloader = _downloader;
     private readonly IPostDomainParser _parser = _parser;
@@ -41,7 +44,15 @@ public class PostRecovery(
         {
             using CancellationTokenSource tokenSource = new();
             IReadOnlyCollection<DomainPost> posts = await _postRecoveryOrchestrationService.Recover(
-                new RecoverySession(_logger, _config, _mediaLogger, _downloader, _parser, context),
+                new RecoverySession(
+                    _logger,
+                    _config,
+                    _mediaLogger,
+                    _downloader,
+                    _parser,
+                    _tweetDetailRequestFactory,
+                    context
+                ),
                 tokenSource.Token
             );
 
@@ -69,6 +80,7 @@ public class PostRecovery(
         IMediaLogger mediaLogger,
         IPostDownloader downloader,
         IPostDomainParser parser,
+        IPostTweetDetailRequestFactory tweetDetailRequestFactory,
         UsersContext context
     ) : IPostRecoverySession
     {
@@ -78,7 +90,7 @@ public class PostRecovery(
         private readonly IPostDownloader _downloader = downloader;
         private readonly IPostDomainParser _parser = parser;
         private readonly UsersContext _context = context;
-        private readonly Request? _request = RequestMerge.Build(context.Api, "TweetDetail");
+        private readonly Request? _request = tweetDetailRequestFactory.Build(context);
         private List<LogEntry>? _errorLogs;
 
         public bool RecoveryEnabled => _config.Services.Recovery.Enabled;

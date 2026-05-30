@@ -18,6 +18,7 @@ public static class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostDownloader, PostDownloaderHttp>();
         services.AddScoped<IPostParser, PostParser>();
         services.AddScoped<IPostDomainParser, PostDomainParserAdapter>();
+        services.AddScoped<IPostTweetDetailRequestFactory, PostTweetDetailRequestFactory>();
         services.AddScoped<IPostRecovery, PostRecovery>();
         services.AddScoped<IPostDownload, PostDownload>();
         services.AddScoped<IPostExecutionService, PostExecutionService>();
