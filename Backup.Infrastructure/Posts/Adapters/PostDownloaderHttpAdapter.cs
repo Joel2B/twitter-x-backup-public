@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using Backup.Application.Network;
+using Backup.Application.Network.Models;
 using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Request;
@@ -12,7 +13,8 @@ namespace Backup.Infrastructure.Posts.Adapters;
 public class PostDownloaderHttp(
     ILogger<PostDownloaderHttp> _logger,
     AppConfig _config,
-    IHttpRequestHeaderPolicyService httpRequestHeaderPolicyService
+    IHttpRequestHeaderPolicyService httpRequestHeaderPolicyService,
+    IRateLimitDecisionService rateLimitDecisionService
 )
     : IPostDownloader
 {
@@ -21,6 +23,7 @@ public class PostDownloaderHttp(
     private readonly AppConfig _config = _config;
     private readonly IHttpRequestHeaderPolicyService _httpRequestHeaderPolicyService =
         httpRequestHeaderPolicyService;
+    private readonly IRateLimitDecisionService _rateLimitDecisionService = rateLimitDecisionService;
     private readonly HttpClient _client = new(
         new HttpClientHandler
         {
@@ -115,28 +118,35 @@ public class PostDownloaderHttp(
         if (!int.TryParse(rawReset?.FirstOrDefault(), out var reset))
             throw new Exception("no reset");
 
-        TimeSpan diff = DateTimeOffset.FromUnixTimeSeconds(reset) - DateTimeOffset.Now;
-        int threshold = _config.Network.RateLimit.ThresholdRemaining * limit / 100;
+        DateTimeOffset resetAt = DateTimeOffset.FromUnixTimeSeconds(reset);
+        DateTimeOffset now = DateTimeOffset.Now;
+        TimeSpan diff = resetAt - now;
+        RateLimitDecision decision = _rateLimitDecisionService.Evaluate(
+            limit,
+            remaining,
+            _config.Network.RateLimit.ThresholdRemaining,
+            _config.Network.RateLimit.Wait.Reset,
+            now,
+            resetAt
+        );
 
         _logger.LogInformation("URL: {url}", _request.Url);
         _logger.LogInformation("limit: {limit}", limit);
         _logger.LogInformation(
             "remaining: {limit}, threshold: {threshold}, diff: {diff}",
             remaining,
-            threshold,
-            remaining - threshold
+            decision.Threshold,
+            remaining - decision.Threshold
         );
         _logger.LogInformation("reset: {limit}, diff: {diff}", reset, diff);
 
-        if (remaining <= threshold)
-        {
-            if (_config.Network.RateLimit.Wait.Reset)
-            {
-                await Task.Delay((int)Math.Max(0, diff.TotalSeconds) * 1000);
-                return true;
-            }
-
+        if (!decision.Continue)
             return false;
+
+        if (decision.WaitMilliseconds > 0)
+        {
+            await Task.Delay(decision.WaitMilliseconds);
+            return true;
         }
 
         await Delay();

@@ -12,6 +12,7 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
     {
         services.AddScoped<IPostExecutionService, PostExecutionService>();
         services.AddScoped<IHttpRequestHeaderPolicyService, HttpRequestHeaderPolicyService>();
+        services.AddScoped<IRateLimitDecisionService, RateLimitDecisionService>();
         services.AddScoped<IPostRuntimeService, PostRuntimeService>();
         services.AddScoped<IPostDownloadCommandService, PostDownloadCommandService>();
         services.AddScoped<IPostRecoveryCommandService, PostRecoveryCommandService>();
