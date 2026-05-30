@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Models.Media.Backup;
 
-namespace Backup.Infrastructure.Interfaces.Data.Media;
+namespace Backup.Infrastructure.Media.Abstractions.Data;
 
 public interface IMediaBackupData
 {
