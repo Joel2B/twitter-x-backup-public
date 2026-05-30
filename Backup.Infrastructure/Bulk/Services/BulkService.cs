@@ -28,20 +28,15 @@ public partial class BulkService(
     private readonly IBulkSourceRouteProvider _bulkSourceRouteProvider = bulkSourceRouteProvider;
     private readonly IBulkApiClient _bulkApiClient = bulkApiClient;
 
-    private readonly CancellationTokenSource _tokenSource = new();
-    private UsersContext? _context;
-
-    private Dictionary<string, ApiConfig> Api =>
-        _context?.Api ?? throw new Exception("bulk context not initialized");
-
     public async Task Download(UsersContext context)
     {
-        _context = context;
+        using CancellationTokenSource tokenSource = new();
+        IReadOnlyDictionary<string, ApiConfig> api = context.Api;
 
-        await Import();
+        await Import(api, tokenSource.Token);
         await Verify();
-        await Phase1();
-        await Phase2();
+        await Phase1(api, tokenSource.Token);
+        await Phase2(api, tokenSource.Token);
         await ResetPhase2();
 
         await _bulkData.Prune();

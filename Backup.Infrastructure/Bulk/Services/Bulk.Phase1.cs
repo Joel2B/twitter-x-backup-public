@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Models.Bulk;
+using Backup.Infrastructure.Models.Config.Api;
 using Microsoft.Extensions.Logging;
 using ParseResult = Backup.Domain.Posts.ParseResult;
 
@@ -7,7 +8,10 @@ namespace Backup.Infrastructure.Services.Bulk;
 
 public partial class BulkService
 {
-    private async Task Phase1()
+    private async Task Phase1(
+        IReadOnlyDictionary<string, ApiConfig> api,
+        CancellationToken cancellationToken
+    )
     {
         _logger.LogInformation("running phase 1");
 
@@ -93,12 +97,12 @@ public partial class BulkService
                 while (attempt < _config.Bulk.ApiRetryCount)
                 {
                     result = await _bulkApiClient.GetUserMedia(
-                        Api,
+                        api,
                         bulk.User.Id,
                         origin,
                         _config.Bulk.MediaPerApi,
                         bulk.Cursor,
-                        _tokenSource.Token
+                        cancellationToken
                     );
 
                     if (result is not null)

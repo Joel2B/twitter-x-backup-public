@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Models.Bulk;
+using Backup.Infrastructure.Models.Config.Api;
 using Microsoft.Extensions.Logging;
 using ParseUser = Backup.Domain.Posts.ParseUser;
 
@@ -6,7 +7,10 @@ namespace Backup.Infrastructure.Services.Bulk;
 
 public partial class BulkService
 {
-    private async Task Import()
+    private async Task Import(
+        IReadOnlyDictionary<string, ApiConfig> api,
+        CancellationToken cancellationToken
+    )
     {
         _logger.LogInformation("running import");
         _logger.LogInformation("getting sources");
@@ -49,9 +53,9 @@ public partial class BulkService
             }
 
             ParseUser? result = await _bulkApiClient.GetUserByUser(
-                Api,
+                api,
                 source.UserName,
-                _tokenSource.Token
+                cancellationToken
             );
 
             if (result is null)
