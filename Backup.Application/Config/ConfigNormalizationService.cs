@@ -1,5 +1,4 @@
 using Backup.Application.Config.Models;
-using System.Globalization;
 
 namespace Backup.Application.Config;
 
@@ -46,7 +45,7 @@ public sealed class ConfigNormalizationService
                     $"error deserializing api file: entry '{entry.Key}' is missing required field 'Request:Query:Variables'"
                 );
 
-            NormalizeVariables(entry.Variables);
+            QueryVariableNormalizer.Normalize(entry.Variables);
 
             entry.Features ??= [];
             entry.FieldToggles ??= [];
@@ -130,45 +129,4 @@ public sealed class ConfigNormalizationService
         return count > 0 || count == -1;
     }
 
-    private static void NormalizeVariables(Dictionary<string, object?> variables)
-    {
-        List<string> keys = [.. variables.Keys];
-
-        foreach (string key in keys)
-            variables[key] = Coerce(variables[key]);
-    }
-
-    private static object? Coerce(object? value)
-    {
-        if (value is not string text)
-            return value;
-
-        if (bool.TryParse(text, out bool boolValue))
-            return boolValue;
-
-        if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int intValue))
-            return intValue;
-
-        if (
-            long.TryParse(
-                text,
-                NumberStyles.Integer,
-                CultureInfo.InvariantCulture,
-                out long longValue
-            )
-        )
-            return longValue;
-
-        if (
-            double.TryParse(
-                text,
-                NumberStyles.Float | NumberStyles.AllowThousands,
-                CultureInfo.InvariantCulture,
-                out double doubleValue
-            )
-        )
-            return doubleValue;
-
-        return text;
-    }
 }
