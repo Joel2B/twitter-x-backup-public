@@ -4,10 +4,10 @@ using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Models.Config.Api;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Services.Posts;
+namespace Backup.Infrastructure.Posts.Adapters;
 
-internal sealed class PostServiceRecoveryCommand(
-    ILogger<PostService> logger,
+internal sealed class PostServiceRecoveryCommandAdapter(
+    ILogger logger,
     IPostRecovery recovery,
     IPostDomainData data,
     UsersContext context
@@ -21,4 +21,3 @@ internal sealed class PostServiceRecoveryCommand(
 
     public Task RunRecovery() => recovery.Recovery(data, context);
 }
-

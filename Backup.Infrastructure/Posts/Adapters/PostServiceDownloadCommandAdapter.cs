@@ -4,10 +4,10 @@ using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Posts;
 using Microsoft.Extensions.Logging;
 
-namespace Backup.Infrastructure.Services.Posts;
+namespace Backup.Infrastructure.Posts.Adapters;
 
-internal sealed class PostServiceDownloadCommand(
-    ILogger<PostService> logger,
+internal sealed class PostServiceDownloadCommandAdapter(
+    ILogger logger,
     IPostDownload download,
     IPostDomainData data,
     ApiContext context
@@ -20,4 +20,3 @@ internal sealed class PostServiceDownloadCommand(
 
     public Task RunPrune() => data.Prune();
 }
-

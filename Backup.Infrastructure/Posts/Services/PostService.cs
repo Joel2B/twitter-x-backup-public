@@ -3,6 +3,7 @@ using Backup.Infrastructure.Interfaces.Data.Posts;
 using Backup.Infrastructure.Interfaces.Services.Posts;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Posts;
+using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Posts;
@@ -23,12 +24,12 @@ public class PostService(
 
     public async Task Recover(UsersContext context) =>
         await _postRuntimeService.Recover(
-            new PostServiceRecoveryCommand(_logger, _postRecovery, _postData, context)
+            new PostServiceRecoveryCommandAdapter(_logger, _postRecovery, _postData, context)
         );
 
     public async Task Download(ApiContext context) =>
         await _postRuntimeService.Download(
-            new PostServiceDownloadCommand(_logger, _postDownload, _postData, context)
+            new PostServiceDownloadCommandAdapter(_logger, _postDownload, _postData, context)
         );
 }
 
