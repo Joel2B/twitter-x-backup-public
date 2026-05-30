@@ -152,6 +152,97 @@ public class SqlitePostDataTests
         }
     }
 
+    [Fact]
+    public async Task UpsertPosts_DuplicateIdsInSameBatch_KeepsLastVersion()
+    {
+        (SqlitePostData sut, string root) = CreateSut();
+
+        try
+        {
+            await sut.Setup();
+
+            await sut.UpsertPosts(
+            [
+                CreatePost("p1", "profile-1", "first", "user-1", "posts"),
+                CreatePost("p1", "profile-1", "second", "user-1", "posts"),
+            ]);
+            await sut.Save();
+
+            Assert.Equal(1, await sut.GetCount());
+
+            Post stored = (await sut.GetByIds(["p1"])).Single();
+            Assert.Equal("second", stored.Description);
+        }
+        finally
+        {
+            await sut.DisposeAsync();
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task MarkDeletedExcept_IsIdempotent_WhenAlreadyDeleted()
+    {
+        (SqlitePostData sut, string root) = CreateSut();
+
+        try
+        {
+            await sut.Setup();
+
+            await sut.UpsertPosts(
+            [
+                CreatePost("p1", "profile-1", "one", "user-1", "posts"),
+                CreatePost("p2", "profile-1", "two", "user-1", "posts"),
+            ]);
+            await sut.Save();
+
+            int firstMarked = await sut.MarkDeletedExcept("user-1", "posts", ["p1"]);
+            await sut.Save();
+
+            int secondMarked = await sut.MarkDeletedExcept("user-1", "posts", ["p1"]);
+            await sut.Save();
+
+            Assert.Equal(1, firstMarked);
+            Assert.Equal(0, secondMarked);
+
+            PostStoreCounts counts = await sut.GetStoreCounts();
+            Assert.Equal(1, counts.Changes);
+            Assert.Equal(1, counts.ChangeFields);
+        }
+        finally
+        {
+            await sut.DisposeAsync();
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task AddPosts_SamePayload_DoesNotCreateChange()
+    {
+        (SqlitePostData sut, string root) = CreateSut();
+
+        try
+        {
+            await sut.Setup();
+
+            Post post = CreatePost("p1", "profile-1", "same", "user-1", "posts");
+
+            await sut.AddPosts("user-1", "posts", [post]);
+            await sut.Save();
+
+            await sut.AddPosts("user-1", "posts", [post.Clone()]);
+            await sut.Save();
+
+            Post stored = (await sut.GetByIds(["p1"])).Single();
+            Assert.Empty(stored.Changes);
+        }
+        finally
+        {
+            await sut.DisposeAsync();
+            DeleteDirectory(root);
+        }
+    }
+
     private static (SqlitePostData Sut, string Root) CreateSut()
     {
         string root = Path.Combine(
@@ -203,7 +294,9 @@ public class SqlitePostDataTests
         string description,
         string userId,
         string origin,
-        string? createdAt = null
+        string? createdAt = null,
+        string? previous = "prev",
+        string? next = "next"
     ) =>
         new()
         {
@@ -229,7 +322,7 @@ public class SqlitePostDataTests
             {
                 [userId] = new Dictionary<string, IndexData>(StringComparer.Ordinal)
                 {
-                    [origin] = new() { Previous = "prev", Next = "next" },
+                    [origin] = new() { Previous = previous, Next = next },
                 },
             },
             Changes = [],
