@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Models.Config.Api;
 
-namespace Backup.Infrastructure.Interfaces.Services.Bulk;
+namespace Backup.Infrastructure.Bulk.Abstractions.Services;
 
 public interface IBulkPhase1Runner
 {

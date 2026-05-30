@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Models.Bulk;
 
-namespace Backup.Infrastructure.Interfaces.Services.Bulk;
+namespace Backup.Infrastructure.Bulk.Abstractions.Services;
 
 public interface IBulkSourceRouteProvider
 {

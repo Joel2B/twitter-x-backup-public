@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Interfaces.Services.Bulk;
+using Backup.Infrastructure.Bulk.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.ApiRequest;
 

@@ -7,5 +7,3 @@ public interface IDumpsData
     public Task<DumpsData> GetData();
     public Task Save(DumpsData dumps);
 }
-
-

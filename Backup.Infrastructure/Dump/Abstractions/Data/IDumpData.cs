@@ -14,5 +14,3 @@ public interface IDumpData
 
     public Task Flush(IPostDomainData postData, string userId, ApiContext context);
 }
-
-

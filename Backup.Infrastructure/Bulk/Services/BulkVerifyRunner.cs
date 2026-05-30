@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Posts.Abstractions.Data;
-using Backup.Infrastructure.Interfaces.Services.Bulk;
+using Backup.Infrastructure.Bulk.Abstractions.Services;
 using Backup.Infrastructure.Models.Bulk;
 using Microsoft.Extensions.Logging;
 

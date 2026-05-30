@@ -1,6 +1,6 @@
 using Backup.Domain.Posts;
 using Backup.Infrastructure.Bulk.Adapters;
-using Backup.Infrastructure.Interfaces.Services.Bulk;
+using Backup.Infrastructure.Bulk.Abstractions.Services;
 using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Bulk;
 using Backup.Infrastructure.Models.Config.Api;

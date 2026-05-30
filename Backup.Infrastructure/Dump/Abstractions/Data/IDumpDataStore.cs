@@ -5,5 +5,3 @@ namespace Backup.Infrastructure.Dump.Abstractions.Data;
 public interface IDumpDataStore : IDumpData, IDefaultStore
 {
 }
-
-

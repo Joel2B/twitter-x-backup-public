@@ -2,7 +2,7 @@ using Backup.Infrastructure.Models.Config.Api;
 using ParseResult = Backup.Domain.Posts.ParseResult;
 using ParseUser = Backup.Domain.Posts.ParseUser;
 
-namespace Backup.Infrastructure.Interfaces.Services.Bulk;
+namespace Backup.Infrastructure.Bulk.Abstractions.Services;
 
 public interface IBulkApiClient
 {

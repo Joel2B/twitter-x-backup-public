@@ -1,7 +1,7 @@
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.ApiRequest;
 
-namespace Backup.Infrastructure.Interfaces.Services.Bulk;
+namespace Backup.Infrastructure.Bulk.Abstractions.Services;
 
 public interface IBulkRequestFactory
 {
