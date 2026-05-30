@@ -14,7 +14,8 @@ public partial class SqlitePostData(
     StoragePost config,
     IPartition partition,
     IPostMergeService postMergeService,
-    IPostSoftDeleteSelectionService postSoftDeleteSelectionService
+    IPostSoftDeleteSelectionService postSoftDeleteSelectionService,
+    IPostSnapshotNormalizationService postSnapshotNormalizationService
 ) : IPostDataStore, ISetup, IAsyncDisposable
 {
     public string? Id { get; set; }
@@ -26,6 +27,8 @@ public partial class SqlitePostData(
     private readonly IPostMergeService _postMergeService = postMergeService;
     private readonly IPostSoftDeleteSelectionService _postSoftDeleteSelectionService =
         postSoftDeleteSelectionService;
+    private readonly IPostSnapshotNormalizationService _postSnapshotNormalizationService =
+        postSnapshotNormalizationService;
     private PostsDbContext? _db;
     private const int SqlInChunkSize = 5000;
 

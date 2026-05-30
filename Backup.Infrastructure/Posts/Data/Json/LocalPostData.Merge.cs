@@ -71,11 +71,9 @@ public partial class LocalPostData
 
     public Task Reset(List<Post> posts)
     {
-        _postsCache = posts
-            .Where(post => !string.IsNullOrWhiteSpace(post.Id))
-            .GroupBy(post => post.Id, StringComparer.Ordinal)
-            .Select(group => group.Last())
-            .ToDictionary(post => post.Id, post => post.Clone(), StringComparer.Ordinal);
+        IReadOnlyList<Post> normalized = NormalizePosts(posts);
+
+        _postsCache = normalized.ToDictionary(post => post.Id, post => post.Clone(), StringComparer.Ordinal);
 
         _postMetaCache = _postsCache.ToDictionary(
             entry => entry.Key,
@@ -93,18 +91,17 @@ public partial class LocalPostData
 
     public async Task UpsertPosts(List<Post> posts)
     {
-        if (posts.Count == 0)
+        IReadOnlyList<Post> normalized = NormalizePosts(posts);
+
+        if (normalized.Count == 0)
             return;
 
         Dictionary<string, Post> cache = await GetCache() ?? [];
         Dictionary<string, PostMetaRow> postMeta = await GetPostMetaCache();
         _postsCache ??= cache;
 
-        foreach (Post post in posts)
+        foreach (Post post in normalized)
         {
-            if (string.IsNullOrWhiteSpace(post.Id))
-                continue;
-
             Post clone = post.Clone();
             cache[clone.Id] = clone;
 
@@ -117,6 +114,13 @@ public partial class LocalPostData
         }
 
         _postMetaCache = postMeta;
+    }
+
+    private IReadOnlyList<Post> NormalizePosts(IReadOnlyCollection<Post> posts)
+    {
+        List<Backup.Domain.Posts.Post> domainPosts = posts.Select(PostReplicationMapper.ToDomain).ToList();
+        IReadOnlyList<Backup.Domain.Posts.Post> normalized = _postSnapshotNormalizationService.Normalize(domainPosts);
+        return normalized.Select(PostReplicationMapper.ToApp).ToList();
     }
 
     private void LogDataChange(Post current, Post merged, string userId)

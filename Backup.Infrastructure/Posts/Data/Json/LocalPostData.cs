@@ -18,7 +18,8 @@ public partial class LocalPostData(
     StoragePost _config,
     IPartition _partition,
     IPostMergeService postMergeService,
-    IPostSoftDeleteSelectionService postSoftDeleteSelectionService
+    IPostSoftDeleteSelectionService postSoftDeleteSelectionService,
+    IPostSnapshotNormalizationService postSnapshotNormalizationService
 ) : IPostDataStore, ISetup
 {
     public string? Id { get; set; }
@@ -31,6 +32,8 @@ public partial class LocalPostData(
     private readonly IPostMergeService _postMergeService = postMergeService;
     private readonly IPostSoftDeleteSelectionService _postSoftDeleteSelectionService =
         postSoftDeleteSelectionService;
+    private readonly IPostSnapshotNormalizationService _postSnapshotNormalizationService =
+        postSnapshotNormalizationService;
 
     private Dictionary<string, Post>? _postsCache = null;
     private Dictionary<string, PostMetaRow>? _postMetaCache = null;

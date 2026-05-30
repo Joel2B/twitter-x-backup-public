@@ -121,19 +121,12 @@ public partial class SqlitePostData
 
     private async Task UpsertPostsInternal(List<Post> posts)
     {
-        if (posts.Count == 0)
-            return;
-
-        PostsDbContext db = await GetDbContext();
-
-        List<Post> normalizedPosts = posts
-            .Where(post => !string.IsNullOrWhiteSpace(post.Id))
-            .GroupBy(post => post.Id, StringComparer.Ordinal)
-            .Select(group => group.Last().Clone())
-            .ToList();
+        IReadOnlyList<Post> normalizedPosts = NormalizePosts(posts);
 
         if (normalizedPosts.Count == 0)
             return;
+
+        PostsDbContext db = await GetDbContext();
 
         List<string> ids = normalizedPosts.Select(post => post.Id).ToList();
         DetachTrackedPostGraphByIds(db, ids);
@@ -265,11 +258,8 @@ public partial class SqlitePostData
             }
         }
 
-        Dictionary<string, Post> normalizedPosts = posts
-            .Where(post => !string.IsNullOrWhiteSpace(post.Id))
-            .GroupBy(post => post.Id, StringComparer.Ordinal)
-            .Select(group => group.Last().Clone())
-            .ToDictionary(post => post.Id, StringComparer.Ordinal);
+        IReadOnlyList<Post> normalized = NormalizePosts(posts);
+        Dictionary<string, Post> normalizedPosts = normalized.ToDictionary(post => post.Id, StringComparer.Ordinal);
 
         if (normalizedPosts.Count == 0)
             return;
@@ -318,6 +308,13 @@ public partial class SqlitePostData
         }
 
         await UpsertHashMetaForPosts(db, normalizedPosts.Values);
+    }
+
+    private IReadOnlyList<Post> NormalizePosts(IReadOnlyCollection<Post> posts)
+    {
+        List<Backup.Domain.Posts.Post> domainPosts = posts.Select(PostReplicationMapper.ToDomain).ToList();
+        IReadOnlyList<Backup.Domain.Posts.Post> normalized = _postSnapshotNormalizationService.Normalize(domainPosts);
+        return normalized.Select(PostReplicationMapper.ToApp).ToList();
     }
 
 }

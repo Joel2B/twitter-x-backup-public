@@ -290,7 +290,8 @@ public class SqlitePostDataTests
             storage,
             partition,
             new PostMergeService(),
-            new PostSoftDeleteSelectionService()
+            new PostSoftDeleteSelectionService(),
+            new PostSnapshotNormalizationService()
         );
         return (sut, root);
     }
