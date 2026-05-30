@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using System.Globalization;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Application.Media;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
@@ -14,12 +14,15 @@ namespace Backup.Infrastructure.Media.Data;
 public class LocalMediaLogger(
     ILogger<LocalMediaLogger> _logger,
     AppConfig config,
-    IPartition _partition
+    IPartition _partition,
+    IMediaLogFilePolicyService mediaLogFilePolicyService
 ) : IMediaLogger, ISetup
 {
     private readonly ILogger<LocalMediaLogger> _logger = _logger;
     public readonly AppConfig _config = config;
     private readonly IPartition _partition = _partition;
+    private readonly IMediaLogFilePolicyService _mediaLogFilePolicyService =
+        mediaLogFilePolicyService;
 
     private readonly ConcurrentDictionary<string, Logs> _errors = new();
     private readonly ConcurrentDictionary<string, Logs> _logs = new();
@@ -60,13 +63,12 @@ public class LocalMediaLogger(
     private string GetPathError() =>
         Path.Combine([GetPath(), .. _config.Downloads.Media.Error.Paths]);
 
-    private static async Task SaveFile(List<Logs> logs, string path)
+    private async Task SaveFile(List<Logs> logs, string path)
     {
         if (logs.Count == 0)
             return;
 
-        string date = DateTime.Now.ToString("yyyy.MM.dd-HH.mm.ss");
-        string fileName = $"{date}.json";
+        string fileName = _mediaLogFilePolicyService.CreateFileName(DateTime.Now);
         string _path = Path.Combine(path, fileName);
 
         string log = JsonConvert.SerializeObject(logs, Formatting.Indented);
@@ -76,24 +78,12 @@ public class LocalMediaLogger(
     private async Task<List<Logs>?> ReadErrors()
     {
         string[] paths = Directory.GetFiles(GetPathError(), "*.json");
+        string? lastLogPath = _mediaLogFilePolicyService.SelectLatestFilePath(paths);
 
-        LogFile? lastLogFile = paths
-            .Select(path => new LogFile
-            {
-                Path = path,
-                Date = DateTime.ParseExact(
-                    Path.GetFileNameWithoutExtension(path),
-                    "yyyy.MM.dd-HH.mm.ss",
-                    CultureInfo.InvariantCulture
-                ),
-            })
-            .OrderByDescending(file => file.Date)
-            .FirstOrDefault();
-
-        if (lastLogFile is null)
+        if (string.IsNullOrWhiteSpace(lastLogPath))
             return null;
 
-        string content = await File.ReadAllTextAsync(lastLogFile.Path);
+        string content = await File.ReadAllTextAsync(lastLogPath);
         List<Logs>? errors = JsonConvert.DeserializeObject<List<Logs>>(content);
 
         if (errors is null)
