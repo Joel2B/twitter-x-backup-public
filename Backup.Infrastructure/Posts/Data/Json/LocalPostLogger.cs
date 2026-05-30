@@ -1,4 +1,6 @@
 using Backup.Infrastructure.Posts.Abstractions.Data;
+using Backup.Application.Posts;
+using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
@@ -10,12 +12,15 @@ namespace Backup.Infrastructure.Posts.Data.Json;
 public class LocalPostLogger(
     ILogger<LocalPostLogger> _logger,
     AppConfig _config,
-    IPartition _partition
+    IPartition _partition,
+    IPostDebugLogPrunePolicyService postDebugLogPrunePolicyService
 ) : IPostLogger
 {
     private readonly ILogger<LocalPostLogger> _logger = _logger;
     private readonly AppConfig _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly IPostDebugLogPrunePolicyService _postDebugLogPrunePolicyService =
+        postDebugLogPrunePolicyService;
 
     private string _id = "";
     private string _path = "";
@@ -68,24 +73,19 @@ public class LocalPostLogger(
         {
             string[] subPaths = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly);
 
-            var pathsDate = subPaths
-                .Where(o => UtilsPath.ToDate(o, true) is not null)
-                .Select(o => new { Path = o, Date = UtilsPath.ToDate(o, true) })
-                .OrderBy(o => o.Date)
+            List<PostHistoryPath> pathsDate = subPaths
+                .Select(path => new { Path = path, Date = UtilsPath.ToDate(path, true) })
+                .Where(entry => entry.Date is not null)
+                .Select(entry => new PostHistoryPath(entry.Path, entry.Date!.Value))
                 .ToList();
 
-            DateTime? date = pathsDate
-                .SkipLast(_config.Debug.Api.Prune.RetainedCountLimit)
-                .LastOrDefault()
-                ?.Date;
-
-            if (date is null)
-                continue;
-
-            List<string> pathsToRemove = pathsDate
-                .Where(o => o.Date <= date)
-                .Select(o => o.Path)
-                .ToList();
+            List<string> pathsToRemove =
+            [
+                .. _postDebugLogPrunePolicyService.GetPathsToRemove(
+                    pathsDate,
+                    _config.Debug.Api.Prune.RetainedCountLimit
+                ),
+            ];
 
             if (pathsToRemove.Count == 0)
                 continue;
