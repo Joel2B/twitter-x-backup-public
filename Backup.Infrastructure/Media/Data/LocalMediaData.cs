@@ -10,14 +10,14 @@ namespace Backup.Infrastructure.Data.Media;
 public class LocalMediaData(
     StorageMedia _config,
     IPartition _partition,
-    LocalMediaCache _mediaCache
+    IMediaCache _mediaCache
 ) : IMediaStorage, ISetup
 {
     public string? Id { get; set; }
 
     private readonly StorageMedia _config = _config;
     private readonly IPartition _partition = _partition;
-    private readonly LocalMediaCache _mediaCache = _mediaCache;
+    private readonly IMediaCache _mediaCache = _mediaCache;
 
     public Task Setup()
     {

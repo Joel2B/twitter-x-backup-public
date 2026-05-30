@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Backup.Infrastructure.Interfaces;
 using Backup.Infrastructure.Interfaces.Partition;
+using Backup.Infrastructure.Interfaces.Services.Media;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
 using Backup.Infrastructure.Models.Media;
@@ -16,7 +17,7 @@ public class LocalMediaCache(
     ILogger<LocalMediaCache> _logger,
     StorageMedia _config,
     IPartition _partition
-) : ISetup
+) : IMediaCache
 {
     private readonly ILogger<LocalMediaCache> _logger = _logger;
     private readonly StorageMedia _config = _config;

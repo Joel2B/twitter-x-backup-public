@@ -12,7 +12,7 @@ public class LocalMediaDataMaintenance(
     ILogger<LocalMediaDataMaintenance> _log,
     StorageMedia _config,
     IPartition _partition,
-    LocalMediaCache _mediaCache
+    IMediaCache _mediaCache
 ) : IMediaDataMaintenance
 {
     public string? Id { get; set; }
@@ -20,7 +20,7 @@ public class LocalMediaDataMaintenance(
     private readonly ILogger<LocalMediaDataMaintenance> _logger = _log;
     private readonly StorageMedia _config = _config;
     private readonly IPartition _partition = _partition;
-    private readonly LocalMediaCache _mediaCache = _mediaCache;
+    private readonly IMediaCache _mediaCache = _mediaCache;
 
     public async Task CheckData(List<Download> downloads)
     {

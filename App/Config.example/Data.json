@@ -191,6 +191,12 @@
       "Default": true,
       "Enabled": true,
       "SizeHeavy": 10485760,
+      "CacheBackend": {
+        "Type": "json",
+        "ConnectionString": null,
+        "KeyPrefix": "backup:media-cache",
+        "Database": 0
+      },
       "Paths": {
         "Media": {
           "Paths": ["media"]
