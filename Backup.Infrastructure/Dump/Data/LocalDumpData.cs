@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Backup.Application.Dump;
 using Backup.Application.Dump.Models;
 using Backup.Infrastructure.Posts.Abstractions.Data;
@@ -24,7 +23,8 @@ public class LocalDumpData(
     IDumpsData _dumps,
     StorageDump _config,
     IPartition _partition,
-    IDumpProgressPolicyService dumpProgressPolicyService
+    IDumpProgressPolicyService dumpProgressPolicyService,
+    IDumpIndexFilePolicyService dumpIndexFilePolicyService
 ) : IDumpDataStore
 {
     public string? Id { get; set; }
@@ -35,6 +35,7 @@ public class LocalDumpData(
     private readonly StorageDump _config = _config;
     private readonly IPartition _partition = _partition;
     private readonly IDumpProgressPolicyService _dumpProgressPolicyService = dumpProgressPolicyService;
+    private readonly IDumpIndexFilePolicyService _dumpIndexFilePolicyService = dumpIndexFilePolicyService;
 
     private DumpData? _dumpData;
     private DumpData Data => _dumpData ?? throw new Exception("Dump data not initialized");
@@ -196,23 +197,20 @@ public class LocalDumpData(
     {
         _logger.LogInformation("dumping data");
 
-        Regex regex = new(@"^\d+");
         string currentPath = await GetPathCurrent(context);
 
         List<string> paths = Directory
             .EnumerateFiles(currentPath, "*.json", SearchOption.AllDirectories)
             .ToList();
+        IReadOnlyList<string> indexPaths = _dumpIndexFilePolicyService.SelectIndexFiles(
+            paths,
+            [.. _config.Paths.Dumps.Dump.Api.Paths]
+        );
 
         List<Post> dumpPosts = [];
 
-        foreach (string path in paths)
+        foreach (string path in indexPaths)
         {
-            string fileName = Path.GetFileName(path);
-            string apiPath = Path.Combine([.. _config.Paths.Dumps.Dump.Api.Paths, fileName]);
-
-            if (!regex.IsMatch(fileName) || path.Contains(apiPath))
-                continue;
-
             string content = await File.ReadAllTextAsync(path);
             List<Post>? _posts = JsonConvert.DeserializeObject<List<Post>>(content);
 
