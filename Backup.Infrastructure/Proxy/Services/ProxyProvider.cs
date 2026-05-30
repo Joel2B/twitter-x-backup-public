@@ -1,4 +1,5 @@
 using System.Net;
+using Backup.Application.Proxy;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Backup.Infrastructure.Proxy.Abstractions.Core;
@@ -13,7 +14,12 @@ public class ProxyException(string? message = null) : Exception(message) { }
 
 public class ProxyEmptyException(string? message = null) : ProxyException(message) { }
 
-public class ProxyProvider(ILogger<ProxyProvider> _logger, AppConfig _config, IProxyData _data)
+public class ProxyProvider(
+    ILogger<ProxyProvider> _logger,
+    AppConfig _config,
+    IProxyData _data,
+    IProxyRuntimePolicyService proxyRuntimePolicyService
+)
     : IProxyProvider,
         ISetup,
         IDisposable
@@ -21,6 +27,7 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, AppConfig _config, IP
     private readonly ILogger<ProxyProvider> _logger = _logger;
     private readonly AppConfig _config = _config;
     private readonly IProxyData _data = _data;
+    private readonly IProxyRuntimePolicyService _proxyRuntimePolicyService = proxyRuntimePolicyService;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
     private int _proxyIndex = 0;
@@ -60,9 +67,10 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, AppConfig _config, IP
         _proxies = [.. proxiesDict.Values];
 
         _proxies = _proxies
-            .Where(proxy =>
-                proxy.Status.Current == StatusEnum.Active || proxy.Connections.Count > 0
-            )
+            .Where(proxy => _proxyRuntimePolicyService.ShouldIncludeInRuntimePool(
+                proxy.Status.Current == StatusEnum.Active,
+                proxy.Connections.Count
+            ))
             .ToList();
 
         if (_proxies.Count == 0)
@@ -180,7 +188,12 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, AppConfig _config, IP
 
             _logger.LogInformation("failure count: {value}", value);
 
-            if (value < _config.Downloads.Threads.Start)
+            if (
+                !_proxyRuntimePolicyService.ShouldAttemptProxySwitch(
+                    value,
+                    _config.Downloads.Threads.Start
+                )
+            )
                 return;
 
             await Reset();
@@ -189,7 +202,7 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, AppConfig _config, IP
 
             _logger.LogInformation("attempt {attempt}", count);
 
-            if (count >= 3)
+            if (_proxyRuntimePolicyService.ShouldRotateProxy(count, attemptsPerProxy: 3))
             {
                 count = 0;
 
@@ -331,7 +344,12 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, AppConfig _config, IP
                 error.Date = DateTime.Now;
             }
 
-            if (proxy.Errors.Count >= _config.Proxy.Threshold.ErrorsToInactive)
+            if (
+                _proxyRuntimePolicyService.ShouldDisableProxy(
+                    proxy.Errors.Count,
+                    _config.Proxy.Threshold.ErrorsToInactive
+                )
+            )
             {
                 proxy.Status.Current = StatusEnum.Inactive;
                 proxy.Status.Date = DateTime.Now;
@@ -351,7 +369,11 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, AppConfig _config, IP
 
     private void CheckStop()
     {
-        if (_config.Proxy.Threshold.ErrorsToStop == -1)
+        if (
+            _proxyRuntimePolicyService.IsStopThresholdDisabled(
+                _config.Proxy.Threshold.ErrorsToStop
+            )
+        )
             return;
 
         int value = Interlocked.Increment(ref _stopCount);
@@ -362,7 +384,12 @@ public class ProxyProvider(ILogger<ProxyProvider> _logger, AppConfig _config, IP
             _config.Proxy.Threshold.ErrorsToStop
         );
 
-        if (value < _config.Proxy.Threshold.ErrorsToStop)
+        if (
+            !_proxyRuntimePolicyService.ShouldStopProcess(
+                value,
+                _config.Proxy.Threshold.ErrorsToStop
+            )
+        )
             return;
 
         throw new ProxyException();
