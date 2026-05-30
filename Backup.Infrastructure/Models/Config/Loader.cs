@@ -16,6 +16,7 @@ namespace Backup.Infrastructure.Models.Config;
 public static class ConfigLoader
 {
     private static readonly ConfigNormalizationService _normalization = new();
+    private static readonly ConfigApiFileSelectionService _apiFileSelection = new();
 
     public static string GetConfigDirectory() => Path.Combine(AppContext.BaseDirectory, "config");
 
@@ -88,18 +89,19 @@ public static class ConfigLoader
 
         Dictionary<string, Dictionary<string, ApiConfig>> apiByUser = [];
         string[] files = Directory.GetFiles(apiDirectory, "*.json", SearchOption.TopDirectoryOnly);
-
-        if (files.Length == 0)
-            throw new Exception("error deserializing config folder 'Api': no json files found");
+        List<string> availableFileNames = files
+            .Select(Path.GetFileName)
+            .Where(fileName => !string.IsNullOrWhiteSpace(fileName))
+            .Select(fileName => fileName!)
+            .ToList();
+        IReadOnlyDictionary<string, string> requiredFiles = _apiFileSelection.SelectRequiredFiles(
+            services.Users.Select(user => user.Id).ToList(),
+            availableFileNames
+        );
 
         foreach (UserService user in services.Users)
         {
-            string file = Path.Combine(apiDirectory, $"{user.Id}.json");
-
-            if (!File.Exists(file))
-                throw new Exception(
-                    $"error deserializing config folder 'Api': file '{user.Id}.json' not found for user '{user.Id}'"
-                );
+            string file = Path.Combine(apiDirectory, requiredFiles[user.Id]);
 
             apiByUser[user.Id] = LoadApiFile(file);
         }
