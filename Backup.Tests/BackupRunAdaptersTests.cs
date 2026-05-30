@@ -1,9 +1,7 @@
 using Backup.Application.BackupRun;
 using Backup.Application.BackupRun.Models;
-using Backup.Domain.BackupRun;
 using Backup.Infrastructure.BackupRun.Adapters;
-using Backup.Infrastructure.Posts.Abstractions.Services;
-using Backup.Infrastructure.Models.Config.Api;
+using Backup.Application.BackupRun.Ports;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Backup.Tests;
@@ -11,10 +9,10 @@ namespace Backup.Tests;
 public class BackupRunAdaptersTests
 {
     [Fact]
-    public async Task PostSourceRunner_MapsPlanToApiContext_AndCallsAllServices()
+    public async Task PostSourceRunner_PassesExecutionToAllServices()
     {
-        FakePostService serviceA = new();
-        FakePostService serviceB = new();
+        FakePostSourceExecutionService serviceA = new();
+        FakePostSourceExecutionService serviceB = new();
 
         PostSourceRunnerAdapter runner = new(
             new BackupRunStepExecutor(),
@@ -40,24 +38,24 @@ public class BackupRunAdaptersTests
 
         await runner.Run(execution);
 
-        ApiContext context = Assert.Single(serviceA.DownloadCalls);
+        BackupRunSourceExecution context = Assert.Single(serviceA.DownloadCalls);
         Assert.Single(serviceB.DownloadCalls);
-        Assert.Equal("SearchTimeline", context.Id);
+        Assert.Equal("SearchTimeline", context.ApiId);
         Assert.Equal("user-123", context.UserId);
         Assert.Equal(55, context.Count);
         Assert.Equal("https://x.com/graphql", context.Request.Url);
-        Assert.Equal(20, Convert.ToInt32(context.Request.Query.Variables["count"]));
-        Assert.Equal("A1", context.Request.Query.Variables["cursor"]?.ToString());
-        Assert.True(context.Request.Query.Features["featureA"]);
-        Assert.False(context.Request.Query.FieldToggles["fieldA"]);
+        Assert.Equal(20, Convert.ToInt32(context.Request.Variables["count"]));
+        Assert.Equal("A1", context.Request.Variables["cursor"]?.ToString());
+        Assert.True(context.Request.Features["featureA"]);
+        Assert.False(context.Request.FieldToggles["fieldA"]);
         Assert.Equal("Bearer token", context.Request.Headers["authorization"]);
     }
 
     [Fact]
-    public async Task PostRecoveryRunner_MapsPlanToUsersContext_AndCallsAllServices()
+    public async Task PostRecoveryRunner_PassesExecutionToAllServices()
     {
-        FakePostService serviceA = new();
-        FakePostService serviceB = new();
+        FakePostRecoveryExecutionService serviceA = new();
+        FakePostRecoveryExecutionService serviceB = new();
 
         PostRecoveryRunnerAdapter runner = new(
             new BackupRunStepExecutor(),
@@ -88,34 +86,38 @@ public class BackupRunAdaptersTests
 
         await runner.Run(execution);
 
-        UsersContext context = Assert.Single(serviceA.RecoverCalls);
+        BackupRunRecoveryExecution context = Assert.Single(serviceA.RecoverCalls);
         Assert.Single(serviceB.RecoverCalls);
         Assert.Equal("user-42", context.UserId);
-        Assert.True(context.Api.TryGetValue("TweetDetail", out ApiConfig? api));
+        Assert.True(context.Api.TryGetValue("TweetDetail", out BackupRunApiExecution? api));
         Assert.NotNull(api);
         Assert.Equal("TweetDetail", api!.Id);
         Assert.True(api.Enabled);
         Assert.Equal("https://x.com/graphql/tweet", api.Request.Url);
-        Assert.Equal("100", api.Request.Query.Variables["focalTweetId"]?.ToString());
-        Assert.True(api.Request.Query.Features["featureX"]);
-        Assert.False(api.Request.Query.FieldToggles["fieldX"]);
+        Assert.Equal("100", api.Request.Variables["focalTweetId"]?.ToString());
+        Assert.True(api.Request.Features["featureX"]);
+        Assert.False(api.Request.FieldToggles["fieldX"]);
         Assert.Equal("csrf", api.Request.Headers["x-csrf-token"]);
     }
 
-    private sealed class FakePostService : IPostService
+    private sealed class FakePostSourceExecutionService : IPostSourceExecutionService
     {
-        public List<ApiContext> DownloadCalls { get; } = [];
-        public List<UsersContext> RecoverCalls { get; } = [];
+        public List<BackupRunSourceExecution> DownloadCalls { get; } = [];
 
-        public Task Recover(UsersContext context)
+        public Task Download(BackupRunSourceExecution execution)
         {
-            RecoverCalls.Add(context);
+            DownloadCalls.Add(execution);
             return Task.CompletedTask;
         }
+    }
 
-        public Task Download(ApiContext context)
+    private sealed class FakePostRecoveryExecutionService : IPostRecoveryExecutionService
+    {
+        public List<BackupRunRecoveryExecution> RecoverCalls { get; } = [];
+
+        public Task Recover(BackupRunRecoveryExecution execution)
         {
-            DownloadCalls.Add(context);
+            RecoverCalls.Add(execution);
             return Task.CompletedTask;
         }
     }

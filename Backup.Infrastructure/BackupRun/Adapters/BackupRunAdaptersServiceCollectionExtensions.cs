@@ -7,6 +7,9 @@ public static class BackupRunAdaptersServiceCollectionExtensions
 {
     public static IServiceCollection AddBackupRunAdapters(this IServiceCollection services)
     {
+        services.AddScoped<IPostSourceExecutionService, PostSourceExecutionServiceAdapter>();
+        services.AddScoped<IPostRecoveryExecutionService, PostRecoveryExecutionServiceAdapter>();
+        services.AddScoped<IMediaExecutionService, MediaExecutionServiceAdapter>();
         services.AddScoped<IBackupRunPlanProvider, BackupRunPlanProviderAdapter>();
         services.AddScoped<IPostSourceRunner, PostSourceRunnerAdapter>();
         services.AddScoped<IPostRecoveryRunner, PostRecoveryRunnerAdapter>();
