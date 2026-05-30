@@ -292,7 +292,8 @@ public class SqlitePostDataTests
             new PostMergeService(),
             new PostSoftDeleteSelectionService(),
             new PostSnapshotNormalizationService(),
-            new PostMediaInputsCompositionService()
+            new PostMediaInputsCompositionService(),
+            new PostHashingService()
         );
         return (sut, root);
     }

@@ -22,6 +22,7 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostSoftDeleteSelectionService, PostSoftDeleteSelectionService>();
         services.AddScoped<IPostSnapshotNormalizationService, PostSnapshotNormalizationService>();
         services.AddScoped<IPostMediaInputsCompositionService, PostMediaInputsCompositionService>();
+        services.AddScoped<IPostHashingService, PostHashingService>();
         services.AddScoped<IPostProjectionComposer, PostProjectionComposer>();
         services.AddScoped<IPostIndexingService, PostIndexingService>();
         services.AddScoped<IPostStoreParityService, PostStoreParityService>();

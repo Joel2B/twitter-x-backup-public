@@ -1,13 +1,13 @@
 using System.Security.Cryptography;
 using System.Text;
-using Backup.Infrastructure.Posts.Models;
+using Backup.Domain.Posts;
 using Newtonsoft.Json;
 
-namespace Backup.Infrastructure.Utils;
+namespace Backup.Application.Posts;
 
-public static class PostHash
+public sealed class PostHashingService : IPostHashingService
 {
-    public static string Compute(Post post)
+    public string Compute(Post post)
     {
         object normalized = Normalize(post);
         string json = JsonConvert.SerializeObject(normalized);

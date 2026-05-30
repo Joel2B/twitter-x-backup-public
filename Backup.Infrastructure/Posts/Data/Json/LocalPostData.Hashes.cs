@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Models.Data.Json;
 using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Adapters;
 using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Posts.Data.Json;
@@ -69,8 +70,9 @@ public partial class LocalPostData
         return meta;
     }
 
-    private static string ComputePostHash(Post post)
+    private string ComputePostHash(Post post)
     {
-        return Backup.Infrastructure.Utils.PostHash.Compute(post);
+        Backup.Domain.Posts.Post domainPost = PostReplicationMapper.ToDomain(post);
+        return _postHashingService.Compute(domainPost);
     }
 }

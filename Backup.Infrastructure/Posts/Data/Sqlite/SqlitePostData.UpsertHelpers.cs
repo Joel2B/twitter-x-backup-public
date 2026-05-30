@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backup.Infrastructure.Posts.Data.Sqlite;
@@ -84,7 +85,7 @@ public partial class SqlitePostData
         return result;
     }
 
-    private static async Task UpsertHashMetaForPosts(PostsDbContext db, IEnumerable<Post> posts)
+    private async Task UpsertHashMetaForPosts(PostsDbContext db, IEnumerable<Post> posts)
     {
         Dictionary<string, Post> normalized = posts
             .Where(post => !string.IsNullOrWhiteSpace(post.Id))
@@ -104,7 +105,8 @@ public partial class SqlitePostData
             foreach (string id in chunk)
             {
                 Post post = normalized[id];
-                string hash = Backup.Infrastructure.Utils.PostHash.Compute(post);
+                Backup.Domain.Posts.Post domainPost = PostReplicationMapper.ToDomain(post);
+                string hash = _postHashingService.Compute(domainPost);
 
                 if (existing.TryGetValue(id, out PostHashMetaEntity? row))
                 {

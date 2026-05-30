@@ -94,7 +94,10 @@ public partial class SqlitePostData
 
             db.PostChanges.Add(change);
             meta.Deleted = true;
-            meta.Hash = Backup.Infrastructure.Utils.PostHash.Compute(ToModel(entity, deleted: true));
+            Backup.Domain.Posts.Post domainPost = PostReplicationMapper.ToDomain(
+                ToModel(entity, deleted: true)
+            );
+            meta.Hash = _postHashingService.Compute(domainPost);
             marked++;
         }
 
