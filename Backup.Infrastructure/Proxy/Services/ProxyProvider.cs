@@ -18,7 +18,8 @@ public class ProxyProvider(
     ILogger<ProxyProvider> _logger,
     AppConfig _config,
     IProxyData _data,
-    IProxyRuntimePolicyService proxyRuntimePolicyService
+    IProxyRuntimePolicyService proxyRuntimePolicyService,
+    IProxyHealthCheckPolicyService proxyHealthCheckPolicyService
 )
     : IProxyProvider,
         ISetup,
@@ -28,6 +29,8 @@ public class ProxyProvider(
     private readonly AppConfig _config = _config;
     private readonly IProxyData _data = _data;
     private readonly IProxyRuntimePolicyService _proxyRuntimePolicyService = proxyRuntimePolicyService;
+    private readonly IProxyHealthCheckPolicyService _proxyHealthCheckPolicyService =
+        proxyHealthCheckPolicyService;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
     private int _proxyIndex = 0;
@@ -99,7 +102,7 @@ public class ProxyProvider(
 
         foreach (ProxyDataConfig proxy in proxies)
         {
-            string url = "https://pbs.twimg.com/media/G6hPY2KbIAAm-FB?format=jpg&name=large";
+            string url = _proxyHealthCheckPolicyService.GetHealthCheckUrl();
             HttpStatusCode? code = null;
 
             while (true)
@@ -122,7 +125,10 @@ public class ProxyProvider(
                         ) => true,
                     };
 
-                    using HttpClient client = new(handler) { Timeout = TimeSpan.FromSeconds(10) };
+                    using HttpClient client = new(handler)
+                    {
+                        Timeout = _proxyHealthCheckPolicyService.GetHealthCheckTimeout(),
+                    };
 
                     using HttpRequestMessage requestHttp = new(HttpMethod.Get, url);
 
@@ -139,7 +145,7 @@ public class ProxyProvider(
                 {
                     _logger.LogError("Error: {error}", JsonConvert.SerializeObject(ex));
 
-                    if (ex.Message.Contains("The SSL connection could not be established"))
+                    if (_proxyHealthCheckPolicyService.ShouldFallbackToHttp(ex))
                         proxy.Protocol = "http";
                     else
                         break;
