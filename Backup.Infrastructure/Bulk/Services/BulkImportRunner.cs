@@ -1,16 +1,28 @@
+using Backup.Infrastructure.Interfaces.Data.Bulk;
+using Backup.Infrastructure.Interfaces.Services.Bulk;
 using Backup.Infrastructure.Models.Bulk;
+using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Microsoft.Extensions.Logging;
 using ParseUser = Backup.Domain.Posts.ParseUser;
 
 namespace Backup.Infrastructure.Services.Bulk;
 
-public partial class BulkService
+public sealed class BulkImportRunner(
+    ILogger<BulkImportRunner> logger,
+    AppConfig config,
+    IBulkSourceData bulkSourceData,
+    IBulkData bulkData,
+    IBulkApiClient bulkApiClient
+) : IBulkImportRunner
 {
-    private async Task Import(
-        IReadOnlyDictionary<string, ApiConfig> api,
-        CancellationToken cancellationToken
-    )
+    private readonly ILogger<BulkImportRunner> _logger = logger;
+    private readonly AppConfig _config = config;
+    private readonly IBulkSourceData _bulkSourceData = bulkSourceData;
+    private readonly IBulkData _bulkData = bulkData;
+    private readonly IBulkApiClient _bulkApiClient = bulkApiClient;
+
+    public async Task Run(IReadOnlyDictionary<string, ApiConfig> api, CancellationToken cancellationToken)
     {
         _logger.LogInformation("running import");
         _logger.LogInformation("getting sources");
@@ -64,7 +76,7 @@ public partial class BulkService
                 continue;
             }
 
-            if (result?.User is not null)
+            if (result.User is not null)
             {
                 bulk.User.Id = result.User.Id;
                 bulk.User.Status = StatusUser.Active;
@@ -78,5 +90,4 @@ public partial class BulkService
         await _bulkData.Save(bulks);
     }
 }
-
 

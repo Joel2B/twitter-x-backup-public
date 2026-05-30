@@ -1,16 +1,24 @@
+using Backup.Infrastructure.Interfaces.Data.Bulk;
 using Backup.Infrastructure.Interfaces.Data.Posts;
+using Backup.Infrastructure.Interfaces.Services.Bulk;
 using Backup.Infrastructure.Models.Bulk;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Bulk;
 
-public partial class BulkService
+public sealed class BulkVerifyRunner(
+    ILogger<BulkVerifyRunner> logger,
+    IPostDomainData postData,
+    IBulkData bulkData
+) : IBulkVerifyRunner
 {
-    private async Task Verify()
+    private readonly ILogger<BulkVerifyRunner> _logger = logger;
+    private readonly IPostDomainData _postData = postData;
+    private readonly IBulkData _bulkData = bulkData;
+
+    public async Task Run()
     {
         _logger.LogInformation("running verify");
-        IPostDomainData postData = _postData;
-
         _logger.LogInformation("getting bulks");
         List<BulkData>? bulks = await _bulkData.GetBulks();
 
@@ -31,7 +39,7 @@ public partial class BulkService
             .ToList();
 
         _logger.LogInformation("getting post counts by profile ids: {count}", userIds.Count);
-        Dictionary<string, int> postCounts = await postData.GetPostCountsByProfileIds(userIds);
+        Dictionary<string, int> postCounts = await _postData.GetPostCountsByProfileIds(userIds);
 
         var data = bulksFiltered.Select(bulk => new
         {
@@ -56,5 +64,4 @@ public partial class BulkService
         }
     }
 }
-
 

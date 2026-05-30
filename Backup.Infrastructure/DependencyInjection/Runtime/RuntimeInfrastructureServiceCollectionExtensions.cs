@@ -27,6 +27,8 @@ public static class RuntimeInfrastructureServiceCollectionExtensions
         services.AddScoped<IBulkRequestFactory, BulkRequestFactory>();
         services.AddScoped<IBulkSourceRouteProvider, BulkSourceRouteProvider>();
         services.AddScoped<IBulkApiClient, BulkApiClient>();
+        services.AddScoped<IBulkImportRunner, BulkImportRunner>();
+        services.AddScoped<IBulkVerifyRunner, BulkVerifyRunner>();
         services.AddScoped<IBulkPhase1Runner, BulkPhase1Runner>();
         services.AddScoped<IBulkPhase2Runner, BulkPhase2Runner>();
         services.AddScoped<IPostService, PostService>();
