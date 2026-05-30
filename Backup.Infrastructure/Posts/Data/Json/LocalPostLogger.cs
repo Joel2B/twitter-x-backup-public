@@ -13,7 +13,8 @@ public class LocalPostLogger(
     ILogger<LocalPostLogger> _logger,
     AppConfig _config,
     IPartition _partition,
-    IPostDebugLogPrunePolicyService postDebugLogPrunePolicyService
+    IPostDebugLogPrunePolicyService postDebugLogPrunePolicyService,
+    IPostLogFolderPolicyService postLogFolderPolicyService
 ) : IPostLogger
 {
     private readonly ILogger<LocalPostLogger> _logger = _logger;
@@ -21,6 +22,8 @@ public class LocalPostLogger(
     private readonly IPartition _partition = _partition;
     private readonly IPostDebugLogPrunePolicyService _postDebugLogPrunePolicyService =
         postDebugLogPrunePolicyService;
+    private readonly IPostLogFolderPolicyService _postLogFolderPolicyService =
+        postLogFolderPolicyService;
 
     private string _id = "";
     private string _path = "";
@@ -33,7 +36,7 @@ public class LocalPostLogger(
 
         _id = sourceId;
 
-        string date = DateTime.Now.ToString("yyyy.MM.dd-HH.mm.ss");
+        string date = _postLogFolderPolicyService.CreateSessionFolderName(DateTime.Now);
 
         _path = Path.Combine([GetPath(), _id, date]);
         Directory.CreateDirectory(_path);
