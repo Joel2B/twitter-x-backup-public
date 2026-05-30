@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Core.Media;
 using Backup.Application.Media;
+using Backup.Application.Media.Models;
 using Backup.Application.Media.Filter;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
@@ -15,7 +16,8 @@ public class MediaProcessing(
     AppConfig _config,
     IMediaDownloadFilterPolicyService downloadFilterPolicyService,
     IMediaDownloadDataBuilderService mediaDownloadDataBuilderService,
-    IMediaVideoVariantPolicyService mediaVideoVariantPolicyService
+    IMediaVideoVariantPolicyService mediaVideoVariantPolicyService,
+    IMediaDuplicateFilterService mediaDuplicateFilterService
 ) : IMediaProcessing
 {
     private readonly ILogger<MediaProcessing> _logger = _logger;
@@ -26,6 +28,8 @@ public class MediaProcessing(
         mediaDownloadDataBuilderService;
     private readonly IMediaVideoVariantPolicyService _mediaVideoVariantPolicyService =
         mediaVideoVariantPolicyService;
+    private readonly IMediaDuplicateFilterService _mediaDuplicateFilterService =
+        mediaDuplicateFilterService;
 
     private readonly Dictionary<string, Download> _all = [];
     private readonly Dictionary<string, Download> _filtered = [];
@@ -65,7 +69,8 @@ public class MediaProcessing(
             processor.Process();
 
             _logger.LogInformation("Filter duplicates");
-            processor.FilterDuplicates();
+            ApplyFiltered(_all);
+            ApplyFiltered(_filtered);
         }
 
         return Task.CompletedTask;
@@ -74,4 +79,31 @@ public class MediaProcessing(
     public List<Download> GetMedia() => [.. _all.Values];
 
     public List<Download> GetFilteredMedia() => [.. _filtered.Values];
+
+    private void ApplyFiltered(Dictionary<string, Download> downloads)
+    {
+        IReadOnlyList<MediaDownload> mapped = downloads
+            .Values.Select(download => new MediaDownload
+            {
+                Id = download.Id,
+                Data = download
+                    .Data.Select(item => new MediaDownloadData { Url = item.Url, Path = item.Path })
+                    .ToList(),
+            })
+            .ToList();
+
+        IReadOnlyList<MediaDownload> filtered = _mediaDuplicateFilterService.Filter(mapped);
+
+        downloads.Clear();
+        foreach (MediaDownload download in filtered)
+        {
+            downloads[download.Id] = new Download
+            {
+                Id = download.Id,
+                Data = download
+                    .Data.Select(item => new DataDownload { Url = item.Url, Path = item.Path })
+                    .ToList(),
+            };
+        }
+    }
 }

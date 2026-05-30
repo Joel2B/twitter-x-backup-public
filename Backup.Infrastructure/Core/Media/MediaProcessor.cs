@@ -30,24 +30,4 @@ public abstract class MediaProcessor(MediaProcessorContext context)
 
         return dl;
     }
-
-    public void FilterDuplicates()
-    {
-        Filter(Context.All);
-        Filter(Context.Filtered);
-    }
-
-    private static void Filter(Dictionary<string, Download> downloads)
-    {
-        HashSet<string> urls = new(StringComparer.OrdinalIgnoreCase);
-
-        foreach (var kv in downloads.ToArray())
-        {
-            Download download = downloads[kv.Key];
-            download.Data = [.. download.Data.Where(data => urls.Add(data.Url))];
-
-            if (download.Data.Count == 0)
-                downloads.Remove(kv.Key);
-        }
-    }
 }
