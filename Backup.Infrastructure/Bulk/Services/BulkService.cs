@@ -6,13 +6,14 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Bulk;
 
-public partial class BulkService(
+public class BulkService(
     ILogger<BulkService> _logger,
     IBulkData _bulkData,
     IBulkImportRunner importRunner,
     IBulkVerifyRunner verifyRunner,
     IBulkPhase1Runner phase1Runner,
-    IBulkPhase2Runner phase2Runner
+    IBulkPhase2Runner phase2Runner,
+    IBulkPhase2ResetRunner phase2ResetRunner
 ) : IBulkService
 {
     private readonly ILogger<BulkService> _logger = _logger;
@@ -21,6 +22,7 @@ public partial class BulkService(
     private readonly IBulkVerifyRunner _verifyRunner = verifyRunner;
     private readonly IBulkPhase1Runner _phase1Runner = phase1Runner;
     private readonly IBulkPhase2Runner _phase2Runner = phase2Runner;
+    private readonly IBulkPhase2ResetRunner _phase2ResetRunner = phase2ResetRunner;
 
     public async Task Download(UsersContext context)
     {
@@ -31,7 +33,7 @@ public partial class BulkService(
         await _verifyRunner.Run();
         await _phase1Runner.Run(api, tokenSource.Token);
         await _phase2Runner.Run(api, tokenSource.Token);
-        await ResetPhase2();
+        await _phase2ResetRunner.Run();
 
         await _bulkData.Prune();
     }

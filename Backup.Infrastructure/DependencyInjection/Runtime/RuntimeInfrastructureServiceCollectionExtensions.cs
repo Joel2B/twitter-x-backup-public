@@ -31,6 +31,7 @@ public static class RuntimeInfrastructureServiceCollectionExtensions
         services.AddScoped<IBulkVerifyRunner, BulkVerifyRunner>();
         services.AddScoped<IBulkPhase1Runner, BulkPhase1Runner>();
         services.AddScoped<IBulkPhase2Runner, BulkPhase2Runner>();
+        services.AddScoped<IBulkPhase2ResetRunner, BulkPhase2ResetRunner>();
         services.AddScoped<IPostService, PostService>();
         services.AddScoped<IMediaService, MediaService>();
         services.AddScoped<IBulkService, BulkService>();

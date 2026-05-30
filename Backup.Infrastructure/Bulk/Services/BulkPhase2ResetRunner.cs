@@ -1,11 +1,17 @@
+using Backup.Infrastructure.Interfaces.Data.Bulk;
+using Backup.Infrastructure.Interfaces.Services.Bulk;
 using Backup.Infrastructure.Models.Bulk;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Services.Bulk;
 
-public partial class BulkService
+public sealed class BulkPhase2ResetRunner(ILogger<BulkPhase2ResetRunner> logger, IBulkData bulkData)
+    : IBulkPhase2ResetRunner
 {
-    private async Task ResetPhase2()
+    private readonly ILogger<BulkPhase2ResetRunner> _logger = logger;
+    private readonly IBulkData _bulkData = bulkData;
+
+    public async Task Run()
     {
         _logger.LogInformation("reset phase 2");
         List<BulkData>? data = await _bulkData.GetBulks();
