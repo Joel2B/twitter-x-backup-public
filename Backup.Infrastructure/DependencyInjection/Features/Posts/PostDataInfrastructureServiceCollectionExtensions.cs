@@ -35,24 +35,12 @@ public static class PostDataInfrastructureServiceCollectionExtensions
 
             services.AddKeyedScoped(
                 key,
-                (sp, _) =>
-                    (IPartition)ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
+                (sp, _) => CreatePartition(sp, storage)
             );
 
             services.AddKeyedScoped(
                 key,
-                (sp, _) =>
-                {
-                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
-
-                    IPostDataStore instance = (IPostDataStore)
-                        ActivatorUtilities.CreateInstance(sp, type, storage, partition);
-
-                    instance.Id = registration.Id;
-                    instance.IsDefault = storage.Default;
-
-                    return instance;
-                }
+                (sp, _) => CreatePostDataStore(sp, key, type, storage, registration.Id)
             );
 
             if (DataInfrastructureHelpers.IsSetupType(type))
@@ -79,6 +67,28 @@ public static class PostDataInfrastructureServiceCollectionExtensions
             return postData as IPostDomainData ?? new PostDataDomainAdapter(postData);
         });
         return services;
+    }
+
+    private static IPartition CreatePartition(IServiceProvider sp, StoragePost storage) =>
+        (IPartition)ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage);
+
+    private static IPostDataStore CreatePostDataStore(
+        IServiceProvider sp,
+        string key,
+        Type storeType,
+        StoragePost storage,
+        string id
+    )
+    {
+        IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
+
+        IPostDataStore instance = (IPostDataStore)
+            ActivatorUtilities.CreateInstance(sp, storeType, storage, partition);
+
+        instance.Id = id;
+        instance.IsDefault = storage.Default;
+
+        return instance;
     }
 }
 
