@@ -54,7 +54,7 @@ public static class MediaDataInfrastructureServiceCollectionExtensions
                     IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
                     LocalMediaCache cache = sp.GetRequiredKeyedService<LocalMediaCache>(key);
 
-                    IMediaData instance = (IMediaData)
+                    IMediaStorage instance = (IMediaStorage)
                         ActivatorUtilities.CreateInstance(sp, type, storage, partition, cache);
 
                     instance.Id = registration.Id;
@@ -62,16 +62,33 @@ public static class MediaDataInfrastructureServiceCollectionExtensions
                 }
             );
 
+            services.AddKeyedScoped(
+                key,
+                (sp, _) =>
+                {
+                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
+                    LocalMediaCache cache = sp.GetRequiredKeyedService<LocalMediaCache>(key);
+
+                    IMediaDataMaintenance instance = (IMediaDataMaintenance)
+                        ActivatorUtilities.CreateInstance(
+                            sp,
+                            typeof(LocalMediaDataMaintenance),
+                            storage,
+                            partition,
+                            cache
+                        );
+
+                    instance.Id = registration.Id;
+                    return instance;
+                }
+            );
+
             if (DataInfrastructureHelpers.IsSetupType(type))
-            {
-                services.AddKeyedScoped(
-                    key,
-                    (sp, _) => (ISetup)sp.GetRequiredKeyedService<IMediaData>(key)
-                );
-            }
+                services.AddKeyedScoped(key, (sp, _) => (ISetup)sp.GetRequiredKeyedService<IMediaStorage>(key));
 
             services.AddScoped<ISetup>(sp => sp.GetRequiredKeyedService<LocalMediaCache>(key));
-            services.AddScoped(sp => sp.GetRequiredKeyedService<IMediaData>(key));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IMediaStorage>(key));
+            services.AddScoped(sp => sp.GetRequiredKeyedService<IMediaDataMaintenance>(key));
 
             if (DataInfrastructureHelpers.IsSetupType(type))
             {

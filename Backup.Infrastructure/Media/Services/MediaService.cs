@@ -12,7 +12,8 @@ public class MediaService(
     IPostDomainData _postData,
     IMediaProcessing _mediaProcessing,
     IMediaPrune _mediaPrune,
-    IEnumerable<IMediaData> _mediaData,
+    IEnumerable<IMediaStorage> _mediaData,
+    IEnumerable<IMediaDataMaintenance> _mediaMaintenance,
     IMediaIntegrity _mediaIntegrity,
     IMediaFilter _mediaFilter,
     IMediaReplication _mediaReplication,
@@ -24,7 +25,10 @@ public class MediaService(
     private readonly IPostDomainData _postData = _postData;
     private readonly IMediaProcessing _mediaProcessing = _mediaProcessing;
     private readonly IMediaPrune _mediaPrune = _mediaPrune;
-    private readonly IEnumerable<IMediaData> _mediaData = _mediaData;
+    private readonly IEnumerable<IMediaStorage> _mediaData = _mediaData;
+    private readonly Dictionary<string, IMediaDataMaintenance> _mediaMaintenance = _mediaMaintenance
+        .Where(m => m.Id is not null)
+        .ToDictionary(m => m.Id!, m => m, StringComparer.OrdinalIgnoreCase);
     private readonly IMediaIntegrity _mediaIntegrity = _mediaIntegrity;
     private readonly IMediaFilter _mediaFilter = _mediaFilter;
     private readonly IMediaReplication _mediaReplication = _mediaReplication;
@@ -65,20 +69,26 @@ public class MediaService(
         _logger.LogInformation("filtering media");
         await _mediaFilter.Check(filtered);
 
-        foreach (IMediaData data in _mediaData)
+        foreach (IMediaStorage data in _mediaData)
         {
+            if (data.Id is null || !_mediaMaintenance.TryGetValue(data.Id, out IMediaDataMaintenance? maintenance))
+            {
+                _logger.LogWarning(data.Id, "no media maintenance configured for media data");
+                continue;
+            }
+
             List<Download> filteredCloned = [.. filtered.Select(dl => dl.Clone())];
             List<Download> filteredIntegrity = [.. filtered.Select(dl => dl.Clone())];
 
             using (_logger.LogTimer(data.Id, $"pruning {GetCount(all)} media"))
-                await data.Prune(all);
+                await maintenance.Prune(all);
 
             using (_logger.LogTimer(data.Id, "checking saved media"))
-                await data.CheckData(filteredCloned);
+                await maintenance.CheckData(filteredCloned);
 
             using (_logger.LogTimer(data.Id, "checking integrity media"))
             {
-                await _mediaIntegrity.Check(filteredIntegrity, data);
+                await _mediaIntegrity.Check(filteredIntegrity, maintenance);
                 _logger.LogInformation(data.Id, "{media} corrupt media", filteredIntegrity.Count);
 
                 filteredCloned.AddRange(filteredIntegrity);
@@ -97,7 +107,7 @@ public class MediaService(
             await _mediaFilter.Check(filteredCloned);
 
             using (_logger.LogTimer(data.Id, "checking saved media"))
-                await data.CheckData(filteredCloned);
+                await maintenance.CheckData(filteredCloned);
 
             _logger.LogInformation(data.Id, "replicating media");
             await _mediaReplication.Replicate(filteredCloned, _mediaData, data);
@@ -108,7 +118,7 @@ public class MediaService(
 
         foreach (IMediaBackupStrategy backup in _mediaBackups)
         {
-            IMediaData? backupSource = _mediaData.FirstOrDefault();
+            IMediaStorage? backupSource = _mediaData.FirstOrDefault();
 
             if (backupSource is null)
             {

@@ -4,6 +4,7 @@ namespace Backup.Infrastructure.Interfaces.Services.Media;
 
 public interface IMediaDataMaintenance
 {
+    public string? Id { get; set; }
     public Task CheckData(List<Download> downloads);
     public Task Prune(List<Download> downloads);
     public Task CheckIntegrity(List<Download> downloads);
