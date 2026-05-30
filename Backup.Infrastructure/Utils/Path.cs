@@ -52,24 +52,11 @@ public class UtilsPath
 
     public static string GetPartitionPath(AppConfig config, PartitionConfig partition)
     {
-        List<string> paths = [];
+        IReadOnlyList<string> resolvedPaths = PathAliasResolutionPolicy.ResolveAliases(
+            partition.Paths,
+            config.Data.Aliases
+        );
 
-        foreach (string path in partition.Paths)
-        {
-            if (!path.StartsWith('@'))
-            {
-                paths.Add(path);
-                continue;
-            }
-
-            string alias = path.Replace("@", "");
-
-            if (!config.Data.Aliases.TryGetValue(alias, out string? value))
-                throw new Exception($"alias '{path}' is not set");
-
-            paths.Add(value);
-        }
-
-        return GetPath(paths);
+        return GetPath([.. resolvedPaths]);
     }
 }
