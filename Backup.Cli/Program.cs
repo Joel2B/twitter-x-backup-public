@@ -2,11 +2,15 @@ using Backup.Configuration;
 using Backup.Infrastructure.DependencyInjection.Composition;
 using Backup.Infrastructure.DependencyInjection.Runtime;
 using Backup.Infrastructure.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 ServiceCollection services = new();
+ConfigurationManager configuration = new();
+configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
+configuration.AddEnvironmentVariables();
 
-services.AddBackupConfiguration();
+services.AddBackupConfiguration(configuration);
 services.AddBackupCliInfrastructure();
 
 Console.Error.WriteLine("[startup] building service provider");

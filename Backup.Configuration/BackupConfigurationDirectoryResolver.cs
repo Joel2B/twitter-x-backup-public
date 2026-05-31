@@ -1,11 +1,13 @@
 using System.Text;
+using Microsoft.Extensions.Configuration;
 
 namespace Backup.Configuration;
 
 internal static class BackupConfigurationDirectoryResolver
 {
-    public static string Resolve(BackupConfigurationOptions options)
+    public static string Resolve(BackupConfigurationOptions options, IConfiguration? configuration = null)
     {
+        string? fromConfiguration = configuration?[BackupConfigurationOptions.ConfigDirectoryConfigurationKey];
         string? fromEnvironment = Environment.GetEnvironmentVariable(
             BackupConfigurationOptions.ConfigDirectoryEnvironmentVariable
         );
@@ -14,6 +16,9 @@ internal static class BackupConfigurationDirectoryResolver
 
         if (!string.IsNullOrWhiteSpace(options.ConfigDirectory))
             candidates.Add(options.ConfigDirectory);
+
+        if (!string.IsNullOrWhiteSpace(fromConfiguration))
+            candidates.Add(fromConfiguration);
 
         if (!string.IsNullOrWhiteSpace(fromEnvironment))
             candidates.Add(fromEnvironment);
