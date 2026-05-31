@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Backup.Application.Media.Backup;
 using Backup.Application.IO;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Media.Abstractions.Data;
@@ -16,6 +17,7 @@ public partial class MediaBackup(
     StorageBackup _config,
     IZipWriterFactory _zipWriterFactory,
     IMediaBackupData _mediaBackupData,
+    IMediaBackupPathAnalysisService mediaBackupPathAnalysisService,
     IEnumerable<IMediaBackupPipelineStep> _pipelineSteps,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaBackupStrategy, IMediaBackupPipelineActions
@@ -29,6 +31,8 @@ public partial class MediaBackup(
     private IMediaStorage MediaData =>
         _dataStoreGuardService.RequireInitialized(_mediaData, "media data not initialized");
     private readonly IMediaBackupData _mediaBackupData = _mediaBackupData;
+    private readonly IMediaBackupPathAnalysisService _mediaBackupPathAnalysisService =
+        mediaBackupPathAnalysisService;
     private BackupChunks _backup = new()
     {
         Chunks = new()

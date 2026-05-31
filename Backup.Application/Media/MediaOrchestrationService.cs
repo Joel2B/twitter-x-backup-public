@@ -7,7 +7,7 @@ public sealed class MediaOrchestrationService : IMediaOrchestrationService
 {
     public async Task Run(IMediaOrchestrationCommand command)
     {
-        IReadOnlyList<Backup.Domain.Posts.MediaInput> posts = await command.GetMediaInputs();
+        IReadOnlyList<global::Backup.Domain.Posts.MediaInput> posts = await command.GetMediaInputs();
 
         if (posts.Count == 0)
             return;

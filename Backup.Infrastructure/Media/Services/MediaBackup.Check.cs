@@ -51,29 +51,11 @@ public partial class MediaBackup
 
             _logger.LogInfo("reading memory for duplicates");
 
-            var memoryDuplicates = memory
-                .GroupBy(o => o)
-                .Where(o => o.Count() > 1)
-                .Select(o => new
-                {
-                    Name = o.Key,
-                    Count = o.Count(),
-                    Entries = o.ToList(),
-                })
-                .ToList();
+            var memoryDuplicates = _mediaBackupPathAnalysisService.FindDuplicates(memory);
 
             _logger.LogInfo("reading storage for duplicates");
 
-            var storageDuplicates = storage
-                .GroupBy(o => o)
-                .Where(o => o.Count() > 1)
-                .Select(o => new
-                {
-                    Name = o.Key,
-                    Count = o.Count(),
-                    Entries = o.ToList(),
-                })
-                .ToList();
+            var storageDuplicates = _mediaBackupPathAnalysisService.FindDuplicates(storage);
 
             if (memoryDuplicates.Count != 0)
             {
@@ -127,8 +109,9 @@ public partial class MediaBackup
                 );
             }
 
-            int missing = memory.Except(storage).Count();
-            IEnumerable<string> extras = storage.Except(memory);
+            var diff = _mediaBackupPathAnalysisService.Diff(memory, storage);
+            int missing = diff.MissingPaths.Count;
+            IReadOnlyList<string> extras = diff.ExtraPaths;
 
             if (missing == 0 && !extras.Any())
                 continue;

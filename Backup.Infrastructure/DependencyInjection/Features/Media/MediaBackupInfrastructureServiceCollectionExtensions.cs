@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Media.Data;
+using Backup.Application.Media.Backup;
 using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.DependencyInjection.Base;
 using Backup.Infrastructure.Core.Abstractions.Setup;
@@ -15,6 +16,8 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
 {
     public static IServiceCollection AddMediaBackupInfrastructure(this IServiceCollection services)
     {
+        services.AddScoped<IMediaBackupPathAnalysisService, MediaBackupPathAnalysisService>();
+
         Dictionary<string, Type> types = new() { ["local"] = typeof(MediaBackup) };
 
         List<DataInfrastructureHelpers.DataRegistration<StorageBackup>> registrations =
