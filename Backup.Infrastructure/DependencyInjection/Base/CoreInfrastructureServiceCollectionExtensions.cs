@@ -27,6 +27,7 @@ public static class CoreInfrastructureServiceCollectionExtensions
         services.AddSingleton<IDumpIndexFilePolicyService, DumpIndexFilePolicyService>();
         services.AddSingleton<IDumpContextGuardService, DumpContextGuardService>();
         services.AddSingleton<IDumpSessionNamingPolicyService, DumpSessionNamingPolicyService>();
+        services.AddSingleton<IDumpLifecycleService, DumpLifecycleService>();
         services.AddSingleton<IDumpFlushPlanningService, DumpFlushPlanningService>();
         services.AddSingleton<IDumpFlushExecutionService, DumpFlushExecutionService>();
         services.AddSingleton<IDumpReplicationPlanningService, DumpReplicationPlanningService>();

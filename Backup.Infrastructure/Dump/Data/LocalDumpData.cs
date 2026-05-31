@@ -24,10 +24,8 @@ public class LocalDumpData(
     IDumpsData _dumps,
     StorageDump _config,
     IPartition _partition,
-    IDumpProgressPolicyService dumpProgressPolicyService,
     IDumpIndexFilePolicyService dumpIndexFilePolicyService,
-    IDumpContextGuardService dumpContextGuardService,
-    IDumpSessionNamingPolicyService dumpSessionNamingPolicyService,
+    IDumpLifecycleService dumpLifecycleService,
     IDumpFlushExecutionService dumpFlushExecutionService,
     IDumpReplicationPlanningService dumpReplicationPlanningService,
     IDataStoreGuardService dataStoreGuardService
@@ -40,11 +38,8 @@ public class LocalDumpData(
     private readonly AppConfig _appConfig = _appConfig;
     private readonly StorageDump _config = _config;
     private readonly IPartition _partition = _partition;
-    private readonly IDumpProgressPolicyService _dumpProgressPolicyService = dumpProgressPolicyService;
     private readonly IDumpIndexFilePolicyService _dumpIndexFilePolicyService = dumpIndexFilePolicyService;
-    private readonly IDumpContextGuardService _dumpContextGuardService = dumpContextGuardService;
-    private readonly IDumpSessionNamingPolicyService _dumpSessionNamingPolicyService =
-        dumpSessionNamingPolicyService;
+    private readonly IDumpLifecycleService _dumpLifecycleService = dumpLifecycleService;
     private readonly IDumpFlushExecutionService _dumpFlushExecutionService = dumpFlushExecutionService;
     private readonly IDumpReplicationPlanningService _dumpReplicationPlanningService =
         dumpReplicationPlanningService;
@@ -62,17 +57,22 @@ public class LocalDumpData(
     private async Task<string> GetPathCurrent(ApiContext context)
     {
         DumpsData dumpsData = await _dumps.GetData();
+        DumpCurrentSessionResolution resolution = _dumpLifecycleService.ResolveCurrentSession(
+            dumpsData.Current,
+            DateTime.Now
+        );
 
-        string current =
-            dumpsData.Current ?? _dumpSessionNamingPolicyService.CreateCurrentSessionName(DateTime.Now);
-
-        if (dumpsData.Current != current)
+        if (resolution.ShouldPersist)
         {
-            dumpsData.Current = current;
+            dumpsData.Current = resolution.Current;
             await _dumps.Save(dumpsData);
         }
 
-        string path = Path.Combine(GetPath(_partition.GetPrimary()), current, context.UserId);
+        string path = Path.Combine(
+            GetPath(_partition.GetPrimary()),
+            resolution.Current,
+            context.UserId
+        );
 
         Directory.CreateDirectory(path);
 
@@ -108,10 +108,15 @@ public class LocalDumpData(
         if (File.Exists(path))
             return;
 
+        DumpDataInitialization initialized = _dumpLifecycleService.CreateInitialData(
+            _appConfig.Services.Dump.Count,
+            context.Request.Query.Variables["count"]
+        );
+
         DumpData dump = new()
         {
-            Count = _appConfig.Services.Dump.Count,
-            QueryCount = Convert.ToInt32(context.Request.Query.Variables["count"]),
+            Count = initialized.Count,
+            QueryCount = initialized.QueryCount,
         };
 
         string content = JsonConvert.SerializeObject(dump);
@@ -136,15 +141,12 @@ public class LocalDumpData(
 
     private async Task SetupDirectory(ApiContext context)
     {
-        DumpProgressState state = new()
-        {
-            Index = Data.Index,
-            IndexFile = Data.IndexFile,
-            Count = Data.Count,
-            QueryCount = Data.QueryCount,
-        };
-
-        _dumpProgressPolicyService.AdvanceDirectoryIndex(state);
+        DumpProgressState state = _dumpLifecycleService.AdvanceDirectory(
+            Data.Index,
+            Data.IndexFile,
+            Data.Count,
+            Data.QueryCount
+        );
         Data.Index = state.Index;
         Data.IndexFile = state.IndexFile;
 
@@ -164,7 +166,7 @@ public class LocalDumpData(
         await CreateData(context);
         await SetupData(context);
 
-        Data.Type = _dumpContextGuardService.ResolveType(dumpsData.Current, context.Id, Data.Type);
+        Data.Type = _dumpLifecycleService.ResolveType(dumpsData.Current, context.Id, Data.Type);
 
         return Data;
     }
