@@ -1,6 +1,5 @@
 using Backup.Application.Posts;
 using Backup.Infrastructure.Posts.Models;
-using Backup.Infrastructure.Posts.Adapters.Parsing;
 using Newtonsoft.Json.Linq;
 
 namespace Backup.Tests;
@@ -15,7 +14,11 @@ public class PostsParserComponentsTests
             new Result { Legacy = CreateLegacy(id: "base-id", userId: "u1"), Tweet = tweet }
         );
 
-        Result resolved = TweetResultResolver.Resolve(entry);
+        Result resolved = PostResultResolutionPolicy.ResolvePrimaryThenRetweeted(
+            entry.Content.ItemContent.TweetResults!.Result,
+            current => current.Tweet,
+            current => current.Legacy?.RetweetedStatusResult?.Result
+        );
 
         Assert.Same(tweet, resolved);
         Assert.Equal("tweet-id", resolved.Legacy?.IdStr);
@@ -36,7 +39,11 @@ public class PostsParserComponentsTests
 
         Entry entry = CreateEntry(new Result { Legacy = legacy });
 
-        Result resolved = TweetResultResolver.Resolve(entry);
+        Result resolved = PostResultResolutionPolicy.ResolvePrimaryThenRetweeted(
+            entry.Content.ItemContent.TweetResults!.Result,
+            current => current.Tweet,
+            current => current.Legacy?.RetweetedStatusResult?.Result
+        );
 
         Assert.Same(retweetedTweet, resolved);
         Assert.Equal("retweet-id", resolved.Legacy?.IdStr);
