@@ -55,6 +55,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaCacheRecheckOrchestrationService, MediaCacheRecheckOrchestrationService>();
         services.AddScoped<IMediaCacheEntryPathPolicyService, MediaCacheEntryPathPolicyService>();
         services.AddScoped<IMediaCacheEntryStateFactoryService, MediaCacheEntryStateFactoryService>();
+        services.AddScoped<IMediaCacheStoredEntryProjectionService, MediaCacheStoredEntryProjectionService>();
         services.AddScoped<IMediaCachePartitionSizeAggregationService, MediaCachePartitionSizeAggregationService>();
         services.AddScoped<IMediaCacheReplicationPathService, MediaCacheReplicationPathService>();
         services.AddScoped<IMediaIntegrity, MediaIntegrity>();

@@ -22,6 +22,7 @@ public class LocalMediaCache(
     IMediaCacheRecheckOrchestrationService mediaCacheRecheckOrchestrationService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
+    IMediaCacheStoredEntryProjectionService mediaCacheStoredEntryProjectionService,
     IMediaCachePartitionSizeAggregationService mediaCachePartitionSizeAggregationService,
     IMediaCacheReplicationPathService mediaCacheReplicationPathService
 ) : IMediaCache
@@ -38,6 +39,8 @@ public class LocalMediaCache(
         mediaCacheEntryPathPolicyService;
     private readonly IMediaCacheEntryStateFactoryService _mediaCacheEntryStateFactoryService =
         mediaCacheEntryStateFactoryService;
+    private readonly IMediaCacheStoredEntryProjectionService _mediaCacheStoredEntryProjectionService =
+        mediaCacheStoredEntryProjectionService;
     private readonly IMediaCachePartitionSizeAggregationService _mediaCachePartitionSizeAggregationService =
         mediaCachePartitionSizeAggregationService;
     private readonly IMediaCacheReplicationPathService _mediaCacheReplicationPathService =
@@ -111,14 +114,10 @@ public class LocalMediaCache(
             }
 
             _logger.LogWarning("cache: {count}", _cache.Count);
-            List<MediaCacheRecheckCandidate> candidates = _cache
-                .Values.Select(entry => new MediaCacheRecheckCandidate
-                {
-                    Path = entry.Path,
-                    StreamSizeBytes = entry.Size?.Stream,
-                    FileSizeBytes = entry.Size?.File,
-                })
-                .ToList();
+            IReadOnlyList<MediaCacheRecheckCandidate> candidates =
+                _mediaCacheStoredEntryProjectionService.ToRecheckCandidates(
+                    _cache.Values.Select(ToStoredEntry)
+                );
             recheck = _mediaCacheRecheckOrchestrationService.SelectRecheckPaths(candidates);
         }
         else
@@ -210,8 +209,8 @@ public class LocalMediaCache(
         );
 
         IReadOnlyDictionary<int, long> sizes = _mediaCachePartitionSizeAggregationService.Aggregate(
-            _cache.Values.Select(entry =>
-                new KeyValuePair<int?, long?>(entry.PartitionId, entry.Size?.File)
+            _mediaCacheStoredEntryProjectionService.ToPartitionFileSizes(
+                _cache.Values.Select(ToStoredEntry)
             )
         );
 
@@ -375,5 +374,14 @@ public class LocalMediaCache(
                 Stream = state.StreamSizeBytes,
                 File = state.FileSizeBytes,
             },
+        };
+
+    private static MediaCacheStoredEntry ToStoredEntry(MediaCacheEntry entry)
+        => new()
+        {
+            Path = entry.Path,
+            PartitionId = entry.PartitionId,
+            StreamSizeBytes = entry.Size?.Stream,
+            FileSizeBytes = entry.Size?.File,
         };
 }
