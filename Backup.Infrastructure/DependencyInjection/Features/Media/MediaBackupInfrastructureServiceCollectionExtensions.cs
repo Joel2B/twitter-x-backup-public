@@ -44,6 +44,7 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaBackupChunkMetadataOrchestrationService, MediaBackupChunkMetadataOrchestrationService>();
         services.AddScoped<IMediaBackupIntegrityChunkUpdateOrchestrationService, MediaBackupIntegrityChunkUpdateOrchestrationService>();
         services.AddScoped<IMediaBackupIntegrityChunkApplyService, MediaBackupIntegrityChunkApplyService>();
+        services.AddScoped<IMediaBackupIntegrityChunkRefreshService, MediaBackupIntegrityChunkRefreshService>();
         services.AddScoped<IMediaBackupDuplicateCleanupService, MediaBackupDuplicateCleanupService>();
         services.AddScoped<IMediaBackupDuplicateCheckPlanningService, MediaBackupDuplicateCheckPlanningService>();
         services.AddScoped<IMediaBackupDuplicateChunkOrchestrationService, MediaBackupDuplicateChunkOrchestrationService>();

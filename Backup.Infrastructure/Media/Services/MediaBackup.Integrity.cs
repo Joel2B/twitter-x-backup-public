@@ -190,17 +190,12 @@ public partial class MediaBackup
                     )
                 );
 
-            MediaBackupIntegrityUpdateSelectionPlan selection =
-                _mediaBackupIntegrityChunkUpdateOrchestrationService.SelectAndValidate(
+            MediaBackupIntegrityChunkApplyResult applyResult =
+                _mediaBackupIntegrityChunkRefreshService.Refresh(
                     change.Paths,
                     _chunks[change.ChunkId].Data.Select(chunkData => chunkData.Path),
-                    metadataByPath
-                );
-
-            MediaBackupIntegrityChunkApplyResult applyResult =
-                _mediaBackupIntegrityChunkApplyService.Apply(
-                    BuildChunkEntryStates(_chunks[change.ChunkId].Data),
-                    selection
+                    metadataByPath,
+                    BuildChunkEntryStates(_chunks[change.ChunkId].Data)
                 );
 
             ApplyChunkEntryStates(_chunks[change.ChunkId], applyResult.Entries);

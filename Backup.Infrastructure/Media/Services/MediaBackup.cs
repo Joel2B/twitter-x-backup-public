@@ -43,8 +43,7 @@ public partial class MediaBackup(
     IMediaBackupChunkReportObservationAggregationService mediaBackupChunkReportObservationAggregationService,
     IMediaBackupChunkReportService mediaBackupChunkReportService,
     IMediaBackupChunkMetadataOrchestrationService mediaBackupChunkMetadataOrchestrationService,
-    IMediaBackupIntegrityChunkUpdateOrchestrationService mediaBackupIntegrityChunkUpdateOrchestrationService,
-    IMediaBackupIntegrityChunkApplyService mediaBackupIntegrityChunkApplyService,
+    IMediaBackupIntegrityChunkRefreshService mediaBackupIntegrityChunkRefreshService,
     IMediaBackupDuplicateChunkExecutionService mediaBackupDuplicateChunkExecutionService,
     IMediaBackupZipEntryReaderIOService mediaBackupZipEntryReaderIoService,
     IMediaBackupZipMutationIOService mediaBackupZipMutationIoService,
@@ -114,10 +113,8 @@ public partial class MediaBackup(
         mediaBackupChunkReportService;
     private readonly IMediaBackupChunkMetadataOrchestrationService _mediaBackupChunkMetadataOrchestrationService =
         mediaBackupChunkMetadataOrchestrationService;
-    private readonly IMediaBackupIntegrityChunkUpdateOrchestrationService _mediaBackupIntegrityChunkUpdateOrchestrationService =
-        mediaBackupIntegrityChunkUpdateOrchestrationService;
-    private readonly IMediaBackupIntegrityChunkApplyService _mediaBackupIntegrityChunkApplyService =
-        mediaBackupIntegrityChunkApplyService;
+    private readonly IMediaBackupIntegrityChunkRefreshService _mediaBackupIntegrityChunkRefreshService =
+        mediaBackupIntegrityChunkRefreshService;
     private readonly IMediaBackupDuplicateChunkExecutionService _mediaBackupDuplicateChunkExecutionService =
         mediaBackupDuplicateChunkExecutionService;
     private readonly IMediaBackupZipEntryReaderIOService _mediaBackupZipEntryReaderIoService =
