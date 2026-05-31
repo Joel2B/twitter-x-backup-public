@@ -1,6 +1,7 @@
 using Backup.Infrastructure.Models.Data.Json;
 using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Posts.Adapters;
+using Backup.Application.Posts.Models;
 using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Posts.Data.Json;
@@ -39,35 +40,41 @@ public partial class LocalPostData
     private async Task<Dictionary<string, PostMetaRow>> EnsurePostMetaCache(IEnumerable<Post> posts)
     {
         Dictionary<string, PostMetaRow> meta = await GetPostMetaCache();
-        HashSet<string> ids = [];
-
-        foreach (Post post in posts)
-        {
-            ids.Add(post.Id);
-            string hash = ComputePostHash(post);
-
-            if (!meta.TryGetValue(post.Id, out PostMetaRow? value))
-            {
-                meta[post.Id] = new()
+        IReadOnlyDictionary<string, PostMetaRecord> existing = meta.ToDictionary(
+            entry => entry.Key,
+            entry =>
+                new PostMetaRecord
                 {
-                    Id = post.Id,
-                    Hash = hash,
-                    Deleted = post.Deleted,
-                };
+                    Id = entry.Value.Id,
+                    Hash = entry.Value.Hash,
+                    Deleted = entry.Value.Deleted,
+                },
+            StringComparer.Ordinal
+        );
 
-                continue;
-            }
+        List<PostMetaRecord> current = posts
+            .Select(post => new PostMetaRecord
+            {
+                Id = post.Id,
+                Hash = ComputePostHash(post),
+                Deleted = post.Deleted,
+            })
+            .ToList();
 
-            value.Deleted = post.Deleted;
-            value.Hash = hash;
-        }
+        IReadOnlyDictionary<string, PostMetaRecord> reconciled =
+            _postMetaReconciliationService.Reconcile(existing, current);
 
-        List<string> staleIds = [.. meta.Keys.Where(id => !ids.Contains(id))];
-
-        foreach (string staleId in staleIds)
-            meta.Remove(staleId);
-
-        return meta;
+        return reconciled.ToDictionary(
+            entry => entry.Key,
+            entry =>
+                new PostMetaRow
+                {
+                    Id = entry.Value.Id,
+                    Hash = entry.Value.Hash,
+                    Deleted = entry.Value.Deleted,
+                },
+            StringComparer.Ordinal
+        );
     }
 
     private string ComputePostHash(Post post)
