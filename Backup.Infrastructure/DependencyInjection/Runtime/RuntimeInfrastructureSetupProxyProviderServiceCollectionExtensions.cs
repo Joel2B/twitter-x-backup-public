@@ -20,6 +20,7 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
         services.AddScoped<IProxyKeyPolicyService, ProxyKeyPolicyService>();
         services.AddScoped<IProxyEndpointParserService, ProxyEndpointParserService>();
         services.AddScoped<IProxyProviderTypeResolverService, ProxyProviderTypeResolverService>();
+        services.AddScoped<IProxySourceLoadService, ProxySourceLoadService>();
         services.AddScoped<ProxyProvider>();
         services.AddScoped<IProxyProvider>(sp => sp.GetRequiredService<ProxyProvider>());
         services.AddScoped<ISetup>(sp => sp.GetRequiredService<ProxyProvider>());

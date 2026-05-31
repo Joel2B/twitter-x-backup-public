@@ -1,9 +1,11 @@
 using Backup.Application.Proxy;
+using Backup.Application.Proxy.Models;
+using Backup.Application.Proxy.Ports;
+using Backup.Infrastructure.Proxy.Adapters;
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Proxy;
 using Backup.Infrastructure.Proxy.Models;
-using Backup.Infrastructure.Proxy.Services.Downloader;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Proxy.Services;
@@ -12,7 +14,8 @@ public class ProxyLoader(
     ILogger _logger,
     AppConfig _config,
     IProxyEndpointParserService proxyEndpointParserService,
-    IProxyProviderTypeResolverService proxyProviderTypeResolverService
+    IProxyProviderTypeResolverService proxyProviderTypeResolverService,
+    IProxySourceLoadService proxySourceLoadService
 )
 {
     private readonly ILogger _logger = _logger;
@@ -20,28 +23,43 @@ public class ProxyLoader(
     private readonly IProxyEndpointParserService _proxyEndpointParserService = proxyEndpointParserService;
     private readonly IProxyProviderTypeResolverService _proxyProviderTypeResolverService =
         proxyProviderTypeResolverService;
-    private readonly List<ProxyDataConfig> _proxies = [];
+    private readonly IProxySourceLoadService _proxySourceLoadService = proxySourceLoadService;
 
     public async Task<List<ProxyDataConfig>> Load()
     {
-        foreach (Provider provider in _config.Proxy.Providers)
-        {
-            foreach (Resource resource in provider.Resources)
+        IReadOnlyList<ProxyLoadProviderDefinition> providers = _config.Proxy.Providers
+            .Select(ToProviderDefinition)
+            .ToList();
+
+        IProxyResourceLoadPort port = new ProxyResourceLoadPortAdapter(
+            _logger,
+            _proxyEndpointParserService,
+            _proxyProviderTypeResolverService
+        );
+
+        IReadOnlyList<ProxyEndpoint> loaded = await _proxySourceLoadService.Load(providers, port);
+
+        return loaded
+            .Select(endpoint => new ProxyDataConfig
             {
-                IProxyDownloader downloader = new ProxyDownloader(
-                    _logger,
-                    _proxyEndpointParserService,
-                    _proxyProviderTypeResolverService,
-                    provider.Format
-                ).Create(provider.Type);
-
-                List<ProxyDataConfig>? proxies = await downloader.Load(resource);
-
-                if (proxies is not null)
-                    _proxies.AddRange(proxies);
-            }
-        }
-
-        return _proxies;
+                Ip = endpoint.Ip,
+                Port = endpoint.Port,
+                Protocol = endpoint.Protocol,
+            })
+            .ToList();
     }
+
+    private static ProxyLoadProviderDefinition ToProviderDefinition(Provider provider) =>
+        new()
+        {
+            ProviderType = provider.Type,
+            ProviderFormat = provider.Format,
+            Resources = provider.Resources
+                .Select(resource => new ProxyLoadResourceDefinition
+                {
+                    ResourceType = resource.Type,
+                    ResourceValue = resource.Value,
+                })
+                .ToList(),
+        };
 }

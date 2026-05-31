@@ -25,7 +25,8 @@ public class ProxyProvider(
     IProxyConnectionWindowPolicyService proxyConnectionWindowPolicyService,
     IProxyKeyPolicyService proxyKeyPolicyService,
     IProxyEndpointParserService proxyEndpointParserService,
-    IProxyProviderTypeResolverService proxyProviderTypeResolverService
+    IProxyProviderTypeResolverService proxyProviderTypeResolverService,
+    IProxySourceLoadService proxySourceLoadService
 )
     : IProxyProvider,
         ISetup,
@@ -48,6 +49,7 @@ public class ProxyProvider(
         proxyEndpointParserService;
     private readonly IProxyProviderTypeResolverService _proxyProviderTypeResolverService =
         proxyProviderTypeResolverService;
+    private readonly IProxySourceLoadService _proxySourceLoadService = proxySourceLoadService;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
     private int _proxyIndex = 0;
@@ -77,7 +79,8 @@ public class ProxyProvider(
             _logger,
             _config,
             _proxyEndpointParserService,
-            _proxyProviderTypeResolverService
+            _proxyProviderTypeResolverService,
+            _proxySourceLoadService
         );
         List<ProxyDataConfig> proxies = await loader.Load();
 
@@ -121,7 +124,8 @@ public class ProxyProvider(
             _logger,
             _config,
             _proxyEndpointParserService,
-            _proxyProviderTypeResolverService
+            _proxyProviderTypeResolverService,
+            _proxySourceLoadService
         );
         List<ProxyDataConfig> proxiesLoader = await loader.Load();
         proxies.AddRange(proxiesLoader);
