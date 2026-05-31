@@ -16,6 +16,7 @@ public partial class MediaBackup
         _logger.LogInformation("checking integrity backup");
 
         _changes.Clear();
+        List<MediaBackupIntegrityObservation> observations = [];
 
         foreach (var kvp in _chunks)
         {
@@ -49,29 +50,23 @@ public partial class MediaBackup
                 MediaCacheEntry? cache = await MediaData.GetCache(item.Path);
                 entries.TryGetValue(item.Path.Replace('\\', '/'), out ZipEntry? value2);
 
-                IntegrityChange change = new()
-                {
-                    Id = kvp.Key,
-                    Path = item.Path,
-                    FileSize = new() { Diff1 = item.FileSize, Diff2 = cache?.Size?.File },
-                    Crc32 = new() { Diff1 = item.Crc32, Diff2 = value2?.Crc32 },
-                };
-
-                if (
-                    !_mediaBackupIntegrityPlanningService.HasChange(
-                        change.FileSize?.Diff1,
-                        change.FileSize?.Diff2,
-                        change.Crc32?.Diff1,
-                        change.Crc32?.Diff2
-                    )
-                )
-                    continue;
-
-                _changes.Add(change);
+                observations.Add(
+                    new MediaBackupIntegrityObservation
+                    {
+                        ChunkId = kvp.Key,
+                        Path = item.Path,
+                        ExpectedFileSize = item.FileSize,
+                        ActualFileSize = cache?.Size?.File,
+                        ExpectedCrc32 = item.Crc32,
+                        ActualCrc32 = value2?.Crc32,
+                    }
+                );
             }
 
             _logger.LogInformation("chunk {chunk} processed", kvp.Key);
         }
+
+        _changes.AddRange(_mediaBackupIntegrityChangeDetectionService.Detect(observations));
 
         if (_changes.Count > 0)
             _logger.LogInfo(
@@ -83,14 +78,14 @@ public partial class MediaBackup
                 "path"
             );
 
-        foreach (IntegrityChange change in _changes)
+        foreach (MediaBackupIntegrityChange change in _changes)
         {
             _logger.LogInformation(
                 "{id,-3} {diff1,-10} {diff2,-10} {diff,-5} {path}",
-                change.Id,
-                change.FileSize?.Diff1,
-                change.FileSize?.Diff2,
-                change.FileSize?.Diff1 - change.FileSize?.Diff2,
+                change.ChunkId,
+                change.ExpectedFileSize,
+                change.ActualFileSize,
+                change.ExpectedFileSize - change.ActualFileSize,
                 change.Path
             );
         }
@@ -102,7 +97,7 @@ public partial class MediaBackup
             .GroupByChunk(
                 _changes.Select(change => new MediaBackupIntegrityPathChange
                 {
-                    ChunkId = change.Id,
+                    ChunkId = change.ChunkId,
                     Path = change.Path,
                 })
             );

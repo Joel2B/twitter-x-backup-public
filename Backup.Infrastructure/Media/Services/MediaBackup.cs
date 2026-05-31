@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Backup.Application.Media.Backup;
+using Backup.Application.Media.Backup.Models;
 using Backup.Application.IO;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Media.Abstractions.Data;
@@ -23,6 +24,7 @@ public partial class MediaBackup(
     IMediaBackupDirectPathEligibilityService mediaBackupDirectPathEligibilityService,
     IMediaBackupChunkSyncPlanningService mediaBackupChunkSyncPlanningService,
     IMediaBackupIntegrityPlanningService mediaBackupIntegrityPlanningService,
+    IMediaBackupIntegrityChangeDetectionService mediaBackupIntegrityChangeDetectionService,
     IMediaBackupDuplicateCleanupService mediaBackupDuplicateCleanupService,
     IMediaBackupStorageConsistencyDecisionService mediaBackupStorageConsistencyDecisionService,
     IMediaBackupChunkPlanningService mediaBackupChunkPlanningService,
@@ -52,6 +54,8 @@ public partial class MediaBackup(
         mediaBackupChunkSyncPlanningService;
     private readonly IMediaBackupIntegrityPlanningService _mediaBackupIntegrityPlanningService =
         mediaBackupIntegrityPlanningService;
+    private readonly IMediaBackupIntegrityChangeDetectionService _mediaBackupIntegrityChangeDetectionService =
+        mediaBackupIntegrityChangeDetectionService;
     private readonly IMediaBackupDuplicateCleanupService _mediaBackupDuplicateCleanupService =
         mediaBackupDuplicateCleanupService;
     private readonly IMediaBackupStorageConsistencyDecisionService _mediaBackupStorageConsistencyDecisionService =
@@ -72,7 +76,7 @@ public partial class MediaBackup(
     private Dictionary<int, Chunk> _chunks = [];
     private List<string> _pathsInBoth = [];
     private ConcurrentBag<string> _pathsDirect = [];
-    private readonly List<IntegrityChange> _changes = [];
+    private readonly List<MediaBackupIntegrityChange> _changes = [];
 
     private readonly ILogger<MediaBackup> _logger = _logger;
     private readonly IZipWriterFactory _zipWriterFactory = _zipWriterFactory;
