@@ -28,7 +28,7 @@ public partial class MediaBackup(
     IMediaBackupDirectPathQueueService mediaBackupDirectPathQueueService,
     IMediaBackupPathProjectionService mediaBackupPathProjectionService,
     IMediaBackupChunkFailurePolicyService mediaBackupChunkFailurePolicyService,
-    IMediaBackupStorageConsistencyDecisionService mediaBackupStorageConsistencyDecisionService,
+    IMediaBackupApplyFinalizeService mediaBackupApplyFinalizeService,
     IMediaBackupChunkPlanningService mediaBackupChunkPlanningService,
     IMediaBackupChunkCountDeltaService mediaBackupChunkCountDeltaService,
     IMediaBackupChunkDeltaLogPlanningService mediaBackupChunkDeltaLogPlanningService,
@@ -67,8 +67,8 @@ public partial class MediaBackup(
         mediaBackupPathProjectionService;
     private readonly IMediaBackupChunkFailurePolicyService _mediaBackupChunkFailurePolicyService =
         mediaBackupChunkFailurePolicyService;
-    private readonly IMediaBackupStorageConsistencyDecisionService _mediaBackupStorageConsistencyDecisionService =
-        mediaBackupStorageConsistencyDecisionService;
+    private readonly IMediaBackupApplyFinalizeService _mediaBackupApplyFinalizeService =
+        mediaBackupApplyFinalizeService;
     private readonly IMediaBackupChunkPlanningService _mediaBackupChunkPlanningService =
         mediaBackupChunkPlanningService;
     private readonly IMediaBackupChunkCountDeltaService _mediaBackupChunkCountDeltaService =

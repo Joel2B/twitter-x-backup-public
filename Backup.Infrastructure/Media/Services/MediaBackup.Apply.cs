@@ -77,11 +77,13 @@ public partial class MediaBackup
                 IReadOnlyList<string> memory = _mediaBackupPathProjectionService.ToArchivePaths(
                     kvp.Value.Data.Select(item => item.Path)
                 );
-                MediaBackupStorageConsistencyDecision decision =
-                    _mediaBackupStorageConsistencyDecisionService.DecideForApply(
-                        memory,
-                        storagePaths
-                    );
+                MediaBackupApplyFinalizePlan finalizePlan = _mediaBackupApplyFinalizeService.Plan(
+                    memory,
+                    storagePaths,
+                    _backup.Chunks.Ids,
+                    kvp.Key
+                );
+                MediaBackupStorageConsistencyDecision decision = finalizePlan.ConsistencyDecision;
 
                 _logger.LogInformation(
                     "{memory}/{storage}:{missing}/{extras}",
@@ -105,8 +107,7 @@ public partial class MediaBackup
                     );
                 }
 
-                if (!_backup.Chunks.Ids.Contains(kvp.Key))
-                    _backup.Chunks.Ids.Add(kvp.Key);
+                _backup.Chunks.Ids = finalizePlan.ChunkIds.ToList();
 
                 await _mediaBackupData.SaveBackup(_backup);
                 await _mediaBackupData.Save([kvp.Value]);
