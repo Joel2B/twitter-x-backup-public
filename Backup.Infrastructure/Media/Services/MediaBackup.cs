@@ -41,6 +41,7 @@ public partial class MediaBackup(
     IMediaBackupChunkDeltaInputCompositionService mediaBackupChunkDeltaInputCompositionService,
     IMediaBackupChunkDeltaLogPlanningService mediaBackupChunkDeltaLogPlanningService,
     IMediaBackupChunkEntryStateService mediaBackupChunkEntryStateService,
+    IMediaBackupChunkEntryStateMutationService mediaBackupChunkEntryStateMutationService,
     IMediaBackupChunkMetadataRefreshExecutionService mediaBackupChunkMetadataRefreshExecutionService,
     IMediaBackupChunkReportObservationAggregationService mediaBackupChunkReportObservationAggregationService,
     IMediaBackupChunkReportService mediaBackupChunkReportService,
@@ -111,6 +112,8 @@ public partial class MediaBackup(
         mediaBackupChunkDeltaLogPlanningService;
     private readonly IMediaBackupChunkEntryStateService _mediaBackupChunkEntryStateService =
         mediaBackupChunkEntryStateService;
+    private readonly IMediaBackupChunkEntryStateMutationService _mediaBackupChunkEntryStateMutationService =
+        mediaBackupChunkEntryStateMutationService;
     private readonly IMediaBackupChunkMetadataRefreshExecutionService _mediaBackupChunkMetadataRefreshExecutionService =
         mediaBackupChunkMetadataRefreshExecutionService;
     private readonly IMediaBackupChunkReportObservationAggregationService _mediaBackupChunkReportObservationAggregationService =
@@ -223,25 +226,38 @@ public partial class MediaBackup(
         step.GetType().FullName ?? step.GetType().Name;
 
     private IReadOnlyList<MediaBackupChunkEntryState> BuildChunkEntryStates(IEnumerable<ChunkData> items) =>
-        items.Select(item => new MediaBackupChunkEntryState
+        _mediaBackupChunkEntryStateMutationService.BuildStates(
+            items.Select(item => new MediaBackupChunkEntryMutationInput
             {
                 Path = item.Path,
                 Hash = item.Hash,
                 FileSize = item.FileSize,
                 Crc32 = item.Crc32,
             })
-            .ToList();
+        );
 
     private void ApplyChunkEntryStates(Chunk chunk, IEnumerable<MediaBackupChunkEntryState> states)
     {
-        Dictionary<string, MediaBackupChunkEntryState> byPath = states.ToDictionary(
+        IReadOnlyList<MediaBackupChunkEntryMutationInput> updated =
+            _mediaBackupChunkEntryStateMutationService.ApplyStates(
+                chunk.Data.Select(data => new MediaBackupChunkEntryMutationInput
+                {
+                    Path = data.Path,
+                    Hash = data.Hash,
+                    FileSize = data.FileSize,
+                    Crc32 = data.Crc32,
+                }),
+                states
+            );
+
+        Dictionary<string, MediaBackupChunkEntryMutationInput> byPath = updated.ToDictionary(
             item => item.Path,
             StringComparer.Ordinal
         );
 
         foreach (ChunkData data in chunk.Data)
         {
-            if (!byPath.TryGetValue(data.Path, out MediaBackupChunkEntryState? state))
+            if (!byPath.TryGetValue(data.Path, out MediaBackupChunkEntryMutationInput? state))
                 continue;
 
             data.Hash = state.Hash;
