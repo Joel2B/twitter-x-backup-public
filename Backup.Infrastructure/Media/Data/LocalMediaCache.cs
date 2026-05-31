@@ -22,6 +22,7 @@ public class LocalMediaCache(
     IMediaCacheRecheckOrchestrationService mediaCacheRecheckOrchestrationService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
+    IMediaCachePartitionSelectionService mediaCachePartitionSelectionService,
     IMediaCacheStoredEntryProjectionService mediaCacheStoredEntryProjectionService,
     IMediaCachePartitionSizeAggregationService mediaCachePartitionSizeAggregationService,
     IMediaCacheReplicationPathService mediaCacheReplicationPathService
@@ -39,6 +40,8 @@ public class LocalMediaCache(
         mediaCacheEntryPathPolicyService;
     private readonly IMediaCacheEntryStateFactoryService _mediaCacheEntryStateFactoryService =
         mediaCacheEntryStateFactoryService;
+    private readonly IMediaCachePartitionSelectionService _mediaCachePartitionSelectionService =
+        mediaCachePartitionSelectionService;
     private readonly IMediaCacheStoredEntryProjectionService _mediaCacheStoredEntryProjectionService =
         mediaCacheStoredEntryProjectionService;
     private readonly IMediaCachePartitionSizeAggregationService _mediaCachePartitionSizeAggregationService =
@@ -316,12 +319,14 @@ public class LocalMediaCache(
     public async Task<string> GetPath(string path, long size = 0, CancellationToken ct = default)
     {
         MediaCacheEntry? cache = Get(path);
-        PartitionConfig? partition = null;
-
-        if (size > 0 && size >= _config.SizeHeavy)
-            partition = _partition.GetHeavy();
-
-        partition ??= _partition.GetPath(cache?.PartitionId, size);
+        MediaCachePartitionSelection selection = _mediaCachePartitionSelectionService.Select(
+            size,
+            _config.SizeHeavy,
+            cache?.PartitionId
+        );
+        PartitionConfig partition = selection.UseHeavyPartition
+            ? _partition.GetHeavy()
+            : _partition.GetPath(selection.PreferredPartitionId, selection.RequestedSizeBytes);
 
         if (size > 0)
         {
