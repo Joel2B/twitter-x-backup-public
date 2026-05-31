@@ -3,6 +3,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Backup.Application.IO;
 using Backup.Application.Media.Maintenance;
+using Backup.Application.Media.Maintenance.Models;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Media.Abstractions.Services;
@@ -22,6 +23,7 @@ public class LocalMediaCache(
     IDataStoreGuardService dataStoreGuardService,
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
     IMediaCacheRecheckPolicyService mediaCacheRecheckPolicyService,
+    IMediaCacheRecheckOrchestrationService mediaCacheRecheckOrchestrationService,
     IMediaCachePartitionSizeAggregationService mediaCachePartitionSizeAggregationService,
     IMediaCacheReplicationPathService mediaCacheReplicationPathService
 ) : IMediaCache
@@ -34,6 +36,8 @@ public class LocalMediaCache(
         mediaCacheDirectoryPolicyService;
     private readonly IMediaCacheRecheckPolicyService _mediaCacheRecheckPolicyService =
         mediaCacheRecheckPolicyService;
+    private readonly IMediaCacheRecheckOrchestrationService _mediaCacheRecheckOrchestrationService =
+        mediaCacheRecheckOrchestrationService;
     private readonly IMediaCachePartitionSizeAggregationService _mediaCachePartitionSizeAggregationService =
         mediaCachePartitionSizeAggregationService;
     private readonly IMediaCacheReplicationPathService _mediaCacheReplicationPathService =
@@ -94,7 +98,7 @@ public class LocalMediaCache(
         await Replicate();
 
         string file = GetPathCacheFilePrimary();
-        HashSet<string> recheck = new(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyCollection<string> recheck = [];
 
         if (File.Exists(file))
         {
@@ -107,19 +111,15 @@ public class LocalMediaCache(
             }
 
             _logger.LogWarning("cache: {count}", _cache.Count);
-
-            foreach (MediaCacheEntry entry in _cache.Values)
-            {
-                if (
-                    !_mediaCacheRecheckPolicyService.ShouldRecheck(
-                        entry.Size?.Stream,
-                        entry.Size?.File
-                    )
-                )
-                    continue;
-
-                recheck.Add(entry.Path);
-            }
+            List<MediaCacheRecheckCandidate> candidates = _cache
+                .Values.Select(entry => new MediaCacheRecheckCandidate
+                {
+                    Path = entry.Path,
+                    StreamSizeBytes = entry.Size?.Stream,
+                    FileSizeBytes = entry.Size?.File,
+                })
+                .ToList();
+            recheck = _mediaCacheRecheckOrchestrationService.SelectRecheckPaths(candidates);
         }
         else
             _logger.LogWarning("cache file not exist, {path}", file);
@@ -132,43 +132,72 @@ public class LocalMediaCache(
             recheck,
             options,
             path =>
-            {
-                try
                 {
-                    MediaCacheEntry? cache = Get(path);
-
-                    if (cache is null || cache.Size is null)
-                        throw new Exception();
-
-                    PartitionConfig partition = _partition.GetPath(cache.PartitionId);
-
-                    string fullPath = Path.Combine(
-                        [GetPathMedia(partition), UtilsPath.NormalizePath(path)]
-                    );
-
-                    FileInfo fi = new(fullPath);
-
-                    if (!fi.Exists)
+                    try
                     {
-                        bool removed = _cache.TryRemove(path, out var _);
+                        MediaCacheEntry? cache = Get(path);
+
+                        if (cache is null)
+                            throw new Exception();
+
+                        int? partitionId = cache.PartitionId;
+                        long? streamSize = cache.Size?.Stream;
+                        bool fileExists = false;
+                        long? fileSize = null;
+
+                        if (partitionId is not null)
+                        {
+                            PartitionConfig partition = _partition.GetPath(partitionId);
+                            string fullPath = Path.Combine(
+                                [GetPathMedia(partition), UtilsPath.NormalizePath(path)]
+                            );
+                            FileInfo fi = new(fullPath);
+                            fileExists = fi.Exists;
+                            fileSize = fileExists ? fi.Length : null;
+                        }
+
+                        MediaCacheRecheckResult decision = _mediaCacheRecheckOrchestrationService.Evaluate(
+                            new MediaCacheRecheckObservation
+                            {
+                                Path = path,
+                                PartitionId = partitionId,
+                                StreamSizeBytes = streamSize,
+                                FileExists = fileExists,
+                                FileSizeBytes = fileSize,
+                            }
+                        );
+
+                        if (decision.IsInvalid)
+                            throw new Exception();
+
+                        if (decision.ShouldRemove)
+                        {
+                            bool removed = _cache.TryRemove(path, out var _);
 
                         if (removed)
                             _logger.LogWarning("{path} path removed from cache", path);
                         else
                             _logger.LogError("error removing path {path}", path);
 
-                        return;
+                            return;
+                        }
+
+                        if (!decision.ShouldUpdate)
+                            return;
+
+                        MediaCacheEntry newCache = new()
+                        {
+                            Path = path,
+                            PartitionId = decision.PartitionId,
+                            Size = new()
+                            {
+                                Stream = decision.StreamSizeBytes,
+                                File = decision.FileSizeBytes,
+                            },
+                        };
+
+                        _cache.TryUpdate(path, newCache, cache);
                     }
-
-                    MediaCacheEntry newCache = new()
-                    {
-                        Path = path,
-                        PartitionId = cache.PartitionId,
-                        Size = new() { Stream = cache.Size.Stream, File = fi.Length },
-                    };
-
-                    _cache.TryUpdate(path, newCache, cache);
-                }
                 catch (Exception ex)
                 {
                     _logger.LogError("Error in {path}: {error}", path, ex.Message);
