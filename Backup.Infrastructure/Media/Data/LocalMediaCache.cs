@@ -24,6 +24,7 @@ public class LocalMediaCache(
     IMediaCacheRecheckApplyPolicyService mediaCacheRecheckApplyPolicyService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
+    IMediaCacheWritePolicyService mediaCacheWritePolicyService,
     IMediaCachePartitionSelectionService mediaCachePartitionSelectionService,
     IMediaCacheStoredEntryProjectionService mediaCacheStoredEntryProjectionService,
     IMediaCachePartitionSizeAggregationService mediaCachePartitionSizeAggregationService,
@@ -46,6 +47,8 @@ public class LocalMediaCache(
         mediaCacheEntryPathPolicyService;
     private readonly IMediaCacheEntryStateFactoryService _mediaCacheEntryStateFactoryService =
         mediaCacheEntryStateFactoryService;
+    private readonly IMediaCacheWritePolicyService _mediaCacheWritePolicyService =
+        mediaCacheWritePolicyService;
     private readonly IMediaCachePartitionSelectionService _mediaCachePartitionSelectionService =
         mediaCachePartitionSelectionService;
     private readonly IMediaCacheStoredEntryProjectionService _mediaCacheStoredEntryProjectionService =
@@ -334,24 +337,20 @@ public class LocalMediaCache(
 
         if (size > 0)
         {
-            string normalizedPath = _mediaCacheEntryPathPolicyService.NormalizeForCacheKey(path);
-            MediaCacheEntryState newEntryState = _mediaCacheEntryStateFactoryService.Create(
-                normalizedPath,
+            MediaCacheWritePlan writePlan = _mediaCacheWritePolicyService.BuildWritePlan(
+                path,
                 partition.Id,
                 size
             );
-            MediaCacheEntry newCache = ToCacheEntry(newEntryState);
+            MediaCacheEntry newCache = ToCacheEntry(writePlan.EntryState);
 
             _cache.AddOrUpdate(
-                normalizedPath,
+                writePlan.CacheKey,
                 _ => newCache,
                 (_, old) =>
                 {
                     if (
-                        _mediaCacheEntryStateFactoryService.HasStreamSizeConflict(
-                            old.Size?.Stream,
-                            newEntryState.StreamSizeBytes
-                        )
+                        _mediaCacheWritePolicyService.HasConflict(old.Size?.Stream, writePlan)
                     )
                         throw new Exception("different sizes");
 
