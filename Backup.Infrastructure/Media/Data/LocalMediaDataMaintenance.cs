@@ -2,6 +2,7 @@ using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Application.Media.Maintenance;
 using Backup.Application.Media.Maintenance.Models;
 using Backup.Application.Media.Models;
+using Backup.Application.Media;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
@@ -16,6 +17,8 @@ public class LocalMediaDataMaintenance(
     StorageMedia _config,
     IPartition _partition,
     IMediaCache _mediaCache,
+    IMediaTempPathPolicyService mediaTempPathPolicyService,
+    IMediaMaintenanceDownloadProjectionService mediaMaintenanceDownloadProjectionService,
     IMediaMaintenanceCachedDownloadFilterService mediaMaintenanceCachedDownloadFilterService,
     IMediaMaintenanceFileProbePolicyService mediaMaintenanceFileProbePolicyService,
     IMediaMaintenanceIntegrityEvaluationService mediaMaintenanceIntegrityEvaluationService,
@@ -29,6 +32,10 @@ public class LocalMediaDataMaintenance(
     private readonly StorageMedia _config = _config;
     private readonly IPartition _partition = _partition;
     private readonly IMediaCache _mediaCache = _mediaCache;
+    private readonly IMediaTempPathPolicyService _mediaTempPathPolicyService =
+        mediaTempPathPolicyService;
+    private readonly IMediaMaintenanceDownloadProjectionService _mediaMaintenanceDownloadProjectionService =
+        mediaMaintenanceDownloadProjectionService;
     private readonly IMediaMaintenanceCachedDownloadFilterService _mediaMaintenanceCachedDownloadFilterService =
         mediaMaintenanceCachedDownloadFilterService;
     private readonly IMediaMaintenanceFileProbePolicyService _mediaMaintenanceFileProbePolicyService =
@@ -47,32 +54,25 @@ public class LocalMediaDataMaintenance(
         DeleteTemp();
         await _mediaCache.Load();
 
+        List<MediaDownload> appDownloads = ToApplication(downloads);
+        Dictionary<string, long?> cacheSizesByPath = appDownloads
+            .SelectMany(download => download.Data)
+            .Select(item => item.Path)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(path => path, path => _mediaCache.Get(path)?.Size?.File, StringComparer.OrdinalIgnoreCase);
+
+        IReadOnlyList<MediaMaintenanceCachedDownload> cachedDownloads =
+            _mediaMaintenanceDownloadProjectionService.ToCachedDownloads(
+                appDownloads,
+                cacheSizesByPath
+            );
         IReadOnlyList<MediaMaintenanceCachedDownload> filtered =
             _mediaMaintenanceCachedDownloadFilterService.Filter(
-                downloads.Select(download => new MediaMaintenanceCachedDownload
-                {
-                    Id = download.Id,
-                    Data = download
-                        .Data.Select(data => new MediaMaintenanceCachedDownloadData
-                        {
-                            Url = data.Url,
-                            Path = data.Path,
-                            CacheFileSize = _mediaCache.Get(data.Path)?.Size?.File,
-                        })
-                        .ToList(),
-                })
+                cachedDownloads
             );
 
         downloads.Clear();
-        downloads.AddRange(
-            filtered.Select(download => new Download
-            {
-                Id = download.Id,
-                Data = download
-                    .Data.Select(data => new DataDownload { Url = data.Url, Path = data.Path })
-                    .ToList(),
-            })
-        );
+        downloads.AddRange(ToInfrastructure(_mediaMaintenanceDownloadProjectionService.ToDownloads(filtered)));
         downloads.RemoveAll(dl => dl.Data.Count == 0);
     }
 
@@ -133,13 +133,7 @@ public class LocalMediaDataMaintenance(
         await _mediaCache.Load();
 
         IReadOnlySet<string> paths = _mediaMaintenancePrunePathSelectionService.SelectPaths(
-            downloads.Select(download => new MediaDownload
-            {
-                Id = download.Id,
-                Data = download
-                    .Data.Select(item => new MediaDownloadData { Url = item.Url, Path = item.Path })
-                    .ToList(),
-            })
+            ToApplication(downloads)
         );
 
         CancellationTokenSource cts = new();
@@ -176,9 +170,11 @@ public class LocalMediaDataMaintenance(
     private string GetPathTemp()
     {
         PartitionConfig heavy = _partition.GetHeavy();
-
-        return Path.Combine(
-            [.. heavy.Paths, .. _config.Paths.Tmp.Paths, .. _config.Paths.Tmp.Downloader.Paths]
+        string rootPath = Path.Combine([.. heavy.Paths]);
+        return _mediaTempPathPolicyService.BuildDownloaderTempPath(
+            rootPath,
+            _config.Paths.Tmp.Paths,
+            _config.Paths.Tmp.Downloader.Paths
         );
     }
 
@@ -192,4 +188,26 @@ public class LocalMediaDataMaintenance(
         Directory.Delete(path, recursive: true);
         Directory.CreateDirectory(path);
     }
+
+    private static List<MediaDownload> ToApplication(IEnumerable<Download> downloads) =>
+        downloads
+            .Select(download => new MediaDownload
+            {
+                Id = download.Id,
+                Data = download
+                    .Data.Select(item => new MediaDownloadData { Url = item.Url, Path = item.Path })
+                    .ToList(),
+            })
+            .ToList();
+
+    private static List<Download> ToInfrastructure(IEnumerable<MediaDownload> downloads) =>
+        downloads
+            .Select(download => new Download
+            {
+                Id = download.Id,
+                Data = download
+                    .Data.Select(item => new DataDownload { Url = item.Url, Path = item.Path })
+                    .ToList(),
+            })
+            .ToList();
 }

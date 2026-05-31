@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Application.Media;
 using Backup.Application.IO;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Data;
@@ -12,6 +13,7 @@ public class LocalMediaData(
     StorageMedia _config,
     IPartition _partition,
     IMediaCache _mediaCache,
+    IMediaTempPathPolicyService mediaTempPathPolicyService,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaStorage, ISetup
 {
@@ -20,6 +22,8 @@ public class LocalMediaData(
     private readonly StorageMedia _config = _config;
     private readonly IPartition _partition = _partition;
     private readonly IMediaCache _mediaCache = _mediaCache;
+    private readonly IMediaTempPathPolicyService _mediaTempPathPolicyService =
+        mediaTempPathPolicyService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     public Task Setup()
@@ -37,9 +41,11 @@ public class LocalMediaData(
     private string GetPathTemp()
     {
         PartitionConfig heavy = _partition.GetHeavy();
-
-        return Path.Combine(
-            [.. heavy.Paths, .. _config.Paths.Tmp.Paths, .. _config.Paths.Tmp.Downloader.Paths]
+        string rootPath = Path.Combine([.. heavy.Paths]);
+        return _mediaTempPathPolicyService.BuildDownloaderTempPath(
+            rootPath,
+            _config.Paths.Tmp.Paths,
+            _config.Paths.Tmp.Downloader.Paths
         );
     }
 

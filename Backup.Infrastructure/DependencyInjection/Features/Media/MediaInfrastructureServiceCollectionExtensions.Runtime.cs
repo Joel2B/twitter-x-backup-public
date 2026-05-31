@@ -42,10 +42,13 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaDownloadProgressPolicyService, MediaDownloadProgressPolicyService>();
         services.AddScoped<IMediaDownloadExecutionService, MediaDownloadExecutionService>();
         services.AddScoped<IMediaLogFilePolicyService, MediaLogFilePolicyService>();
+        services.AddScoped<IMediaPathSelectionService, MediaPathSelectionService>();
+        services.AddScoped<IMediaTempPathPolicyService, MediaTempPathPolicyService>();
         services.AddScoped<IMediaVideoVariantPolicyService, MediaVideoVariantPolicyService>();
         services.AddScoped<IMediaIntegrityPolicyService, MediaIntegrityPolicyService>();
         services.AddScoped<IMediaPruneSelectionService, MediaPruneSelectionService>();
         services.AddScoped<IMediaMaintenanceDataPolicyService, MediaMaintenanceDataPolicyService>();
+        services.AddScoped<IMediaMaintenanceDownloadProjectionService, MediaMaintenanceDownloadProjectionService>();
         services.AddScoped<IMediaMaintenanceCachedDownloadFilterService, MediaMaintenanceCachedDownloadFilterService>();
         services.AddScoped<IMediaMaintenanceFileProbePolicyService, MediaMaintenanceFileProbePolicyService>();
         services.AddScoped<IMediaMaintenanceIntegrityPolicyService, MediaMaintenanceIntegrityPolicyService>();

@@ -1,4 +1,6 @@
 using Backup.Infrastructure.Core.Abstractions.Setup;
+using Backup.Application.Media.Backup;
+using Backup.Application.Media.Backup.Models;
 using Backup.Application.IO;
 using Backup.Infrastructure.Media.Abstractions.Data;
 using Backup.Infrastructure.Core.Abstractions.Partition;
@@ -14,12 +16,18 @@ public class LocalMediaBackup(
     ILogger<LocalMediaBackup> _logger,
     StorageBackup _config,
     IPartition _partition,
+    IMediaBackupPartitionPathService mediaBackupPartitionPathService,
+    IMediaBackupChunkFileNamePolicyService mediaBackupChunkFileNamePolicyService,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaBackupData, ISetup
 {
     private readonly ILogger<LocalMediaBackup> _logger = _logger;
     private readonly StorageBackup _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly IMediaBackupPartitionPathService _mediaBackupPartitionPathService =
+        mediaBackupPartitionPathService;
+    private readonly IMediaBackupChunkFileNamePolicyService _mediaBackupChunkFileNamePolicyService =
+        mediaBackupChunkFileNamePolicyService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     public Task Setup()
@@ -38,14 +46,15 @@ public class LocalMediaBackup(
 
     private string GetPath()
     {
-        PartitionConfig? backup = _partition
-            .GetPartitions()
-            .FirstOrDefault(o => o.Type == "backup");
+        string backupRootPath = _mediaBackupPartitionPathService.GetRequiredBackupRootPath(
+            _partition.GetPartitions().Select(partition => new MediaBackupPartitionPathCandidate
+            {
+                Type = partition.Type,
+                RootPath = Path.Combine([.. partition.Paths]),
+            })
+        );
 
-        if (backup is null)
-            throw new Exception();
-
-        return Path.Combine([.. backup.Paths, .. _config.Paths.Paths]);
+        return Path.Combine([backupRootPath, .. _config.Paths.Paths]);
     }
 
     private string GetPathChunks() => Path.Combine([GetPath(), .. _config.Chunk.Paths]);
@@ -98,7 +107,10 @@ public class LocalMediaBackup(
                 {
                     int id = backup.Chunks.Ids[i];
 
-                    string fileName = $"{id}.{_config.Chunk.Data.File!}";
+                    string fileName = _mediaBackupChunkFileNamePolicyService.BuildDataFileName(
+                        id,
+                        _config.Chunk.Data.File!
+                    );
                     string path = Path.Combine([GetPathChunks(), fileName]);
                     string content = await File.ReadAllTextAsync(path, ct);
 
@@ -130,7 +142,10 @@ public class LocalMediaBackup(
         if (string.IsNullOrWhiteSpace(_config.Chunk.Zip.File))
             return Task.FromResult<Stream?>(null);
 
-        string fileName = $"{chunk.Id}.{_config.Chunk.Zip.File!}";
+        string fileName = _mediaBackupChunkFileNamePolicyService.BuildZipFileName(
+            chunk.Id,
+            _config.Chunk.Zip.File!
+        );
         string path = Path.Combine(GetPathChunks(), fileName);
         string directory = _dataStoreGuardService.RequireDirectoryName(
             Path.GetDirectoryName(path),
@@ -164,7 +179,10 @@ public class LocalMediaBackup(
 
         foreach (Chunk chunk in chunks)
         {
-            string fileName = $"{chunk.Id}.{dataFile}";
+            string fileName = _mediaBackupChunkFileNamePolicyService.BuildDataFileName(
+                chunk.Id,
+                dataFile
+            );
             string path = Path.Combine(GetPathChunks(), fileName);
 
             string json = JsonConvert.SerializeObject(chunk, Formatting.Indented);
@@ -187,7 +205,10 @@ public class LocalMediaBackup(
         if (string.IsNullOrWhiteSpace(_config.Chunk.Zip.File))
             return Task.CompletedTask;
 
-        string fileName = $"{chunk.Id}.{_config.Chunk.Zip.File}";
+        string fileName = _mediaBackupChunkFileNamePolicyService.BuildZipFileName(
+            chunk.Id,
+            _config.Chunk.Zip.File
+        );
         string path = Path.Combine(GetPathChunks(), fileName);
 
         if (!File.Exists(path))

@@ -16,6 +16,7 @@ public class LocalMediaLogger(
     ILogger<LocalMediaLogger> _logger,
     AppConfig config,
     IPartition _partition,
+    IMediaPathSelectionService mediaPathSelectionService,
     IMediaLogFilePolicyService mediaLogFilePolicyService,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaLogger, ISetup
@@ -23,6 +24,7 @@ public class LocalMediaLogger(
     private readonly ILogger<LocalMediaLogger> _logger = _logger;
     public readonly AppConfig _config = config;
     private readonly IPartition _partition = _partition;
+    private readonly IMediaPathSelectionService _mediaPathSelectionService = mediaPathSelectionService;
     private readonly IMediaLogFilePolicyService _mediaLogFilePolicyService =
         mediaLogFilePolicyService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
@@ -54,11 +56,13 @@ public class LocalMediaLogger(
 
     private string GetPath()
     {
-        PartitionConfig partition = _partition
-            .GetPartitions(_config.Downloads.Media.Partitions)
-            .First();
+        string rootPath = _mediaPathSelectionService.SelectRequiredRootPath(
+            _partition
+                .GetPartitions(_config.Downloads.Media.Partitions)
+                .Select(partition => Path.Combine([.. partition.Paths]))
+        );
 
-        return Path.Combine([.. partition.Paths, .. _config.Downloads.Media.Paths]);
+        return Path.Combine([rootPath, .. _config.Downloads.Media.Paths]);
     }
 
     private string GetPathLog() => Path.Combine([GetPath(), .. _config.Downloads.Media.Log.Paths]);

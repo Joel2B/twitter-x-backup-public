@@ -18,6 +18,8 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
     public static IServiceCollection AddMediaBackupInfrastructure(this IServiceCollection services)
     {
         services.AddScoped<IMediaBackupPathAnalysisService, MediaBackupPathAnalysisService>();
+        services.AddScoped<IMediaBackupPartitionPathService, MediaBackupPartitionPathService>();
+        services.AddScoped<IMediaBackupChunkFileNamePolicyService, MediaBackupChunkFileNamePolicyService>();
         services.AddScoped<IMediaBackupChunkAssignmentService, MediaBackupChunkAssignmentService>();
         services.AddScoped<IMediaBackupDirectPathSelectionService, MediaBackupDirectPathSelectionService>();
         services.AddScoped<IMediaBackupDirectPathEligibilityService, MediaBackupDirectPathEligibilityService>();
