@@ -30,6 +30,46 @@ This project follows folder-to-namespace alignment as the default rule.
 - Keep one public responsibility per class.
 - Prefer constructor injection through abstractions.
 
+## What Belongs In Infrastructure
+
+- IO concerns:
+  - file read/write, directory creation, zip stream operations
+  - HTTP calls and transport retries
+  - database persistence and transaction boundaries
+- Adapter concerns:
+  - mapping infrastructure models to application/domain models
+  - wiring external libraries to internal ports
+- Composition concerns:
+  - dependency registration and keyed/store resolution
+
+## What Must Stay Out Of Infrastructure
+
+- Business decisions:
+  - selection rules (`which items should be removed/kept`)
+  - transition rules (`when a proxy becomes inactive`)
+  - planning rules (`how to assign/replicate/chunk data`)
+- Cross-aggregate orchestration policies that do not require IO.
+- Threshold/consistency rules that can run on plain models.
+
+## Quick PR Checklist (Layer Guard)
+
+1. For every new `if`/`switch`, ask:
+   - does it depend on IO or external framework state?
+   - if no, move it to `Backup.Application`.
+2. In `Infrastructure`, keep methods shaped like:
+   - load data
+   - call application service/policy
+   - persist/emit side effects
+3. If a class does both planning and IO, split:
+   - `*PlanningService` (Application)
+   - `*IOService` or `*Adapter` (Infrastructure)
+4. Add at least one unit test for moved business rule using fakes/in-memory data.
+5. Run targeted validation:
+   - `dotnet build Backup.Infrastructure/Backup.Infrastructure.csproj`
+   - `dotnet build Backup.Cli/Backup.Cli.csproj`
+   - `dotnet build Backup.Api/Backup.Api.csproj`
+   - `dotnet test Backup.Tests/Backup.Tests.csproj`
+
 ## Refactor checklist
 
 1. Move file to target folder.

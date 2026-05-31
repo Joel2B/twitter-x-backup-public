@@ -35,7 +35,7 @@ public partial class MediaBackup
             {
                 _logger.LogInfo("read zip");
                 _logger.LogInfo("reading entries");
-                entries = zip.GetEntries().ToDictionary(o => o.FullName);
+                entries = _mediaBackupZipEntryReaderIoService.ReadEntriesByFullName(zip);
             }
             finally
             {
@@ -121,11 +121,13 @@ public partial class MediaBackup
 
                 foreach (string path in change.Paths)
                 {
-                    using Stream read = await MediaData.Read(path);
                     string relativePath = _mediaBackupPathProjectionService.ToArchivePath(path);
-
-                    zip.RemoveEntry(relativePath);
-                    await zip.AddEntry(relativePath, read);
+                    await _mediaBackupZipMutationIoService.ReplaceEntryFromMediaStorage(
+                        MediaData,
+                        zip,
+                        path,
+                        relativePath
+                    );
 
                     _logger.LogInfo("{path} processed", relativePath);
                 }
@@ -156,7 +158,7 @@ public partial class MediaBackup
             try
             {
                 _logger.LogInfo("reading entries");
-                entries = zip.GetEntries().ToDictionary(o => o.FullName);
+                entries = _mediaBackupZipEntryReaderIoService.ReadEntriesByFullName(zip);
             }
             finally
             {
@@ -199,7 +201,10 @@ public partial class MediaBackup
             }
 
             _logger.LogInfo("saving chunk");
-            await _mediaBackupData.Save([_chunks[change.ChunkId]]);
+            await _mediaBackupChunkPersistenceIoService.SaveChunk(
+                _mediaBackupData,
+                _chunks[change.ChunkId]
+            );
         }
     }
 }

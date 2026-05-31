@@ -8,6 +8,7 @@ using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Data.Backup;
 using Backup.Infrastructure.Media.Services;
+using Backup.Infrastructure.Media.IO;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection.Features.Media;
@@ -43,6 +44,9 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaBackupChunkMetadataPolicyService, MediaBackupChunkMetadataPolicyService>();
         services.AddScoped<IMediaBackupChunkMetadataRefreshPlanningService, MediaBackupChunkMetadataRefreshPlanningService>();
         services.AddScoped<IMediaBackupChunkReportService, MediaBackupChunkReportService>();
+        services.AddScoped<IMediaBackupZipEntryReaderIOService, MediaBackupZipEntryReaderIOService>();
+        services.AddScoped<IMediaBackupZipMutationIOService, MediaBackupZipMutationIOService>();
+        services.AddScoped<IMediaBackupChunkPersistenceIOService, MediaBackupChunkPersistenceIOService>();
 
         Dictionary<string, Type> types = new() { ["local"] = typeof(MediaBackup) };
 

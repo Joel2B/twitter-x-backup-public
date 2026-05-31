@@ -70,16 +70,14 @@ public partial class LocalPostData
             .Where(entry => entry.Date is not null)
             .Select(entry => new PostHistoryPath(entry.Path, entry.Date!.Value))
             .ToList();
-
-        PostHistoryPath? latestHistory = _postHistoryLatestSelectionService.SelectLatest(historyPaths);
-
-        if (latestHistory is null)
-            return Task.CompletedTask;
-
-        string historyPath = Path.Combine(
-            latestHistory.Path,
-            Path.GetFileName(NormalizedPostsFileName)
+        PostSnapshotVerificationPlan plan = _postSnapshotVerificationPlanningService.Plan(
+            Path.GetFileName(NormalizedPostsFileName),
+            historyPaths
         );
+
+        if (!plan.ShouldCompareWithHistory)
+            return Task.CompletedTask;
+        string historyPath = plan.HistoryFilePath;
 
         if (!File.Exists(historyPath))
             return Task.CompletedTask;
@@ -91,7 +89,7 @@ public partial class LocalPostData
             historyLength,
             _config.Tasks.VerifyMaxSizeDiffBytes,
             NormalizedPostsFileName,
-            Path.GetFileName(latestHistory.Path) ?? string.Empty
+            plan.HistoryDirectoryName
         );
 
         return Task.CompletedTask;

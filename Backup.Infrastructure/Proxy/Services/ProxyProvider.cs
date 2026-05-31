@@ -27,6 +27,7 @@ public class ProxyProvider(
     IProxyEndpointParserService proxyEndpointParserService,
     IProxyProviderTypeResolverService proxyProviderTypeResolverService,
     IProxySourceLoadService proxySourceLoadService,
+    IProxyRuntimeRecordMapper proxyRuntimeRecordMapper,
     IProxyRuntimePoolBuilderService proxyRuntimePoolBuilderService,
     IProxyHealthAcceptanceService proxyHealthAcceptanceService,
     IProxyFailureOrchestrationService proxyFailureOrchestrationService,
@@ -52,6 +53,7 @@ public class ProxyProvider(
     private readonly IProxyProviderTypeResolverService _proxyProviderTypeResolverService =
         proxyProviderTypeResolverService;
     private readonly IProxySourceLoadService _proxySourceLoadService = proxySourceLoadService;
+    private readonly IProxyRuntimeRecordMapper _proxyRuntimeRecordMapper = proxyRuntimeRecordMapper;
     private readonly IProxyRuntimePoolBuilderService _proxyRuntimePoolBuilderService =
         proxyRuntimePoolBuilderService;
     private readonly IProxyHealthAcceptanceService _proxyHealthAcceptanceService =
@@ -89,10 +91,10 @@ public class ProxyProvider(
             .Values
             .ToList();
         IReadOnlyList<ProxyRuntimeRecord> runtimePool = _proxyRuntimePoolBuilderService.BuildPool(
-            stored.Select(ToRuntimeRecord),
+            stored.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
             await LoadCandidatesFromProviders()
         );
-        _proxies = runtimePool.Select(ToProxyData).ToList();
+        _proxies = runtimePool.Select(_proxyRuntimeRecordMapper.ToProxyData).ToList();
 
         if (_proxies.Count == 0)
             throw new ProxyEmptyException();
@@ -109,7 +111,7 @@ public class ProxyProvider(
         HashSet<string> proxiesAdded = [.. _proxies.Select(o => GetProxyKey(o.Proxy))];
         List<ProxyData> proxiesStorage = await _data.GetAll() ?? [];
         IReadOnlyList<ProxyRuntimeRecord> merged = _proxyRuntimePoolBuilderService.BuildPool(
-            proxiesStorage.Select(ToRuntimeRecord),
+            proxiesStorage.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
             await LoadCandidatesFromProviders()
         );
         ProxyHealthAcceptanceResult acceptance = await _proxyHealthAcceptanceService.AcceptAsync(
@@ -124,7 +126,7 @@ public class ProxyProvider(
 
         foreach (ProxyHealthAcceptanceItem item in acceptance.AcceptedItems)
         {
-            _proxies.Add(ToProxyData(item.Record));
+            _proxies.Add(_proxyRuntimeRecordMapper.ToProxyData(item.Record));
 
             if (item.ShouldFlush)
                 await SaveData();
@@ -229,14 +231,9 @@ public class ProxyProvider(
 
         lock (proxy)
         {
-            ProxyRuntimeRecord runtimeRecord = ToRuntimeRecord(proxy);
+            ProxyRuntimeRecord runtimeRecord = _proxyRuntimeRecordMapper.ToRuntimeRecord(proxy);
             _proxyUsageTrackingService.RegisterUse(runtimeRecord, DateTime.Now);
-            ApplyRuntimeRecord(
-                proxy,
-                runtimeRecord,
-                disabledAt: null,
-                _proxyRuntimeStatusTransitionService
-            );
+            _proxyRuntimeRecordMapper.ApplyRuntimeRecord(proxy, runtimeRecord, disabledAt: null);
         }
 
         ResetStopCount();
@@ -259,7 +256,7 @@ public class ProxyProvider(
                 return;
 
             DateTime now = DateTime.Now;
-            ProxyRuntimeRecord runtimeRecord = ToRuntimeRecord(proxy);
+            ProxyRuntimeRecord runtimeRecord = _proxyRuntimeRecordMapper.ToRuntimeRecord(proxy);
             ProxyErrorTrackingResult tracking = _proxyErrorTrackingService.RegisterError(
                 runtimeRecord,
                 ex.Message,
@@ -271,7 +268,7 @@ public class ProxyProvider(
                 tracking.WasDisabled,
                 now
             );
-            ApplyRuntimeRecord(proxy, runtimeRecord, disabledAt, _proxyRuntimeStatusTransitionService);
+            _proxyRuntimeRecordMapper.ApplyRuntimeRecord(proxy, runtimeRecord, disabledAt);
 
             if (tracking.WasDisabled)
             {
@@ -307,100 +304,8 @@ public class ProxyProvider(
         return loaded.Select(ToCandidate).ToList();
     }
 
-    private static ProxyRuntimeRecord ToRuntimeRecord(ProxyData data) =>
-        new()
-        {
-            Candidate = ToCandidate(data.Proxy),
-            IsActive = data.Status.Current == StatusEnum.Active,
-            Connections = data.Connections
-                .Select(item => new ProxyRuntimeConnection
-                {
-                    Date = item.Date,
-                    TotalUses = item.TotalUses,
-                })
-                .ToList(),
-            Errors = data.Errors
-                .Select(item => new ProxyRuntimeError
-                {
-                    Short = item.Message.Short,
-                    Extended = item.Message.Extended,
-                    TotalDuplicates = item.TotalDuplicates,
-                    Date = item.Date,
-                })
-                .ToList(),
-        };
-
-    private static ProxyData ToProxyData(ProxyRuntimeRecord record) =>
-        new()
-        {
-            Proxy = ToProxyDataConfig(record.Candidate),
-            Connections = record.Connections
-                .Select(item => new Connection
-                {
-                    Date = item.Date,
-                    TotalUses = item.TotalUses,
-                })
-                .ToList(),
-            Errors = record.Errors
-                .Select(item => new Error
-                {
-                    Message = new ErrorMessage
-                    {
-                        Short = item.Short,
-                        Extended = item.Extended,
-                    },
-                    TotalDuplicates = item.TotalDuplicates,
-                    Date = item.Date,
-                })
-                .ToList(),
-            Status = new Status
-            {
-                Current = record.IsActive ? StatusEnum.Active : StatusEnum.Inactive,
-            },
-        };
-
-    private static void ApplyRuntimeRecord(
-        ProxyData proxy,
-        ProxyRuntimeRecord source,
-        DateTime? disabledAt,
-        IProxyRuntimeStatusTransitionService transitionService
-    )
-    {
-        proxy.Connections = source.Connections
-            .Select(item => new Connection
-            {
-                Date = item.Date,
-                TotalUses = item.TotalUses,
-            })
-            .ToList();
-        proxy.Errors = source.Errors
-            .Select(item => new Error
-            {
-                Message = new ErrorMessage
-                {
-                    Short = item.Short,
-                    Extended = item.Extended,
-                },
-                TotalDuplicates = item.TotalDuplicates,
-                Date = item.Date,
-            })
-            .ToList();
-
-        ProxyRuntimeStatusTransitionResult status = transitionService.ResolveStatus(
-            source.IsActive,
-            proxy.Status.Date,
-            disabledAt
-        );
-        proxy.Status.Current = status.IsActive ? StatusEnum.Active : StatusEnum.Inactive;
-        if (status.StatusDate.HasValue)
-            proxy.Status.Date = status.StatusDate.Value;
-    }
-
     private static ProxyCandidate ToCandidate(ProxyDataConfig proxy) =>
         new() { Ip = proxy.Ip, Port = proxy.Port, Protocol = proxy.Protocol };
-
-    private static ProxyDataConfig ToProxyDataConfig(ProxyCandidate candidate) =>
-        new() { Ip = candidate.Ip, Port = candidate.Port, Protocol = candidate.Protocol };
 
     private ProxyFailureSettings BuildFailureSettings() =>
         new()

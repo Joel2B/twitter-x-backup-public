@@ -39,7 +39,7 @@ public partial class MediaBackup
             {
                 _logger.LogInfo("read zip");
                 _logger.LogInfo("reading entries");
-                entries = zip.GetEntries().ToDictionary(o => o.FullName);
+                entries = _mediaBackupZipEntryReaderIoService.ReadEntriesByFullName(zip);
             }
             finally
             {
@@ -91,7 +91,7 @@ public partial class MediaBackup
             }
 
             _logger.LogInfo("saving chunk");
-            await _mediaBackupData.Save([kvp.Value]);
+            await _mediaBackupChunkPersistenceIoService.SaveChunk(_mediaBackupData, kvp.Value);
 
             _logger.LogInformation("chunk {chunk} processed", kvp.Key);
         }
