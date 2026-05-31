@@ -1,6 +1,8 @@
 using Backup.Infrastructure.Models.Data.Json;
+using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Utils;
+using Backup.Application.Posts.Models;
 using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Posts.Data.Json;
@@ -140,95 +142,8 @@ public partial class LocalPostData
         return tables;
     }
 
-    private static List<Post> BuildPosts(LocalPostTables tables)
+    private List<Post> BuildPosts(LocalPostTables tables)
     {
-        Dictionary<string, PostProfile> profiles = tables.Profiles.ToDictionary(
-            o => o.Id,
-            o => new PostProfile
-            {
-                Id = o.Id,
-                UserName = o.UserName,
-                Name = o.Name,
-                BannerUrl = o.BannerUrl,
-                ImageUrl = o.ImageUrl,
-                Following = o.Following,
-                Count = o.CountMedia.HasValue ? new PostCount { Media = o.CountMedia } : null,
-            },
-            StringComparer.Ordinal
-        );
-
-        Dictionary<string, List<string>> hashtagsByPost = tables
-            .Hashtags.GroupBy(o => o.PostId, StringComparer.Ordinal)
-            .ToDictionary(
-                g => g.Key,
-                g => g.OrderBy(o => o.Ordinal).Select(o => o.Value).ToList(),
-                StringComparer.Ordinal
-            );
-
-        Dictionary<(string PostId, int MediaOrdinal), List<PostVariant>> variantsByMedia = tables
-            .MediaVariants.GroupBy(o => (o.PostId, o.MediaOrdinal))
-            .ToDictionary(
-                g => g.Key,
-                g =>
-                    g.OrderBy(o => o.Ordinal)
-                        .Select(o => new PostVariant
-                        {
-                            ContentType = o.ContentType,
-                            Bitrate = o.Bitrate,
-                            Url = o.Url,
-                        })
-                        .ToList()
-            );
-
-        Dictionary<string, List<PostMedia>> mediasByPost = tables
-            .Medias.GroupBy(o => o.PostId, StringComparer.Ordinal)
-            .ToDictionary(
-                g => g.Key,
-                g =>
-                    g.OrderBy(o => o.Ordinal)
-                        .Select(o =>
-                        {
-                            variantsByMedia.TryGetValue((o.PostId, o.Ordinal), out var variants);
-
-                            return new PostMedia
-                            {
-                                Id = o.MediaId,
-                                Url = o.Url,
-                                Type = o.Type,
-                                VideoInfo =
-                                    o.VideoDurationMilis is null
-                                    && (variants is null || variants.Count == 0)
-                                        ? null
-                                        : new PostVideoInfo
-                                        {
-                                            DurationMilis = o.VideoDurationMilis,
-                                            Variants = variants,
-                                        },
-                            };
-                        })
-                        .ToList(),
-                StringComparer.Ordinal
-            );
-
-        Dictionary<string, Dictionary<string, Dictionary<string, IndexData>>> indexByPost = tables
-            .IndexEntries.GroupBy(o => o.PostId, StringComparer.Ordinal)
-            .ToDictionary(
-                g => g.Key,
-                g =>
-                    g.GroupBy(o => o.UserId, StringComparer.Ordinal)
-                        .ToDictionary(
-                            ug => ug.Key,
-                            ug =>
-                                ug.ToDictionary(
-                                    o => o.Origin,
-                                    o => new IndexData { Previous = o.Previous, Next = o.Next },
-                                    StringComparer.Ordinal
-                                ),
-                            StringComparer.Ordinal
-                        ),
-                StringComparer.Ordinal
-            );
-
         Dictionary<string, List<PostChangeRow>> changesByPost = tables
             .PostChanges.GroupBy(o => o.PostId, StringComparer.Ordinal)
             .ToDictionary(
@@ -237,58 +152,92 @@ public partial class LocalPostData
                 StringComparer.Ordinal
             );
 
-        Dictionary<string, PostMetaRow> postMetaById = tables.PostMeta.ToDictionary(
-            row => row.Id,
-            row => row,
-            StringComparer.Ordinal
-        );
-
         Dictionary<(string PostId, int ChangeOrdinal), List<PostChangeFieldRow>> fieldsByChange =
             tables
                 .PostChangeFields.GroupBy(o => (o.PostId, o.ChangeOrdinal))
                 .ToDictionary(g => g.Key, g => g.OrderBy(o => o.Ordinal).ToList());
-
-        List<Post> posts = new(tables.Posts.Count);
-
-        foreach (PostRow row in tables.Posts)
-        {
-            PostProfile profile = profiles.TryGetValue(row.ProfileId, out PostProfile? value)
-                ? value
-                : new PostProfile { Id = row.ProfileId };
-
-            hashtagsByPost.TryGetValue(row.Id, out List<string>? hashtags);
-            mediasByPost.TryGetValue(row.Id, out List<PostMedia>? medias);
-
-            indexByPost.TryGetValue(
-                row.Id,
-                out Dictionary<string, Dictionary<string, IndexData>>? index
-            );
-
-            changesByPost.TryGetValue(row.Id, out List<PostChangeRow>? postChanges);
-
-            if (!postMetaById.TryGetValue(row.Id, out PostMetaRow? meta))
-                throw new Exception($"Missing post_meta row for post '{row.Id}'.");
-
-            Post post = new()
+        IReadOnlyList<Backup.Domain.Posts.Post> domainPosts = _postTableMaterializationService.Materialize(
+            new PostTableMaterializationInput
             {
-                Id = row.Id,
-                Profile = profile,
-                Description = row.Description,
-                Retweeted = row.Retweeted,
-                Favorited = row.Favorited,
-                Bookmarked = row.Bookmarked,
-                CreatedAt = row.CreatedAt,
-                Deleted = meta.Deleted,
-                Hashtags = hashtags is not null && hashtags.Count > 0 ? hashtags : null,
-                Medias = medias is not null && medias.Count > 0 ? medias : null,
-                Index = index ?? [],
-            };
+                Posts = tables
+                    .Posts.Select(row => new PostTablePostRow
+                    {
+                        Id = row.Id,
+                        ProfileId = row.ProfileId,
+                        Description = row.Description,
+                        Retweeted = row.Retweeted,
+                        Favorited = row.Favorited,
+                        Bookmarked = row.Bookmarked,
+                        CreatedAt = row.CreatedAt,
+                    })
+                    .ToList(),
+                Profiles = tables
+                    .Profiles.Select(row => new PostTableProfileRow
+                    {
+                        Id = row.Id,
+                        UserName = row.UserName,
+                        Name = row.Name,
+                        BannerUrl = row.BannerUrl,
+                        ImageUrl = row.ImageUrl,
+                        Following = row.Following,
+                        CountMedia = row.CountMedia,
+                    })
+                    .ToList(),
+                Hashtags = tables
+                    .Hashtags.Select(row => new PostTableHashtagRow
+                    {
+                        PostId = row.PostId,
+                        Value = row.Value,
+                        Ordinal = row.Ordinal,
+                    })
+                    .ToList(),
+                Medias = tables
+                    .Medias.Select(row => new PostTableMediaRow
+                    {
+                        PostId = row.PostId,
+                        Ordinal = row.Ordinal,
+                        MediaId = row.MediaId,
+                        Url = row.Url,
+                        Type = row.Type,
+                        VideoDurationMilis = row.VideoDurationMilis,
+                    })
+                    .ToList(),
+                MediaVariants = tables
+                    .MediaVariants.Select(row => new PostTableMediaVariantRow
+                    {
+                        PostId = row.PostId,
+                        MediaOrdinal = row.MediaOrdinal,
+                        Ordinal = row.Ordinal,
+                        ContentType = row.ContentType,
+                        Bitrate = row.Bitrate,
+                        Url = row.Url,
+                    })
+                    .ToList(),
+                IndexEntries = tables
+                    .IndexEntries.Select(row => new PostTableIndexEntryRow
+                    {
+                        PostId = row.PostId,
+                        UserId = row.UserId,
+                        Origin = row.Origin,
+                        Previous = row.Previous,
+                        Next = row.Next,
+                    })
+                    .ToList(),
+                PostMeta = tables
+                    .PostMeta.Select(row => new PostTableMetaRow { Id = row.Id, Deleted = row.Deleted })
+                    .ToList(),
+            }
+        );
+
+        List<Post> posts = domainPosts.Select(PostReplicationMapper.ToApp).ToList();
+
+        foreach (Post post in posts)
+        {
+            changesByPost.TryGetValue(post.Id, out List<PostChangeRow>? postChanges);
 
             post.Changes = postChanges is null
                 ? []
                 : ToModelChanges(postChanges, fieldsByChange, post);
-
-            posts.Add(post);
         }
 
         return posts;
