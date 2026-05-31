@@ -5,6 +5,7 @@ using Backup.Application.Media;
 using Backup.Application.Media.Ports;
 using Backup.Application.Media.Filter;
 using Backup.Application.Media.Integrity;
+using Backup.Application.Media.Maintenance;
 using Backup.Application.Media.Prune;
 using Backup.Infrastructure.Models.Config;
 using Microsoft.Extensions.DependencyInjection;
@@ -43,6 +44,9 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaVideoVariantPolicyService, MediaVideoVariantPolicyService>();
         services.AddScoped<IMediaIntegrityPolicyService, MediaIntegrityPolicyService>();
         services.AddScoped<IMediaPruneSelectionService, MediaPruneSelectionService>();
+        services.AddScoped<IMediaMaintenanceDataPolicyService, MediaMaintenanceDataPolicyService>();
+        services.AddScoped<IMediaMaintenanceIntegrityPolicyService, MediaMaintenanceIntegrityPolicyService>();
+        services.AddScoped<IMediaMaintenancePrunePathSelectionService, MediaMaintenancePrunePathSelectionService>();
         services.AddScoped<IMediaIntegrity, MediaIntegrity>();
         services.AddScoped<IMediaFilter, MediaFilter>();
         services.AddScoped<IMediaReplication, MediaReplication>();

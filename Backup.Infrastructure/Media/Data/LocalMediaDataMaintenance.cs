@@ -1,4 +1,6 @@
 using Backup.Infrastructure.Media.Abstractions.Services;
+using Backup.Application.Media.Maintenance;
+using Backup.Application.Media.Models;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
@@ -12,7 +14,10 @@ public class LocalMediaDataMaintenance(
     ILogger<LocalMediaDataMaintenance> _log,
     StorageMedia _config,
     IPartition _partition,
-    IMediaCache _mediaCache
+    IMediaCache _mediaCache,
+    IMediaMaintenanceDataPolicyService mediaMaintenanceDataPolicyService,
+    IMediaMaintenanceIntegrityPolicyService mediaMaintenanceIntegrityPolicyService,
+    IMediaMaintenancePrunePathSelectionService mediaMaintenancePrunePathSelectionService
 ) : IMediaDataMaintenance
 {
     public string? Id { get; set; }
@@ -21,6 +26,14 @@ public class LocalMediaDataMaintenance(
     private readonly StorageMedia _config = _config;
     private readonly IPartition _partition = _partition;
     private readonly IMediaCache _mediaCache = _mediaCache;
+    private readonly IMediaMaintenanceDataPolicyService _mediaMaintenanceDataPolicyService =
+        mediaMaintenanceDataPolicyService;
+    private readonly IMediaMaintenanceIntegrityPolicyService _mediaMaintenanceIntegrityPolicyService =
+        mediaMaintenanceIntegrityPolicyService;
+    private readonly IMediaMaintenancePrunePathSelectionService _mediaMaintenancePrunePathSelectionService =
+        mediaMaintenancePrunePathSelectionService;
+
+    private const long IntegritySizeThreshold = 1000;
 
     public async Task CheckData(List<Download> downloads)
     {
@@ -31,9 +44,8 @@ public class LocalMediaDataMaintenance(
         {
             download.Data.RemoveAll(data =>
             {
-                MediaCacheEntry? cache = _mediaCache.Get(data.Path);
-
-                return cache is not null && cache.Size?.File is long sz && sz != 0;
+                long? cacheFileSize = _mediaCache.Get(data.Path)?.Size?.File;
+                return _mediaMaintenanceDataPolicyService.ShouldRemoveCachedDownload(cacheFileSize);
             });
         }
 
@@ -53,40 +65,33 @@ public class LocalMediaDataMaintenance(
                 DataDownload data = download.Data[i];
 
                 long? size = _mediaCache.Get(data.Path)?.Size?.File;
-                string fullPath = "";
-
-                if (size is not null)
-                    fullPath = await _mediaCache.GetPath(data.Path);
-
-                bool remove = false;
+                string fullPath = string.Empty;
+                bool isValid = false;
 
                 if (size is null)
-                {
-                    remove = true;
                     nullCount++;
-                }
-
-                if (size >= 1000)
-                    remove = true;
                 else
-                    sizeCount++;
-
-                if (!remove)
                 {
-                    if (
-                        MediaValidator.IsValid(
+                    if (size < IntegritySizeThreshold)
+                    {
+                        fullPath = await _mediaCache.GetPath(data.Path);
+                        isValid = MediaValidator.IsValid(
                             fullPath,
                             () => _logger.LogWarning("path {path} not exist", fullPath)
-                        )
-                    )
-                    {
-                        remove = true;
+                        );
                     }
-                    else
-                    {
-                        invalidCount++;
-                    }
+
+                    sizeCount++;
                 }
+
+                bool remove = _mediaMaintenanceIntegrityPolicyService.ShouldRemoveFromIntegrity(
+                    size,
+                    isValid,
+                    IntegritySizeThreshold
+                );
+
+                if (!remove && !isValid)
+                    invalidCount++;
 
                 if (remove)
                     download.Data.RemoveAt(i);
@@ -110,9 +115,15 @@ public class LocalMediaDataMaintenance(
 
         await _mediaCache.Load();
 
-        HashSet<string> paths = downloads
-            .SelectMany(download => download.Data.Select(o => o.Path))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        IReadOnlySet<string> paths = _mediaMaintenancePrunePathSelectionService.SelectPaths(
+            downloads.Select(download => new MediaDownload
+            {
+                Id = download.Id,
+                Data = download
+                    .Data.Select(item => new MediaDownloadData { Url = item.Url, Path = item.Path })
+                    .ToList(),
+            })
+        );
 
         CancellationTokenSource cts = new();
 
