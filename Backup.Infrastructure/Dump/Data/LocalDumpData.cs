@@ -26,6 +26,7 @@ public class LocalDumpData(
     IPartition _partition,
     IDumpIndexFilePolicyService dumpIndexFilePolicyService,
     IDumpLifecycleService dumpLifecycleService,
+    IDumpPathService dumpPathService,
     IDumpFlushExecutionService dumpFlushExecutionService,
     IDumpReplicationPlanningService dumpReplicationPlanningService,
     IDataStoreGuardService dataStoreGuardService
@@ -40,6 +41,7 @@ public class LocalDumpData(
     private readonly IPartition _partition = _partition;
     private readonly IDumpIndexFilePolicyService _dumpIndexFilePolicyService = dumpIndexFilePolicyService;
     private readonly IDumpLifecycleService _dumpLifecycleService = dumpLifecycleService;
+    private readonly IDumpPathService _dumpPathService = dumpPathService;
     private readonly IDumpFlushExecutionService _dumpFlushExecutionService = dumpFlushExecutionService;
     private readonly IDumpReplicationPlanningService _dumpReplicationPlanningService =
         dumpReplicationPlanningService;
@@ -52,7 +54,7 @@ public class LocalDumpData(
     public Task Setup() => Task.CompletedTask;
 
     private string GetPath(PartitionConfig partition) =>
-        Path.Combine([.. partition.Paths, .. _config.Paths.Paths, .. _config.Paths.Dumps.Paths]);
+        _dumpPathService.BuildDumpRootPath(partition.Paths, _config.Paths.Paths, _config.Paths.Dumps.Paths);
 
     private async Task<string> GetPathCurrent(ApiContext context)
     {
@@ -68,7 +70,7 @@ public class LocalDumpData(
             await _dumps.Save(dumpsData);
         }
 
-        string path = Path.Combine(
+        string path = _dumpPathService.BuildCurrentUserPath(
             GetPath(_partition.GetPrimary()),
             resolution.Current,
             context.UserId
@@ -84,21 +86,21 @@ public class LocalDumpData(
         string path = await GetPathCurrent(context);
         string fileName = _dataStoreGuardService.RequireConfiguredFileName(_config.Paths.Dumps.Dump.File);
 
-        return Path.Combine(path, fileName);
+        return _dumpPathService.BuildDataFilePath(path, fileName);
     }
 
     private async Task<string> GetPathIndex(ApiContext context)
     {
         string path = await GetPathCurrent(context);
 
-        return Path.Combine([path, Data.Index.ToString()]);
+        return _dumpPathService.BuildIndexPath(path, Data.Index);
     }
 
     private async Task<string> GetPathApi(ApiContext context)
     {
         string path = await GetPathIndex(context);
 
-        return Path.Combine([path, .. _config.Paths.Dumps.Dump.Api.Paths]);
+        return _dumpPathService.BuildApiPath(path, _config.Paths.Dumps.Dump.Api.Paths);
     }
 
     private async Task CreateData(ApiContext context)
@@ -180,7 +182,7 @@ public class LocalDumpData(
         string indexPath = await GetPathIndex(context);
         string apiPath = await GetPathApi(context);
 
-        string fileName = $"{Data.IndexFile}.json";
+        string fileName = _dumpPathService.BuildIndexFileName(Data.IndexFile);
 
         string indexFullPath = Path.Combine(indexPath, fileName);
         string apiFullPath = Path.Combine(apiPath, fileName);
