@@ -20,7 +20,6 @@ public class ProxyProvider(
     ILogger<ProxyProvider> _logger,
     AppConfig _config,
     IProxyData _data,
-    IProxyHealthProbeService proxyHealthProbeService,
     IProxyHealthProbePort proxyHealthProbePort,
     IProxyHttpClientFactoryPolicyService proxyHttpClientFactoryPolicyService,
     IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService,
@@ -29,11 +28,10 @@ public class ProxyProvider(
     IProxyProviderTypeResolverService proxyProviderTypeResolverService,
     IProxySourceLoadService proxySourceLoadService,
     IProxyRuntimePoolBuilderService proxyRuntimePoolBuilderService,
+    IProxyHealthAcceptanceService proxyHealthAcceptanceService,
     IProxyFailureOrchestrationService proxyFailureOrchestrationService,
     IProxyUsageTrackingService proxyUsageTrackingService,
-    IProxyErrorTrackingService proxyErrorTrackingService,
-    IProxyAcceptedCandidateFactoryService proxyAcceptedCandidateFactoryService,
-    IProxyBatchFlushPolicyService proxyBatchFlushPolicyService
+    IProxyErrorTrackingService proxyErrorTrackingService
 )
     : IProxyProvider,
         ISetup,
@@ -42,7 +40,6 @@ public class ProxyProvider(
     private readonly ILogger<ProxyProvider> _logger = _logger;
     private readonly AppConfig _config = _config;
     private readonly IProxyData _data = _data;
-    private readonly IProxyHealthProbeService _proxyHealthProbeService = proxyHealthProbeService;
     private readonly IProxyHealthProbePort _proxyHealthProbePort = proxyHealthProbePort;
     private readonly IProxyHttpClientFactoryPolicyService _proxyHttpClientFactoryPolicyService =
         proxyHttpClientFactoryPolicyService;
@@ -56,14 +53,12 @@ public class ProxyProvider(
     private readonly IProxySourceLoadService _proxySourceLoadService = proxySourceLoadService;
     private readonly IProxyRuntimePoolBuilderService _proxyRuntimePoolBuilderService =
         proxyRuntimePoolBuilderService;
+    private readonly IProxyHealthAcceptanceService _proxyHealthAcceptanceService =
+        proxyHealthAcceptanceService;
     private readonly IProxyFailureOrchestrationService _proxyFailureOrchestrationService =
         proxyFailureOrchestrationService;
     private readonly IProxyUsageTrackingService _proxyUsageTrackingService = proxyUsageTrackingService;
     private readonly IProxyErrorTrackingService _proxyErrorTrackingService = proxyErrorTrackingService;
-    private readonly IProxyAcceptedCandidateFactoryService _proxyAcceptedCandidateFactoryService =
-        proxyAcceptedCandidateFactoryService;
-    private readonly IProxyBatchFlushPolicyService _proxyBatchFlushPolicyService =
-        proxyBatchFlushPolicyService;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
     private int _proxyIndex = 0;
@@ -109,51 +104,26 @@ public class ProxyProvider(
             return;
 
         HashSet<string> proxiesAdded = [.. _proxies.Select(o => GetProxyKey(o.Proxy))];
-        int count = 0;
-
         List<ProxyData> proxiesStorage = await _data.GetAll() ?? [];
         IReadOnlyList<ProxyRuntimeRecord> merged = _proxyRuntimePoolBuilderService.BuildPool(
             proxiesStorage.Select(ToRuntimeRecord),
             await LoadCandidatesFromProviders()
         );
+        ProxyHealthAcceptanceResult acceptance = await _proxyHealthAcceptanceService.AcceptAsync(
+            merged,
+            proxiesAdded,
+            flushEvery: 10,
+            _proxyHealthProbePort
+        );
 
-        foreach (ProxyRuntimeRecord record in merged)
+        foreach (string error in acceptance.ProbeErrors)
+            _logger.LogError("Error: {error}", error);
+
+        foreach (ProxyHealthAcceptanceItem item in acceptance.AcceptedItems)
         {
-            ProxyHealthProbeResult probe = await _proxyHealthProbeService.Probe(
-                record.Candidate,
-                _proxyHealthProbePort
-            );
+            _proxies.Add(ToProxyData(item.Record));
 
-            if (probe.Error is not null)
-                _logger.LogError("Error: {error}", JsonConvert.SerializeObject(probe.Error));
-
-            if (!probe.Success)
-                continue;
-
-            ProxyAcceptedCandidate accepted = _proxyAcceptedCandidateFactoryService.Create(
-                probe.Candidate
-            );
-            ProxyRuntimeRecord acceptedRecord = new()
-            {
-                Candidate = accepted.Candidate,
-                Connections =
-                [
-                    new ProxyRuntimeConnection
-                    {
-                        TotalUses = accepted.InitialConnectionUses,
-                    },
-                ],
-            };
-            ProxyData proxyData = ToProxyData(acceptedRecord);
-            ProxyDataConfig acceptedProxy = proxyData.Proxy;
-
-            if (!proxiesAdded.Add(GetProxyKey(acceptedProxy)))
-                continue;
-
-            _proxies.Add(proxyData);
-            count++;
-
-            if (_proxyBatchFlushPolicyService.ShouldFlush(count, flushEvery: 10))
+            if (item.ShouldFlush)
                 await SaveData();
         }
 
