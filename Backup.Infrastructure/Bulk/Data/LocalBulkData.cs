@@ -19,6 +19,7 @@ public class LocalBulkData(
     AppConfig _appConfig,
     StorageBulk _config,
     IPartition _partition,
+    IBulkDatedPathExtractionService bulkDatedPathExtractionService,
     IBulkPruneExecutionService bulkPruneExecutionService,
     IBulkReplicationPathPlanningService bulkReplicationPathPlanningService,
     IBulkArchiveFilePolicyService bulkArchiveFilePolicyService,
@@ -32,6 +33,8 @@ public class LocalBulkData(
     private readonly AppConfig _appConfig = _appConfig;
     private readonly StorageBulk _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly IBulkDatedPathExtractionService _bulkDatedPathExtractionService =
+        bulkDatedPathExtractionService;
     private readonly IBulkPruneExecutionService _bulkPruneExecutionService = bulkPruneExecutionService;
     private readonly IBulkReplicationPathPlanningService _bulkReplicationPathPlanningService =
         bulkReplicationPathPlanningService;
@@ -122,11 +125,8 @@ public class LocalBulkData(
         {
             string basePath = GetPath(partition);
             string[] pathsFiles = Directory.GetFiles(basePath, "*.json", SearchOption.TopDirectoryOnly);
-
-            List<DatedPath> datedPaths = pathsFiles
-                .Select(path => new { Path = path, Date = UtilsPath.ToDate(path) })
-                .Where(entry => entry.Date is not null)
-                .Select(entry => new DatedPath(entry.Path, entry.Date!.Value))
+            List<DatedPath> datedPaths = _bulkDatedPathExtractionService
+                .Extract(pathsFiles)
                 .OrderBy(entry => entry.Date)
                 .ToList();
 
