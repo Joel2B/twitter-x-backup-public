@@ -116,43 +116,42 @@ public partial class MediaBackup
             })
         );
 
-        List<MediaBackupChunkDeltaLogInput> deltaLogInputs = [];
+        Dictionary<int, IReadOnlyList<string>> beforePathsByChunk = _chunksClone.ToDictionary(
+            item => item.Key,
+            item => (IReadOnlyList<string>)item.Value.Data.Select(data => data.Path).ToList()
+        );
+        Dictionary<int, IReadOnlyList<string>> afterPathsByChunk = _chunks.ToDictionary(
+            item => item.Key,
+            item => (IReadOnlyList<string>)item.Value.Data.Select(data => data.Path).ToList()
+        );
 
-        foreach (MediaBackupChunkCountDeltaItem delta in deltas.Items)
+        HashSet<string> allPathsForSizeLookup = [];
+
+        foreach (IReadOnlyList<string> paths in beforePathsByChunk.Values)
+            allPathsForSizeLookup.UnionWith(paths);
+
+        foreach (IReadOnlyList<string> paths in afterPathsByChunk.Values)
+            allPathsForSizeLookup.UnionWith(paths);
+
+        Dictionary<string, long> sizeByPath = [];
+
+        foreach (string path in allPathsForSizeLookup)
         {
-            _chunksClone.TryGetValue(delta.ChunkId, out Chunk? chunkBefore);
+            MediaCacheEntry? cache = await MediaData.GetCache(path);
 
-            long sizeBefore = 0;
-            long sizeAfter = 0;
+            if (cache is null)
+                continue;
 
-            foreach (ChunkData chunkData in chunkBefore?.Data ?? [])
-            {
-                MediaCacheEntry? cache = await MediaData.GetCache(chunkData.Path);
-
-                if (cache is not null)
-                    sizeBefore += cache.Size?.File ?? 0;
-            }
-
-            foreach (ChunkData chunkData in _chunks[delta.ChunkId].Data)
-            {
-                MediaCacheEntry? cache = await MediaData.GetCache(chunkData.Path);
-
-                if (cache is not null)
-                    sizeAfter += cache.Size?.File ?? 0;
-            }
-
-            deltaLogInputs.Add(
-                new MediaBackupChunkDeltaLogInput
-                {
-                    ChunkId = delta.ChunkId,
-                    BeforeCount = delta.BeforeCount,
-                    AfterCount = delta.AfterCount,
-                    Difference = delta.Difference,
-                    SizeBeforeBytes = sizeBefore,
-                    SizeAfterBytes = sizeAfter,
-                }
-            );
+            sizeByPath[path] = cache.Size?.File ?? 0;
         }
+
+        IReadOnlyList<MediaBackupChunkDeltaLogInput> deltaLogInputs =
+            _mediaBackupChunkDeltaInputCompositionService.Compose(
+                deltas.Items,
+                beforePathsByChunk,
+                afterPathsByChunk,
+                sizeByPath
+            );
 
         MediaBackupChunkDeltaLogPlan deltaLogPlan = _mediaBackupChunkDeltaLogPlanningService.Plan(
             deltaLogInputs,
