@@ -235,14 +235,6 @@ public partial class MediaBackup
                 {
                     try
                     {
-                        bool cancel = false;
-
-                        if (cancel)
-                        {
-                            cts.Cancel();
-                            return;
-                        }
-
                         await using Stream read = await MediaData.Read(
                             UtilsPath.NormalizePath(path)
                         );

@@ -200,14 +200,6 @@ public partial class MediaBackup
                 {
                     try
                     {
-                        bool cancel = false;
-
-                        if (cancel)
-                        {
-                            cts.Cancel();
-                            return;
-                        }
-
                         MediaCacheEntry? cache = await MediaData.GetCache(path);
                         bool existsSource = await MediaData.Exists(path);
                         bool existsTarget = await _mediaBackupData.Exists(path);

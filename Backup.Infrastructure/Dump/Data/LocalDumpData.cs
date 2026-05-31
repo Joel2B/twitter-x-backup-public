@@ -28,6 +28,7 @@ public class LocalDumpData(
     IDumpIndexFilePolicyService dumpIndexFilePolicyService,
     IDumpContextGuardService dumpContextGuardService,
     IDumpSessionNamingPolicyService dumpSessionNamingPolicyService,
+    IDumpFlushPlanningService dumpFlushPlanningService,
     IDataStoreGuardService dataStoreGuardService
 ) : IDumpDataStore
 {
@@ -43,6 +44,7 @@ public class LocalDumpData(
     private readonly IDumpContextGuardService _dumpContextGuardService = dumpContextGuardService;
     private readonly IDumpSessionNamingPolicyService _dumpSessionNamingPolicyService =
         dumpSessionNamingPolicyService;
+    private readonly IDumpFlushPlanningService _dumpFlushPlanningService = dumpFlushPlanningService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     private DumpData? _dumpData;
@@ -226,17 +228,24 @@ public class LocalDumpData(
             dumpPosts.AddRange(_posts);
         }
 
-        string sourceId = Data.Type ?? context.Id;
+        DumpFlushPlan flushPlan = _dumpFlushPlanningService.Build(
+            Data.Type,
+            context.Id,
+            dumpPosts.Select(post => post.Id)
+        );
 
         await postData.AddPosts(
             userId,
-            sourceId,
+            flushPlan.SourceId,
             dumpPosts.Select(PostReplicationMapper.ToDomain).ToList()
         );
         _logger.LogInformation("{posts} posts loaded from dump", dumpPosts.Count);
 
-        HashSet<string> newIds = [.. dumpPosts.Select(post => post.Id)];
-        int deletedCount = await postData.MarkDeletedExcept(userId, sourceId, newIds);
+        int deletedCount = await postData.MarkDeletedExcept(
+            userId,
+            flushPlan.SourceId,
+            flushPlan.NewPostIds
+        );
         _logger.LogInformation("{posts} posts deleted", deletedCount);
 
         DumpsData dumpsData = await _dumps.GetData();
