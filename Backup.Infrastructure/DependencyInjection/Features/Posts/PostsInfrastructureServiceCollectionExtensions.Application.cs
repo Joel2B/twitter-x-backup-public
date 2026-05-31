@@ -40,6 +40,7 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostTimelineExtractionService, PostTimelineExtractionService>();
         services.AddScoped<IPostUserParsePolicyService, PostUserParsePolicyService>();
         services.AddScoped<IPostProjectionParseService, PostProjectionParseService>();
+        services.AddScoped<IPostTokenMaterializationService, PostTokenMaterializationService>();
         return services;
     }
 }

@@ -15,7 +15,8 @@ public class PostParser(
     ILogger<PostParser> _logger,
     IPostTimelineExtractionService postTimelineExtractionService,
     IPostUserParsePolicyService postUserParsePolicyService,
-    IPostProjectionParseService postProjectionParseService
+    IPostProjectionParseService postProjectionParseService,
+    IPostTokenMaterializationService postTokenMaterializationService
 ) : IPostParser
 {
     private readonly ILogger<PostParser> _logger = _logger;
@@ -25,16 +26,24 @@ public class PostParser(
         postUserParsePolicyService;
     private readonly IPostProjectionParseService _postProjectionParseService =
         postProjectionParseService;
+    private readonly IPostTokenMaterializationService _postTokenMaterializationService =
+        postTokenMaterializationService;
 
     public ParseResult Parse(string userId, string origin, string response)
     {
         JObject root = JObject.Parse(response);
-        List<Entry> entries = _postTimelineExtractionService
-            .ExtractEntries(root)
-            .Select(token => token.ToObject<Entry>() ?? throw new Exception())
-            .ToList();
+        PostTokenMaterializationBatchResult<Entry> materialized =
+            _postTokenMaterializationService.MaterializeMany<Entry>(
+                _postTimelineExtractionService.ExtractEntries(root)
+            );
 
-        PostProjectionParseBatchResult batch = _postProjectionParseService.Parse(entries, PostMapper.Map);
+        foreach (string error in materialized.Errors)
+            _logger.LogError("Error: {error}", error);
+
+        PostProjectionParseBatchResult batch = _postProjectionParseService.Parse(
+            materialized.Items,
+            PostMapper.Map
+        );
 
         foreach (string error in batch.Errors)
             _logger.LogError("Error: {error}", error);
@@ -52,7 +61,7 @@ public class PostParser(
         if (token is null)
             throw new Exception();
 
-        DataUser? data = token.ToObject<DataUser>();
+        DataUser? data = _postTokenMaterializationService.Materialize<DataUser>(token);
 
         if (data is null)
             throw new Exception();
