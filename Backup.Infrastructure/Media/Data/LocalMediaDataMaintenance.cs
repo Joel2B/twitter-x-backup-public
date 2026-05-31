@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Application.Media.Maintenance;
+using Backup.Application.Media.Maintenance.Models;
 using Backup.Application.Media.Models;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data;
@@ -15,7 +16,7 @@ public class LocalMediaDataMaintenance(
     StorageMedia _config,
     IPartition _partition,
     IMediaCache _mediaCache,
-    IMediaMaintenanceDataPolicyService mediaMaintenanceDataPolicyService,
+    IMediaMaintenanceCachedDownloadFilterService mediaMaintenanceCachedDownloadFilterService,
     IMediaMaintenanceIntegrityEvaluationService mediaMaintenanceIntegrityEvaluationService,
     IMediaMaintenancePrunePathSelectionService mediaMaintenancePrunePathSelectionService
 ) : IMediaDataMaintenance
@@ -26,8 +27,8 @@ public class LocalMediaDataMaintenance(
     private readonly StorageMedia _config = _config;
     private readonly IPartition _partition = _partition;
     private readonly IMediaCache _mediaCache = _mediaCache;
-    private readonly IMediaMaintenanceDataPolicyService _mediaMaintenanceDataPolicyService =
-        mediaMaintenanceDataPolicyService;
+    private readonly IMediaMaintenanceCachedDownloadFilterService _mediaMaintenanceCachedDownloadFilterService =
+        mediaMaintenanceCachedDownloadFilterService;
     private readonly IMediaMaintenanceIntegrityEvaluationService _mediaMaintenanceIntegrityEvaluationService =
         mediaMaintenanceIntegrityEvaluationService;
     private readonly IMediaMaintenancePrunePathSelectionService _mediaMaintenancePrunePathSelectionService =
@@ -40,15 +41,32 @@ public class LocalMediaDataMaintenance(
         DeleteTemp();
         await _mediaCache.Load();
 
-        foreach (Download download in downloads)
-        {
-            download.Data.RemoveAll(data =>
-            {
-                long? cacheFileSize = _mediaCache.Get(data.Path)?.Size?.File;
-                return _mediaMaintenanceDataPolicyService.ShouldRemoveCachedDownload(cacheFileSize);
-            });
-        }
+        IReadOnlyList<MediaMaintenanceCachedDownload> filtered =
+            _mediaMaintenanceCachedDownloadFilterService.Filter(
+                downloads.Select(download => new MediaMaintenanceCachedDownload
+                {
+                    Id = download.Id,
+                    Data = download
+                        .Data.Select(data => new MediaMaintenanceCachedDownloadData
+                        {
+                            Url = data.Url,
+                            Path = data.Path,
+                            CacheFileSize = _mediaCache.Get(data.Path)?.Size?.File,
+                        })
+                        .ToList(),
+                })
+            );
 
+        downloads.Clear();
+        downloads.AddRange(
+            filtered.Select(download => new Download
+            {
+                Id = download.Id,
+                Data = download
+                    .Data.Select(data => new DataDownload { Url = data.Url, Path = data.Path })
+                    .ToList(),
+            })
+        );
         downloads.RemoveAll(dl => dl.Data.Count == 0);
     }
 
