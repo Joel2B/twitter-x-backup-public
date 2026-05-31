@@ -1,0 +1,26 @@
+{
+  "Enabled": true,
+  "Threads": {
+    "Start": 4,
+    "Min": 1,
+    "Max": 64
+  },
+  "Count": -1,
+  "MaxBytesPerSecond": 7340032,
+  "MaxBytes": 0,
+  "Timeout": 600,
+  "NoDataTimeout": 10000,
+  "Prune": {
+    "Filters": ["jpg:png:*"]
+  },
+  "Media": {
+    "Partitions": [0],
+    "Paths": ["data", "media"],
+    "Log": {
+      "Paths": ["log"]
+    },
+    "Error": {
+      "Paths": ["error"]
+    }
+  }
+}
