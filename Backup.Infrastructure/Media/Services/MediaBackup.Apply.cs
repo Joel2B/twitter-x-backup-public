@@ -148,18 +148,25 @@ public partial class MediaBackup
 
     private async Task SyncChunks()
     {
-        List<MediaBackupChunkPathsState> chunkStates = _chunks
+        List<MediaBackupSyncFinalizeInputChunk> chunkStates = _chunks
             .Values.Select(chunk => new MediaBackupChunkPathsState
             {
                 Id = chunk.Id,
                 Paths = chunk.Data.Select(data => data.Path).ToList(),
             })
+            .Select(chunk => new MediaBackupSyncFinalizeInputChunk
+            {
+                ChunkId = chunk.Id,
+                Paths = chunk.Paths,
+            })
             .ToList();
 
-        MediaBackupChunkSyncPlan plan = _mediaBackupChunkSyncPlanningService.Plan(
+        MediaBackupSyncFinalizeResult finalize = _mediaBackupSyncFinalizeService.Finalize(
             chunkStates,
-            _pathsInBoth
+            _pathsInBoth,
+            _pathsDirect
         );
+        MediaBackupChunkSyncPlan plan = finalize.Plan;
 
         foreach (MediaBackupChunkSyncChunkPlan chunkPlan in plan.Chunks)
         {
@@ -209,13 +216,13 @@ public partial class MediaBackup
             }
         }
 
-        _pathsDirect = [.. _mediaBackupDirectPathQueueService.MergeAndNormalize(_pathsDirect, plan.DirectPathsToAdd)];
+        _pathsDirect = [.. finalize.MergedDirectPaths];
     }
 
     private async Task ApplyDirect()
     {
         await SyncChunks();
-        IReadOnlyList<string> directPaths = _mediaBackupDirectPathQueueService.Normalize(_pathsDirect);
+        IReadOnlyList<string> directPaths = _mediaBackupDirectApplyPathService.GetPaths(_pathsDirect);
 
         CancellationTokenSource cts = new();
 

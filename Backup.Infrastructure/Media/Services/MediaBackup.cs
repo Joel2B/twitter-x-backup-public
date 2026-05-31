@@ -21,7 +21,8 @@ public partial class MediaBackup(
     IMediaBackupDuplicateCheckPlanningService mediaBackupDuplicateCheckPlanningService,
     IMediaBackupChunkAssignmentService mediaBackupChunkAssignmentService,
     IMediaBackupDirectPathFinalizeService mediaBackupDirectPathFinalizeService,
-    IMediaBackupChunkSyncPlanningService mediaBackupChunkSyncPlanningService,
+    IMediaBackupSyncFinalizeService mediaBackupSyncFinalizeService,
+    IMediaBackupDirectApplyPathService mediaBackupDirectApplyPathService,
     IMediaBackupIntegrityPlanningService mediaBackupIntegrityPlanningService,
     IMediaBackupIntegrityChangeDetectionService mediaBackupIntegrityChangeDetectionService,
     IMediaBackupDirectPathCandidateDecisionService mediaBackupDirectPathCandidateDecisionService,
@@ -54,8 +55,10 @@ public partial class MediaBackup(
         mediaBackupChunkAssignmentService;
     private readonly IMediaBackupDirectPathFinalizeService _mediaBackupDirectPathFinalizeService =
         mediaBackupDirectPathFinalizeService;
-    private readonly IMediaBackupChunkSyncPlanningService _mediaBackupChunkSyncPlanningService =
-        mediaBackupChunkSyncPlanningService;
+    private readonly IMediaBackupSyncFinalizeService _mediaBackupSyncFinalizeService =
+        mediaBackupSyncFinalizeService;
+    private readonly IMediaBackupDirectApplyPathService _mediaBackupDirectApplyPathService =
+        mediaBackupDirectApplyPathService;
     private readonly IMediaBackupIntegrityPlanningService _mediaBackupIntegrityPlanningService =
         mediaBackupIntegrityPlanningService;
     private readonly IMediaBackupIntegrityChangeDetectionService _mediaBackupIntegrityChangeDetectionService =
