@@ -22,8 +22,6 @@ public partial class MediaBackup
                 if (_stop)
                     break;
 
-                HashSet<string>? storagePaths = null;
-
                 foreach (ChunkData chunkData in kvp.Value.Data)
                 {
                     if (chunkData.Hash is not null)
@@ -38,41 +36,41 @@ public partial class MediaBackup
                         _logger.LogInfo("error in hash: {path}", chunkData.Path);
                         continue;
                     }
-
-                    if (zip is null)
-                    {
-                        _logger.LogInformation("processing chunk {chunk}", kvp.Key);
-                        _logger.LogInfo("update zip");
-                        zip = await OpenChunkZipWrite(kvp.Value, "apply");
-
-                        if (zip is null)
-                            break;
-                    }
-
-                    if (storagePaths is null)
-                    {
-                        _logger.LogInfo("reading entries");
-                        storagePaths = [.. zip.GetEntries().Select(o => o.FullName)];
-                    }
-
-                    string relativePath = _mediaBackupPathProjectionService.ToArchivePath(
-                        chunkData.Path
-                    );
-
-                    if (storagePaths.TryGetValue(relativePath, out var _))
-                        continue;
-
-                    storagePaths.Add(relativePath);
-
-                    await using Stream read = await MediaData.Read(
-                        UtilsPath.NormalizePath(chunkData.Path)
-                    );
-
-                    await zip.AddEntry(relativePath, read);
                 }
 
-                if (zip is null || storagePaths is null)
+                IReadOnlyList<MediaBackupApplyEntryCandidate> candidates = kvp.Value.Data
+                    .Select(item => new MediaBackupApplyEntryCandidate
+                    {
+                        SourcePath = item.Path,
+                        ArchivePath = _mediaBackupPathProjectionService.ToArchivePath(item.Path),
+                        HasHash = item.Hash is not null,
+                    })
+                    .ToList();
+
+                if (!candidates.Any(item => item.HasHash))
                     continue;
+
+                _logger.LogInformation("processing chunk {chunk}", kvp.Key);
+                _logger.LogInfo("update zip");
+                zip = await OpenChunkZipWrite(kvp.Value, "apply");
+
+                if (zip is null)
+                    continue;
+
+                _logger.LogInfo("reading entries");
+                HashSet<string> storagePaths = [.. zip.GetEntries().Select(o => o.FullName)];
+
+                IReadOnlyList<MediaBackupApplyEntryCandidate> toAdd =
+                    _mediaBackupApplyEntrySelectionService.SelectEntriesToAdd(candidates, storagePaths);
+
+                foreach (MediaBackupApplyEntryCandidate item in toAdd)
+                {
+                    storagePaths.Add(item.ArchivePath);
+                    await using Stream read = await MediaData.Read(
+                        UtilsPath.NormalizePath(item.SourcePath)
+                    );
+                    await zip.AddEntry(item.ArchivePath, read);
+                }
 
                 IReadOnlyList<string> memory = _mediaBackupPathProjectionService.ToArchivePaths(
                     kvp.Value.Data.Select(item => item.Path)
