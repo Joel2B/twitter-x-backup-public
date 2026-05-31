@@ -1,13 +1,20 @@
 using Backup.Infrastructure.Logging;
+using Backup.Application.Media;
+using Backup.Application.Media.Models;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
 
-public class MediaReplication(ILogger<MediaReplication> _logger) : IMediaReplication
+public class MediaReplication(
+    ILogger<MediaReplication> _logger,
+    IMediaReplicationPlanningService mediaReplicationPlanningService
+) : IMediaReplication
 {
     private readonly ILogger<MediaReplication> _logger = _logger;
+    private readonly IMediaReplicationPlanningService _mediaReplicationPlanningService =
+        mediaReplicationPlanningService;
 
     public async Task Replicate(
         List<Download> downloads,
@@ -20,35 +27,50 @@ public class MediaReplication(ILogger<MediaReplication> _logger) : IMediaReplica
         if (target == source)
             return;
 
-        List<DataDownload> copied = [];
+        List<MediaReplicationPathObservation> observations = [];
+
+        foreach (Download download in downloads)
+        {
+            foreach (DataDownload dataDownload in download.Data)
+            {
+                bool existsSource = await source.Exists(dataDownload.Path);
+                bool existsTarget = await target.Exists(dataDownload.Path);
+
+                observations.Add(
+                    new MediaReplicationPathObservation
+                    {
+                        DownloadId = download.Id,
+                        Url = dataDownload.Url,
+                        Path = dataDownload.Path,
+                        ExistsInSource = existsSource,
+                        ExistsInTarget = existsTarget,
+                    }
+                );
+            }
+        }
+
+        IReadOnlyList<MediaReplicationCopyAction> copyActions =
+            _mediaReplicationPlanningService.SelectCopyActions(observations);
+        List<MediaReplicationCopyAction> copied = [];
 
         try
         {
-            foreach (Download download in downloads)
+            foreach (MediaReplicationCopyAction action in copyActions)
             {
-                foreach (DataDownload dataDownload in download.Data)
-                {
-                    bool existsSource = await source.Exists(dataDownload.Path);
-                    bool existsTarget = await target.Exists(dataDownload.Path);
+                using Stream read = await source.Read(action.Path);
+                using Stream write = await target.Write(action.Path);
 
-                    if (!existsSource || existsTarget)
-                        continue;
+                await read.CopyToAsync(write);
 
-                    using Stream read = await source.Read(dataDownload.Path);
-                    using Stream write = await target.Write(dataDownload.Path);
+                _logger.LogInformation(
+                    target.Id,
+                    "{Id}, {Url}, {Path}",
+                    action.DownloadId,
+                    action.Url,
+                    action.Path
+                );
 
-                    await read.CopyToAsync(write);
-
-                    _logger.LogInformation(
-                        target.Id,
-                        "{Id}, {Url}, {Path}",
-                        download.Id,
-                        dataDownload.Url,
-                        dataDownload.Path
-                    );
-
-                    copied.Add(dataDownload);
-                }
+                copied.Add(action);
             }
         }
         catch (Exception ex)
@@ -56,9 +78,39 @@ public class MediaReplication(ILogger<MediaReplication> _logger) : IMediaReplica
             _logger.LogError("Error: {error}", ex.Message);
         }
 
-        foreach (Download download in downloads)
-            download.Data.RemoveAll(copied.Contains);
+        IReadOnlyList<Backup.Application.Media.Models.MediaDownload> remaining =
+            _mediaReplicationPlanningService.RemoveCopied(ToApplication(downloads), copied);
 
-        downloads.RemoveAll(dl => dl.Data.Count == 0);
+        SyncDownloads(downloads, remaining);
+    }
+
+    private static List<Backup.Application.Media.Models.MediaDownload> ToApplication(
+        IEnumerable<Download> downloads
+    ) =>
+        downloads
+            .Select(download => new Backup.Application.Media.Models.MediaDownload
+            {
+                Id = download.Id,
+                Data = download
+                    .Data.Select(item => new MediaDownloadData { Url = item.Url, Path = item.Path })
+                    .ToList(),
+            })
+            .ToList();
+
+    private static void SyncDownloads(
+        List<Download> target,
+        IReadOnlyList<Backup.Application.Media.Models.MediaDownload> source
+    )
+    {
+        target.Clear();
+        target.AddRange(
+            source.Select(download => new Download
+            {
+                Id = download.Id,
+                Data = download
+                    .Data.Select(item => new DataDownload { Url = item.Url, Path = item.Path })
+                    .ToList(),
+            })
+        );
     }
 }
