@@ -102,17 +102,24 @@ public partial class MediaBackup
             newPaths.Add(item.OriginalPath);
         }
 
-        int newPathsCount = 0;
+        MediaBackupChunkCountDeltaResult deltas = _mediaBackupChunkCountDeltaService.Compare(
+            _chunksClone.Values.Select(chunk => new MediaBackupChunkCountState
+            {
+                ChunkId = chunk.Id,
+                PathCount = chunk.Data.Count,
+            }),
+            _chunks.Values.Select(chunk => new MediaBackupChunkCountState
+            {
+                ChunkId = chunk.Id,
+                PathCount = chunk.Data.Count,
+            })
+        );
+
         bool header = false;
 
-        foreach (var kvp in _chunks)
+        foreach (MediaBackupChunkCountDeltaItem delta in deltas.Items)
         {
-            _chunksClone.TryGetValue(kvp.Key, out Chunk? chunkBefore);
-
-            int before = chunkBefore is null ? 0 : chunkBefore.Data.Count;
-            int after = _chunks[kvp.Key].Data.Count;
-            int diff = after - before;
-            newPathsCount += diff;
+            _chunksClone.TryGetValue(delta.ChunkId, out Chunk? chunkBefore);
 
             long sizeBefore = 0;
             long sizeAfter = 0;
@@ -125,7 +132,7 @@ public partial class MediaBackup
                     sizeBefore += cache.Size?.File ?? 0;
             }
 
-            foreach (ChunkData chunkData in _chunks[kvp.Key].Data)
+            foreach (ChunkData chunkData in _chunks[delta.ChunkId].Data)
             {
                 MediaCacheEntry? cache = await MediaData.GetCache(chunkData.Path);
 
@@ -133,7 +140,7 @@ public partial class MediaBackup
                     sizeAfter += cache.Size?.File ?? 0;
             }
 
-            if (before != after)
+            if (delta.BeforeCount != delta.AfterCount)
             {
                 if (!header)
                 {
@@ -152,17 +159,21 @@ public partial class MediaBackup
 
                 _logger.LogInformation(
                     "{id,-3} {before,-6} {after,-6} {diff,-6} {sizeBefore,-17} {sizeAfter}",
-                    kvp.Key,
-                    before,
-                    after,
-                    diff,
+                    delta.ChunkId,
+                    delta.BeforeCount,
+                    delta.AfterCount,
+                    delta.Difference,
                     Math.Round(sizeBefore / 1024m / 1024m / 1024m, 2, MidpointRounding.ToZero),
                     Math.Round(sizeAfter / 1024m / 1024m / 1024m, 2, MidpointRounding.ToZero)
                 );
             }
         }
 
-        _logger.LogInformation("{paths1}/{paths2} new paths", newPathsCount, newPaths.Count);
+        _logger.LogInformation(
+            "{paths1}/{paths2} new paths",
+            deltas.TotalAddedPaths,
+            newPaths.Count
+        );
     }
 
     private async Task CalculateDirect()
