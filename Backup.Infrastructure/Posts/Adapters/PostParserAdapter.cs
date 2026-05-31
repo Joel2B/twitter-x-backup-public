@@ -4,7 +4,6 @@ using Backup.Infrastructure.Posts.Abstractions.Services;
 using PostMapper = Backup.Infrastructure.Posts.Adapters.ProjectionMapping.PostMapper;
 using Backup.Infrastructure.Posts.Models;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ParseResult = Backup.Application.Posts.Models.ParsedPostBatch;
 using ParseUser = Backup.Domain.Posts.ParseUser;
@@ -15,7 +14,8 @@ namespace Backup.Infrastructure.Posts.Adapters;
 public class PostParser(
     ILogger<PostParser> _logger,
     IPostTimelineExtractionService postTimelineExtractionService,
-    IPostUserParsePolicyService postUserParsePolicyService
+    IPostUserParsePolicyService postUserParsePolicyService,
+    IPostProjectionParseService postProjectionParseService
 ) : IPostParser
 {
     private readonly ILogger<PostParser> _logger = _logger;
@@ -23,6 +23,8 @@ public class PostParser(
         postTimelineExtractionService;
     private readonly IPostUserParsePolicyService _postUserParsePolicyService =
         postUserParsePolicyService;
+    private readonly IPostProjectionParseService _postProjectionParseService =
+        postProjectionParseService;
 
     public ParseResult Parse(string userId, string origin, string response)
     {
@@ -32,35 +34,14 @@ public class PostParser(
             .Select(token => token.ToObject<Entry>() ?? throw new Exception())
             .ToList();
 
-        List<ParsedPostProjection> tweets = [];
-        List<Entry> debugTweets = [];
+        PostProjectionParseBatchResult batch = _postProjectionParseService.Parse(entries, PostMapper.Map);
 
-        foreach (Entry entry in entries)
-            try
-            {
-                ParsedPostProjection post = PostMapper.Map(entry);
-                tweets.Add(post);
-            }
-            catch (Exception ex)
-            {
-                debugTweets.Add(entry);
-
-                _logger.LogError(
-                    "Error: {message}, {exception}",
-                    ex.Message,
-                    JsonConvert.SerializeObject(
-                        ex,
-                        new JsonSerializerSettings
-                        {
-                            ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                        }
-                    )
-                );
-            }
+        foreach (string error in batch.Errors)
+            _logger.LogError("Error: {error}", error);
 
         string? cursor = _postTimelineExtractionService.ExtractCursor(root);
 
-        return new ParseResult(tweets, cursor);
+        return new ParseResult(batch.Posts.ToList(), cursor);
     }
 
     public ParseUser ParseUser(string response)
