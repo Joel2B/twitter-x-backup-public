@@ -13,6 +13,7 @@ namespace Backup.Infrastructure.Bulk.Adapters;
 internal sealed class BulkPhase1CommandAdapter(
     IReadOnlyDictionary<string, ApiConfig> api,
     IBulkItemIdentityService bulkItemIdentityService,
+    IBulkIdentityLastWriteWinsService bulkIdentityLastWriteWinsService,
     IPostDomainData postData,
     IBulkData bulkData,
     IBulkApiClient bulkApiClient
@@ -20,6 +21,8 @@ internal sealed class BulkPhase1CommandAdapter(
 {
     private readonly IReadOnlyDictionary<string, ApiConfig> _api = api;
     private readonly IBulkItemIdentityService _bulkItemIdentityService = bulkItemIdentityService;
+    private readonly IBulkIdentityLastWriteWinsService _bulkIdentityLastWriteWinsService =
+        bulkIdentityLastWriteWinsService;
     private readonly IPostDomainData _postData = postData;
     private readonly IBulkData _bulkData = bulkData;
     private readonly IBulkApiClient _bulkApiClient = bulkApiClient;
@@ -34,10 +37,14 @@ internal sealed class BulkPhase1CommandAdapter(
         _sourceBulks = await _bulkData.GetBulks() ?? [];
 
         List<BulkItem> items = _sourceBulks.Select(BulkPhaseItemMapper.ToApplication).ToList();
-        _bulkMap = items
-            .Zip(_sourceBulks)
-            .GroupBy(pair => _bulkItemIdentityService.GetKey(pair.First))
-            .ToDictionary(group => group.Key, group => group.Last().Second);
+        IReadOnlyDictionary<string, int> lastSourceIndexByKey =
+            _bulkIdentityLastWriteWinsService.BuildLastIndexByKey(
+                items.Select(_bulkItemIdentityService.GetKey)
+            );
+        _bulkMap = lastSourceIndexByKey.ToDictionary(
+            entry => entry.Key,
+            entry => _sourceBulks[entry.Value]
+        );
 
         return items;
     }

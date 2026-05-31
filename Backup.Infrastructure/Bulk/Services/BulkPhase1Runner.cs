@@ -14,6 +14,7 @@ public sealed class BulkPhase1Runner(
     ILogger<BulkPhase1Runner> logger,
     AppConfig config,
     IBulkItemIdentityService bulkItemIdentityService,
+    IBulkIdentityLastWriteWinsService bulkIdentityLastWriteWinsService,
     IPostDomainData postData,
     IBulkData bulkData,
     IBulkSourceRouteService bulkSourceRouteService,
@@ -24,6 +25,8 @@ public sealed class BulkPhase1Runner(
     private readonly ILogger<BulkPhase1Runner> _logger = logger;
     private readonly AppConfig _config = config;
     private readonly IBulkItemIdentityService _bulkItemIdentityService = bulkItemIdentityService;
+    private readonly IBulkIdentityLastWriteWinsService _bulkIdentityLastWriteWinsService =
+        bulkIdentityLastWriteWinsService;
     private readonly IPostDomainData _postData = postData;
     private readonly IBulkData _bulkData = bulkData;
     private readonly IBulkSourceRouteService _bulkSourceRouteService = bulkSourceRouteService;
@@ -56,6 +59,7 @@ public sealed class BulkPhase1Runner(
             new BulkPhase1CommandAdapter(
                 api,
                 _bulkItemIdentityService,
+                _bulkIdentityLastWriteWinsService,
                 _postData,
                 _bulkData,
                 _bulkApiClient

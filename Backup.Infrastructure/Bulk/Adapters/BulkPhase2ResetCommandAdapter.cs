@@ -8,11 +8,14 @@ namespace Backup.Infrastructure.Bulk.Adapters;
 
 internal sealed class BulkPhase2ResetCommandAdapter(
     IBulkData bulkData,
-    IBulkItemIdentityService bulkItemIdentityService
+    IBulkItemIdentityService bulkItemIdentityService,
+    IBulkIdentityLastWriteWinsService bulkIdentityLastWriteWinsService
 ) : IBulkPhase2ResetCommand
 {
     private readonly IBulkData _bulkData = bulkData;
     private readonly IBulkItemIdentityService _bulkItemIdentityService = bulkItemIdentityService;
+    private readonly IBulkIdentityLastWriteWinsService _bulkIdentityLastWriteWinsService =
+        bulkIdentityLastWriteWinsService;
 
     private List<BulkData>? _sourceBulks;
     private Dictionary<string, BulkData>? _bulkMap;
@@ -22,10 +25,14 @@ internal sealed class BulkPhase2ResetCommandAdapter(
         _sourceBulks = await _bulkData.GetBulks() ?? [];
 
         List<BulkItem> items = _sourceBulks.Select(BulkPhaseItemMapper.ToApplication).ToList();
-        _bulkMap = items
-            .Zip(_sourceBulks)
-            .GroupBy(pair => _bulkItemIdentityService.GetKey(pair.First))
-            .ToDictionary(group => group.Key, group => group.Last().Second);
+        IReadOnlyDictionary<string, int> lastSourceIndexByKey =
+            _bulkIdentityLastWriteWinsService.BuildLastIndexByKey(
+                items.Select(_bulkItemIdentityService.GetKey)
+            );
+        _bulkMap = lastSourceIndexByKey.ToDictionary(
+            entry => entry.Key,
+            entry => _sourceBulks[entry.Value]
+        );
 
         return items;
     }
