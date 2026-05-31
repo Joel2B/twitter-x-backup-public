@@ -1,5 +1,6 @@
 using System.Net;
 using Backup.Application.Proxy;
+using Backup.Application.Proxy.Ports;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Backup.Infrastructure.Proxy.Abstractions.Core;
@@ -20,7 +21,8 @@ public class ProxyProvider(
     AppConfig _config,
     IProxyData _data,
     IProxyRuntimePolicyService proxyRuntimePolicyService,
-    IProxyHealthCheckPolicyService proxyHealthCheckPolicyService,
+    IProxyHealthProbeService proxyHealthProbeService,
+    IProxyHealthProbePort proxyHealthProbePort,
     IProxyHttpClientFactoryPolicyService proxyHttpClientFactoryPolicyService,
     IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService,
     IProxyConnectionWindowPolicyService proxyConnectionWindowPolicyService,
@@ -39,8 +41,8 @@ public class ProxyProvider(
     private readonly AppConfig _config = _config;
     private readonly IProxyData _data = _data;
     private readonly IProxyRuntimePolicyService _proxyRuntimePolicyService = proxyRuntimePolicyService;
-    private readonly IProxyHealthCheckPolicyService _proxyHealthCheckPolicyService =
-        proxyHealthCheckPolicyService;
+    private readonly IProxyHealthProbeService _proxyHealthProbeService = proxyHealthProbeService;
+    private readonly IProxyHealthProbePort _proxyHealthProbePort = proxyHealthProbePort;
     private readonly IProxyHttpClientFactoryPolicyService _proxyHttpClientFactoryPolicyService =
         proxyHttpClientFactoryPolicyService;
     private readonly IProxyHttpClientHeaderPolicyService _proxyHttpClientHeaderPolicyService =
@@ -137,51 +139,21 @@ public class ProxyProvider(
 
         foreach (ProxyDataConfig proxy in proxies)
         {
-            string url = _proxyHealthCheckPolicyService.GetHealthCheckUrl();
-            HttpStatusCode? code = null;
+            ProxyHealthProbeResult probe = await _proxyHealthProbeService.Probe(
+                ToCandidate(proxy),
+                _proxyHealthProbePort
+            );
 
-            while (true)
-            {
-                try
-                {
-                    Uri uri = new(proxy.ToString());
+            if (probe.Error is not null)
+                _logger.LogError("Error: {error}", JsonConvert.SerializeObject(probe.Error));
 
-                    _logger.LogInformation("Uri: {uri}", uri.ToString());
-
-                    using HttpClientHandler handler = _proxyHttpClientFactoryPolicyService.CreateHandler(uri);
-                    using HttpClient client = _proxyHttpClientFactoryPolicyService.CreateClient(
-                        handler,
-                        _proxyHealthCheckPolicyService.GetHealthCheckTimeout()
-                    );
-
-                    using HttpRequestMessage requestHttp = new(HttpMethod.Get, url);
-
-                    using HttpResponseMessage response = await client.SendAsync(
-                        requestHttp,
-                        HttpCompletionOption.ResponseHeadersRead
-                    );
-
-                    code = response.StatusCode;
-
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError("Error: {error}", JsonConvert.SerializeObject(ex));
-
-                    if (_proxyHealthCheckPolicyService.ShouldFallbackToHttp(ex))
-                        proxy.Protocol = "http";
-                    else
-                        break;
-                }
-            }
-
-            if (code is not HttpStatusCode.OK)
+            if (!probe.Success)
                 continue;
 
-            ProxyData _proxy = new() { Proxy = proxy, Connections = [new() { TotalUses = 1 }] };
+            ProxyDataConfig acceptedProxy = ToProxyDataConfig(probe.Candidate);
+            ProxyData _proxy = new() { Proxy = acceptedProxy, Connections = [new() { TotalUses = 1 }] };
 
-            if (!proxiesAdded.Add(GetProxyKey(proxy)))
+            if (!proxiesAdded.Add(GetProxyKey(acceptedProxy)))
                 continue;
 
             _proxies.Add(_proxy);
