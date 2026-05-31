@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Logging;
+using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Utility.Abstractions.Services;
 using Microsoft.Extensions.Logging;
@@ -81,6 +82,8 @@ public partial class MediaBackup
                 );
 
                 _logger.LogInformation("processing chunk {chunk}", kvp.Key);
+                MediaBackupDuplicateCleanupPlan cleanupPlan =
+                    _mediaBackupDuplicateCleanupService.BuildPlan(storageDuplicates);
 
                 IZipWriter? writeZip = await OpenChunkZipWrite(
                     kvp.Value,
@@ -94,8 +97,8 @@ public partial class MediaBackup
                 {
                     _logger.LogInfo("removing entries");
 
-                    foreach (var item in storageDuplicates)
-                        writeZip.RemoveEntry(item.Entries[0], true);
+                    foreach (MediaBackupDuplicateCleanupOperation operation in cleanupPlan.Operations)
+                        writeZip.RemoveEntry(operation.EntryPath, operation.RemoveDuplicateEntries);
                 }
                 finally
                 {
@@ -103,10 +106,7 @@ public partial class MediaBackup
                     writeZip.Dispose();
                 }
 
-                _logger.LogInformation(
-                    "{paths} duplicate paths removed",
-                    storageDuplicates.Sum(o => o.Entries.Count) - storageDuplicates.Count
-                );
+                _logger.LogInformation("{paths} duplicate paths removed", cleanupPlan.RemovedPathCount);
             }
 
             var diff = _mediaBackupPathAnalysisService.Diff(memory, storage);
