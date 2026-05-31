@@ -1,5 +1,6 @@
 using Backup.Application.Bulk.Ports;
 using Backup.Application.Bulk.Models;
+using Backup.Application.Bulk;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Abstractions.Services;
 using Backup.Infrastructure.Bulk.Models;
@@ -11,25 +12,30 @@ namespace Backup.Infrastructure.Bulk.Adapters;
 
 internal sealed class BulkPhase2CommandAdapter(
     IReadOnlyDictionary<string, ApiConfig> api,
+    IBulkItemIdentityService bulkItemIdentityService,
     IPostDomainData postData,
     IBulkData bulkData,
     IBulkApiClient bulkApiClient
 ) : IBulkPhase2Command
 {
     private readonly IReadOnlyDictionary<string, ApiConfig> _api = api;
+    private readonly IBulkItemIdentityService _bulkItemIdentityService = bulkItemIdentityService;
     private readonly IPostDomainData _postData = postData;
     private readonly IBulkData _bulkData = bulkData;
     private readonly IBulkApiClient _bulkApiClient = bulkApiClient;
 
     private List<BulkData>? _sourceBulks;
-    private Dictionary<BulkItem, BulkData>? _bulkMap;
+    private Dictionary<string, BulkData>? _bulkMap;
 
     public async Task<IReadOnlyList<BulkItem>> GetBulks()
     {
         _sourceBulks = await _bulkData.GetBulks() ?? [];
 
         List<BulkItem> items = _sourceBulks.Select(BulkPhaseItemMapper.ToApplication).ToList();
-        _bulkMap = items.Zip(_sourceBulks).ToDictionary(pair => pair.First, pair => pair.Second);
+        _bulkMap = items
+            .Zip(_sourceBulks)
+            .GroupBy(pair => _bulkItemIdentityService.GetKey(pair.First))
+            .ToDictionary(group => group.Key, group => group.Last().Second);
 
         return items;
     }
@@ -41,7 +47,7 @@ internal sealed class BulkPhase2CommandAdapter(
 
         foreach (BulkItem bulk in bulks)
         {
-            if (!_bulkMap.TryGetValue(bulk, out BulkData? source))
+            if (!_bulkMap.TryGetValue(_bulkItemIdentityService.GetKey(bulk), out BulkData? source))
                 continue;
 
             BulkPhaseItemMapper.ApplyToInfrastructure(bulk, source);

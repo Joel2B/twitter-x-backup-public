@@ -12,6 +12,7 @@ namespace Backup.Infrastructure.Bulk.Services;
 public sealed class BulkImportRunner(
     ILogger<BulkImportRunner> logger,
     AppConfig config,
+    IBulkItemIdentityService bulkItemIdentityService,
     IBulkSourceData bulkSourceData,
     IBulkData bulkData,
     IBulkApiClient bulkApiClient,
@@ -20,6 +21,7 @@ public sealed class BulkImportRunner(
 {
     private readonly ILogger<BulkImportRunner> _logger = logger;
     private readonly AppConfig _config = config;
+    private readonly IBulkItemIdentityService _bulkItemIdentityService = bulkItemIdentityService;
     private readonly IBulkSourceData _bulkSourceData = bulkSourceData;
     private readonly IBulkData _bulkData = bulkData;
     private readonly IBulkApiClient _bulkApiClient = bulkApiClient;
@@ -32,7 +34,13 @@ public sealed class BulkImportRunner(
         BulkImportOptions options = new() { UsersPerCycle = _config.Bulk.UsersPerCycle };
 
         await _bulkImportService.Run(
-            new BulkImportCommandAdapter(api, _bulkSourceData, _bulkData, _bulkApiClient),
+            new BulkImportCommandAdapter(
+                api,
+                _bulkItemIdentityService,
+                _bulkSourceData,
+                _bulkData,
+                _bulkApiClient
+            ),
             options,
             cancellationToken
         );

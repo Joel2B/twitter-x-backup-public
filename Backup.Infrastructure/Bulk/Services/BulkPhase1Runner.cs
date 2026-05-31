@@ -13,6 +13,7 @@ namespace Backup.Infrastructure.Bulk.Services;
 public sealed class BulkPhase1Runner(
     ILogger<BulkPhase1Runner> logger,
     AppConfig config,
+    IBulkItemIdentityService bulkItemIdentityService,
     IPostDomainData postData,
     IBulkData bulkData,
     IBulkSourceRouteService bulkSourceRouteService,
@@ -22,6 +23,7 @@ public sealed class BulkPhase1Runner(
 {
     private readonly ILogger<BulkPhase1Runner> _logger = logger;
     private readonly AppConfig _config = config;
+    private readonly IBulkItemIdentityService _bulkItemIdentityService = bulkItemIdentityService;
     private readonly IPostDomainData _postData = postData;
     private readonly IBulkData _bulkData = bulkData;
     private readonly IBulkSourceRouteService _bulkSourceRouteService = bulkSourceRouteService;
@@ -51,7 +53,13 @@ public sealed class BulkPhase1Runner(
         };
 
         await _bulkPhase1Service.Run(
-            new BulkPhase1CommandAdapter(api, _postData, _bulkData, _bulkApiClient),
+            new BulkPhase1CommandAdapter(
+                api,
+                _bulkItemIdentityService,
+                _postData,
+                _bulkData,
+                _bulkApiClient
+            ),
             options,
             origin,
             cancellationToken
