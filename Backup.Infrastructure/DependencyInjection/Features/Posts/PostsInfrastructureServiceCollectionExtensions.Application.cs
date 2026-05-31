@@ -37,6 +37,7 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostIndexingService, PostIndexingService>();
         services.AddScoped<IPostStoreParityService, PostStoreParityService>();
         services.AddScoped<IPostChangeComputationService, PostChangeComputationService>();
+        services.AddScoped<IPostTimelineExtractionService, PostTimelineExtractionService>();
         return services;
     }
 }

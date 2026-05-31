@@ -1,7 +1,7 @@
 using Backup.Application.Posts.Models;
+using Backup.Application.Posts;
 using Backup.Infrastructure.Posts.Abstractions.Services;
 using PostMapper = Backup.Infrastructure.Posts.Adapters.ProjectionMapping.PostMapper;
-using TimelineEntryExtractor = Backup.Infrastructure.Posts.Adapters.Parsing.TimelineEntryExtractor;
 using Backup.Infrastructure.Posts.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -12,14 +12,22 @@ using PostUser = Backup.Domain.Posts.PostUser;
 
 namespace Backup.Infrastructure.Posts.Adapters;
 
-public class PostParser(ILogger<PostParser> _logger) : IPostParser
+public class PostParser(
+    ILogger<PostParser> _logger,
+    IPostTimelineExtractionService postTimelineExtractionService
+) : IPostParser
 {
     private readonly ILogger<PostParser> _logger = _logger;
+    private readonly IPostTimelineExtractionService _postTimelineExtractionService =
+        postTimelineExtractionService;
 
     public ParseResult Parse(string userId, string origin, string response)
     {
         JObject root = JObject.Parse(response);
-        List<Entry> entries = TimelineEntryExtractor.ExtractEntries(root);
+        List<Entry> entries = _postTimelineExtractionService
+            .ExtractEntries(root)
+            .Select(token => token.ToObject<Entry>() ?? throw new Exception())
+            .ToList();
 
         List<ParsedPostProjection> tweets = [];
         List<Entry> debugTweets = [];
@@ -47,7 +55,7 @@ public class PostParser(ILogger<PostParser> _logger) : IPostParser
                 );
             }
 
-        string? cursor = TimelineEntryExtractor.ExtractCursor(root);
+        string? cursor = _postTimelineExtractionService.ExtractCursor(root);
 
         return new ParseResult(tweets, cursor);
     }
