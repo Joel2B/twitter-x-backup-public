@@ -39,106 +39,79 @@ public partial class LocalPostData
     private LocalPostTables BuildTables(List<Post> posts)
     {
         LocalPostTables tables = new();
-        Dictionary<string, ProfileRow> profileById = new(StringComparer.Ordinal);
+        IReadOnlyList<Backup.Domain.Posts.Post> domainPosts = posts
+            .Select(PostReplicationMapper.ToDomain)
+            .ToList();
+        PostTableProjectionResult projection = _postTableProjectionService.Project(domainPosts);
+
+        tables.Posts = projection
+            .Posts.Select(row => new PostRow
+            {
+                Id = row.Id,
+                ProfileId = row.ProfileId,
+                Description = row.Description,
+                Retweeted = row.Retweeted,
+                Favorited = row.Favorited,
+                Bookmarked = row.Bookmarked,
+                CreatedAt = row.CreatedAt,
+            })
+            .ToList();
+        tables.Profiles = projection
+            .Profiles.Select(row => new ProfileRow
+            {
+                Id = row.Id,
+                UserName = row.UserName,
+                Name = row.Name,
+                BannerUrl = row.BannerUrl,
+                ImageUrl = row.ImageUrl,
+                Following = row.Following,
+                CountMedia = row.CountMedia,
+            })
+            .ToList();
+        tables.Hashtags = projection
+            .Hashtags.Select(row => new HashtagRow
+            {
+                PostId = row.PostId,
+                Value = row.Value,
+                Ordinal = row.Ordinal,
+            })
+            .ToList();
+        tables.Medias = projection
+            .Medias.Select(row => new MediaRow
+            {
+                PostId = row.PostId,
+                Ordinal = row.Ordinal,
+                MediaId = row.MediaId,
+                Url = row.Url,
+                Type = row.Type,
+                VideoDurationMilis = row.VideoDurationMilis,
+            })
+            .ToList();
+        tables.MediaVariants = projection
+            .MediaVariants.Select(row => new MediaVariantRow
+            {
+                PostId = row.PostId,
+                MediaOrdinal = row.MediaOrdinal,
+                Ordinal = row.Ordinal,
+                ContentType = row.ContentType,
+                Bitrate = row.Bitrate,
+                Url = row.Url,
+            })
+            .ToList();
+        tables.IndexEntries = projection
+            .IndexEntries.Select(row => new IndexEntryRow
+            {
+                PostId = row.PostId,
+                UserId = row.UserId,
+                Origin = row.Origin,
+                Previous = row.Previous,
+                Next = row.Next,
+            })
+            .ToList();
 
         foreach (Post post in posts)
-        {
-            profileById[post.Profile.Id] = new()
-            {
-                Id = post.Profile.Id,
-                UserName = post.Profile.UserName,
-                Name = post.Profile.Name,
-                BannerUrl = post.Profile.BannerUrl,
-                ImageUrl = post.Profile.ImageUrl,
-                Following = post.Profile.Following,
-                CountMedia = post.Profile.Count?.Media,
-            };
-
-            tables.Posts.Add(
-                new()
-                {
-                    Id = post.Id,
-                    ProfileId = post.Profile.Id,
-                    Description = post.Description,
-                    Retweeted = post.Retweeted,
-                    Favorited = post.Favorited,
-                    Bookmarked = post.Bookmarked,
-                    CreatedAt = post.CreatedAt,
-                }
-            );
-
-            if (post.Hashtags is not null)
-                for (int i = 0; i < post.Hashtags.Count; i++)
-                    tables.Hashtags.Add(
-                        new()
-                        {
-                            PostId = post.Id,
-                            Value = post.Hashtags[i],
-                            Ordinal = i,
-                        }
-                    );
-
-            if (post.Medias is not null)
-            {
-                for (int i = 0; i < post.Medias.Count; i++)
-                {
-                    PostMedia media = post.Medias[i];
-
-                    tables.Medias.Add(
-                        new()
-                        {
-                            PostId = post.Id,
-                            Ordinal = i,
-                            MediaId = media.Id,
-                            Url = media.Url,
-                            Type = media.Type,
-                            VideoDurationMilis = media.VideoInfo?.DurationMilis,
-                        }
-                    );
-
-                    if (media.VideoInfo?.Variants is null)
-                        continue;
-
-                    for (int j = 0; j < media.VideoInfo.Variants.Count; j++)
-                    {
-                        PostVariant variant = media.VideoInfo.Variants[j];
-
-                        tables.MediaVariants.Add(
-                            new()
-                            {
-                                PostId = post.Id,
-                                MediaOrdinal = i,
-                                Ordinal = j,
-                                ContentType = variant.ContentType,
-                                Bitrate = variant.Bitrate,
-                                Url = variant.Url,
-                            }
-                        );
-                    }
-                }
-            }
-
-            foreach (var userIndex in post.Index)
-            {
-                foreach (var originIndex in userIndex.Value)
-                {
-                    tables.IndexEntries.Add(
-                        new()
-                        {
-                            PostId = post.Id,
-                            UserId = userIndex.Key,
-                            Origin = originIndex.Key,
-                            Previous = originIndex.Value.Previous,
-                            Next = originIndex.Value.Next,
-                        }
-                    );
-                }
-            }
-
             AddChangeRows(tables, post);
-        }
 
-        tables.Profiles = [.. profileById.Values];
         return tables;
     }
 

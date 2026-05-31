@@ -50,6 +50,7 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostMergeResolutionService, PostMergeResolutionService>();
         services.AddScoped<IPostHashMetaParityService, PostHashMetaParityService>();
         services.AddScoped<IPostMetaReconciliationService, PostMetaReconciliationService>();
+        services.AddScoped<IPostTableProjectionService, PostTableProjectionService>();
         services.AddScoped<IPostTableMaterializationService, PostTableMaterializationService>();
         services.AddScoped<IPostProfileCountAggregationService, PostProfileCountAggregationService>();
         services.AddScoped<IPostMetaConsistencyValidationService, PostMetaConsistencyValidationService>();
