@@ -105,11 +105,7 @@ public partial class MediaBackup
     {
         IReadOnlyList<MediaBackupIntegrityChunkGroup> changes = _mediaBackupIntegrityPlanningService
             .GroupByChunk(
-                _changes.Select(change => new MediaBackupIntegrityPathChange
-                {
-                    ChunkId = change.ChunkId,
-                    Path = change.Path,
-                })
+                _mediaBackupIntegrityObservationCompositionService.BuildPathChanges(_changes)
             );
 
         _logger.LogInformation("processing changes");

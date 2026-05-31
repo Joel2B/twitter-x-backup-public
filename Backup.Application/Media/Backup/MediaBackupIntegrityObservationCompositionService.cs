@@ -29,4 +29,14 @@ public sealed class MediaBackupIntegrityObservationCompositionService
                 Crc32 = input.Crc32,
             })
             .ToList();
+
+    public IReadOnlyList<MediaBackupIntegrityPathChange> BuildPathChanges(
+        IEnumerable<MediaBackupIntegrityChange> changes
+    ) =>
+        changes.Select(change => new MediaBackupIntegrityPathChange
+            {
+                ChunkId = change.ChunkId,
+                Path = change.Path,
+            })
+            .ToList();
 }

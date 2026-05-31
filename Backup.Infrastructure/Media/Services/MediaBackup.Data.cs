@@ -17,12 +17,9 @@ public partial class MediaBackup
         foreach (var kvp in _chunks)
         {
             bool isNull = _mediaBackupChunkMetadataOrchestrationService.RequiresRefresh(
-                kvp.Value.Data.Select(item => new MediaBackupChunkPathMetadataState
-                {
-                    Path = item.Path,
-                    FileSize = item.FileSize,
-                    Crc32 = item.Crc32,
-                })
+                _mediaBackupChunkMetadataObservationCompositionService.BuildPathMetadataStates(
+                    BuildChunkEntryStates(kvp.Value.Data)
+                )
             );
 
             if (!isNull)

@@ -11,4 +11,8 @@ public interface IMediaBackupIntegrityObservationCompositionService
     IReadOnlyList<MediaBackupChunkPathMetadataState> BuildPathMetadataStates(
         IEnumerable<MediaBackupChunkPathMetadataInput> inputs
     );
+
+    IReadOnlyList<MediaBackupIntegrityPathChange> BuildPathChanges(
+        IEnumerable<MediaBackupIntegrityChange> changes
+    );
 }

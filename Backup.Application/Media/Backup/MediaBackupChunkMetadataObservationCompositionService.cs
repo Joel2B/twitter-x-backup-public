@@ -5,6 +5,17 @@ namespace Backup.Application.Media.Backup;
 public sealed class MediaBackupChunkMetadataObservationCompositionService
     : IMediaBackupChunkMetadataObservationCompositionService
 {
+    public IReadOnlyList<MediaBackupChunkPathMetadataState> BuildPathMetadataStates(
+        IEnumerable<MediaBackupChunkEntryState> entries
+    ) =>
+        entries.Select(entry => new MediaBackupChunkPathMetadataState
+            {
+                Path = entry.Path,
+                FileSize = entry.FileSize,
+                Crc32 = entry.Crc32,
+            })
+            .ToList();
+
     public IReadOnlyList<MediaBackupChunkMetadataObservation> BuildObservations(
         IEnumerable<MediaBackupChunkMetadataObservationInput> inputs
     ) =>
