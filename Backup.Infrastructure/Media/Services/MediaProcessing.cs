@@ -1,109 +1,91 @@
-using Backup.Infrastructure.Core.Media;
 using Backup.Application.Media;
 using Backup.Application.Media.Models;
-using Backup.Application.Media.Filter;
 using Backup.Infrastructure.Media.Abstractions.Services;
-using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Media.Models;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Medias;
+using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Posts.Models;
-using Backup.Infrastructure.Media.Services.Processors;
-using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
 
 public class MediaProcessing(
-    ILogger<MediaProcessing> _logger,
-    AppConfig _config,
-    IMediaDownloadFilterPolicyService downloadFilterPolicyService,
-    IMediaDownloadDataBuilderService mediaDownloadDataBuilderService,
-    IMediaVideoVariantPolicyService mediaVideoVariantPolicyService,
-    IMediaDuplicateFilterService mediaDuplicateFilterService
+    AppConfig config,
+    IMediaDownloadProjectionService mediaDownloadProjectionService
 ) : IMediaProcessing
 {
-    private readonly ILogger<MediaProcessing> _logger = _logger;
-    private readonly AppConfig _config = _config;
-    private readonly IMediaDownloadFilterPolicyService _downloadFilterPolicyService =
-        downloadFilterPolicyService;
-    private readonly IMediaDownloadDataBuilderService _mediaDownloadDataBuilderService =
-        mediaDownloadDataBuilderService;
-    private readonly IMediaVideoVariantPolicyService _mediaVideoVariantPolicyService =
-        mediaVideoVariantPolicyService;
-    private readonly IMediaDuplicateFilterService _mediaDuplicateFilterService =
-        mediaDuplicateFilterService;
+    private readonly AppConfig _config = config;
+    private readonly IMediaDownloadProjectionService _mediaDownloadProjectionService =
+        mediaDownloadProjectionService;
 
-    private readonly Dictionary<string, Download> _all = [];
-    private readonly Dictionary<string, Download> _filtered = [];
+    private readonly List<Download> _all = [];
+    private readonly List<Download> _filtered = [];
 
     public Task Process(List<MediaInput> posts)
     {
-        MediaProcessorContext context = new(posts, _all, _filtered);
+        IReadOnlyList<Backup.Domain.Posts.MediaInput> domainPosts = posts
+            .Select(PostReplicationMapper.ToDomain)
+            .ToList();
 
-        List<MediaProcessor> processors =
-        [
-            new PhotoProcessor(
-                _config.Medias.Photo,
-                context,
-                _downloadFilterPolicyService,
-                _mediaDownloadDataBuilderService
-            ),
-            new GifProcessor(
-                _config.Medias.Gif,
-                context,
-                _downloadFilterPolicyService,
-                _mediaDownloadDataBuilderService
-            ),
-            new ProfileProcessor(_config.Medias.Profile, context, _mediaDownloadDataBuilderService),
-            new BannerProcessor(_config.Medias.Banner, context, _mediaDownloadDataBuilderService),
-            new VideoProcessor(
-                _config.Medias.Video,
-                context,
-                _downloadFilterPolicyService,
-                _mediaDownloadDataBuilderService,
-                _mediaVideoVariantPolicyService
-            ),
-        ];
+        MediaDownloadProjectionConfig projectionConfig = ToProjectionConfig(_config.Medias);
+        MediaProcessingResult projected = _mediaDownloadProjectionService.Project(
+            domainPosts,
+            projectionConfig
+        );
 
-        foreach (MediaProcessor processor in processors)
-        {
-            _logger.LogInformation("Media processing: {Processor}", processor.GetType().Name);
-            processor.Process();
+        _all.Clear();
+        _all.AddRange(ToInfrastructure(projected.All));
 
-            _logger.LogInformation("Filter duplicates");
-            ApplyFiltered(_all);
-            ApplyFiltered(_filtered);
-        }
+        _filtered.Clear();
+        _filtered.AddRange(ToInfrastructure(projected.Filtered));
 
         return Task.CompletedTask;
     }
 
-    public List<Download> GetMedia() => [.. _all.Values];
+    public List<Download> GetMedia() => _all.Select(Clone).ToList();
 
-    public List<Download> GetFilteredMedia() => [.. _filtered.Values];
+    public List<Download> GetFilteredMedia() => _filtered.Select(Clone).ToList();
 
-    private void ApplyFiltered(Dictionary<string, Download> downloads)
-    {
-        IReadOnlyList<MediaDownload> mapped = downloads
-            .Values.Select(download => new MediaDownload
-            {
-                Id = download.Id,
-                Data = download
-                    .Data.Select(item => new MediaDownloadData { Url = item.Url, Path = item.Path })
-                    .ToList(),
-            })
-            .ToList();
-
-        IReadOnlyList<MediaDownload> filtered = _mediaDuplicateFilterService.Filter(mapped);
-
-        downloads.Clear();
-        foreach (MediaDownload download in filtered)
+    private static Download Clone(Download source) =>
+        new()
         {
-            downloads[download.Id] = new Download
+            Id = source.Id,
+            Data = source.Data.Select(data => data.Clone()).ToList(),
+        };
+
+    private static List<Download> ToInfrastructure(IEnumerable<MediaDownload> projected) =>
+        projected
+            .Select(download => new Download
             {
                 Id = download.Id,
                 Data = download
                     .Data.Select(item => new DataDownload { Url = item.Url, Path = item.Path })
                     .ToList(),
-            };
-        }
-    }
+            })
+            .ToList();
+
+    private static MediaDownloadProjectionConfig ToProjectionConfig(MediasConfig config) =>
+        new()
+        {
+            Banner = ToRule(config.Banner),
+            Profile = ToRule(config.Profile),
+            Photo = ToRule(config.Photo),
+            Gif = ToVariant(config.Gif),
+            Video = ToVariant(config.Video),
+        };
+
+    private static MediaDownloadProjectionRuleConfig ToRule(MediaConfig config) =>
+        new()
+        {
+            Filters = config.Filters is null ? null : [.. config.Filters],
+            Types = config.Types is null ? null : [.. config.Types],
+            Dimensions = config.Dimensions is null ? null : [.. config.Dimensions],
+            Sizes = config.Sizes is null ? null : [.. config.Sizes],
+        };
+
+    private static MediaDownloadProjectionVariantConfig ToVariant(VideoConfig config) =>
+        new() { Thumb = ToRule(config.Thumb), Types = config.Types is null ? null : [.. config.Types] };
+
+    private static MediaDownloadProjectionVariantConfig ToVariant(GifConfig config) =>
+        new() { Thumb = ToRule(config.Thumb), Types = config.Types is null ? null : [.. config.Types] };
 }

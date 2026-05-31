@@ -26,6 +26,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaErrorFilterPolicyService, MediaErrorFilterPolicyService>();
         services.AddScoped<IMediaDownloadFilterPolicyService, MediaDownloadFilterPolicyService>();
         services.AddScoped<IMediaDownloadDataBuilderService, MediaDownloadDataBuilderService>();
+        services.AddScoped<IMediaDownloadProjectionService, MediaDownloadProjectionService>();
         services.AddScoped<IMediaDuplicateFilterService, MediaDuplicateFilterService>();
         services.AddScoped<IMediaParallelDownloadPolicyService, MediaParallelDownloadPolicyService>();
         services.AddScoped<IMediaDownloadPathPriorityPolicyService, MediaDownloadPathPriorityPolicyService>();
