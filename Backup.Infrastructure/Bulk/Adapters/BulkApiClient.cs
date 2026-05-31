@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Bulk.Abstractions.Services;
+using Backup.Application.Bulk;
 using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Bulk.Models;
 using Backup.Infrastructure.Models.Config.Api;
@@ -11,6 +12,7 @@ namespace Backup.Infrastructure.Bulk.Adapters;
 
 public sealed class BulkApiClient(
     ILogger<BulkApiClient> logger,
+    IBulkApiResultPolicyService bulkApiResultPolicyService,
     IBulkRequestFactory bulkRequestFactory,
     IBulkSourceRouteProvider bulkSourceRouteProvider,
     IPostDownloader downloader,
@@ -18,6 +20,8 @@ public sealed class BulkApiClient(
 ) : IBulkApiClient
 {
     private readonly ILogger<BulkApiClient> _logger = logger;
+    private readonly IBulkApiResultPolicyService _bulkApiResultPolicyService =
+        bulkApiResultPolicyService;
     private readonly IBulkRequestFactory _bulkRequestFactory = bulkRequestFactory;
     private readonly IBulkSourceRouteProvider _bulkSourceRouteProvider = bulkSourceRouteProvider;
     private readonly IPostDownloader _downloader = downloader;
@@ -86,7 +90,7 @@ public sealed class BulkApiClient(
             response = await _downloader.Download(request, cancellationToken);
             ParseResult parseResult = _parser.Parse(id, origin, response);
 
-            if (parseResult.Posts.Count == 0)
+            if (_bulkApiResultPolicyService.ShouldLogRawResponse(parseResult))
                 _logger.LogInformation("response: {response}", response);
 
             return parseResult;
