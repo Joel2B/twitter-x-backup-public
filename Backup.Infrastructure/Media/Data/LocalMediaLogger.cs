@@ -16,7 +16,7 @@ public class LocalMediaLogger(
     ILogger<LocalMediaLogger> _logger,
     AppConfig config,
     IPartition _partition,
-    IMediaPathSelectionService mediaPathSelectionService,
+    IMediaStoragePathService mediaStoragePathService,
     IMediaLogFilePolicyService mediaLogFilePolicyService,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaLogger, ISetup
@@ -24,7 +24,7 @@ public class LocalMediaLogger(
     private readonly ILogger<LocalMediaLogger> _logger = _logger;
     public readonly AppConfig _config = config;
     private readonly IPartition _partition = _partition;
-    private readonly IMediaPathSelectionService _mediaPathSelectionService = mediaPathSelectionService;
+    private readonly IMediaStoragePathService _mediaStoragePathService = mediaStoragePathService;
     private readonly IMediaLogFilePolicyService _mediaLogFilePolicyService =
         mediaLogFilePolicyService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
@@ -56,19 +56,19 @@ public class LocalMediaLogger(
 
     private string GetPath()
     {
-        string rootPath = _mediaPathSelectionService.SelectRequiredRootPath(
+        return _mediaStoragePathService.BuildMediaRootPath(
             _partition
                 .GetPartitions(_config.Downloads.Media.Partitions)
-                .Select(partition => Path.Combine([.. partition.Paths]))
+                .Select(partition => Path.Combine([.. partition.Paths])),
+            _config.Downloads.Media.Paths
         );
-
-        return Path.Combine([rootPath, .. _config.Downloads.Media.Paths]);
     }
 
-    private string GetPathLog() => Path.Combine([GetPath(), .. _config.Downloads.Media.Log.Paths]);
+    private string GetPathLog() =>
+        _mediaStoragePathService.BuildMediaLogPath(GetPath(), _config.Downloads.Media.Log.Paths);
 
     private string GetPathError() =>
-        Path.Combine([GetPath(), .. _config.Downloads.Media.Error.Paths]);
+        _mediaStoragePathService.BuildMediaErrorPath(GetPath(), _config.Downloads.Media.Error.Paths);
 
     private async Task SaveFile(List<Logs> logs, string path)
     {

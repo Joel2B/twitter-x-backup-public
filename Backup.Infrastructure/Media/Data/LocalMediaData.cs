@@ -13,7 +13,7 @@ public class LocalMediaData(
     StorageMedia _config,
     IPartition _partition,
     IMediaCache _mediaCache,
-    IMediaTempPathPolicyService mediaTempPathPolicyService,
+    IMediaStoragePathService mediaStoragePathService,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaStorage, ISetup
 {
@@ -22,8 +22,7 @@ public class LocalMediaData(
     private readonly StorageMedia _config = _config;
     private readonly IPartition _partition = _partition;
     private readonly IMediaCache _mediaCache = _mediaCache;
-    private readonly IMediaTempPathPolicyService _mediaTempPathPolicyService =
-        mediaTempPathPolicyService;
+    private readonly IMediaStoragePathService _mediaStoragePathService = mediaStoragePathService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     public Task Setup()
@@ -40,10 +39,8 @@ public class LocalMediaData(
 
     private string GetPathTemp()
     {
-        PartitionConfig heavy = _partition.GetHeavy();
-        string rootPath = Path.Combine([.. heavy.Paths]);
-        return _mediaTempPathPolicyService.BuildDownloaderTempPath(
-            rootPath,
+        return _mediaStoragePathService.BuildDownloaderTempPath(
+            _partition.GetHeavy().Paths.Select(path => Path.Combine(path)),
             _config.Paths.Tmp.Paths,
             _config.Paths.Tmp.Downloader.Paths
         );
