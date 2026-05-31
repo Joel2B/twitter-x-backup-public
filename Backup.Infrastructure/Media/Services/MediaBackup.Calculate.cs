@@ -282,20 +282,16 @@ public partial class MediaBackup
             .Select(o => o.Path)
             .ToList();
 
-        IReadOnlyList<string> normalizedDirectPaths = _mediaBackupDirectPathQueueService.Normalize(
+        MediaBackupDirectPathFinalizeResult finalize = _mediaBackupDirectPathFinalizeService.Finalize(
+            pathsInChunks,
             _pathsDirect
         );
 
-        MediaBackupDirectPathSelectionResult selection = _mediaBackupDirectPathSelectionService.Select(
-            pathsInChunks,
-            normalizedDirectPaths
-        );
-
-        _pathsInBoth = selection.PathsInBoth.ToList();
+        _pathsInBoth = finalize.PathsInBoth.ToList();
 
         _logger.LogInformation("{paths} in both", _pathsInBoth.Count);
 
-        _pathsDirect = [.. _mediaBackupDirectPathQueueService.Normalize(selection.DirectPaths)];
+        _pathsDirect = [.. finalize.DirectPaths];
 
         _logger.LogInformation(
             "{paths} paths > {size}",
