@@ -2,6 +2,7 @@ using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Application.Media;
 using Backup.Application.Media.Models;
+using Backup.Application.Media.Ports;
 using Backup.Application.IO;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Media.Models;
@@ -16,11 +17,13 @@ class MediaDownloadService(
     AppConfig _config,
     IMediaParallelDownloadPolicyService mediaParallelDownloadPolicyService,
     IMediaDownloadQueueBuilderService mediaDownloadQueueBuilderService,
+    IMediaDownloadExecutionService mediaDownloadExecutionService,
+    IMediaDownloadParallelRunner mediaDownloadParallelRunner,
     IDataStoreGuardService dataStoreGuardService,
     IMediaDownloader _downloader,
     IMediaLogger _mediaLogger,
     IProxyProvider proxyProvider
-) : IMediaDownloadService
+) : IMediaDownloadService, IMediaDownloadExecutionCommand
 {
     private readonly ILogger<MediaDownloadService> _logger = _logger;
     private readonly AppConfig _config = _config;
@@ -28,6 +31,10 @@ class MediaDownloadService(
         mediaParallelDownloadPolicyService;
     private readonly IMediaDownloadQueueBuilderService _mediaDownloadQueueBuilderService =
         mediaDownloadQueueBuilderService;
+    private readonly IMediaDownloadExecutionService _mediaDownloadExecutionService =
+        mediaDownloadExecutionService;
+    private readonly IMediaDownloadParallelRunner _mediaDownloadParallelRunner =
+        mediaDownloadParallelRunner;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
     private readonly IMediaDownloader _downloader = _downloader;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
@@ -44,36 +51,12 @@ class MediaDownloadService(
 
         _mediaData = data;
 
-        await ProcessDownloads(downloads);
-        await SaveLogs();
-    }
+        MediaParallelDownloadSettings settings = _mediaParallelDownloadPolicyService.Create(
+            _config.Downloads.Threads.Min,
+            _config.Downloads.Threads.Max,
+            _config.Downloads.Threads.Start
+        );
 
-    private async Task ProcessDownloads(List<Download> downloads)
-    {
-        using CancellationTokenSource cts = new();
-        Backup.Application.Media.Models.MediaParallelDownloadSettings settings =
-            _mediaParallelDownloadPolicyService.Create(
-                _config.Downloads.Threads.Min,
-                _config.Downloads.Threads.Max,
-                _config.Downloads.Threads.Start
-            );
-
-        DynamicParallelOptions options = new()
-        {
-            MinDegreeOfParallelism = settings.MinDegreeOfParallelism,
-            MaxDegreeOfParallelism = settings.MaxDegreeOfParallelism,
-            StartDegreeOfParallelism = settings.StartDegreeOfParallelism,
-            TargetDuration = settings.TargetDuration,
-            JumpToMaxOnFastAverage = settings.JumpToMaxOnFastAverage,
-            EnableHeavyCut = settings.EnableHeavyCut,
-            HeavyThreshold = settings.HeavyThreshold,
-            CancellationToken = cts.Token,
-            EnableDebug = settings.EnableDebug,
-            DebugSink = msg => _logger.LogInformation("{msg}", msg),
-            StrictDecreaseGate = settings.StrictDecreaseGate,
-        };
-
-        Dictionary<string, Download> downloadsById = downloads.ToDictionary(download => download.Id);
         IReadOnlyList<MediaDownloadQueueItem> queue = _mediaDownloadQueueBuilderService.Build(
             downloads.SelectMany(download =>
                 download.Data.Select(data => new MediaDownloadQueueItem
@@ -86,70 +69,63 @@ class MediaDownloadService(
             _config.Downloads.Count
         );
 
-        Dictionary<MediaDownloadQueueItem, Download> queueMap = queue.ToDictionary(
-            item => item,
-            item => downloadsById[item.DownloadId]
+        await _mediaDownloadExecutionService.Run(
+            this,
+            _mediaDownloadParallelRunner,
+            queue,
+            settings
         );
-
-        try
-        {
-            await DynamicParallel.ForEachAsync(
-                queueMap.Keys,
-                options,
-                async (data, token) =>
-                {
-                    DataDownload dataDownload = new() { Url = data.Url, Path = data.Path };
-                    await ProcessDownload(dataDownload, queueMap[data], cts, token);
-                }
-            );
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            _logger.LogError("Error: {error}", ex.Message);
-        }
-        finally
-        {
-            await _proxyProvider.SaveData();
-        }
     }
 
-    private async Task ProcessDownload(
-        DataDownload data,
-        Download download,
-        CancellationTokenSource cts,
-        CancellationToken token
-    )
+    public async Task<Stream> Download(MediaDownloadQueueItem item, CancellationToken cancellationToken)
+    {
+        DataDownload data = new() { Url = item.Url, Path = item.Path };
+        return await _downloader.Download(data, Data, cancellationToken);
+    }
+
+    public Task Save(MediaDownloadQueueItem item, Stream stream, CancellationToken cancellationToken) =>
+        Data.Save(stream, item.Path, cancellationToken);
+
+    public void OnSuccess(MediaDownloadQueueItem item)
     {
         Logs logs = new()
         {
-            Id = download.Id,
-            Messages = [new() { Id = data.Url, Message = data.Path }],
+            Id = item.DownloadId,
+            Messages = [new() { Id = item.Url, Message = item.Path }],
         };
 
-        try
-        {
-            using Stream stream = await _downloader.Download(data, Data, token);
-            await Data.Save(stream, data.Path, token);
-
-            _mediaLogger.Log(logs);
-        }
-        catch (ProxyException)
-        {
-            if (!cts.IsCancellationRequested)
-                cts.Cancel();
-        }
-        catch (OperationCanceledException) { }
-        catch (Exception ex)
-        {
-            logs.Messages[0].Message = ex.Message;
-            _mediaLogger.Error(logs);
-        }
+        _mediaLogger.Log(logs);
     }
 
-    private async Task SaveLogs()
+    public void OnItemError(MediaDownloadQueueItem item, string message)
+    {
+        Logs logs = new()
+        {
+            Id = item.DownloadId,
+            Messages =
+            [
+                new()
+                {
+                    Id = item.Url,
+                    Message = message,
+                },
+            ],
+        };
+
+        _mediaLogger.Error(logs);
+    }
+
+    public bool ShouldCancelOnItemError(Exception exception) => exception is ProxyException;
+
+    public void OnFatalError(string message) => _logger.LogError("Error: {error}", message);
+
+    public void OnDebug(string message) => _logger.LogInformation("{msg}", message);
+
+    public Task SaveState() => _proxyProvider.SaveData();
+
+    public Task SaveLogs()
     {
         _logger.LogInformation("saving logs");
-        await _mediaLogger.Save();
+        return _mediaLogger.Save();
     }
 }

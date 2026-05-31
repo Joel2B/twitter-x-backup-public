@@ -2,6 +2,7 @@ using Backup.Infrastructure.Media.Data;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Services;
 using Backup.Application.Media;
+using Backup.Application.Media.Ports;
 using Backup.Application.Media.Filter;
 using Backup.Application.Media.Integrity;
 using Backup.Application.Media.Prune;
@@ -37,6 +38,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaDownloadContentValidationPolicyService, MediaDownloadContentValidationPolicyService>();
         services.AddScoped<IMediaDownloadStreamingPolicyService, MediaDownloadStreamingPolicyService>();
         services.AddScoped<IMediaDownloadProgressPolicyService, MediaDownloadProgressPolicyService>();
+        services.AddScoped<IMediaDownloadExecutionService, MediaDownloadExecutionService>();
         services.AddScoped<IMediaLogFilePolicyService, MediaLogFilePolicyService>();
         services.AddScoped<IMediaVideoVariantPolicyService, MediaVideoVariantPolicyService>();
         services.AddScoped<IMediaIntegrityPolicyService, MediaIntegrityPolicyService>();
@@ -45,6 +47,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaFilter, MediaFilter>();
         services.AddScoped<IMediaReplication, MediaReplication>();
         services.AddScoped<IMediaDownloadService, MediaDownloadService>();
+        services.AddScoped<IMediaDownloadParallelRunner, MediaDownloadParallelRunnerAdapter>();
         services.AddScoped<IMediaDownloader, MediaDownloaderHttp>();
         services.AddScoped<IMediaLogger, LocalMediaLogger>();
         return services;
