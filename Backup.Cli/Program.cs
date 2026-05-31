@@ -8,6 +8,11 @@ using Microsoft.Extensions.DependencyInjection;
 ServiceCollection services = new();
 ConfigurationManager configuration = new();
 configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
+configuration.AddJsonFile(
+    Path.Combine(AppContext.BaseDirectory, "appsettings.json"),
+    optional: true,
+    reloadOnChange: false
+);
 configuration.AddEnvironmentVariables();
 
 services.AddBackupConfiguration(configuration);

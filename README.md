@@ -19,6 +19,10 @@ This project is under active personal development. Structure and configuration f
 1. Use files in `App/Config.example/` as a starting point.
 2. Copy them to your runtime config directory (recommended: `./config/`) and replace all fields marked as `{REPLACE_THIS}`.
 3. Adjust data/debug paths and download settings for your environment.
+4. Optional host-level override:
+   - Copy `Backup.Api/appsettings.example.json` to `Backup.Api/appsettings.json`
+   - Copy `Backup.Cli/appsettings.example.json` to `Backup.Cli/appsettings.json`
+   - Set `Backup:Configuration:ConfigDirectory` to your runtime config folder.
 
 Configuration directory resolution order:
 - `BackupConfigurationOptions.ConfigDirectory` (when provided in host wiring)
