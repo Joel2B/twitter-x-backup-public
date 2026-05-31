@@ -115,7 +115,7 @@ public partial class MediaBackup
             })
         );
 
-        bool header = false;
+        List<MediaBackupChunkDeltaLogInput> deltaLogInputs = [];
 
         foreach (MediaBackupChunkCountDeltaItem delta in deltas.Items)
         {
@@ -140,39 +140,55 @@ public partial class MediaBackup
                     sizeAfter += cache.Size?.File ?? 0;
             }
 
-            if (delta.BeforeCount != delta.AfterCount)
-            {
-                if (!header)
+            deltaLogInputs.Add(
+                new MediaBackupChunkDeltaLogInput
                 {
-                    header = true;
-
-                    _logger.LogInfo(
-                        "{id,-3} {before,-6} {after,-6} {diff,-6} {sizeBefore} {sizeAfter}",
-                        "id",
-                        "before",
-                        "after",
-                        "diff",
-                        "size before (GiB)",
-                        "size after (GiB)"
-                    );
+                    ChunkId = delta.ChunkId,
+                    BeforeCount = delta.BeforeCount,
+                    AfterCount = delta.AfterCount,
+                    Difference = delta.Difference,
+                    SizeBeforeBytes = sizeBefore,
+                    SizeAfterBytes = sizeAfter,
                 }
+            );
+        }
 
+        MediaBackupChunkDeltaLogPlan deltaLogPlan = _mediaBackupChunkDeltaLogPlanningService.Plan(
+            deltaLogInputs,
+            deltas.TotalAddedPaths,
+            newPaths.Count
+        );
+
+        if (deltaLogPlan.Rows.Count > 0)
+        {
+            _logger.LogInfo(
+                "{id,-3} {before,-6} {after,-6} {diff,-6} {sizeBefore} {sizeAfter}",
+                "id",
+                "before",
+                "after",
+                "diff",
+                "size before (GiB)",
+                "size after (GiB)"
+            );
+
+            foreach (MediaBackupChunkDeltaLogRow row in deltaLogPlan.Rows)
+            {
                 _logger.LogInformation(
                     "{id,-3} {before,-6} {after,-6} {diff,-6} {sizeBefore,-17} {sizeAfter}",
-                    delta.ChunkId,
-                    delta.BeforeCount,
-                    delta.AfterCount,
-                    delta.Difference,
-                    Math.Round(sizeBefore / 1024m / 1024m / 1024m, 2, MidpointRounding.ToZero),
-                    Math.Round(sizeAfter / 1024m / 1024m / 1024m, 2, MidpointRounding.ToZero)
+                    row.ChunkId,
+                    row.BeforeCount,
+                    row.AfterCount,
+                    row.Difference,
+                    row.SizeBeforeGiB,
+                    row.SizeAfterGiB
                 );
             }
         }
 
         _logger.LogInformation(
             "{paths1}/{paths2} new paths",
-            deltas.TotalAddedPaths,
-            newPaths.Count
+            deltaLogPlan.TotalAddedPaths,
+            deltaLogPlan.AddedPathCount
         );
     }
 
