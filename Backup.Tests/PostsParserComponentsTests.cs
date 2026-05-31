@@ -1,3 +1,4 @@
+using Backup.Application.Posts;
 using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Posts.Adapters.Parsing;
 using Newtonsoft.Json.Linq;
@@ -44,6 +45,7 @@ public class PostsParserComponentsTests
     [Fact]
     public void TimelineEntryExtractor_ExtractsEntriesAndBottomCursor_FromTimelineItems()
     {
+        IPostTimelineExtractionService service = new PostTimelineExtractionService();
         JObject root = JObject.Parse(
             """
             {
@@ -81,8 +83,11 @@ public class PostsParserComponentsTests
             """
         );
 
-        List<Entry> entries = TimelineEntryExtractor.ExtractEntries(root);
-        string? cursor = TimelineEntryExtractor.ExtractCursor(root);
+        List<Entry> entries = service
+            .ExtractEntries(root)
+            .Select(entry => entry.ToObject<Entry>() ?? throw new Exception())
+            .ToList();
+        string? cursor = service.ExtractCursor(root);
 
         Assert.Single(entries);
         Assert.Equal("tweet-1", entries[0].EntryId);
@@ -92,6 +97,7 @@ public class PostsParserComponentsTests
     [Fact]
     public void TimelineEntryExtractor_FallsBackToModuleItems()
     {
+        IPostTimelineExtractionService service = new PostTimelineExtractionService();
         JObject root = JObject.Parse(
             """
             {
@@ -132,7 +138,10 @@ public class PostsParserComponentsTests
             """
         );
 
-        List<Entry> entries = TimelineEntryExtractor.ExtractEntries(root);
+        List<Entry> entries = service
+            .ExtractEntries(root)
+            .Select(entry => entry.ToObject<Entry>() ?? throw new Exception())
+            .ToList();
 
         Assert.Single(entries);
         Assert.Equal("module-tweet-1", entries[0].EntryId);
