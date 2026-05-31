@@ -114,17 +114,9 @@ public partial class MediaBackup
 
                 await _mediaBackupData.DeleteChunk(kvp.Value);
 
-                IReadOnlyDictionary<string, MediaBackupChunkFailureState> resetByPath =
-                    _mediaBackupChunkFailureOrchestrationService.BuildResetMapForApplyFailure(
-                        _mediaBackupChunkEntryStateService.BuildFailureStates(
-                            BuildChunkEntryStates(kvp.Value.Data)
-                        )
-                    );
-
                 IReadOnlyList<MediaBackupChunkEntryState> resetStates =
-                    _mediaBackupChunkEntryStateService.ApplyFailureStates(
-                        BuildChunkEntryStates(kvp.Value.Data),
-                        resetByPath
+                    _mediaBackupChunkFailureApplyService.ApplyForApplyFailure(
+                        BuildChunkEntryStates(kvp.Value.Data)
                     );
                 ApplyChunkEntryStates(kvp.Value, resetStates);
 
