@@ -168,10 +168,9 @@ public partial class MediaBackup
                 }
             }
 
-            storageCount = _mediaBackupDuplicateChunkOrchestrationService.UpdateStorageCount(
+            storageCount = _mediaBackupDuplicateChunkExecutionService.UpdateStorageCount(
                 storageCount,
-                storagePaths.Count,
-                executionResult.RemovedExtrasCount
+                executionResult
             );
         }
 

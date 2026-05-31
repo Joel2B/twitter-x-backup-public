@@ -46,4 +46,14 @@ public sealed class MediaBackupDuplicateChunkExecutionService(
             RemovedExtrasCount = removedExtrasCount,
         };
     }
+
+    public int UpdateStorageCount(
+        int currentStorageCount,
+        MediaBackupDuplicateChunkExecutionResult executionResult
+    ) =>
+        _mediaBackupDuplicateChunkOrchestrationService.UpdateStorageCount(
+            currentStorageCount,
+            executionResult.StorageArchivePaths.Count,
+            executionResult.RemovedExtrasCount
+        );
 }

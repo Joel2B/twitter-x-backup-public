@@ -18,7 +18,6 @@ public partial class MediaBackup(
     StorageBackup _config,
     IZipWriterFactory _zipWriterFactory,
     IMediaBackupData _mediaBackupData,
-    IMediaBackupDuplicateChunkOrchestrationService mediaBackupDuplicateChunkOrchestrationService,
     IMediaBackupChunkAssignmentService mediaBackupChunkAssignmentService,
     IMediaBackupDirectPathFinalizeService mediaBackupDirectPathFinalizeService,
     IMediaBackupSyncFinalizeService mediaBackupSyncFinalizeService,
@@ -61,8 +60,6 @@ public partial class MediaBackup(
     private IMediaStorage MediaData =>
         _dataStoreGuardService.RequireInitialized(_mediaData, "media data not initialized");
     private readonly IMediaBackupData _mediaBackupData = _mediaBackupData;
-    private readonly IMediaBackupDuplicateChunkOrchestrationService _mediaBackupDuplicateChunkOrchestrationService =
-        mediaBackupDuplicateChunkOrchestrationService;
     private readonly IMediaBackupChunkAssignmentService _mediaBackupChunkAssignmentService =
         mediaBackupChunkAssignmentService;
     private readonly IMediaBackupDirectPathFinalizeService _mediaBackupDirectPathFinalizeService =

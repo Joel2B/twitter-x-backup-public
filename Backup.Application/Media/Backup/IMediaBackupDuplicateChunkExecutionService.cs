@@ -9,4 +9,9 @@ public interface IMediaBackupDuplicateChunkExecutionService
         IEnumerable<string> storageArchivePaths,
         int extraPreviewLimit
     );
+
+    int UpdateStorageCount(
+        int currentStorageCount,
+        MediaBackupDuplicateChunkExecutionResult executionResult
+    );
 }
