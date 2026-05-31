@@ -130,21 +130,20 @@ public partial class MediaBackup
 
     private async Task SyncChunks()
     {
-        HashSet<string> pathsInBotSet = [.. _pathsInBoth];
-
-        List<Chunk> chunks = _chunks
-            .Values.Select(chunk => new Chunk
+        List<MediaBackupChunkPathsState> chunkStates = _chunks
+            .Values.Select(chunk => new MediaBackupChunkPathsState
             {
                 Id = chunk.Id,
-                Data = chunk
-                    .Data.Where(o => pathsInBotSet.Contains(o.Path))
-                    .Select(o => o.Clone())
-                    .ToList(),
+                Paths = chunk.Data.Select(data => data.Path).ToList(),
             })
-            .Where(o => o.Data.Count > 0)
             .ToList();
 
-        foreach (Chunk chunk in chunks)
+        MediaBackupChunkSyncPlan plan = _mediaBackupChunkSyncPlanningService.Plan(
+            chunkStates,
+            _pathsInBoth
+        );
+
+        foreach (MediaBackupChunkSyncChunkPlan chunkPlan in plan.Chunks)
         {
             IZipWriter? zip = null;
 
@@ -153,31 +152,30 @@ public partial class MediaBackup
                 if (_stop)
                     break;
 
-                foreach (ChunkData chunkData in chunk.Data)
+                foreach (string path in chunkPlan.PathsToRemove)
                 {
                     if (zip is null)
                     {
-                        _logger.LogInformation("processing chunk {chunk}", chunk.Id);
+                        _logger.LogInformation("processing chunk {chunk}", chunkPlan.ChunkId);
                         _logger.LogInfo("update zip");
-                        zip = await OpenChunkZipWrite(chunk, "sync-chunks");
+                        zip = await OpenChunkZipWrite(_chunks[chunkPlan.ChunkId], "sync-chunks");
 
                         if (zip is null)
                             break;
                     }
 
-                    _logger.LogInfo("removing entry", chunkData.Path);
-                    zip.RemoveEntry(chunkData.Path.Replace('\\', '/'));
+                    _logger.LogInfo("removing entry", path);
+                    zip.RemoveEntry(path.Replace('\\', '/'));
                     _logger.LogInfo("entry removed");
 
-                    _chunks[chunk.Id].Data.RemoveAll(data => data.Path == chunkData.Path);
-                    _pathsDirect.Add(chunkData.Path);
+                    _chunks[chunkPlan.ChunkId].Data.RemoveAll(data => data.Path == path);
                 }
 
                 if (zip is null)
                     continue;
 
-                await _mediaBackupData.Save([_chunks[chunk.Id]]);
-                _logger.LogInformation("chunk {chunk} processed", chunk.Id);
+                await _mediaBackupData.Save([_chunks[chunkPlan.ChunkId]]);
+                _logger.LogInformation("chunk {chunk} processed", chunkPlan.ChunkId);
             }
             catch (Exception ex)
             {
@@ -192,6 +190,9 @@ public partial class MediaBackup
                 zip?.Dispose();
             }
         }
+
+        foreach (string path in plan.DirectPathsToAdd)
+            _pathsDirect.Add(path);
     }
 
     private async Task ApplyDirect()
