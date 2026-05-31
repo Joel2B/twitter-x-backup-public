@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Application.IO;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
@@ -10,7 +11,8 @@ namespace Backup.Infrastructure.Media.Data;
 public class LocalMediaData(
     StorageMedia _config,
     IPartition _partition,
-    IMediaCache _mediaCache
+    IMediaCache _mediaCache,
+    IDataStoreGuardService dataStoreGuardService
 ) : IMediaStorage, ISetup
 {
     public string? Id { get; set; }
@@ -18,6 +20,7 @@ public class LocalMediaData(
     private readonly StorageMedia _config = _config;
     private readonly IPartition _partition = _partition;
     private readonly IMediaCache _mediaCache = _mediaCache;
+    private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     public Task Setup()
     {
@@ -45,11 +48,11 @@ public class LocalMediaData(
         long size = stream.Length;
         stream.Position = 0;
 
-        string? fullPath = await _mediaCache.GetPath(path, size);
-        string? directoryName = Path.GetDirectoryName(fullPath);
-
-        if (directoryName is null)
-            throw new Exception("Error getting the directory name.");
+        string fullPath = await _mediaCache.GetPath(path, size);
+        string directoryName = _dataStoreGuardService.RequireDirectoryName(
+            Path.GetDirectoryName(fullPath),
+            "Error getting the directory name."
+        );
 
         Directory.CreateDirectory(directoryName);
 
@@ -81,10 +84,10 @@ public class LocalMediaData(
     public async Task<Stream> Write(string path)
     {
         string fullPath = await _mediaCache.GetPath(path);
-        string? directory = Path.GetDirectoryName(fullPath);
-
-        if (directory is null)
-            throw new Exception("Error getting the directory name.");
+        string directory = _dataStoreGuardService.RequireDirectoryName(
+            Path.GetDirectoryName(fullPath),
+            "Error getting the directory name."
+        );
 
         Directory.CreateDirectory(directory);
         Stream stream = File.Open(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);

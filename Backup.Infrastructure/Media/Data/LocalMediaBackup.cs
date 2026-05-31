@@ -184,6 +184,9 @@ public class LocalMediaBackup(
 
     public Task DeleteChunk(Chunk chunk)
     {
+        if (string.IsNullOrWhiteSpace(_config.Chunk.Zip.File))
+            return Task.CompletedTask;
+
         string fileName = $"{chunk.Id}.{_config.Chunk.Zip.File}";
         string path = Path.Combine(GetPathChunks(), fileName);
 

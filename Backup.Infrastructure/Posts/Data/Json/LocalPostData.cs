@@ -8,6 +8,7 @@ using Backup.Infrastructure.Models.Data.Json;
 using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Posts.Models;
 using Backup.Application.Posts;
+using Backup.Application.IO;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Data.Json;
@@ -23,7 +24,8 @@ public partial class LocalPostData(
     IPostMediaInputsCompositionService postMediaInputsCompositionService,
     IPostHashingService postHashingService,
     IPostHistoryPrunePolicyService postHistoryPrunePolicyService,
-    IPostSnapshotSizeGuardService postSnapshotSizeGuardService
+    IPostSnapshotSizeGuardService postSnapshotSizeGuardService,
+    IDataStoreGuardService dataStoreGuardService
 ) : IPostDataStore, ISetup
 {
     public string? Id { get; set; }
@@ -45,6 +47,7 @@ public partial class LocalPostData(
         postHistoryPrunePolicyService;
     private readonly IPostSnapshotSizeGuardService _postSnapshotSizeGuardService =
         postSnapshotSizeGuardService;
+    private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     private Dictionary<string, Post>? _postsCache = null;
     private Dictionary<string, PostMetaRow>? _postMetaCache = null;

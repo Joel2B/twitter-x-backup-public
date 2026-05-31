@@ -141,9 +141,13 @@ public partial class LocalPostData
             case NormalizedPostsFileName:
             {
                 string postsContent = await File.ReadAllTextAsync(path);
-                tables.Posts =
-                    JsonConvert.DeserializeObject<List<PostRow>>(postsContent)
-                    ?? throw new Exception("Error deserializing posts file.");
+                List<PostRow>? deserialized = JsonConvert.DeserializeObject<List<PostRow>>(
+                    postsContent
+                );
+                tables.Posts = _dataStoreGuardService.RequireDeserialized(
+                    deserialized,
+                    "Error deserializing posts file."
+                );
                 break;
             }
             case ProfilesFileName:
