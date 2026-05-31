@@ -13,6 +13,7 @@ public static class RuntimeInfrastructureBulkServiceCollectionExtensions
         services.AddScoped<IBulkSourceRouteService, BulkSourceRouteService>();
         services.AddScoped<IBulkPrunePolicyService, BulkPrunePolicyService>();
         services.AddScoped<IBulkSourceExtractionService, BulkSourceExtractionService>();
+        services.AddScoped<IBulkSourceReplicationPolicyService, BulkSourceReplicationPolicyService>();
         services.AddScoped<IBulkRequestFactory, BulkRequestFactory>();
         services.AddScoped<IBulkSourceRouteProvider, BulkSourceRouteProvider>();
         services.AddScoped<IBulkApiClient, BulkApiClient>();

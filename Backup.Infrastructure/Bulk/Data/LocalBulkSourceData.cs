@@ -14,7 +14,8 @@ public class LocalBulkSourceData(
     ILogger<LocalBulkSourceData> _logger,
     StorageBulk _config,
     IPartition _partition,
-    IBulkSourceExtractionService bulkSourceExtractionService
+    IBulkSourceExtractionService bulkSourceExtractionService,
+    IBulkSourceReplicationPolicyService bulkSourceReplicationPolicyService
 ) : IBulkSourceDataStore, ISetup
 {
     public bool IsDefault { get; set; }
@@ -22,6 +23,8 @@ public class LocalBulkSourceData(
     private readonly StorageBulk _config = _config;
     private readonly IPartition _partition = _partition;
     private readonly IBulkSourceExtractionService _bulkSourceExtractionService = bulkSourceExtractionService;
+    private readonly IBulkSourceReplicationPolicyService _bulkSourceReplicationPolicyService =
+        bulkSourceReplicationPolicyService;
 
     public Task Setup()
     {
@@ -87,16 +90,28 @@ public class LocalBulkSourceData(
         foreach (PartitionConfig partition in partitions)
         {
             string path = GetPathSources(partition);
+            HashSet<string> replicaFileNames =
+            [
+                .. Directory
+                    .EnumerateFiles(path)
+                    .Select(file => Path.GetFileName(file))
+                    .Where(fileName => !string.IsNullOrWhiteSpace(fileName)),
+            ];
 
-            foreach (string mainFile in Directory.EnumerateFiles(mainPath))
+            IReadOnlyList<string> missingFileNames = _bulkSourceReplicationPolicyService.GetMissingFiles(
+                Directory
+                    .EnumerateFiles(mainPath)
+                    .Select(file => Path.GetFileName(file))
+                    .Where(fileName => !string.IsNullOrWhiteSpace(fileName)),
+                replicaFileNames
+            );
+
+            foreach (string fileName in missingFileNames)
             {
-                string file = Path.Combine(path, Path.GetFileName(mainFile));
-
-                if (File.Exists(file))
-                    continue;
-
-                File.Copy(mainFile, file);
-                _logger.LogInformation("{path} path copied", file);
+                string sourceFile = Path.Combine(mainPath, fileName);
+                string targetFile = Path.Combine(path, fileName);
+                File.Copy(sourceFile, targetFile);
+                _logger.LogInformation("{path} path copied", targetFile);
             }
         }
     }
