@@ -1,6 +1,7 @@
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Application.Media;
+using Backup.Application.Media.Models;
 using Backup.Application.IO;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Media.Models;
@@ -14,7 +15,7 @@ class MediaDownloadService(
     ILogger<MediaDownloadService> _logger,
     AppConfig _config,
     IMediaParallelDownloadPolicyService mediaParallelDownloadPolicyService,
-    IMediaDownloadPathPriorityPolicyService mediaDownloadPathPriorityPolicyService,
+    IMediaDownloadQueueBuilderService mediaDownloadQueueBuilderService,
     IDataStoreGuardService dataStoreGuardService,
     IMediaDownloader _downloader,
     IMediaLogger _mediaLogger,
@@ -25,8 +26,8 @@ class MediaDownloadService(
     private readonly AppConfig _config = _config;
     private readonly IMediaParallelDownloadPolicyService _mediaParallelDownloadPolicyService =
         mediaParallelDownloadPolicyService;
-    private readonly IMediaDownloadPathPriorityPolicyService _mediaDownloadPathPriorityPolicyService =
-        mediaDownloadPathPriorityPolicyService;
+    private readonly IMediaDownloadQueueBuilderService _mediaDownloadQueueBuilderService =
+        mediaDownloadQueueBuilderService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
     private readonly IMediaDownloader _downloader = _downloader;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
@@ -72,20 +73,33 @@ class MediaDownloadService(
             StrictDecreaseGate = settings.StrictDecreaseGate,
         };
 
-        var data = downloads.SelectMany(download => download.Data.Select(data => (data, download)));
-        data = data.OrderBy(o => _mediaDownloadPathPriorityPolicyService.GetPriority(o.data.Path));
+        Dictionary<string, Download> downloadsById = downloads.ToDictionary(download => download.Id);
+        IReadOnlyList<MediaDownloadQueueItem> queue = _mediaDownloadQueueBuilderService.Build(
+            downloads.SelectMany(download =>
+                download.Data.Select(data => new MediaDownloadQueueItem
+                {
+                    DownloadId = download.Id,
+                    Url = data.Url,
+                    Path = data.Path,
+                })
+            ),
+            _config.Downloads.Count
+        );
 
-        if (_config.Downloads.Count >= 0)
-            data = data.Take(_config.Downloads.Count);
+        Dictionary<MediaDownloadQueueItem, Download> queueMap = queue.ToDictionary(
+            item => item,
+            item => downloadsById[item.DownloadId]
+        );
 
         try
         {
             await DynamicParallel.ForEachAsync(
-                data,
+                queueMap.Keys,
                 options,
                 async (data, token) =>
                 {
-                    await ProcessDownload(data.data, data.download, cts, token);
+                    DataDownload dataDownload = new() { Url = data.Url, Path = data.Path };
+                    await ProcessDownload(dataDownload, queueMap[data], cts, token);
                 }
             );
         }
