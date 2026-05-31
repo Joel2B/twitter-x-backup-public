@@ -23,6 +23,8 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaBackupChunkSyncPlanningService, MediaBackupChunkSyncPlanningService>();
         services.AddScoped<IMediaBackupIntegrityPlanningService, MediaBackupIntegrityPlanningService>();
         services.AddScoped<IMediaBackupIntegrityChangeDetectionService, MediaBackupIntegrityChangeDetectionService>();
+        services.AddScoped<IMediaBackupDirectPathCandidateDecisionService, MediaBackupDirectPathCandidateDecisionService>();
+        services.AddScoped<IMediaBackupDirectPathQueueService, MediaBackupDirectPathQueueService>();
         services.AddScoped<IMediaBackupDuplicateCleanupService, MediaBackupDuplicateCleanupService>();
         services.AddScoped<IMediaBackupChunkReconciliationService, MediaBackupChunkReconciliationService>();
         services.AddScoped<IMediaBackupStorageConsistencyDecisionService, MediaBackupStorageConsistencyDecisionService>();

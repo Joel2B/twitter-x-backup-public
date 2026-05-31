@@ -196,13 +196,13 @@ public partial class MediaBackup
             }
         }
 
-        foreach (string path in plan.DirectPathsToAdd)
-            _pathsDirect.Add(path);
+        _pathsDirect = [.. _mediaBackupDirectPathQueueService.MergeAndNormalize(_pathsDirect, plan.DirectPathsToAdd)];
     }
 
     private async Task ApplyDirect()
     {
         await SyncChunks();
+        IReadOnlyList<string> directPaths = _mediaBackupDirectPathQueueService.Normalize(_pathsDirect);
 
         CancellationTokenSource cts = new();
 
@@ -215,7 +215,7 @@ public partial class MediaBackup
         try
         {
             await Parallel.ForEachAsync(
-                _pathsDirect,
+                directPaths,
                 options,
                 async (path, ct) =>
                 {

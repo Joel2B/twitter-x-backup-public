@@ -214,28 +214,28 @@ public partial class MediaBackup
                             return;
 
                         bool existsSource = await MediaData.Exists(path);
-
-                        if (!existsSource)
-                            throw new Exception();
-
                         bool existsTarget = await _mediaBackupData.Exists(path);
 
-                        MediaBackupDirectPathCandidate candidate = new()
-                        {
-                            CachePath = cache.Path,
-                            FileSizeBytes = cache.Size?.File,
-                            TargetExists = existsTarget,
-                        };
+                        MediaBackupDirectPathCandidateDecision decision =
+                            _mediaBackupDirectPathCandidateDecisionService.Decide(
+                                new MediaBackupDirectPathCandidateObservation
+                                {
+                                    Path = path,
+                                    CachePath = cache.Path,
+                                    FileSizeBytes = cache.Size?.File,
+                                    SourceExists = existsSource,
+                                    TargetExists = existsTarget,
+                                    MaxPathSizeBytes = _config.Chunk.Path.Size,
+                                }
+                            );
 
-                        if (
-                            !_mediaBackupDirectPathEligibilityService.ShouldBackupDirect(
-                                candidate,
-                                _config.Chunk.Path.Size
-                            )
-                        )
+                        if (decision.ShouldThrowMissingSource)
+                            throw new Exception();
+
+                        if (!decision.ShouldIncludeDirectPath)
                             return;
 
-                        _pathsDirect.Add(candidate.CachePath);
+                        _pathsDirect.Add(cache.Path);
                     }
                     catch (OperationCanceledException)
                     {
@@ -253,7 +253,9 @@ public partial class MediaBackup
 
                         if (percent != prev)
                         {
-                            if (Interlocked.CompareExchange(ref lastPercent, percent, prev) == prev)
+                            if (
+                                Interlocked.CompareExchange(ref lastPercent, percent, prev) == prev
+                            )
                             {
                                 _logger.LogInformation(
                                     "Progress: {percent}% ({current}/{total}) elapsed={elapsed}",
@@ -275,16 +277,20 @@ public partial class MediaBackup
             .Select(o => o.Path)
             .ToList();
 
+        IReadOnlyList<string> normalizedDirectPaths = _mediaBackupDirectPathQueueService.Normalize(
+            _pathsDirect
+        );
+
         MediaBackupDirectPathSelectionResult selection = _mediaBackupDirectPathSelectionService.Select(
             pathsInChunks,
-            _pathsDirect
+            normalizedDirectPaths
         );
 
         _pathsInBoth = selection.PathsInBoth.ToList();
 
         _logger.LogInformation("{paths} in both", _pathsInBoth.Count);
 
-        _pathsDirect = [.. selection.DirectPaths];
+        _pathsDirect = [.. _mediaBackupDirectPathQueueService.Normalize(selection.DirectPaths)];
 
         _logger.LogInformation(
             "{paths} paths > {size}",

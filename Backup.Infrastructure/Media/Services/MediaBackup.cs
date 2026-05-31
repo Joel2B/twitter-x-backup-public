@@ -21,10 +21,11 @@ public partial class MediaBackup(
     IMediaBackupPathAnalysisService mediaBackupPathAnalysisService,
     IMediaBackupChunkAssignmentService mediaBackupChunkAssignmentService,
     IMediaBackupDirectPathSelectionService mediaBackupDirectPathSelectionService,
-    IMediaBackupDirectPathEligibilityService mediaBackupDirectPathEligibilityService,
     IMediaBackupChunkSyncPlanningService mediaBackupChunkSyncPlanningService,
     IMediaBackupIntegrityPlanningService mediaBackupIntegrityPlanningService,
     IMediaBackupIntegrityChangeDetectionService mediaBackupIntegrityChangeDetectionService,
+    IMediaBackupDirectPathCandidateDecisionService mediaBackupDirectPathCandidateDecisionService,
+    IMediaBackupDirectPathQueueService mediaBackupDirectPathQueueService,
     IMediaBackupDuplicateCleanupService mediaBackupDuplicateCleanupService,
     IMediaBackupStorageConsistencyDecisionService mediaBackupStorageConsistencyDecisionService,
     IMediaBackupChunkPlanningService mediaBackupChunkPlanningService,
@@ -49,14 +50,16 @@ public partial class MediaBackup(
         mediaBackupChunkAssignmentService;
     private readonly IMediaBackupDirectPathSelectionService _mediaBackupDirectPathSelectionService =
         mediaBackupDirectPathSelectionService;
-    private readonly IMediaBackupDirectPathEligibilityService _mediaBackupDirectPathEligibilityService =
-        mediaBackupDirectPathEligibilityService;
     private readonly IMediaBackupChunkSyncPlanningService _mediaBackupChunkSyncPlanningService =
         mediaBackupChunkSyncPlanningService;
     private readonly IMediaBackupIntegrityPlanningService _mediaBackupIntegrityPlanningService =
         mediaBackupIntegrityPlanningService;
     private readonly IMediaBackupIntegrityChangeDetectionService _mediaBackupIntegrityChangeDetectionService =
         mediaBackupIntegrityChangeDetectionService;
+    private readonly IMediaBackupDirectPathCandidateDecisionService _mediaBackupDirectPathCandidateDecisionService =
+        mediaBackupDirectPathCandidateDecisionService;
+    private readonly IMediaBackupDirectPathQueueService _mediaBackupDirectPathQueueService =
+        mediaBackupDirectPathQueueService;
     private readonly IMediaBackupDuplicateCleanupService _mediaBackupDuplicateCleanupService =
         mediaBackupDuplicateCleanupService;
     private readonly IMediaBackupStorageConsistencyDecisionService _mediaBackupStorageConsistencyDecisionService =
