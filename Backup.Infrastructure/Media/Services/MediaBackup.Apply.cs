@@ -38,16 +38,15 @@ public partial class MediaBackup
                     }
                 }
 
-                IReadOnlyList<MediaBackupApplyEntryCandidate> candidates = kvp.Value.Data
-                    .Select(item => new MediaBackupApplyEntryCandidate
+                IReadOnlyList<MediaBackupApplyChunkPathState> chunkPaths = kvp.Value.Data
+                    .Select(item => new MediaBackupApplyChunkPathState
                     {
                         SourcePath = item.Path,
-                        ArchivePath = _mediaBackupPathProjectionService.ToArchivePath(item.Path),
                         HasHash = item.Hash is not null,
                     })
                     .ToList();
 
-                if (!candidates.Any(item => item.HasHash))
+                if (!chunkPaths.Any(item => item.HasHash))
                     continue;
 
                 _logger.LogInformation("processing chunk {chunk}", kvp.Key);
@@ -59,11 +58,17 @@ public partial class MediaBackup
 
                 _logger.LogInfo("reading entries");
                 HashSet<string> storagePaths = [.. zip.GetEntries().Select(o => o.FullName)];
+                MediaBackupApplyChunkPlan chunkPlan = _mediaBackupApplyChunkPlanningService.Plan(
+                    chunkPaths,
+                    storagePaths,
+                    _backup.Chunks.Ids,
+                    kvp.Key
+                );
 
-                IReadOnlyList<MediaBackupApplyEntryCandidate> toAdd =
-                    _mediaBackupApplyEntrySelectionService.SelectEntriesToAdd(candidates, storagePaths);
+                if (!chunkPlan.ShouldProcessChunk || chunkPlan.FinalizePlan is null)
+                    continue;
 
-                foreach (MediaBackupApplyEntryCandidate item in toAdd)
+                foreach (MediaBackupApplyEntryCandidate item in chunkPlan.EntriesToAdd)
                 {
                     storagePaths.Add(item.ArchivePath);
                     await using Stream read = await MediaData.Read(
@@ -72,20 +77,12 @@ public partial class MediaBackup
                     await zip.AddEntry(item.ArchivePath, read);
                 }
 
-                IReadOnlyList<string> memory = _mediaBackupPathProjectionService.ToArchivePaths(
-                    kvp.Value.Data.Select(item => item.Path)
-                );
-                MediaBackupApplyFinalizePlan finalizePlan = _mediaBackupApplyFinalizeService.Plan(
-                    memory,
-                    storagePaths,
-                    _backup.Chunks.Ids,
-                    kvp.Key
-                );
+                MediaBackupApplyFinalizePlan finalizePlan = chunkPlan.FinalizePlan;
                 MediaBackupStorageConsistencyDecision decision = finalizePlan.ConsistencyDecision;
 
                 _logger.LogInformation(
                     "{memory}/{storage}:{missing}/{extras}",
-                    memory.Count,
+                    kvp.Value.Data.Count,
                     storagePaths.Count,
                     decision.MissingCount,
                     decision.ExtraPaths.Count
