@@ -22,7 +22,8 @@ public class LocalMediaCache(
     IDataStoreGuardService dataStoreGuardService,
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
     IMediaCacheRecheckPolicyService mediaCacheRecheckPolicyService,
-    IMediaCachePartitionSizeAggregationService mediaCachePartitionSizeAggregationService
+    IMediaCachePartitionSizeAggregationService mediaCachePartitionSizeAggregationService,
+    IMediaCacheReplicationPathService mediaCacheReplicationPathService
 ) : IMediaCache
 {
     private readonly ILogger<LocalMediaCache> _logger = _logger;
@@ -35,6 +36,8 @@ public class LocalMediaCache(
         mediaCacheRecheckPolicyService;
     private readonly IMediaCachePartitionSizeAggregationService _mediaCachePartitionSizeAggregationService =
         mediaCachePartitionSizeAggregationService;
+    private readonly IMediaCacheReplicationPathService _mediaCacheReplicationPathService =
+        mediaCacheReplicationPathService;
 
     private readonly ConcurrentDictionary<string, MediaCacheEntry> _cache = new(
         StringComparer.OrdinalIgnoreCase
@@ -216,19 +219,23 @@ public class LocalMediaCache(
 
     private async Task Replicate()
     {
-        string file = GetPathCacheFilePrimary();
+        string primaryFilePath = GetPathCacheFilePrimary();
 
-        if (!File.Exists(file))
+        if (!File.Exists(primaryFilePath))
             return;
 
         List<PartitionConfig> partitions = _partition.GetCache();
+        IReadOnlyList<string> replicaPaths = _mediaCacheReplicationPathService.GetReplicaPaths(
+            primaryFilePath,
+            partitions.Select(GetPathCacheFile)
+        );
 
-        foreach (PartitionConfig partition in partitions)
+        foreach (string path in replicaPaths)
         {
-            string path = GetPathCacheFile(partition);
+            if (File.Exists(path))
+                File.Delete(path);
 
-            File.Delete(path);
-            File.Copy(file, path);
+            File.Copy(primaryFilePath, path);
         }
     }
 
