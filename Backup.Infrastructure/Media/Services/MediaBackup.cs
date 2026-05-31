@@ -19,6 +19,7 @@ public partial class MediaBackup(
     IMediaBackupData _mediaBackupData,
     IMediaBackupPathAnalysisService mediaBackupPathAnalysisService,
     IMediaBackupChunkAssignmentService mediaBackupChunkAssignmentService,
+    IMediaBackupDirectPathSelectionService mediaBackupDirectPathSelectionService,
     IEnumerable<IMediaBackupPipelineStep> _pipelineSteps,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaBackupStrategy, IMediaBackupPipelineActions
@@ -36,6 +37,8 @@ public partial class MediaBackup(
         mediaBackupPathAnalysisService;
     private readonly IMediaBackupChunkAssignmentService _mediaBackupChunkAssignmentService =
         mediaBackupChunkAssignmentService;
+    private readonly IMediaBackupDirectPathSelectionService _mediaBackupDirectPathSelectionService =
+        mediaBackupDirectPathSelectionService;
     private BackupChunks _backup = new()
     {
         Chunks = new()

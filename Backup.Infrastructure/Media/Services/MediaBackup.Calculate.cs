@@ -248,11 +248,16 @@ public partial class MediaBackup
             .Select(o => o.Path)
             .ToList();
 
-        _pathsInBoth = pathsInChunks.Intersect(_pathsDirect).ToList();
+        MediaBackupDirectPathSelectionResult selection = _mediaBackupDirectPathSelectionService.Select(
+            pathsInChunks,
+            _pathsDirect
+        );
+
+        _pathsInBoth = selection.PathsInBoth.ToList();
 
         _logger.LogInformation("{paths} in both", _pathsInBoth.Count);
 
-        _pathsDirect = [.. _pathsDirect.ToList().Except(_pathsInBoth)];
+        _pathsDirect = [.. selection.DirectPaths];
 
         _logger.LogInformation(
             "{paths} paths > {size}",
