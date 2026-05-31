@@ -7,21 +7,21 @@ namespace Backup.Infrastructure.Media.Services;
 
 public class MediaFilter(
     IMediaLogger _mediaLogger,
-    IMediaErrorFilterPolicyService mediaErrorFilterPolicyService
+    IMediaErrorExclusionService mediaErrorExclusionService
 ) : IMediaFilter
 {
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
-    private readonly IMediaErrorFilterPolicyService _mediaErrorFilterPolicyService =
-        mediaErrorFilterPolicyService;
+    private readonly IMediaErrorExclusionService _mediaErrorExclusionService =
+        mediaErrorExclusionService;
 
     public async Task Check(List<Download> downloads)
     {
         List<Logs> logs = await _mediaLogger.GetErrors() ?? [];
 
-        HashSet<string> ids = logs.SelectMany(log => log.Messages)
-            .Where(msg => _mediaErrorFilterPolicyService.ShouldExclude(msg.Message))
-            .Select(msg => msg.Id)
-            .ToHashSet();
+        IReadOnlySet<string> ids = _mediaErrorExclusionService.GetExcludedIds(
+            logs.SelectMany(log => log.Messages)
+                .Select(message => new MediaErrorMessage { Id = message.Id, Message = message.Message })
+        );
 
         foreach (Download download in downloads)
             download.Data.RemoveAll(data => ids.Contains(data.Url));
