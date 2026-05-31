@@ -20,8 +20,8 @@ public class LocalMediaCache(
     IDataStoreGuardService dataStoreGuardService,
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
     IMediaCacheRecheckOrchestrationService mediaCacheRecheckOrchestrationService,
+    IMediaCacheRecheckDecisionService mediaCacheRecheckDecisionService,
     IMediaCacheJsonSnapshotService mediaCacheJsonSnapshotService,
-    IMediaCacheRecheckApplyPolicyService mediaCacheRecheckApplyPolicyService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
     IMediaCacheWritePolicyService mediaCacheWritePolicyService,
@@ -39,10 +39,10 @@ public class LocalMediaCache(
         mediaCacheDirectoryPolicyService;
     private readonly IMediaCacheRecheckOrchestrationService _mediaCacheRecheckOrchestrationService =
         mediaCacheRecheckOrchestrationService;
+    private readonly IMediaCacheRecheckDecisionService _mediaCacheRecheckDecisionService =
+        mediaCacheRecheckDecisionService;
     private readonly IMediaCacheJsonSnapshotService _mediaCacheJsonSnapshotService =
         mediaCacheJsonSnapshotService;
-    private readonly IMediaCacheRecheckApplyPolicyService _mediaCacheRecheckApplyPolicyService =
-        mediaCacheRecheckApplyPolicyService;
     private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
         mediaCacheEntryPathPolicyService;
     private readonly IMediaCacheEntryStateFactoryService _mediaCacheEntryStateFactoryService =
@@ -175,7 +175,8 @@ public class LocalMediaCache(
                             fileSize = fileExists ? fi.Length : null;
                         }
 
-                        MediaCacheRecheckResult decision = _mediaCacheRecheckOrchestrationService.Evaluate(
+                        MediaCacheRecheckApplyResult applyDecision =
+                            _mediaCacheRecheckDecisionService.Decide(
                             new MediaCacheRecheckObservation
                             {
                                 Path = path,
@@ -185,9 +186,6 @@ public class LocalMediaCache(
                                 FileSizeBytes = fileSize,
                             }
                         );
-
-                        MediaCacheRecheckApplyResult applyDecision =
-                            _mediaCacheRecheckApplyPolicyService.Apply(path, decision);
 
                         if (applyDecision.IsInvalid)
                             throw new Exception();
