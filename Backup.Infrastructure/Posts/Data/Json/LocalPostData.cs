@@ -23,6 +23,7 @@ public partial class LocalPostData(
     IPostSnapshotNormalizationService postSnapshotNormalizationService,
     IPostMediaInputsCompositionService postMediaInputsCompositionService,
     IPostHashingService postHashingService,
+    IPostHashMetaParityService postHashMetaParityService,
     IPostHistoryPrunePolicyService postHistoryPrunePolicyService,
     IPostSnapshotSizeGuardService postSnapshotSizeGuardService,
     IPostChangeComputationService postChangeComputationService,
@@ -47,6 +48,8 @@ public partial class LocalPostData(
     private readonly IPostMediaInputsCompositionService _postMediaInputsCompositionService =
         postMediaInputsCompositionService;
     private readonly IPostHashingService _postHashingService = postHashingService;
+    private readonly IPostHashMetaParityService _postHashMetaParityService =
+        postHashMetaParityService;
     private readonly IPostHistoryPrunePolicyService _postHistoryPrunePolicyService =
         postHistoryPrunePolicyService;
     private readonly IPostSnapshotSizeGuardService _postSnapshotSizeGuardService =
@@ -83,12 +86,11 @@ public partial class LocalPostData(
         int postCount = posts?.Count ?? 0;
         int metaCount = postMeta.Count;
 
-        if (postCount != metaCount)
-        {
-            throw new InvalidOperationException(
-                $"post_meta count mismatch in local post store '{Id ?? _config.Id ?? "unknown"}': posts={postCount}, post_meta={metaCount}"
-            );
-        }
+        _postHashMetaParityService.EnsureMatch(
+            postCount,
+            metaCount,
+            Id ?? _config.Id ?? "unknown"
+        );
 
         return postMeta.ToDictionary(
             entry => entry.Key,

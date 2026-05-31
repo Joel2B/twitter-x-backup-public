@@ -44,6 +44,7 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostTokenMaterializationService, PostTokenMaterializationService>();
         services.AddScoped<IPostIdentifierFilterService, PostIdentifierFilterService>();
         services.AddScoped<IPostMergeResolutionService, PostMergeResolutionService>();
+        services.AddScoped<IPostHashMetaParityService, PostHashMetaParityService>();
         return services;
     }
 }
