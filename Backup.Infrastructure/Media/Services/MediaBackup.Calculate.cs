@@ -205,10 +205,22 @@ public partial class MediaBackup
 
                         bool existsTarget = await _mediaBackupData.Exists(path);
 
-                        if (existsTarget)
+                        MediaBackupDirectPathCandidate candidate = new()
+                        {
+                            CachePath = cache.Path,
+                            FileSizeBytes = cache.Size?.File,
+                            TargetExists = existsTarget,
+                        };
+
+                        if (
+                            !_mediaBackupDirectPathEligibilityService.ShouldBackupDirect(
+                                candidate,
+                                _config.Chunk.Path.Size
+                            )
+                        )
                             return;
 
-                        _pathsDirect.Add(cache.Path);
+                        _pathsDirect.Add(candidate.CachePath);
                     }
                     catch (OperationCanceledException)
                     {
