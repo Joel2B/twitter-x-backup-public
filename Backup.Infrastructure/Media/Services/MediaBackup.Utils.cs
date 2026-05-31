@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Logging;
+using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Media.Models.Backup;
@@ -11,6 +12,7 @@ public partial class MediaBackup
     private async Task ShowInfoChunks()
     {
         _logger.LogInfo("{id,-3} {paths,-10} {size}", "id", "paths", "size (GiB)");
+        List<MediaBackupChunkReportObservation> observations = [];
 
         foreach (var kvp in _chunks)
         {
@@ -27,11 +29,27 @@ public partial class MediaBackup
                     size += cache.Size?.File ?? 0;
             }
 
+            observations.Add(
+                new MediaBackupChunkReportObservation
+                {
+                    ChunkId = kvp.Key,
+                    PathCount = kvp.Value.Data.Count,
+                    SizeBytes = size,
+                }
+            );
+        }
+
+        IReadOnlyList<MediaBackupChunkReportRow> rows = _mediaBackupChunkReportService.Build(
+            observations
+        );
+
+        foreach (MediaBackupChunkReportRow row in rows)
+        {
             _logger.LogInformation(
                 "{id,-3} {paths,-10} {size}",
-                kvp.Key,
-                kvp.Value.Data.Count,
-                Math.Round(size / 1024m / 1024m / 1024m, 2, MidpointRounding.ToZero)
+                row.ChunkId,
+                row.PathCount,
+                row.SizeGiB
             );
         }
     }

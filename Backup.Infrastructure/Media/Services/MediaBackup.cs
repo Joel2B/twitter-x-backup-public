@@ -33,6 +33,7 @@ public partial class MediaBackup(
     IMediaBackupChunkPlanningService mediaBackupChunkPlanningService,
     IMediaBackupChunkCountDeltaService mediaBackupChunkCountDeltaService,
     IMediaBackupChunkMetadataPolicyService mediaBackupChunkMetadataPolicyService,
+    IMediaBackupChunkReportService mediaBackupChunkReportService,
     IEnumerable<IMediaBackupPipelineStep> _pipelineSteps,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaBackupStrategy, IMediaBackupPipelineActions
@@ -76,6 +77,8 @@ public partial class MediaBackup(
         mediaBackupChunkCountDeltaService;
     private readonly IMediaBackupChunkMetadataPolicyService _mediaBackupChunkMetadataPolicyService =
         mediaBackupChunkMetadataPolicyService;
+    private readonly IMediaBackupChunkReportService _mediaBackupChunkReportService =
+        mediaBackupChunkReportService;
     private BackupChunks _backup = new()
     {
         Chunks = new()
