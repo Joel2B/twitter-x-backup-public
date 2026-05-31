@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Logging;
+using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Utility.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
@@ -57,8 +58,12 @@ public partial class MediaBackup
                 };
 
                 if (
-                    change.FileSize.Diff1 == change.FileSize.Diff2
-                    && change.Crc32.Diff1 == change.Crc32.Diff2
+                    !_mediaBackupIntegrityPlanningService.HasChange(
+                        change.FileSize?.Diff1,
+                        change.FileSize?.Diff2,
+                        change.Crc32?.Diff1,
+                        change.Crc32?.Diff2
+                    )
                 )
                     continue;
 
@@ -93,17 +98,21 @@ public partial class MediaBackup
 
     private async Task FixIntegrity()
     {
-        var changes = _changes
-            .GroupBy(o => o.Id)
-            .Select(o => new { Id = o.Key, Paths = o.ToList() })
-            .ToDictionary(o => o.Id);
+        IReadOnlyList<MediaBackupIntegrityChunkGroup> changes = _mediaBackupIntegrityPlanningService
+            .GroupByChunk(
+                _changes.Select(change => new MediaBackupIntegrityPathChange
+                {
+                    ChunkId = change.Id,
+                    Path = change.Path,
+                })
+            );
 
         _logger.LogInformation("processing changes");
 
-        foreach (var change in changes)
+        foreach (MediaBackupIntegrityChunkGroup change in changes)
         {
-            _logger.LogInformation("processing chunk {chunk}", change.Key);
-            IZipWriter? zip = await OpenChunkZipWrite(_chunks[change.Key], "fix-integrity");
+            _logger.LogInformation("processing chunk {chunk}", change.ChunkId);
+            IZipWriter? zip = await OpenChunkZipWrite(_chunks[change.ChunkId], "fix-integrity");
 
             if (zip is null)
                 continue;
@@ -112,15 +121,15 @@ public partial class MediaBackup
             {
                 _logger.LogInfo("applying fixes");
 
-                foreach (IntegrityChange integrityChange in change.Value.Paths)
+                foreach (string path in change.Paths)
                 {
-                    using Stream read = await MediaData.Read(integrityChange.Path);
-                    string path = integrityChange.Path.Replace('\\', '/');
+                    using Stream read = await MediaData.Read(path);
+                    string relativePath = path.Replace('\\', '/');
 
-                    zip.RemoveEntry(path);
-                    await zip.AddEntry(path, read);
+                    zip.RemoveEntry(relativePath);
+                    await zip.AddEntry(relativePath, read);
 
-                    _logger.LogInfo("{path} processed", path);
+                    _logger.LogInfo("{path} processed", relativePath);
                 }
             }
             finally
@@ -132,12 +141,12 @@ public partial class MediaBackup
 
         _logger.LogInformation("set new file sizes");
 
-        foreach (var change in changes)
+        foreach (MediaBackupIntegrityChunkGroup change in changes)
         {
-            _logger.LogInformation("processing chunk {chunk}", change.Key);
+            _logger.LogInformation("processing chunk {chunk}", change.ChunkId);
 
             IZipWriter? zip = await OpenChunkZipRead(
-                _chunks[change.Key],
+                _chunks[change.ChunkId],
                 "set-new-file-sizes-after-fix"
             );
 
@@ -159,11 +168,12 @@ public partial class MediaBackup
 
             _logger.LogInfo("expanding chunk");
 
-            Dictionary<string, ChunkData> data = _chunks[change.Key]
-                .Data.Where(o => change.Value.Paths.Select(o => o.Path).Contains(o.Path))
+            HashSet<string> changedPaths = [.. change.Paths];
+            Dictionary<string, ChunkData> data = _chunks[change.ChunkId]
+                .Data.Where(chunkData => changedPaths.Contains(chunkData.Path))
                 .ToDictionary(o => o.Path);
 
-            if (data.Values.Count != change.Value.Paths.Count)
+            if (data.Values.Count != change.Paths.Count)
                 throw new Exception();
 
             foreach (var item in data.Values)
@@ -180,7 +190,7 @@ public partial class MediaBackup
             }
 
             _logger.LogInfo("saving chunk");
-            await _mediaBackupData.Save([_chunks[change.Key]]);
+            await _mediaBackupData.Save([_chunks[change.ChunkId]]);
         }
     }
 }
