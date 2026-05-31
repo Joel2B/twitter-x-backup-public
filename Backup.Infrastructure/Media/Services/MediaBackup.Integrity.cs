@@ -170,24 +170,21 @@ public partial class MediaBackup
             }
 
             _logger.LogInfo("expanding chunk");
-            IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByPath =
-                _mediaBackupChunkMetadataOrchestrationService.BuildPathMetadataMap(
-                    _mediaBackupIntegrityObservationCompositionService.BuildPathMetadataStates(
-                        change.Paths.Select(path =>
-                        {
-                            entries.TryGetValue(
-                                _mediaBackupPathProjectionService.ToArchivePath(path),
-                                out ZipEntry? value
-                            );
+            IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByArchivePath =
+                entries.ToDictionary(
+                    item => item.Key,
+                    item => new MediaBackupChunkDataMetadata
+                    {
+                        FileSize = item.Value.FileSize,
+                        Crc32 = item.Value.Crc32,
+                    },
+                    StringComparer.Ordinal
+                );
 
-                            return new MediaBackupChunkPathMetadataInput
-                            {
-                                Path = path,
-                                FileSize = value?.FileSize,
-                                Crc32 = value?.Crc32,
-                            };
-                        })
-                    )
+            IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByPath =
+                _mediaBackupPathArchiveMetadataProjectionService.BuildPathMetadataByPath(
+                    change.Paths,
+                    metadataByArchivePath
                 );
 
             MediaBackupIntegrityChunkApplyResult applyResult =

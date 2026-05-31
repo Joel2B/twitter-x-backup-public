@@ -47,23 +47,21 @@ public partial class MediaBackup
             }
 
             _logger.LogInfo("updating data");
-            IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> archiveMetadataByPath =
-                kvp.Value.Data.ToDictionary(
-                    item => item.Path,
-                    item =>
+            IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByArchivePath =
+                entries.ToDictionary(
+                    item => item.Key,
+                    item => new MediaBackupChunkDataMetadata
                     {
-                        entries.TryGetValue(
-                            _mediaBackupPathProjectionService.ToArchivePath(item.Path),
-                            out ZipEntry? value
-                        );
-
-                        return new MediaBackupChunkDataMetadata
-                        {
-                            FileSize = value?.FileSize,
-                            Crc32 = value?.Crc32,
-                        };
+                        FileSize = item.Value.FileSize,
+                        Crc32 = item.Value.Crc32,
                     },
                     StringComparer.Ordinal
+                );
+
+            IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> archiveMetadataByPath =
+                _mediaBackupPathArchiveMetadataProjectionService.BuildPathMetadataByPath(
+                    kvp.Value.Data.Select(item => item.Path),
+                    metadataByArchivePath
                 );
 
             MediaBackupChunkMetadataRefreshExecutionResult refreshResult =
