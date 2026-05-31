@@ -1,3 +1,4 @@
+using Backup.Application.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.Request;
 using Backup.Infrastructure.Posts.Adapters;
@@ -24,7 +25,7 @@ public class PostTweetDetailRequestFactoryTests
             },
         };
 
-        PostTweetDetailRequestFactory sut = new();
+        PostTweetDetailRequestFactory sut = new(new ApiRequestBuildService());
 
         Request? built = sut.Build(context);
 
@@ -45,7 +46,7 @@ public class PostTweetDetailRequestFactoryTests
             Api = new Dictionary<string, ApiConfig>(),
         };
 
-        PostTweetDetailRequestFactory sut = new();
+        PostTweetDetailRequestFactory sut = new(new ApiRequestBuildService());
 
         Request? built = sut.Build(context);
 
@@ -69,7 +70,7 @@ public class PostTweetDetailRequestFactoryTests
             },
         };
 
-        PostTweetDetailRequestFactory sut = new();
+        PostTweetDetailRequestFactory sut = new(new ApiRequestBuildService());
 
         Request? built = sut.Build(context);
 

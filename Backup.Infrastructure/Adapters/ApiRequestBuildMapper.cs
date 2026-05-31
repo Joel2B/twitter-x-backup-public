@@ -1,14 +1,15 @@
-using Backup.Application.Config;
 using Backup.Application.Config.Models;
 using Backup.Infrastructure.Models.Config.Api;
+using Backup.Infrastructure.Models.Config.Request;
 
-namespace Backup.Infrastructure.Models.Config.Request;
+namespace Backup.Infrastructure.Adapters;
 
-public static class RequestMerge
+internal static class ApiRequestBuildMapper
 {
-    public static Request? Build(IReadOnlyDictionary<string, ApiConfig> requests, string key)
-    {
-        IReadOnlyDictionary<string, ApiRequestBuildSource> sources = requests.ToDictionary(
+    internal static IReadOnlyDictionary<string, ApiRequestBuildSource> ToSources(
+        IReadOnlyDictionary<string, ApiConfig> requests
+    ) =>
+        requests.ToDictionary(
             kvp => kvp.Key,
             kvp =>
             {
@@ -34,12 +35,8 @@ public static class RequestMerge
             }
         );
 
-        ApiRequestBuildResult? built = new ApiRequestBuildService().Build(sources, key);
-
-        if (built is null)
-            return null;
-
-        return new Request
+    internal static Request ToRequest(ApiRequestBuildResult built) =>
+        new()
         {
             Url = built.Url,
             Query = new Query
@@ -50,5 +47,4 @@ public static class RequestMerge
             },
             Headers = built.Headers.ToDictionary(entry => entry.Key, entry => entry.Value),
         };
-    }
 }

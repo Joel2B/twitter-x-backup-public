@@ -1,6 +1,6 @@
 using System.Globalization;
-using Backup.Infrastructure.Models.Config.Api;
-using Backup.Infrastructure.Models.Config.Request;
+using Backup.Application.Config;
+using Backup.Application.Config.Models;
 
 namespace Backup.Tests;
 
@@ -9,107 +9,77 @@ public partial class ConfigApiTests
     [Fact]
     public void RequestMerge_Build_ReturnsClonedRequest_WhenApiIsEnabled()
     {
-        Request sourceRequest = new()
+        ApiRequestBuildSource source = new()
         {
+            Enabled = true,
             Url = "https://x.com/i/api/graphql/test/TweetDetail",
-            Query = new()
-            {
-                Variables = new Dictionary<string, object?> { ["focalTweetId"] = "1" },
-                Features = new Dictionary<string, bool> { ["featureA"] = true },
-                FieldToggles = new Dictionary<string, bool> { ["toggleA"] = false },
-            },
-            Headers = new Dictionary<string, string>
-            {
-                ["Referer"] = "https://x.com/test/status/1",
-            },
+            Variables = new Dictionary<string, object?> { ["focalTweetId"] = "1" },
+            Features = new Dictionary<string, bool> { ["featureA"] = true },
+            FieldToggles = new Dictionary<string, bool> { ["toggleA"] = false },
+            Headers = new Dictionary<string, string> { ["Referer"] = "https://x.com/test/status/1" },
         };
+        IApiRequestBuildService service = new ApiRequestBuildService();
+        Dictionary<string, ApiRequestBuildSource> api = new() { ["TweetDetail"] = source };
 
-        Dictionary<string, ApiConfig> api = new()
-        {
-            ["TweetDetail"] = new()
-            {
-                Id = "TweetDetail",
-                Enabled = true,
-                Request = sourceRequest,
-            },
-        };
-
-        Request? request = RequestMerge.Build(api, "TweetDetail");
+        ApiRequestBuildResult? request = service.Build(api, "TweetDetail");
 
         Assert.NotNull(request);
-        Assert.Equal(sourceRequest.Url, request!.Url);
-        Assert.Equal("1", request.Query.Variables["focalTweetId"]?.ToString());
+        Assert.Equal(source.Url, request!.Url);
+        Assert.Equal("1", request.Variables["focalTweetId"]?.ToString());
 
-        request.Query.Variables["focalTweetId"] = "2";
+        request.Variables["focalTweetId"] = "2";
         request.Headers["Referer"] = "https://x.com/changed";
 
-        Assert.Equal("1", sourceRequest.Query.Variables["focalTweetId"]?.ToString());
-        Assert.Equal("https://x.com/test/status/1", sourceRequest.Headers["Referer"]);
+        Assert.Equal("1", source.Variables["focalTweetId"]?.ToString());
+        Assert.Equal("https://x.com/test/status/1", source.Headers!["Referer"]);
     }
 
     [Fact]
     public void RequestMerge_Build_ReturnsNull_WhenApiIsDisabledOrMissing()
     {
-        Dictionary<string, ApiConfig> api = new()
+        IApiRequestBuildService service = new ApiRequestBuildService();
+        Dictionary<string, ApiRequestBuildSource> api = new()
         {
-            ["TweetDetail"] = new()
+            ["TweetDetail"] = new ApiRequestBuildSource
             {
-                Id = "TweetDetail",
                 Enabled = false,
-                Request = new()
-                {
-                    Url = "https://x.com/i/api/graphql/test/TweetDetail",
-                    Query = new()
-                    {
-                        Variables = [],
-                        Features = [],
-                        FieldToggles = [],
-                    },
-                    Headers = [],
-                },
+                Url = "https://x.com/i/api/graphql/test/TweetDetail",
+                Variables = [],
+                Features = [],
+                FieldToggles = [],
+                Headers = [],
             },
         };
 
-        Assert.Null(RequestMerge.Build(api, "TweetDetail"));
-        Assert.Null(RequestMerge.Build(api, "MissingApi"));
+        Assert.Null(service.Build(api, "TweetDetail"));
+        Assert.Null(service.Build(api, "MissingApi"));
     }
 
     [Fact]
     public void RequestMerge_Build_CoercesStringBooleanVariables()
     {
-        Request sourceRequest = new()
+        ApiRequestBuildSource source = new()
         {
+            Enabled = true,
             Url = "https://x.com/i/api/graphql/test/UserByScreenName",
-            Query = new()
+            Variables = new Dictionary<string, object?>
             {
-                Variables = new Dictionary<string, object?>
-                {
-                    ["screen_name"] = "myugirlwholived",
-                    ["withGrokTranslatedBio"] = "True",
-                },
-                Features = [],
-                FieldToggles = [],
+                ["screen_name"] = "myugirlwholived",
+                ["withGrokTranslatedBio"] = "True",
             },
+            Features = [],
+            FieldToggles = [],
             Headers = [],
         };
+        IApiRequestBuildService service = new ApiRequestBuildService();
+        Dictionary<string, ApiRequestBuildSource> api = new() { ["UserByScreenName"] = source };
 
-        Dictionary<string, ApiConfig> api = new()
-        {
-            ["UserByScreenName"] = new()
-            {
-                Id = "UserByScreenName",
-                Enabled = true,
-                Request = sourceRequest,
-            },
-        };
+        ApiRequestBuildResult request =
+            service.Build(api, "UserByScreenName") ?? throw new Exception("request should not be null");
 
-        Request request =
-            RequestMerge.Build(api, "UserByScreenName")
-            ?? throw new Exception("request should not be null");
-
-        Assert.True(request.Query.Variables["withGrokTranslatedBio"] is bool);
-        Assert.Equal(true, request.Query.Variables["withGrokTranslatedBio"]);
-        Assert.Equal("True", sourceRequest.Query.Variables["withGrokTranslatedBio"]);
+        Assert.True(request.Variables["withGrokTranslatedBio"] is bool);
+        Assert.Equal(true, request.Variables["withGrokTranslatedBio"]);
+        Assert.Equal("True", source.Variables["withGrokTranslatedBio"]);
     }
 
     [Fact]
@@ -123,39 +93,29 @@ public partial class ConfigApiTests
             CultureInfo.CurrentCulture = new CultureInfo("es-ES");
             CultureInfo.CurrentUICulture = new CultureInfo("es-ES");
 
-            Request sourceRequest = new()
+            ApiRequestBuildSource source = new()
             {
+                Enabled = true,
                 Url = "https://x.com/i/api/graphql/test/UserByScreenName",
-                Query = new()
+                Variables = new Dictionary<string, object?>
                 {
-                    Variables = new Dictionary<string, object?>
-                    {
-                        ["screen_name"] = "myugirlwholived",
-                        ["ratio"] = "1.25",
-                    },
-                    Features = [],
-                    FieldToggles = [],
+                    ["screen_name"] = "myugirlwholived",
+                    ["ratio"] = "1.25",
                 },
+                Features = [],
+                FieldToggles = [],
                 Headers = [],
             };
+            IApiRequestBuildService service = new ApiRequestBuildService();
+            Dictionary<string, ApiRequestBuildSource> api = new() { ["UserByScreenName"] = source };
 
-            Dictionary<string, ApiConfig> api = new()
-            {
-                ["UserByScreenName"] = new()
-                {
-                    Id = "UserByScreenName",
-                    Enabled = true,
-                    Request = sourceRequest,
-                },
-            };
-
-            Request request =
-                RequestMerge.Build(api, "UserByScreenName")
+            ApiRequestBuildResult request =
+                service.Build(api, "UserByScreenName")
                 ?? throw new Exception("request should not be null");
 
-            Assert.True(request.Query.Variables["ratio"] is double);
-            Assert.Equal(1.25d, (double)request.Query.Variables["ratio"]!, 10);
-            Assert.Equal("1.25", sourceRequest.Query.Variables["ratio"]);
+            Assert.True(request.Variables["ratio"] is double);
+            Assert.Equal(1.25d, (double)request.Variables["ratio"]!, 10);
+            Assert.Equal("1.25", source.Variables["ratio"]);
         }
         finally
         {
