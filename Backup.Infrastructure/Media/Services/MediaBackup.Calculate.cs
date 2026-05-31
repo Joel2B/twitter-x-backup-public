@@ -220,8 +220,8 @@ public partial class MediaBackup
                         bool existsSource = await MediaData.Exists(path);
                         bool existsTarget = await _mediaBackupData.Exists(path);
 
-                        MediaBackupDirectPathCandidateDecision decision =
-                            _mediaBackupDirectPathCandidateDecisionService.Decide(
+                        MediaBackupDirectPathScanResult result =
+                            _mediaBackupDirectPathScanOrchestrationService.Evaluate(
                                 new MediaBackupDirectPathCandidateObservation
                                 {
                                     Path = path,
@@ -234,13 +234,13 @@ public partial class MediaBackup
                                 }
                             );
 
-                        if (decision.ShouldThrowMissingSource)
+                        if (result.ShouldThrowMissingSource)
                             throw new Exception();
 
-                        if (!decision.ShouldIncludeDirectPath)
+                        if (!result.ShouldIncludeDirectPath)
                             return;
 
-                        _pathsDirect.Add(cache!.Path);
+                        _pathsDirect.Add(result.IncludedPath);
                     }
                     catch (OperationCanceledException)
                     {
@@ -253,18 +253,23 @@ public partial class MediaBackup
                     finally
                     {
                         int current = Interlocked.Increment(ref done);
-                        int percent = (int)((long)current * 100 / total);
                         int prev = Volatile.Read(ref lastPercent);
+                        MediaBackupProgressDecision progress =
+                            _mediaBackupProgressPolicyService.Evaluate(current, total, prev);
 
-                        if (percent != prev)
+                        if (progress.ShouldLog)
                         {
                             if (
-                                Interlocked.CompareExchange(ref lastPercent, percent, prev) == prev
+                                Interlocked.CompareExchange(
+                                    ref lastPercent,
+                                    progress.Percent,
+                                    prev
+                                ) == prev
                             )
                             {
                                 _logger.LogInformation(
                                     "Progress: {percent}% ({current}/{total}) elapsed={elapsed}",
-                                    percent,
+                                    progress.Percent,
                                     current,
                                     total,
                                     sw.Elapsed
