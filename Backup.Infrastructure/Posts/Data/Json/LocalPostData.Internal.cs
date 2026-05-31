@@ -64,12 +64,14 @@ public partial class LocalPostData
 
         string basePath = GetPath(_partition.GetPrimary());
 
-        var latestHistory = Directory
+        List<PostHistoryPath> historyPaths = Directory
             .GetDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
             .Select(path => new { Path = path, Date = UtilsPath.ToDate(path, isDir: true) })
-            .Where(o => o.Date is not null)
-            .OrderByDescending(o => o.Date)
-            .FirstOrDefault();
+            .Where(entry => entry.Date is not null)
+            .Select(entry => new PostHistoryPath(entry.Path, entry.Date!.Value))
+            .ToList();
+
+        PostHistoryPath? latestHistory = _postHistoryLatestSelectionService.SelectLatest(historyPaths);
 
         if (latestHistory is null)
             return Task.CompletedTask;
