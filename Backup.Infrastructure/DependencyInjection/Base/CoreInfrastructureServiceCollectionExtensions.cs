@@ -38,6 +38,9 @@ public static class CoreInfrastructureServiceCollectionExtensions
 
     public static IServiceCollection AddConfigInfrastructure(this IServiceCollection services)
     {
+        if (services.Any(descriptor => descriptor.ServiceType == typeof(AppConfig)))
+            return services;
+
         IAppConfigStore store = new JsonAppConfigStore();
         IAppConfigService configService = new AppConfigService(store);
         AppConfigSnapshot snapshot = configService.GetSnapshot();

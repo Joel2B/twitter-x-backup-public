@@ -20,12 +20,4 @@
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="App\Config\**\*.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-      <TargetPath>config/%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
-    </None>
-  </ItemGroup>
-
 </Project>

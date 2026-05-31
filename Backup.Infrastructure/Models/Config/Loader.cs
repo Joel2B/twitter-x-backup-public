@@ -22,14 +22,15 @@ public static class ConfigLoader
 
     public static string GetConfigDirectory() => Path.Combine(AppContext.BaseDirectory, "config");
 
-    public static AppConfig Load() => LoadSplit(GetConfigDirectory());
+    public static AppConfig Load(string? configDirectory = null) =>
+        LoadSplit(configDirectory ?? GetConfigDirectory());
 
-    public static DataConfig LoadData() =>
-        LoadFile<DataConfig>(GetConfigDirectory(), "Data.json", prefix: "BACKUP__");
+    public static DataConfig LoadData(string? configDirectory = null) =>
+        LoadFile<DataConfig>(configDirectory ?? GetConfigDirectory(), "Data.json", prefix: "BACKUP__");
 
-    public static void SaveData(DataConfig data)
+    public static void SaveData(DataConfig data, string? configDirectory = null)
     {
-        string path = Path.Combine(GetConfigDirectory(), "Data.json");
+        string path = Path.Combine(configDirectory ?? GetConfigDirectory(), "Data.json");
         string json = JsonConvert.SerializeObject(data, Formatting.Indented);
 
         File.WriteAllText(path, json);

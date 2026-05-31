@@ -1,3 +1,4 @@
+using Backup.Configuration;
 using Backup.Infrastructure.DependencyInjection.Composition;
 using Backup.Infrastructure.DependencyInjection.Runtime;
 using Backup.Infrastructure.Hosting;
@@ -5,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 ServiceCollection services = new();
 
+services.AddBackupConfiguration();
 services.AddBackupCliInfrastructure();
 
 Console.Error.WriteLine("[startup] building service provider");
