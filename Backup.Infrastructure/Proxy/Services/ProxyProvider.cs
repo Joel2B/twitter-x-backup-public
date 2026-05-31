@@ -33,7 +33,8 @@ public class ProxyProvider(
     IProxyCandidateMergeService proxyCandidateMergeService,
     IProxyRuntimePoolSelectionService proxyRuntimePoolSelectionService,
     IProxyAcceptedCandidateFactoryService proxyAcceptedCandidateFactoryService,
-    IProxyBatchFlushPolicyService proxyBatchFlushPolicyService
+    IProxyBatchFlushPolicyService proxyBatchFlushPolicyService,
+    IProxyErrorDecisionService proxyErrorDecisionService
 )
     : IProxyProvider,
         ISetup,
@@ -64,6 +65,7 @@ public class ProxyProvider(
         proxyAcceptedCandidateFactoryService;
     private readonly IProxyBatchFlushPolicyService _proxyBatchFlushPolicyService =
         proxyBatchFlushPolicyService;
+    private readonly IProxyErrorDecisionService _proxyErrorDecisionService = proxyErrorDecisionService;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
     private int _proxyIndex = 0;
@@ -315,24 +317,23 @@ public class ProxyProvider(
                 Extended = JsonConvert.SerializeObject(ex),
             };
 
-            Error? error = proxy.Errors.LastOrDefault(error =>
-                error.Message.Short == message.Short
+            ProxyErrorDecision decision = _proxyErrorDecisionService.Decide(
+                proxy.Errors.Select(item => item.Message.Short).ToList(),
+                message.Short,
+                _config.Proxy.Threshold.ErrorsToInactive
             );
 
-            if (error is null)
+            Error? error = proxy.Errors.LastOrDefault(item => item.Message.Short == message.Short);
+
+            if (decision.IsNewMessage)
                 proxy.Errors.Add(new() { Message = message });
-            else
+            else if (error is not null)
             {
                 error.TotalDuplicates++;
                 error.Date = DateTime.Now;
             }
 
-            if (
-                _proxyRuntimePolicyService.ShouldDisableProxy(
-                    proxy.Errors.Count,
-                    _config.Proxy.Threshold.ErrorsToInactive
-                )
-            )
+            if (decision.ShouldDisable)
             {
                 proxy.Status.Current = StatusEnum.Inactive;
                 proxy.Status.Date = DateTime.Now;
