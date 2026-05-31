@@ -24,6 +24,7 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaBackupIntegrityPlanningService, MediaBackupIntegrityPlanningService>();
         services.AddScoped<IMediaBackupDuplicateCleanupService, MediaBackupDuplicateCleanupService>();
         services.AddScoped<IMediaBackupChunkReconciliationService, MediaBackupChunkReconciliationService>();
+        services.AddScoped<IMediaBackupChunkPlanningService, MediaBackupChunkPlanningService>();
 
         Dictionary<string, Type> types = new() { ["local"] = typeof(MediaBackup) };
 

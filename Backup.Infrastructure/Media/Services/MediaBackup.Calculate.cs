@@ -14,8 +14,13 @@ public partial class MediaBackup
     {
         await ShowInfoChunks();
 
-        int pathsPerChunk = _paths.Count / _config.Chunk.Count;
-        int increaseCount = Math.Max(_backup.Chunks.Path.Increase, _config.Chunk.Path.Increase);
+        MediaBackupChunkPlanningResult plan = _mediaBackupChunkPlanningService.Plan(
+            _paths.Count,
+            _config.Chunk.Count,
+            _backup.Chunks.Path.Increase,
+            _config.Chunk.Path.Increase,
+            _chunks.Keys
+        );
 
         _logger.LogInformation(
             "paths/residue: {paths}/{residue}",
@@ -25,9 +30,9 @@ public partial class MediaBackup
 
         _logger.LogInformation(
             "pathsPerChunk/increase/total: {paths}/{increase}/{total}",
-            pathsPerChunk,
-            increaseCount,
-            pathsPerChunk + increaseCount
+            plan.PathsPerChunk,
+            plan.IncreaseCount,
+            plan.CapacityPerChunk
         );
 
         _logger.LogInfo("cloning chunks");
@@ -37,7 +42,7 @@ public partial class MediaBackup
             o => o.Value.Clone()
         );
 
-        if (_chunks.Count == 0)
+        if (plan.RequiresSeedChunk)
             _chunks[0] = new() { Id = 0 };
 
         _logger.LogInfo("expanding chunks");
@@ -46,9 +51,8 @@ public partial class MediaBackup
             .Values.SelectMany(chunk => chunk.Data)
             .ToDictionary(o => o.Path, o => o);
 
-        for (int i = 0; i < _backup.Chunks.Total; i++)
-            if (!_chunks.ContainsKey(i))
-                _chunks.Add(i, new() { Id = i });
+        foreach (int missingChunkId in plan.MissingChunkIds)
+            _chunks.Add(missingChunkId, new() { Id = missingChunkId });
 
         IReadOnlyList<MediaBackupChunkState> chunkStates = _chunks
             .Values.Select(chunk => new MediaBackupChunkState
@@ -83,8 +87,8 @@ public partial class MediaBackup
             chunkStates,
             candidates,
             _backup.Chunks.Total,
-            pathsPerChunk,
-            increaseCount,
+            plan.PathsPerChunk,
+            plan.IncreaseCount,
             _config.Chunk.Path.Size
         );
 
