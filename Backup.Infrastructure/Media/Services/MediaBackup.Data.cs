@@ -49,7 +49,7 @@ public partial class MediaBackup
             }
 
             _logger.LogInfo("updating data");
-            List<MediaBackupChunkMetadataObservation> observations = [];
+            List<MediaBackupChunkMetadataObservationInput> observationInputs = [];
 
             foreach (ChunkData item in kvp.Value.Data)
             {
@@ -58,8 +58,8 @@ public partial class MediaBackup
                     out ZipEntry? value
                 );
 
-                observations.Add(
-                    new MediaBackupChunkMetadataObservation
+                observationInputs.Add(
+                    new MediaBackupChunkMetadataObservationInput
                     {
                         Path = item.Path,
                         HasEntry = value is not null,
@@ -70,6 +70,11 @@ public partial class MediaBackup
                     }
                 );
             }
+
+            IReadOnlyList<MediaBackupChunkMetadataObservation> observations =
+                _mediaBackupChunkMetadataObservationCompositionService.BuildObservations(
+                    observationInputs
+                );
 
             IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> updates =
                 _mediaBackupChunkMetadataOrchestrationService.PlanUpdates(observations);
