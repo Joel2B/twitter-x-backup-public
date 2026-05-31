@@ -105,31 +105,14 @@ public partial class LocalPostData
             );
 
         tables.PostMeta = await ReadList<PostMetaRow>(postMetaPath);
-        ValidatePostMetaConsistency(tables);
+
+        _postMetaConsistencyValidationService.EnsureAligned(
+            tables.Posts.Select(row => row.Id),
+            tables.PostMeta.Where(row => !string.IsNullOrWhiteSpace(row.Id)).Select(row => row.Id),
+            Id ?? _config.Id ?? "unknown"
+        );
 
         return tables;
-    }
-
-    private static void ValidatePostMetaConsistency(LocalPostTables tables)
-    {
-        HashSet<string> postIds = tables
-            .Posts.Select(row => row.Id)
-            .ToHashSet(StringComparer.Ordinal);
-
-        HashSet<string> metaIds = tables
-            .PostMeta.Where(row => !string.IsNullOrWhiteSpace(row.Id))
-            .Select(row => row.Id)
-            .ToHashSet(StringComparer.Ordinal);
-
-        if (postIds.SetEquals(metaIds))
-            return;
-
-        int missingInMeta = postIds.Count(id => !metaIds.Contains(id));
-        int missingInPosts = metaIds.Count(id => !postIds.Contains(id));
-
-        throw new Exception(
-            $"post_meta is out of sync with posts. missingInMeta={missingInMeta}, missingInPosts={missingInPosts}"
-        );
     }
 
     private async Task LoadTable(LocalPostTables tables, string fileName)

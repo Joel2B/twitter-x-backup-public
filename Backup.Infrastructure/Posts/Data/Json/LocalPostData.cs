@@ -32,6 +32,7 @@ public partial class LocalPostData(
     IPostChangeComputationService postChangeComputationService,
     IPostStoreCountsAggregationService postStoreCountsAggregationService,
     IPostProfileCountAggregationService postProfileCountAggregationService,
+    IPostMetaConsistencyValidationService postMetaConsistencyValidationService,
     IPostIdentifierFilterService postIdentifierFilterService,
     IDataStoreGuardService dataStoreGuardService
 ) : IPostDataStore, ISetup
@@ -70,6 +71,8 @@ public partial class LocalPostData(
         postStoreCountsAggregationService;
     private readonly IPostProfileCountAggregationService _postProfileCountAggregationService =
         postProfileCountAggregationService;
+    private readonly IPostMetaConsistencyValidationService _postMetaConsistencyValidationService =
+        postMetaConsistencyValidationService;
     private readonly IPostIdentifierFilterService _postIdentifierFilterService =
         postIdentifierFilterService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
