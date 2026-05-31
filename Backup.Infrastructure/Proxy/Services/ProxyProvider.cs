@@ -31,7 +31,9 @@ public class ProxyProvider(
     IProxyProviderTypeResolverService proxyProviderTypeResolverService,
     IProxySourceLoadService proxySourceLoadService,
     IProxyCandidateMergeService proxyCandidateMergeService,
-    IProxyRuntimePoolSelectionService proxyRuntimePoolSelectionService
+    IProxyRuntimePoolSelectionService proxyRuntimePoolSelectionService,
+    IProxyAcceptedCandidateFactoryService proxyAcceptedCandidateFactoryService,
+    IProxyBatchFlushPolicyService proxyBatchFlushPolicyService
 )
     : IProxyProvider,
         ISetup,
@@ -58,6 +60,10 @@ public class ProxyProvider(
     private readonly IProxyCandidateMergeService _proxyCandidateMergeService = proxyCandidateMergeService;
     private readonly IProxyRuntimePoolSelectionService _proxyRuntimePoolSelectionService =
         proxyRuntimePoolSelectionService;
+    private readonly IProxyAcceptedCandidateFactoryService _proxyAcceptedCandidateFactoryService =
+        proxyAcceptedCandidateFactoryService;
+    private readonly IProxyBatchFlushPolicyService _proxyBatchFlushPolicyService =
+        proxyBatchFlushPolicyService;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
     private int _proxyIndex = 0;
@@ -150,8 +156,15 @@ public class ProxyProvider(
             if (!probe.Success)
                 continue;
 
-            ProxyDataConfig acceptedProxy = ToProxyDataConfig(probe.Candidate);
-            ProxyData _proxy = new() { Proxy = acceptedProxy, Connections = [new() { TotalUses = 1 }] };
+            ProxyAcceptedCandidate accepted = _proxyAcceptedCandidateFactoryService.Create(
+                probe.Candidate
+            );
+            ProxyDataConfig acceptedProxy = ToProxyDataConfig(accepted.Candidate);
+            ProxyData _proxy = new()
+            {
+                Proxy = acceptedProxy,
+                Connections = [new() { TotalUses = accepted.InitialConnectionUses }],
+            };
 
             if (!proxiesAdded.Add(GetProxyKey(acceptedProxy)))
                 continue;
@@ -159,7 +172,7 @@ public class ProxyProvider(
             _proxies.Add(_proxy);
             count++;
 
-            if (count % 10 == 0)
+            if (_proxyBatchFlushPolicyService.ShouldFlush(count, flushEvery: 10))
                 await SaveData();
         }
 
