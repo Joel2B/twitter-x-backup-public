@@ -15,6 +15,7 @@ public class LocalPartition(
     AppConfig _appConfig,
     ILogger<LocalPartition> _logger,
     IPartitionResolutionService partitionResolutionService,
+    IPartitionPathResolutionService partitionPathResolutionService,
     IPartitionPathProbeExecutionService partitionPathProbeExecutionService,
     Storage? _config = null
 ) : IPartition, ISetup
@@ -24,6 +25,8 @@ public class LocalPartition(
     private readonly AppConfig _appConfig = _appConfig;
     private readonly IPartitionResolutionService _partitionResolutionService =
         partitionResolutionService;
+    private readonly IPartitionPathResolutionService _partitionPathResolutionService =
+        partitionPathResolutionService;
     private readonly IPartitionPathProbeExecutionService _partitionPathProbeExecutionService =
         partitionPathProbeExecutionService;
 
@@ -55,7 +58,17 @@ public class LocalPartition(
     private void SetupPaths()
     {
         foreach (PartitionConfig partition in _appConfig.Data.Partitions)
-            partition.Paths = [UtilsPath.GetPartitionPath(_appConfig, partition)];
+            partition.Paths =
+            [
+                _partitionPathResolutionService.Resolve(
+                    new PartitionPathSource
+                    {
+                        Paths = partition.Paths,
+                        Aliases = _appConfig.Data.Aliases,
+                        BaseDirectory = AppDomain.CurrentDomain.BaseDirectory,
+                    }
+                ),
+            ];
     }
 
     private void Print()

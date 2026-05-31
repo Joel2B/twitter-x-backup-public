@@ -80,6 +80,7 @@ public static class CoreInfrastructureServiceCollectionExtensions
         services.AddSingleton<IPartitionPolicyService, PartitionPolicyService>();
         services.AddSingleton<IPartitionStateProjectionService, PartitionStateProjectionService>();
         services.AddSingleton<IPartitionResolutionService, PartitionResolutionService>();
+        services.AddSingleton<IPartitionPathResolutionService, PartitionPathResolutionService>();
         services.AddSingleton<IPartitionPathProbeService, PartitionPathProbeService>();
         services.AddSingleton<IPartitionPathProbePlanningService, PartitionPathProbePlanningService>();
         services.AddSingleton<IPartitionPathProbeExecutionService, PartitionPathProbeExecutionService>();
