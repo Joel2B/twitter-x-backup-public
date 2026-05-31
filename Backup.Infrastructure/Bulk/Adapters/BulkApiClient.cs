@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Bulk.Abstractions.Services;
 using Backup.Application.Bulk;
+using Backup.Application.Bulk.Models;
 using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Bulk.Models;
 using Backup.Infrastructure.Models.Config.Api;
@@ -14,7 +15,7 @@ public sealed class BulkApiClient(
     ILogger<BulkApiClient> logger,
     IBulkApiResultPolicyService bulkApiResultPolicyService,
     IBulkRequestFactory bulkRequestFactory,
-    IBulkSourceRouteProvider bulkSourceRouteProvider,
+    IBulkSourceRouteService bulkSourceRouteService,
     IPostDownloader downloader,
     IPostDomainParser parser
 ) : IBulkApiClient
@@ -23,7 +24,7 @@ public sealed class BulkApiClient(
     private readonly IBulkApiResultPolicyService _bulkApiResultPolicyService =
         bulkApiResultPolicyService;
     private readonly IBulkRequestFactory _bulkRequestFactory = bulkRequestFactory;
-    private readonly IBulkSourceRouteProvider _bulkSourceRouteProvider = bulkSourceRouteProvider;
+    private readonly IBulkSourceRouteService _bulkSourceRouteService = bulkSourceRouteService;
     private readonly IPostDownloader _downloader = downloader;
     private readonly IPostDomainParser _parser = parser;
 
@@ -44,7 +45,7 @@ public sealed class BulkApiClient(
         }
 
         request.Query.Variables["screen_name"] = userName;
-        request.Headers["Referer"] = _bulkSourceRouteProvider.GetReferer(SourceType.Notifications);
+        request.Headers["Referer"] = _bulkSourceRouteService.GetReferer(BulkSourceType.Notifications);
 
         string response = "";
 
@@ -81,7 +82,7 @@ public sealed class BulkApiClient(
         request.Query.Variables["userId"] = id;
         request.Query.Variables["count"] = count;
         request.Query.Variables["cursor"] = cursor;
-        request.Headers["Referer"] = _bulkSourceRouteProvider.GetReferer(SourceType.Notifications);
+        request.Headers["Referer"] = _bulkSourceRouteService.GetReferer(BulkSourceType.Notifications);
 
         string response = "";
 
