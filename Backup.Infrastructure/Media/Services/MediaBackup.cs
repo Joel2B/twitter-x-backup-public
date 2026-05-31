@@ -50,6 +50,7 @@ public partial class MediaBackup(
     IMediaBackupZipMutationIOService mediaBackupZipMutationIoService,
     IMediaBackupChunkPersistenceIOService mediaBackupChunkPersistenceIoService,
     IMediaBackupPhaseOrchestrationService mediaBackupPhaseOrchestrationService,
+    IMediaBackupPipelineStepCompositionService mediaBackupPipelineStepCompositionService,
     IEnumerable<IMediaBackupPipelineStep> _pipelineSteps,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaBackupStrategy, IMediaBackupPipelineActions
@@ -127,6 +128,8 @@ public partial class MediaBackup(
         mediaBackupChunkPersistenceIoService;
     private readonly IMediaBackupPhaseOrchestrationService _mediaBackupPhaseOrchestrationService =
         mediaBackupPhaseOrchestrationService;
+    private readonly IMediaBackupPipelineStepCompositionService _mediaBackupPipelineStepCompositionService =
+        mediaBackupPipelineStepCompositionService;
     private BackupChunks _backup = new()
     {
         Chunks = new()
@@ -192,7 +195,15 @@ public partial class MediaBackup(
     {
         IReadOnlyList<MediaBackupPhaseExecutionStep> plan =
             _mediaBackupPhaseOrchestrationService.BuildExecutionPlan(
-                BuildPipelinePhaseSteps(_pipelineStepsById.Values),
+                _mediaBackupPipelineStepCompositionService.BuildPhaseSteps(
+                    _pipelineStepsById.Values.Select(step => new MediaBackupPipelineStepDescriptorInput
+                    {
+                        StepId = GetPipelineStepId(step),
+                        Order = step.Order,
+                        TimerName = step.TimerName,
+                        SkipWhenStopped = step.SkipWhenStopped,
+                    })
+                ),
                 _stop
             );
 
@@ -204,18 +215,6 @@ public partial class MediaBackup(
                 await step.Execute(this);
         }
     }
-
-    private static IReadOnlyList<MediaBackupPhaseStep> BuildPipelinePhaseSteps(
-        IEnumerable<IMediaBackupPipelineStep> steps
-    ) =>
-        steps.Select(step => new MediaBackupPhaseStep
-            {
-                StepId = GetPipelineStepId(step),
-                Order = step.Order,
-                TimerName = step.TimerName,
-                SkipWhenStopped = step.SkipWhenStopped,
-            })
-            .ToList();
 
     private static string GetPipelineStepId(IMediaBackupPipelineStep step) =>
         step.GetType().FullName ?? step.GetType().Name;
