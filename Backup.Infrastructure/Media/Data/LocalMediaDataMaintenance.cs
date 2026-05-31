@@ -16,7 +16,7 @@ public class LocalMediaDataMaintenance(
     IPartition _partition,
     IMediaCache _mediaCache,
     IMediaMaintenanceDataPolicyService mediaMaintenanceDataPolicyService,
-    IMediaMaintenanceIntegrityPolicyService mediaMaintenanceIntegrityPolicyService,
+    IMediaMaintenanceIntegrityEvaluationService mediaMaintenanceIntegrityEvaluationService,
     IMediaMaintenancePrunePathSelectionService mediaMaintenancePrunePathSelectionService
 ) : IMediaDataMaintenance
 {
@@ -28,8 +28,8 @@ public class LocalMediaDataMaintenance(
     private readonly IMediaCache _mediaCache = _mediaCache;
     private readonly IMediaMaintenanceDataPolicyService _mediaMaintenanceDataPolicyService =
         mediaMaintenanceDataPolicyService;
-    private readonly IMediaMaintenanceIntegrityPolicyService _mediaMaintenanceIntegrityPolicyService =
-        mediaMaintenanceIntegrityPolicyService;
+    private readonly IMediaMaintenanceIntegrityEvaluationService _mediaMaintenanceIntegrityEvaluationService =
+        mediaMaintenanceIntegrityEvaluationService;
     private readonly IMediaMaintenancePrunePathSelectionService _mediaMaintenancePrunePathSelectionService =
         mediaMaintenancePrunePathSelectionService;
 
@@ -68,9 +68,7 @@ public class LocalMediaDataMaintenance(
                 string fullPath = string.Empty;
                 bool isValid = false;
 
-                if (size is null)
-                    nullCount++;
-                else
+                if (size is not null)
                 {
                     if (size < IntegritySizeThreshold)
                     {
@@ -80,20 +78,19 @@ public class LocalMediaDataMaintenance(
                             () => _logger.LogWarning("path {path} not exist", fullPath)
                         );
                     }
-
-                    sizeCount++;
                 }
 
-                bool remove = _mediaMaintenanceIntegrityPolicyService.ShouldRemoveFromIntegrity(
+                var evaluation = _mediaMaintenanceIntegrityEvaluationService.Evaluate(
                     size,
                     isValid,
                     IntegritySizeThreshold
                 );
 
-                if (!remove && !isValid)
-                    invalidCount++;
+                nullCount += evaluation.NullCountIncrement;
+                sizeCount += evaluation.SizeCountIncrement;
+                invalidCount += evaluation.InvalidCountIncrement;
 
-                if (remove)
+                if (evaluation.Remove)
                     download.Data.RemoveAt(i);
             }
         }
