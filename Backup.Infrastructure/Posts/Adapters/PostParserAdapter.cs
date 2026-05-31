@@ -14,12 +14,15 @@ namespace Backup.Infrastructure.Posts.Adapters;
 
 public class PostParser(
     ILogger<PostParser> _logger,
-    IPostTimelineExtractionService postTimelineExtractionService
+    IPostTimelineExtractionService postTimelineExtractionService,
+    IPostUserParsePolicyService postUserParsePolicyService
 ) : IPostParser
 {
     private readonly ILogger<PostParser> _logger = _logger;
     private readonly IPostTimelineExtractionService _postTimelineExtractionService =
         postTimelineExtractionService;
+    private readonly IPostUserParsePolicyService _postUserParsePolicyService =
+        postUserParsePolicyService;
 
     public ParseResult Parse(string userId, string origin, string response)
     {
@@ -76,18 +79,19 @@ public class PostParser(
         if (data.User is null)
             return new ParseUser(null);
 
-        if (data.User.Result.Typename == "UserUnavailable")
+        if (_postUserParsePolicyService.IsUnavailable(data.User.Result.Typename))
         {
             _logger.LogInformation("{message}", data.User.Result.Message);
             return new ParseUser(null);
         }
 
-        PostUser user = new()
-        {
-            Id = data.User.Result.RestId ?? throw new Exception("RestId is null"),
-            MediaCount =
-                data.User.Result.Legacy?.MediaCount ?? throw new Exception("MediaCount is null"),
-        };
+        PostUser? user = _postUserParsePolicyService.CreateUser(
+            data.User.Result.RestId,
+            data.User.Result.Legacy?.MediaCount
+        );
+
+        if (user is null)
+            throw new Exception("User parse payload is invalid");
 
         return new ParseUser(user);
     }
