@@ -44,7 +44,11 @@ public partial class MediaBackup
             }
 
             _logger.LogInfo("checking changes");
-            List<MediaBackupIntegrityObservationInput> observationInputs = [];
+            IReadOnlyList<MediaBackupChunkEntryState> entryStates = BuildChunkEntryStates(
+                kvp.Value.Data
+            );
+            Dictionary<string, long?> actualFileSizeByPath = new(StringComparer.Ordinal);
+            Dictionary<string, uint?> actualCrc32ByPath = new(StringComparer.Ordinal);
 
             foreach (ChunkData item in kvp.Value.Data)
             {
@@ -54,22 +58,16 @@ public partial class MediaBackup
                     out ZipEntry? value2
                 );
 
-                observationInputs.Add(
-                    new MediaBackupIntegrityObservationInput
-                    {
-                        ChunkId = kvp.Key,
-                        Path = item.Path,
-                        ExpectedFileSize = item.FileSize,
-                        ActualFileSize = cache?.Size?.File,
-                        ExpectedCrc32 = item.Crc32,
-                        ActualCrc32 = value2?.Crc32,
-                    }
-                );
+                actualFileSizeByPath[item.Path] = cache?.Size?.File;
+                actualCrc32ByPath[item.Path] = value2?.Crc32;
             }
 
             observations.AddRange(
-                _mediaBackupIntegrityObservationCompositionService.BuildObservations(
-                    observationInputs
+                _mediaBackupIntegrityObservationCompositionService.BuildChunkObservations(
+                    kvp.Key,
+                    entryStates,
+                    actualFileSizeByPath,
+                    actualCrc32ByPath
                 )
             );
 

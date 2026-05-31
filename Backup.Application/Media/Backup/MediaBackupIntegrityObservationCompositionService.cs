@@ -5,6 +5,29 @@ namespace Backup.Application.Media.Backup;
 public sealed class MediaBackupIntegrityObservationCompositionService
     : IMediaBackupIntegrityObservationCompositionService
 {
+    public IReadOnlyList<MediaBackupIntegrityObservation> BuildChunkObservations(
+        int chunkId,
+        IEnumerable<MediaBackupChunkEntryState> entries,
+        IReadOnlyDictionary<string, long?> actualFileSizeByPath,
+        IReadOnlyDictionary<string, uint?> actualCrc32ByPath
+    ) =>
+        entries.Select(entry =>
+            {
+                actualFileSizeByPath.TryGetValue(entry.Path, out long? actualFileSize);
+                actualCrc32ByPath.TryGetValue(entry.Path, out uint? actualCrc32);
+
+                return new MediaBackupIntegrityObservation
+                {
+                    ChunkId = chunkId,
+                    Path = entry.Path,
+                    ExpectedFileSize = entry.FileSize,
+                    ActualFileSize = actualFileSize,
+                    ExpectedCrc32 = entry.Crc32,
+                    ActualCrc32 = actualCrc32,
+                };
+            })
+            .ToList();
+
     public IReadOnlyList<MediaBackupIntegrityObservation> BuildObservations(
         IEnumerable<MediaBackupIntegrityObservationInput> inputs
     ) =>
