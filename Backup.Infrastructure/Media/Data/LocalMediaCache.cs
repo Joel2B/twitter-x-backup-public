@@ -21,7 +21,8 @@ public class LocalMediaCache(
     IPartition _partition,
     IDataStoreGuardService dataStoreGuardService,
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
-    IMediaCacheRecheckPolicyService mediaCacheRecheckPolicyService
+    IMediaCacheRecheckPolicyService mediaCacheRecheckPolicyService,
+    IMediaCachePartitionSizeAggregationService mediaCachePartitionSizeAggregationService
 ) : IMediaCache
 {
     private readonly ILogger<LocalMediaCache> _logger = _logger;
@@ -32,6 +33,8 @@ public class LocalMediaCache(
         mediaCacheDirectoryPolicyService;
     private readonly IMediaCacheRecheckPolicyService _mediaCacheRecheckPolicyService =
         mediaCacheRecheckPolicyService;
+    private readonly IMediaCachePartitionSizeAggregationService _mediaCachePartitionSizeAggregationService =
+        mediaCachePartitionSizeAggregationService;
 
     private readonly ConcurrentDictionary<string, MediaCacheEntry> _cache = new(
         StringComparer.OrdinalIgnoreCase
@@ -170,11 +173,13 @@ public class LocalMediaCache(
             }
         );
 
-        Dictionary<int, long> sizes = _cache
-            .GroupBy(o => o.Value.PartitionId ?? -1)
-            .ToDictionary(o => o.Key, o => o.Sum(o => o.Value.Size?.File ?? 0));
+        IReadOnlyDictionary<int, long> sizes = _mediaCachePartitionSizeAggregationService.Aggregate(
+            _cache.Values.Select(entry =>
+                new KeyValuePair<int?, long?>(entry.PartitionId, entry.Size?.File)
+            )
+        );
 
-        _partition.SetupSizes(sizes);
+        _partition.SetupSizes(sizes.ToDictionary(item => item.Key, item => item.Value));
 
         if (recheck.Count > 0)
         {
