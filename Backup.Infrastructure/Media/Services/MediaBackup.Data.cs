@@ -16,9 +16,10 @@ public partial class MediaBackup
 
         foreach (var kvp in _chunks)
         {
-            bool isNull = _mediaBackupChunkMetadataPolicyService.RequiresRefresh(
-                kvp.Value.Data.Select(item => new MediaBackupChunkDataMetadata
+            bool isNull = _mediaBackupChunkMetadataOrchestrationService.RequiresRefresh(
+                kvp.Value.Data.Select(item => new MediaBackupChunkPathMetadataState
                 {
+                    Path = item.Path,
                     FileSize = item.FileSize,
                     Crc32 = item.Crc32,
                 })
@@ -48,7 +49,7 @@ public partial class MediaBackup
             }
 
             _logger.LogInfo("updating data");
-            List<MediaBackupChunkMetadataRefreshCandidate> candidates = [];
+            List<MediaBackupChunkMetadataObservation> observations = [];
 
             foreach (ChunkData item in kvp.Value.Data)
             {
@@ -57,29 +58,21 @@ public partial class MediaBackup
                     out ZipEntry? value
                 );
 
-                candidates.Add(
-                    new MediaBackupChunkMetadataRefreshCandidate
+                observations.Add(
+                    new MediaBackupChunkMetadataObservation
                     {
                         Path = item.Path,
                         HasEntry = value is not null,
-                        Current = new MediaBackupChunkDataMetadata
-                        {
-                            FileSize = item.FileSize,
-                            Crc32 = item.Crc32,
-                        },
-                        Entry = new MediaBackupChunkDataMetadata
-                        {
-                            FileSize = value?.FileSize,
-                            Crc32 = value?.Crc32,
-                        },
+                        CurrentFileSize = item.FileSize,
+                        CurrentCrc32 = item.Crc32,
+                        EntryFileSize = value?.FileSize,
+                        EntryCrc32 = value?.Crc32,
                     }
                 );
             }
 
-            MediaBackupChunkMetadataRefreshPlan plan =
-                _mediaBackupChunkMetadataRefreshPlanningService.Plan(candidates);
-            Dictionary<string, MediaBackupChunkDataMetadata> updates = plan
-                .Updates.ToDictionary(update => update.Path, update => update.Metadata);
+            IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> updates =
+                _mediaBackupChunkMetadataOrchestrationService.PlanUpdates(observations);
 
             foreach (ChunkData item in kvp.Value.Data)
             {

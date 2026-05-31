@@ -25,18 +25,18 @@ public partial class MediaBackup(
     IMediaBackupDirectApplyPathService mediaBackupDirectApplyPathService,
     IMediaBackupIntegrityPlanningService mediaBackupIntegrityPlanningService,
     IMediaBackupIntegrityChangeDetectionService mediaBackupIntegrityChangeDetectionService,
-    IMediaBackupIntegrityChunkDataSelectionService mediaBackupIntegrityChunkDataSelectionService,
     IMediaBackupDirectPathCandidateDecisionService mediaBackupDirectPathCandidateDecisionService,
     IMediaBackupDirectPathQueueService mediaBackupDirectPathQueueService,
     IMediaBackupPathProjectionService mediaBackupPathProjectionService,
+    IMediaBackupPathCandidateCompositionService mediaBackupPathCandidateCompositionService,
     IMediaBackupChunkFailureOrchestrationService mediaBackupChunkFailureOrchestrationService,
     IMediaBackupApplyChunkPlanningService mediaBackupApplyChunkPlanningService,
     IMediaBackupChunkPlanningService mediaBackupChunkPlanningService,
     IMediaBackupChunkCountDeltaService mediaBackupChunkCountDeltaService,
     IMediaBackupChunkDeltaLogPlanningService mediaBackupChunkDeltaLogPlanningService,
-    IMediaBackupChunkMetadataPolicyService mediaBackupChunkMetadataPolicyService,
-    IMediaBackupChunkMetadataRefreshPlanningService mediaBackupChunkMetadataRefreshPlanningService,
     IMediaBackupChunkReportService mediaBackupChunkReportService,
+    IMediaBackupChunkMetadataOrchestrationService mediaBackupChunkMetadataOrchestrationService,
+    IMediaBackupIntegrityChunkUpdateOrchestrationService mediaBackupIntegrityChunkUpdateOrchestrationService,
     IMediaBackupZipEntryReaderIOService mediaBackupZipEntryReaderIoService,
     IMediaBackupZipMutationIOService mediaBackupZipMutationIoService,
     IMediaBackupChunkPersistenceIOService mediaBackupChunkPersistenceIoService,
@@ -67,14 +67,14 @@ public partial class MediaBackup(
         mediaBackupIntegrityPlanningService;
     private readonly IMediaBackupIntegrityChangeDetectionService _mediaBackupIntegrityChangeDetectionService =
         mediaBackupIntegrityChangeDetectionService;
-    private readonly IMediaBackupIntegrityChunkDataSelectionService _mediaBackupIntegrityChunkDataSelectionService =
-        mediaBackupIntegrityChunkDataSelectionService;
     private readonly IMediaBackupDirectPathCandidateDecisionService _mediaBackupDirectPathCandidateDecisionService =
         mediaBackupDirectPathCandidateDecisionService;
     private readonly IMediaBackupDirectPathQueueService _mediaBackupDirectPathQueueService =
         mediaBackupDirectPathQueueService;
     private readonly IMediaBackupPathProjectionService _mediaBackupPathProjectionService =
         mediaBackupPathProjectionService;
+    private readonly IMediaBackupPathCandidateCompositionService _mediaBackupPathCandidateCompositionService =
+        mediaBackupPathCandidateCompositionService;
     private readonly IMediaBackupChunkFailureOrchestrationService _mediaBackupChunkFailureOrchestrationService =
         mediaBackupChunkFailureOrchestrationService;
     private readonly IMediaBackupApplyChunkPlanningService _mediaBackupApplyChunkPlanningService =
@@ -85,12 +85,12 @@ public partial class MediaBackup(
         mediaBackupChunkCountDeltaService;
     private readonly IMediaBackupChunkDeltaLogPlanningService _mediaBackupChunkDeltaLogPlanningService =
         mediaBackupChunkDeltaLogPlanningService;
-    private readonly IMediaBackupChunkMetadataPolicyService _mediaBackupChunkMetadataPolicyService =
-        mediaBackupChunkMetadataPolicyService;
-    private readonly IMediaBackupChunkMetadataRefreshPlanningService _mediaBackupChunkMetadataRefreshPlanningService =
-        mediaBackupChunkMetadataRefreshPlanningService;
     private readonly IMediaBackupChunkReportService _mediaBackupChunkReportService =
         mediaBackupChunkReportService;
+    private readonly IMediaBackupChunkMetadataOrchestrationService _mediaBackupChunkMetadataOrchestrationService =
+        mediaBackupChunkMetadataOrchestrationService;
+    private readonly IMediaBackupIntegrityChunkUpdateOrchestrationService _mediaBackupIntegrityChunkUpdateOrchestrationService =
+        mediaBackupIntegrityChunkUpdateOrchestrationService;
     private readonly IMediaBackupZipEntryReaderIOService _mediaBackupZipEntryReaderIoService =
         mediaBackupZipEntryReaderIoService;
     private readonly IMediaBackupZipMutationIOService _mediaBackupZipMutationIoService =

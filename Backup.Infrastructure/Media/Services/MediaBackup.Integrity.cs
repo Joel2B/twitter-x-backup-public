@@ -167,35 +167,42 @@ public partial class MediaBackup
             }
 
             _logger.LogInfo("expanding chunk");
+            IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByPath =
+                _mediaBackupChunkMetadataOrchestrationService.BuildPathMetadataMap(
+                    change.Paths.Select(path =>
+                    {
+                        entries.TryGetValue(
+                            _mediaBackupPathProjectionService.ToArchivePath(path),
+                            out ZipEntry? value
+                        );
 
-            MediaBackupIntegrityChunkDataSelectionResult selected =
-                _mediaBackupIntegrityChunkDataSelectionService.Select(
+                        return new MediaBackupChunkPathMetadataState
+                        {
+                            Path = path,
+                            FileSize = value?.FileSize,
+                            Crc32 = value?.Crc32,
+                        };
+                    })
+                );
+
+            MediaBackupIntegrityUpdateSelectionPlan selection =
+                _mediaBackupIntegrityChunkUpdateOrchestrationService.SelectAndValidate(
                     change.Paths,
-                    _chunks[change.ChunkId].Data.Select(chunkData => chunkData.Path)
+                    _chunks[change.ChunkId].Data.Select(chunkData => chunkData.Path),
+                    metadataByPath
                 );
 
-            if (!selected.IsComplete)
-                throw new Exception(
-                    $"missing paths while fixing integrity: {string.Join(", ", selected.MissingPaths)}"
-                );
+            Dictionary<string, ChunkData> dataByPath = _chunks[change.ChunkId]
+                .Data.ToDictionary(item => item.Path);
 
-            HashSet<string> selectedPaths = [.. selected.SelectedPaths];
-            Dictionary<string, ChunkData> data = _chunks[change.ChunkId]
-                .Data.Where(chunkData => selectedPaths.Contains(chunkData.Path))
-                .ToDictionary(o => o.Path);
-
-            foreach (var item in data.Values)
+            foreach (string path in selection.SelectedPaths)
             {
-                entries.TryGetValue(
-                    _mediaBackupPathProjectionService.ToArchivePath(item.Path),
-                    out ZipEntry? value
-                );
+                if (!dataByPath.TryGetValue(path, out ChunkData? item))
+                    continue;
 
-                if (value is null)
-                    throw new Exception();
-
-                item.FileSize = value.FileSize;
-                item.Crc32 = value.Crc32;
+                MediaBackupChunkDataMetadata metadata = selection.PathMetadata[path];
+                item.FileSize = metadata.FileSize;
+                item.Crc32 = metadata.Crc32;
 
                 _logger.LogInfo("{path} updated", item.Path);
             }

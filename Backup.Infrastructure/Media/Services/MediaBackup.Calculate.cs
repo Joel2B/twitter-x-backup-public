@@ -47,9 +47,7 @@ public partial class MediaBackup
 
         _logger.LogInfo("expanding chunks");
 
-        Dictionary<string, ChunkData> data = _chunks
-            .Values.SelectMany(chunk => chunk.Data)
-            .ToDictionary(o => o.Path, o => o);
+        HashSet<string> assignedCachePaths = [.. _chunks.Values.SelectMany(chunk => chunk.Data).Select(o => o.Path)];
 
         foreach (int missingChunkId in plan.MissingChunkIds)
             _chunks.Add(missingChunkId, new() { Id = missingChunkId });
@@ -63,25 +61,28 @@ public partial class MediaBackup
             })
             .ToList();
 
-        List<MediaBackupPathCandidate> candidates = [];
+        List<MediaBackupPathCacheObservation> candidateObservations = [];
 
         foreach (string path in _paths)
         {
             MediaCacheEntry? cache = await MediaData.GetCache(path);
 
-            if (cache is null)
-                continue;
-
-            candidates.Add(
-                new MediaBackupPathCandidate
+            candidateObservations.Add(
+                new MediaBackupPathCacheObservation
                 {
                     OriginalPath = path,
-                    CachePath = cache.Path,
-                    FileSizeBytes = cache.Size?.File,
-                    IsAlreadyAssigned = data.ContainsKey(cache.Path),
+                    CacheExists = cache is not null,
+                    CachePath = cache?.Path ?? string.Empty,
+                    FileSizeBytes = cache?.Size?.File,
                 }
             );
         }
+
+        IReadOnlyList<MediaBackupPathCandidate> candidates =
+            _mediaBackupPathCandidateCompositionService.Compose(
+                candidateObservations,
+                assignedCachePaths
+            );
 
         MediaBackupChunkAssignmentResult assignment = _mediaBackupChunkAssignmentService.Assign(
             chunkStates,
