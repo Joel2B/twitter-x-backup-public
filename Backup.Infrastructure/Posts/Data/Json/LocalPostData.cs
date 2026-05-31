@@ -25,6 +25,7 @@ public partial class LocalPostData(
     IPostHashingService postHashingService,
     IPostHistoryPrunePolicyService postHistoryPrunePolicyService,
     IPostSnapshotSizeGuardService postSnapshotSizeGuardService,
+    IPostChangeComputationService postChangeComputationService,
     IDataStoreGuardService dataStoreGuardService
 ) : IPostDataStore, ISetup
 {
@@ -47,6 +48,8 @@ public partial class LocalPostData(
         postHistoryPrunePolicyService;
     private readonly IPostSnapshotSizeGuardService _postSnapshotSizeGuardService =
         postSnapshotSizeGuardService;
+    private readonly IPostChangeComputationService _postChangeComputationService =
+        postChangeComputationService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     private Dictionary<string, Post>? _postsCache = null;
@@ -159,23 +162,12 @@ public partial class LocalPostData(
             if (post.Changes.Count == 0)
                 continue;
 
-            List<Change> orderedChanges = post
-                .Changes.Select((change, index) => new { Change = change, Index = index })
-                .OrderBy(o => o.Change.Date)
-                .ThenBy(o => o.Index)
-                .Select(o => o.Change)
-                .ToList();
+            Backup.Domain.Posts.Post domainPost = PostReplicationMapper.ToDomain(post);
+            IReadOnlyList<Backup.Application.Posts.Models.PostComputedChange> computedChanges =
+                _postChangeComputationService.Compute(domainPost);
 
-            for (int i = 0; i < orderedChanges.Count; i++)
-            {
-                List<PostChangeFieldRow> fields = BuildChangeFields(post, orderedChanges, i);
-
-                if (fields.Count == 0)
-                    continue;
-
-                changes++;
-                changeFields += fields.Count;
-            }
+            changes += computedChanges.Count;
+            changeFields += computedChanges.Sum(change => change.Fields.Count);
         }
 
         return new PostStoreCounts

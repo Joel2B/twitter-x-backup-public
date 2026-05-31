@@ -1,3 +1,4 @@
+using Backup.Application.Posts;
 using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.EntityFrameworkCore;
@@ -49,14 +50,18 @@ public partial class SqlitePostData
         entity.CountMedia = profile.Count?.Media;
     }
 
-    private static PostEntity ToEntity(Post post, PostProfileEntity profile)
+    private static PostEntity ToEntity(
+        Post post,
+        PostProfileEntity profile,
+        IPostChangeComputationService postChangeComputationService
+    )
     {
         Dictionary<string, PostProfileEntity> profiles = new(StringComparer.Ordinal)
         {
             [profile.Id] = profile,
         };
 
-        PostEntity entity = ToEntity(post, profiles);
+        PostEntity entity = ToEntity(post, profiles, postChangeComputationService);
         entity.Profile = profile;
         entity.ProfileId = profile.Id;
         return entity;

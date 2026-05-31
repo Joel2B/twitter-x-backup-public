@@ -1,3 +1,6 @@
+using Backup.Application.Posts;
+using Backup.Application.Posts.Models;
+using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Posts.Models;
 
 namespace Backup.Infrastructure.Posts.Data.Sqlite;
@@ -16,7 +19,11 @@ public partial class SqlitePostData
             CountMedia = profile.Count?.Media,
         };
 
-    private static PostEntity ToEntity(Post post, Dictionary<string, PostProfileEntity> profileById)
+    private static PostEntity ToEntity(
+        Post post,
+        Dictionary<string, PostProfileEntity> profileById,
+        IPostChangeComputationService postChangeComputationService
+    )
     {
         PostEntity entity = new()
         {
@@ -89,33 +96,33 @@ public partial class SqlitePostData
             }
         }
 
-        List<Change> orderedChanges = post
-            .Changes.Select((change, index) => new { Change = change, Index = index })
-            .OrderBy(o => o.Change.Date)
-            .ThenBy(o => o.Index)
-            .Select(o => o.Change)
-            .ToList();
+        Backup.Domain.Posts.Post domainPost = PostReplicationMapper.ToDomain(post);
+        IReadOnlyList<PostComputedChange> computedChanges = postChangeComputationService.Compute(
+            domainPost
+        );
 
-        for (int i = 0; i < orderedChanges.Count; i++)
+        for (int i = 0; i < computedChanges.Count; i++)
         {
-            Change change = orderedChanges[i];
-            List<PostChangeFieldEntity> fields = BuildChangeFields(post, orderedChanges, i);
-
-            if (fields.Count == 0)
-                continue;
+            PostComputedChange change = computedChanges[i];
 
             PostChangeEntity changeEntity = new()
             {
                 PostId = post.Id,
                 UserId = change.UserId,
                 Date = change.Date,
-                ChangeType = GetChangeType(fields),
+                ChangeType = change.ChangeType,
             };
 
-            foreach (PostChangeFieldEntity field in fields)
+            foreach (PostComputedChangeField field in change.Fields)
             {
-                field.Change = changeEntity;
-                changeEntity.Fields.Add(field);
+                changeEntity.Fields.Add(
+                    new PostChangeFieldEntity
+                    {
+                        Field = field.Field,
+                        OldValueJson = field.OldValueJson,
+                        NewValueJson = field.NewValueJson,
+                    }
+                );
             }
 
             entity.Changes.Add(changeEntity);

@@ -157,7 +157,7 @@ public partial class SqlitePostData
                     post.Profile
                 );
 
-                PostEntity created = ToEntity(post, profileEntity);
+                PostEntity created = ToEntity(post, profileEntity, _postChangeComputationService);
                 batch.Add(created);
 
                 if (batch.Count < SqlInChunkSize)
@@ -289,7 +289,7 @@ public partial class SqlitePostData
                     post.Profile
                 );
 
-                PostEntity entity = ToEntity(post, profile);
+                PostEntity entity = ToEntity(post, profile, _postChangeComputationService);
                 batch.Add(entity);
 
                 if (batch.Count < SqlInChunkSize)

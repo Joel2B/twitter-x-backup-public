@@ -34,7 +34,7 @@ public partial class LocalPostData
         }
     }
 
-    private static LocalPostTables BuildTables(List<Post> posts)
+    private LocalPostTables BuildTables(List<Post> posts)
     {
         LocalPostTables tables = new();
         Dictionary<string, ProfileRow> profileById = new(StringComparer.Ordinal);

@@ -17,7 +17,8 @@ public partial class SqlitePostData(
     IPostSoftDeleteSelectionService postSoftDeleteSelectionService,
     IPostSnapshotNormalizationService postSnapshotNormalizationService,
     IPostMediaInputsCompositionService postMediaInputsCompositionService,
-    IPostHashingService postHashingService
+    IPostHashingService postHashingService,
+    IPostChangeComputationService postChangeComputationService
 ) : IPostDataStore, ISetup, IAsyncDisposable
 {
     public string? Id { get; set; }
@@ -34,6 +35,8 @@ public partial class SqlitePostData(
     private readonly IPostMediaInputsCompositionService _postMediaInputsCompositionService =
         postMediaInputsCompositionService;
     private readonly IPostHashingService _postHashingService = postHashingService;
+    private readonly IPostChangeComputationService _postChangeComputationService =
+        postChangeComputationService;
     private PostsDbContext? _db;
     private const int SqlInChunkSize = 5000;
 
