@@ -16,10 +16,11 @@ public partial class MediaBackup
 
         foreach (var kvp in _chunks)
         {
-            bool isNull = _mediaBackupChunkMetadataOrchestrationService.RequiresRefresh(
-                _mediaBackupChunkMetadataObservationCompositionService.BuildPathMetadataStates(
-                    BuildChunkEntryStates(kvp.Value.Data)
-                )
+            IReadOnlyList<MediaBackupChunkEntryState> entryStates = BuildChunkEntryStates(
+                kvp.Value.Data
+            );
+            bool isNull = _mediaBackupChunkMetadataRefreshExecutionService.RequiresRefresh(
+                entryStates
             );
 
             if (!isNull)
@@ -46,44 +47,32 @@ public partial class MediaBackup
             }
 
             _logger.LogInfo("updating data");
-            List<MediaBackupChunkMetadataObservationInput> observationInputs = [];
-
-            foreach (ChunkData item in kvp.Value.Data)
-            {
-                entries.TryGetValue(
-                    _mediaBackupPathProjectionService.ToArchivePath(item.Path),
-                    out ZipEntry? value
-                );
-
-                observationInputs.Add(
-                    new MediaBackupChunkMetadataObservationInput
+            IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> archiveMetadataByPath =
+                kvp.Value.Data.ToDictionary(
+                    item => item.Path,
+                    item =>
                     {
-                        Path = item.Path,
-                        HasEntry = value is not null,
-                        CurrentFileSize = item.FileSize,
-                        CurrentCrc32 = item.Crc32,
-                        EntryFileSize = value?.FileSize,
-                        EntryCrc32 = value?.Crc32,
-                    }
+                        entries.TryGetValue(
+                            _mediaBackupPathProjectionService.ToArchivePath(item.Path),
+                            out ZipEntry? value
+                        );
+
+                        return new MediaBackupChunkDataMetadata
+                        {
+                            FileSize = value?.FileSize,
+                            Crc32 = value?.Crc32,
+                        };
+                    },
+                    StringComparer.Ordinal
                 );
-            }
 
-            IReadOnlyList<MediaBackupChunkMetadataObservation> observations =
-                _mediaBackupChunkMetadataObservationCompositionService.BuildObservations(
-                    observationInputs
+            MediaBackupChunkMetadataRefreshExecutionResult refreshResult =
+                _mediaBackupChunkMetadataRefreshExecutionService.Refresh(
+                    entryStates,
+                    archiveMetadataByPath
                 );
 
-            IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> updates =
-                _mediaBackupChunkMetadataOrchestrationService.PlanUpdates(observations);
-
-            foreach (ChunkData item in kvp.Value.Data)
-            {
-                if (!updates.TryGetValue(item.Path, out MediaBackupChunkDataMetadata? metadata))
-                    continue;
-
-                item.FileSize = metadata.FileSize;
-                item.Crc32 = metadata.Crc32;
-            }
+            ApplyChunkEntryStates(kvp.Value, refreshResult.Entries);
 
             _logger.LogInfo("saving chunk");
             await _mediaBackupChunkPersistenceIoService.SaveChunk(_mediaBackupData, kvp.Value);
