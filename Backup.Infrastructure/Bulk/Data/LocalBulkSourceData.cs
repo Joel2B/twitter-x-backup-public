@@ -90,21 +90,11 @@ public class LocalBulkSourceData(
         foreach (PartitionConfig partition in partitions)
         {
             string path = GetPathSources(partition);
-            HashSet<string> replicaFileNames =
-            [
-                .. Directory
-                    .EnumerateFiles(path)
-                    .Select(file => Path.GetFileName(file))
-                    .Where(fileName => !string.IsNullOrWhiteSpace(fileName)),
-            ];
-
-            IReadOnlyList<string> missingFileNames = _bulkSourceReplicationPolicyService.GetMissingFiles(
-                Directory
-                    .EnumerateFiles(mainPath)
-                    .Select(file => Path.GetFileName(file))
-                    .Where(fileName => !string.IsNullOrWhiteSpace(fileName)),
-                replicaFileNames
-            );
+            IReadOnlyList<string> missingFileNames =
+                _bulkSourceReplicationPolicyService.GetMissingFilesFromPaths(
+                    Directory.EnumerateFiles(mainPath),
+                    Directory.EnumerateFiles(path)
+                );
 
             foreach (string fileName in missingFileNames)
             {

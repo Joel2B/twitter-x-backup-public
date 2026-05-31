@@ -6,4 +6,9 @@ public interface IBulkSourceReplicationPolicyService
         IEnumerable<string> primaryFileNames,
         IEnumerable<string> replicaFileNames
     );
+
+    IReadOnlyList<string> GetMissingFilesFromPaths(
+        IEnumerable<string> primaryFilePaths,
+        IEnumerable<string> replicaFilePaths
+    );
 }
