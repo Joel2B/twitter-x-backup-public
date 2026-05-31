@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Proxy.Abstractions.Data;
+using Backup.Application.IO;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
@@ -9,10 +10,11 @@ using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Proxy.Data;
 
-public class LocalProxyData(AppConfig _config, IPartition _partition) : IProxyData, ISetup
+public class LocalProxyData(AppConfig _config, IPartition _partition, IDataStoreGuardService dataStoreGuardService) : IProxyData, ISetup
 {
     private readonly AppConfig _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     public Task Setup()
     {
@@ -38,7 +40,7 @@ public class LocalProxyData(AppConfig _config, IPartition _partition) : IProxyDa
     private string GetPathFile() =>
         Path.Combine(
             GetPath(),
-            _config.Proxy.Data.Proxy.File ?? throw new Exception("file not configured")
+            _dataStoreGuardService.RequireConfiguredFileName(_config.Proxy.Data.Proxy.File)
         );
 
     public async Task<List<ProxyData>?> GetAll()
@@ -50,9 +52,11 @@ public class LocalProxyData(AppConfig _config, IPartition _partition) : IProxyDa
 
         string content = await File.ReadAllTextAsync(path);
 
-        List<ProxyData>? datas =
-            JsonConvert.DeserializeObject<List<ProxyData>>(content)
-            ?? throw new Exception("Error deserializing the file.");
+        List<ProxyData>? deserialized = JsonConvert.DeserializeObject<List<ProxyData>>(content);
+        List<ProxyData> datas = _dataStoreGuardService.RequireDeserialized(
+            deserialized,
+            "Error deserializing the file."
+        );
 
         return datas;
     }

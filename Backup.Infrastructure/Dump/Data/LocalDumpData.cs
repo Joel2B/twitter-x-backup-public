@@ -1,5 +1,6 @@
 using Backup.Application.Dump;
 using Backup.Application.Dump.Models;
+using Backup.Application.IO;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Dump.Abstractions.Data;
 using Backup.Infrastructure.Core.Abstractions.Partition;
@@ -26,7 +27,8 @@ public class LocalDumpData(
     IDumpProgressPolicyService dumpProgressPolicyService,
     IDumpIndexFilePolicyService dumpIndexFilePolicyService,
     IDumpContextGuardService dumpContextGuardService,
-    IDumpSessionNamingPolicyService dumpSessionNamingPolicyService
+    IDumpSessionNamingPolicyService dumpSessionNamingPolicyService,
+    IDataStoreGuardService dataStoreGuardService
 ) : IDumpDataStore
 {
     public string? Id { get; set; }
@@ -41,9 +43,11 @@ public class LocalDumpData(
     private readonly IDumpContextGuardService _dumpContextGuardService = dumpContextGuardService;
     private readonly IDumpSessionNamingPolicyService _dumpSessionNamingPolicyService =
         dumpSessionNamingPolicyService;
+    private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     private DumpData? _dumpData;
-    private DumpData Data => _dumpData ?? throw new Exception("Dump data not initialized");
+    private DumpData Data =>
+        _dataStoreGuardService.RequireInitialized(_dumpData, "Dump data not initialized");
 
     public Task Setup() => Task.CompletedTask;
 
@@ -73,11 +77,9 @@ public class LocalDumpData(
     private async Task<string> GetPathData(ApiContext context)
     {
         string path = await GetPathCurrent(context);
+        string fileName = _dataStoreGuardService.RequireConfiguredFileName(_config.Paths.Dumps.Dump.File);
 
-        return Path.Combine(
-            path,
-            _config.Paths.Dumps.Dump.File ?? throw new Exception("file not configured")
-        );
+        return Path.Combine(path, fileName);
     }
 
     private async Task<string> GetPathIndex(ApiContext context)
@@ -115,14 +117,14 @@ public class LocalDumpData(
     {
         string path = await GetPathData(context);
 
-        if (!File.Exists(path))
-            throw new Exception("File doesn't exist");
+        _dataStoreGuardService.EnsureFileExists(path);
 
         string content = await File.ReadAllTextAsync(path);
-        DumpData? data = JsonConvert.DeserializeObject<DumpData>(content);
-
-        if (data is null)
-            throw new Exception("Error in deserialize");
+        DumpData? deserialized = JsonConvert.DeserializeObject<DumpData>(content);
+        DumpData data = _dataStoreGuardService.RequireDeserialized(
+            deserialized,
+            "Error in deserialize"
+        );
 
         _dumpData = data;
     }
@@ -215,10 +217,11 @@ public class LocalDumpData(
         foreach (string path in indexPaths)
         {
             string content = await File.ReadAllTextAsync(path);
-            List<Post>? _posts = JsonConvert.DeserializeObject<List<Post>>(content);
-
-            if (_posts is null)
-                throw new Exception("Error in deserialize");
+            List<Post>? deserialized = JsonConvert.DeserializeObject<List<Post>>(content);
+            List<Post> _posts = _dataStoreGuardService.RequireDeserialized(
+                deserialized,
+                "Error in deserialize"
+            );
 
             dumpPosts.AddRange(_posts);
         }

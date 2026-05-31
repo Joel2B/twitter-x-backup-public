@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
+using Backup.Application.IO;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Media.Abstractions.Services;
@@ -16,12 +17,14 @@ namespace Backup.Infrastructure.Media.Data;
 public class LocalMediaCache(
     ILogger<LocalMediaCache> _logger,
     StorageMedia _config,
-    IPartition _partition
+    IPartition _partition,
+    IDataStoreGuardService dataStoreGuardService
 ) : IMediaCache
 {
     private readonly ILogger<LocalMediaCache> _logger = _logger;
     private readonly StorageMedia _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     private readonly ConcurrentDictionary<string, MediaCacheEntry> _cache = new(
         StringComparer.OrdinalIgnoreCase
@@ -69,10 +72,9 @@ public class LocalMediaCache(
 
     public string GetPathCacheFile(PartitionConfig partition)
     {
-        if (_config.Paths.Cache.File is null)
-            throw new Exception("file not configured");
+        string fileName = _dataStoreGuardService.RequireConfiguredFileName(_config.Paths.Cache.File);
 
-        return Path.Combine(GetPathCache(partition), _config.Paths.Cache.File);
+        return Path.Combine(GetPathCache(partition), fileName);
     }
 
     public string GetPathCacheFilePrimary() => GetPathCacheFile(_partition.GetPrimary());

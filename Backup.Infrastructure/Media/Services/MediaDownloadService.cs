@@ -1,6 +1,7 @@
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Application.Media;
+using Backup.Application.IO;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Media.Models.Logging;
@@ -14,6 +15,7 @@ class MediaDownloadService(
     AppConfig _config,
     IMediaParallelDownloadPolicyService mediaParallelDownloadPolicyService,
     IMediaDownloadPathPriorityPolicyService mediaDownloadPathPriorityPolicyService,
+    IDataStoreGuardService dataStoreGuardService,
     IMediaDownloader _downloader,
     IMediaLogger _mediaLogger,
     IProxyProvider proxyProvider
@@ -25,12 +27,14 @@ class MediaDownloadService(
         mediaParallelDownloadPolicyService;
     private readonly IMediaDownloadPathPriorityPolicyService _mediaDownloadPathPriorityPolicyService =
         mediaDownloadPathPriorityPolicyService;
+    private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
     private readonly IMediaDownloader _downloader = _downloader;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;
     private readonly IProxyProvider _proxyProvider = proxyProvider;
 
     private IMediaStorage? _mediaData;
-    private IMediaStorage Data => _mediaData ?? throw new Exception("media data not initialized");
+    private IMediaStorage Data =>
+        _dataStoreGuardService.RequireInitialized(_mediaData, "media data not initialized");
 
     public async Task Download(List<Download> downloads, IMediaStorage data)
     {

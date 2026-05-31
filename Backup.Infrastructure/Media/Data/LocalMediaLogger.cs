@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Application.Media;
+using Backup.Application.IO;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
@@ -15,7 +16,8 @@ public class LocalMediaLogger(
     ILogger<LocalMediaLogger> _logger,
     AppConfig config,
     IPartition _partition,
-    IMediaLogFilePolicyService mediaLogFilePolicyService
+    IMediaLogFilePolicyService mediaLogFilePolicyService,
+    IDataStoreGuardService dataStoreGuardService
 ) : IMediaLogger, ISetup
 {
     private readonly ILogger<LocalMediaLogger> _logger = _logger;
@@ -23,6 +25,7 @@ public class LocalMediaLogger(
     private readonly IPartition _partition = _partition;
     private readonly IMediaLogFilePolicyService _mediaLogFilePolicyService =
         mediaLogFilePolicyService;
+    private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     private readonly ConcurrentDictionary<string, Logs> _errors = new();
     private readonly ConcurrentDictionary<string, Logs> _logs = new();
@@ -84,10 +87,11 @@ public class LocalMediaLogger(
             return null;
 
         string content = await File.ReadAllTextAsync(lastLogPath);
-        List<Logs>? errors = JsonConvert.DeserializeObject<List<Logs>>(content);
-
-        if (errors is null)
-            throw new Exception("Error in deserialize");
+        List<Logs>? deserialized = JsonConvert.DeserializeObject<List<Logs>>(content);
+        List<Logs> errors = _dataStoreGuardService.RequireDeserialized(
+            deserialized,
+            "Error in deserialize"
+        );
 
         if (errors.Count == 0)
             return null;

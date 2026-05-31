@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Core.Abstractions.Setup;
+using Backup.Application.IO;
 using Backup.Infrastructure.Media.Abstractions.Data;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data;
@@ -12,12 +13,14 @@ namespace Backup.Infrastructure.Media.Data;
 public class LocalMediaBackup(
     ILogger<LocalMediaBackup> _logger,
     StorageBackup _config,
-    IPartition _partition
+    IPartition _partition,
+    IDataStoreGuardService dataStoreGuardService
 ) : IMediaBackupData, ISetup
 {
     private readonly ILogger<LocalMediaBackup> _logger = _logger;
     private readonly StorageBackup _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     public Task Setup()
     {
@@ -51,10 +54,10 @@ public class LocalMediaBackup(
 
     public async Task<BackupChunks?> GetBackup()
     {
-        if (_config.Chunk.File is null)
+        if (string.IsNullOrWhiteSpace(_config.Chunk.File))
             return null;
 
-        string path = Path.Combine(GetPathChunks(), _config.Chunk.File);
+        string path = Path.Combine(GetPathChunks(), _config.Chunk.File!);
 
         if (!File.Exists(path))
             return null;
@@ -71,7 +74,7 @@ public class LocalMediaBackup(
 
     public async Task<List<Chunk>?> GetChunks(CancellationToken token = default)
     {
-        if (_config.Chunk.Data.File is null)
+        if (string.IsNullOrWhiteSpace(_config.Chunk.Data.File))
             return null;
 
         BackupChunks? backup = await GetBackup();
@@ -95,7 +98,7 @@ public class LocalMediaBackup(
                 {
                     int id = backup.Chunks.Ids[i];
 
-                    string fileName = $"{id}.{_config.Chunk.Data.File}";
+                    string fileName = $"{id}.{_config.Chunk.Data.File!}";
                     string path = Path.Combine([GetPathChunks(), fileName]);
                     string content = await File.ReadAllTextAsync(path, ct);
 
@@ -124,15 +127,15 @@ public class LocalMediaBackup(
 
     public Task<Stream?> GetChunk(Chunk chunk)
     {
-        if (_config.Chunk.Zip.File is null)
+        if (string.IsNullOrWhiteSpace(_config.Chunk.Zip.File))
             return Task.FromResult<Stream?>(null);
 
-        string fileName = $"{chunk.Id}.{_config.Chunk.Zip.File}";
+        string fileName = $"{chunk.Id}.{_config.Chunk.Zip.File!}";
         string path = Path.Combine(GetPathChunks(), fileName);
-        string? directory = Path.GetDirectoryName(path);
-
-        if (directory is null)
-            throw new Exception("error in GetDirectoryName.");
+        string directory = _dataStoreGuardService.RequireDirectoryName(
+            Path.GetDirectoryName(path),
+            "error in GetDirectoryName."
+        );
 
         Directory.CreateDirectory(directory);
 
@@ -157,9 +160,11 @@ public class LocalMediaBackup(
 
     public async Task Save(List<Chunk> chunks)
     {
+        string dataFile = _dataStoreGuardService.RequireConfiguredFileName(_config.Chunk.Data.File);
+
         foreach (Chunk chunk in chunks)
         {
-            string fileName = $"{chunk.Id}.{_config.Chunk.Data.File}";
+            string fileName = $"{chunk.Id}.{dataFile}";
             string path = Path.Combine(GetPathChunks(), fileName);
 
             string json = JsonConvert.SerializeObject(chunk, Formatting.Indented);
@@ -169,10 +174,9 @@ public class LocalMediaBackup(
 
     public async Task SaveBackup(BackupChunks backup)
     {
-        if (_config.Chunk.File is null)
-            throw new Exception("file not configured");
+        string chunkFile = _dataStoreGuardService.RequireConfiguredFileName(_config.Chunk.File);
 
-        string path = Path.Combine(GetPathChunks(), _config.Chunk.File);
+        string path = Path.Combine(GetPathChunks(), chunkFile);
         string json = JsonConvert.SerializeObject(backup, Formatting.Indented);
 
         await File.WriteAllTextAsync(path, json);
@@ -197,10 +201,10 @@ public class LocalMediaBackup(
     public async Task<Stream> Write(string path)
     {
         string fullPath = Path.Combine([GetPathDirect(), path]);
-        string? directory = Path.GetDirectoryName(fullPath);
-
-        if (directory is null)
-            throw new Exception("Error getting the directory name.");
+        string directory = _dataStoreGuardService.RequireDirectoryName(
+            Path.GetDirectoryName(fullPath),
+            "Error getting the directory name."
+        );
 
         Directory.CreateDirectory(directory);
         Stream stream = File.Open(fullPath, FileMode.Create, FileAccess.Write, FileShare.None);

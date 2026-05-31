@@ -20,6 +20,7 @@ public class ProxyProvider(
     IProxyData _data,
     IProxyRuntimePolicyService proxyRuntimePolicyService,
     IProxyHealthCheckPolicyService proxyHealthCheckPolicyService,
+    IProxyHttpClientFactoryPolicyService proxyHttpClientFactoryPolicyService,
     IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService,
     IProxyConnectionWindowPolicyService proxyConnectionWindowPolicyService,
     IProxyKeyPolicyService proxyKeyPolicyService
@@ -34,6 +35,8 @@ public class ProxyProvider(
     private readonly IProxyRuntimePolicyService _proxyRuntimePolicyService = proxyRuntimePolicyService;
     private readonly IProxyHealthCheckPolicyService _proxyHealthCheckPolicyService =
         proxyHealthCheckPolicyService;
+    private readonly IProxyHttpClientFactoryPolicyService _proxyHttpClientFactoryPolicyService =
+        proxyHttpClientFactoryPolicyService;
     private readonly IProxyHttpClientHeaderPolicyService _proxyHttpClientHeaderPolicyService =
         proxyHttpClientHeaderPolicyService;
     private readonly IProxyConnectionWindowPolicyService _proxyConnectionWindowPolicyService =
@@ -121,22 +124,11 @@ public class ProxyProvider(
 
                     _logger.LogInformation("Uri: {uri}", uri.ToString());
 
-                    using HttpClientHandler handler = new()
-                    {
-                        Proxy = new WebProxy(uri),
-                        UseProxy = true,
-                        ServerCertificateCustomValidationCallback = (
-                            message,
-                            cert,
-                            chain,
-                            errors
-                        ) => true,
-                    };
-
-                    using HttpClient client = new(handler)
-                    {
-                        Timeout = _proxyHealthCheckPolicyService.GetHealthCheckTimeout(),
-                    };
+                    using HttpClientHandler handler = _proxyHttpClientFactoryPolicyService.CreateHandler(uri);
+                    using HttpClient client = _proxyHttpClientFactoryPolicyService.CreateClient(
+                        handler,
+                        _proxyHealthCheckPolicyService.GetHealthCheckTimeout()
+                    );
 
                     using HttpRequestMessage requestHttp = new(HttpMethod.Get, url);
 
@@ -247,25 +239,21 @@ public class ProxyProvider(
 
     private void NewClient()
     {
-        HttpClientHandler handler = new();
+        Uri? proxyUri = null;
 
         if (_config.Proxy.Enabled)
         {
             string proxy = _proxies[_proxyIndex].Proxy.ToString();
-            Uri uri = new(proxy);
+            proxyUri = new Uri(proxy);
 
-            _logger.LogInformation("Uri: {uri}", uri.ToString());
-
-            handler.Proxy = new WebProxy(uri);
-            handler.UseProxy = true;
-            handler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) =>
-                true;
+            _logger.LogInformation("Uri: {uri}", proxyUri.ToString());
         }
 
-        HttpClient client = new(handler, disposeHandler: true)
-        {
-            Timeout = TimeSpan.FromSeconds(_config.Downloads.Timeout),
-        };
+        HttpClientHandler handler = _proxyHttpClientFactoryPolicyService.CreateHandler(proxyUri);
+        HttpClient client = _proxyHttpClientFactoryPolicyService.CreateClient(
+            handler,
+            TimeSpan.FromSeconds(_config.Downloads.Timeout)
+        );
 
         _proxyHttpClientHeaderPolicyService.Apply(client.DefaultRequestHeaders);
 

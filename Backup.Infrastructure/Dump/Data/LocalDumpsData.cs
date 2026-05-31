@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Dump.Abstractions.Data;
+using Backup.Application.IO;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Dump;
@@ -8,11 +9,12 @@ using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Dump.Data;
 
-public class LocalDumpsData(StorageDump _config, IPartition _partition) : IDumpsDataStore, ISetup
+public class LocalDumpsData(StorageDump _config, IPartition _partition, IDataStoreGuardService dataStoreGuardService) : IDumpsDataStore, ISetup
 {
     public bool IsDefault { get; set; }
     private readonly StorageDump _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     public async Task Setup()
     {
@@ -40,11 +42,10 @@ public class LocalDumpsData(StorageDump _config, IPartition _partition) : IDumps
 
     private string GetPathFile(PartitionConfig? partition = null)
     {
-        if (_config.Paths.Dumps.File is null)
-            throw new Exception("file not configured");
+        string fileName = _dataStoreGuardService.RequireConfiguredFileName(_config.Paths.Dumps.File);
 
         PartitionConfig primary = partition ?? _partition.GetPrimary();
-        string path = Path.Combine(GetPath(primary), _config.Paths.Dumps.File);
+        string path = Path.Combine(GetPath(primary), fileName);
 
         return path;
     }
@@ -53,14 +54,11 @@ public class LocalDumpsData(StorageDump _config, IPartition _partition) : IDumps
     {
         string path = GetPathFile();
 
-        if (!File.Exists(path))
-            throw new Exception("File doesn't exist");
+        _dataStoreGuardService.EnsureFileExists(path);
 
         string content = await File.ReadAllTextAsync(path);
-        DumpsData? data = JsonConvert.DeserializeObject<DumpsData>(content);
-
-        if (data is null)
-            throw new Exception("Error in deserialize");
+        DumpsData? deserialized = JsonConvert.DeserializeObject<DumpsData>(content);
+        DumpsData data = _dataStoreGuardService.RequireDeserialized(deserialized, "Error in deserialize");
 
         return data;
     }

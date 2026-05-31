@@ -2,6 +2,7 @@ using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Application.Bulk;
 using Backup.Application.Bulk.Models;
+using Backup.Application.IO;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Bulk.Models;
 using Backup.Infrastructure.Models.Config;
@@ -19,7 +20,8 @@ public class LocalBulkData(
     StorageBulk _config,
     IPartition _partition,
     IBulkPrunePolicyService bulkPrunePolicyService,
-    IBulkArchiveFilePolicyService bulkArchiveFilePolicyService
+    IBulkArchiveFilePolicyService bulkArchiveFilePolicyService,
+    IDataStoreGuardService dataStoreGuardService
 ) : IBulkDataStore, ISetup
 {
     public string? Id { get; set; }
@@ -32,6 +34,7 @@ public class LocalBulkData(
     private readonly IBulkPrunePolicyService _bulkPrunePolicyService = bulkPrunePolicyService;
     private readonly IBulkArchiveFilePolicyService _bulkArchiveFilePolicyService =
         bulkArchiveFilePolicyService;
+    private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     public Task Setup()
     {
@@ -47,11 +50,10 @@ public class LocalBulkData(
 
     private string GetFileBulk(PartitionConfig? partition = null)
     {
-        if (_config.Paths.Bulk.File is null)
-            throw new Exception("file not configured");
+        string fileName = _dataStoreGuardService.RequireConfiguredFileName(_config.Paths.Bulk.File);
 
         PartitionConfig primary = partition ?? _partition.GetPrimary();
-        string path = Path.Combine(GetPath(primary), _config.Paths.Bulk.File);
+        string path = Path.Combine(GetPath(primary), fileName);
 
         return path;
     }
@@ -71,9 +73,11 @@ public class LocalBulkData(
 
         string content = await File.ReadAllTextAsync(path);
 
-        List<BulkData>? bulks =
-            JsonConvert.DeserializeObject<List<BulkData>>(content)
-            ?? throw new Exception("Error deserializing the file.");
+        List<BulkData>? deserialized = JsonConvert.DeserializeObject<List<BulkData>>(content);
+        List<BulkData> bulks = _dataStoreGuardService.RequireDeserialized(
+            deserialized,
+            "Error deserializing the file."
+        );
 
         return bulks;
     }

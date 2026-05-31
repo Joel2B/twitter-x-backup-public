@@ -18,6 +18,7 @@ public static class ConfigLoader
     private static readonly ConfigNormalizationService _normalization = new();
     private static readonly ConfigApiFileSelectionService _apiFileSelection = new();
     private static readonly ConfigDeserializationGuardService _deserializationGuard = new();
+    private static readonly IConfigApiProjectionService _apiProjection = new ConfigApiProjectionService();
 
     public static string GetConfigDirectory() => Path.Combine(AppContext.BaseDirectory, "config");
 
@@ -162,12 +163,15 @@ public static class ConfigLoader
 
     private static void NormalizeApi(IReadOnlyDictionary<string, ApiConfig> api)
     {
-        List<ConfigApiEntry> entries = api
-            .Select(kvp => ToConfigApiEntry(kvp.Key, kvp.Value))
-            .ToList();
+        IReadOnlyDictionary<string, ConfigApiProjection> projections = api.ToDictionary(
+            kvp => kvp.Key,
+            kvp => ToProjection(kvp.Key, kvp.Value)
+        );
+
+        List<ConfigApiEntry> entries = [.. _apiProjection.ToEntries(projections)];
 
         _normalization.ValidateAndNormalizeApi(entries);
-        ApplyConfigApiEntries(api, entries);
+        ApplyConfigApiEntries(api, _apiProjection.ToProjections(entries));
     }
 
     private static void ApplyFetchToApi(
@@ -175,9 +179,11 @@ public static class ConfigLoader
         IReadOnlyDictionary<string, FetchItem> fetch
     )
     {
-        List<ConfigApiEntry> apiEntries = api
-            .Select(kvp => ToConfigApiEntry(kvp.Key, kvp.Value))
-            .ToList();
+        IReadOnlyDictionary<string, ConfigApiProjection> projections = api.ToDictionary(
+            kvp => kvp.Key,
+            kvp => ToProjection(kvp.Key, kvp.Value)
+        );
+        List<ConfigApiEntry> apiEntries = [.. _apiProjection.ToEntries(projections)];
 
         List<ConfigFetchEntry> fetchEntries = fetch
             .Select(kvp => new ConfigFetchEntry
@@ -191,10 +197,10 @@ public static class ConfigLoader
             .ToList();
 
         _normalization.ApplyFetchToApi(apiEntries, fetchEntries);
-        ApplyConfigApiEntries(api, apiEntries);
+        ApplyConfigApiEntries(api, _apiProjection.ToProjections(apiEntries));
     }
 
-    private static ConfigApiEntry ToConfigApiEntry(string key, ApiConfig value) =>
+    private static ConfigApiProjection ToProjection(string key, ApiConfig value) =>
         new()
         {
             Key = key,
@@ -208,11 +214,13 @@ public static class ConfigLoader
 
     private static void ApplyConfigApiEntries(
         IReadOnlyDictionary<string, ApiConfig> api,
-        IReadOnlyList<ConfigApiEntry> entries
+        IReadOnlyDictionary<string, ConfigApiProjection> projections
     )
     {
-        foreach (ConfigApiEntry entry in entries)
+        foreach (KeyValuePair<string, ConfigApiProjection> kvp in projections)
         {
+            ConfigApiProjection entry = kvp.Value;
+
             if (!api.TryGetValue(entry.Key, out ApiConfig? config))
                 continue;
 
