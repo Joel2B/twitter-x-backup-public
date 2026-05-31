@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Logging;
+using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Utility.Abstractions.Services;
 using Backup.Infrastructure.Media.Models.Backup;
@@ -72,8 +73,9 @@ public partial class MediaBackup
                     continue;
 
                 List<string> memory = [.. kvp.Value.Data.Select(o => o.Path.Replace('\\', '/'))];
-                int missing = memory.Except(storagePaths).Count();
-                IEnumerable<string> extras = storagePaths.Except(memory);
+                MediaPathDiffResult diff = _mediaBackupPathAnalysisService.Diff(memory, storagePaths);
+                int missing = diff.MissingPaths.Count;
+                IReadOnlyList<string> extras = diff.ExtraPaths;
 
                 _logger.LogInformation(
                     "{memory}/{storage}:{missing}/{extras}",
