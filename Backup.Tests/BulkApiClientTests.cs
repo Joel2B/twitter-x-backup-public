@@ -1,8 +1,9 @@
 using Backup.Domain.Posts;
 using Backup.Infrastructure.Bulk.Adapters;
 using Backup.Infrastructure.Bulk.Abstractions.Services;
+using Backup.Application.Bulk;
+using Backup.Application.Bulk.Models;
 using Backup.Infrastructure.Posts.Abstractions.Services;
-using Backup.Infrastructure.Bulk.Models;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.Request;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -16,6 +17,7 @@ public class BulkApiClientTests
     [Fact]
     public async Task Verify_DelegatesToDownloader()
     {
+        FakeBulkApiResultPolicyService resultPolicy = new();
         FakeBulkRequestFactory requestFactory = new();
         FakeBulkSourceRouteProvider routeProvider = new();
         FakePostDownloader downloader = new() { VerifyResult = true };
@@ -23,6 +25,7 @@ public class BulkApiClientTests
 
         BulkApiClient sut = new(
             NullLogger<BulkApiClient>.Instance,
+            resultPolicy,
             requestFactory,
             routeProvider,
             downloader,
@@ -38,6 +41,7 @@ public class BulkApiClientTests
     [Fact]
     public async Task GetUserByUser_WhenRequestMissing_ReturnsNull()
     {
+        FakeBulkApiResultPolicyService resultPolicy = new();
         FakeBulkRequestFactory requestFactory = new() { UserByScreenNameRequest = null };
         FakeBulkSourceRouteProvider routeProvider = new();
         FakePostDownloader downloader = new();
@@ -45,6 +49,7 @@ public class BulkApiClientTests
 
         BulkApiClient sut = new(
             NullLogger<BulkApiClient>.Instance,
+            resultPolicy,
             requestFactory,
             routeProvider,
             downloader,
@@ -65,6 +70,7 @@ public class BulkApiClientTests
     [Fact]
     public async Task GetUserByUser_SetsScreenNameAndReferer_AndParsesResponse()
     {
+        FakeBulkApiResultPolicyService resultPolicy = new();
         Request request = CreateRequest("https://x.com/graphql/user");
         FakeBulkRequestFactory requestFactory = new() { UserByScreenNameRequest = request };
         FakeBulkSourceRouteProvider routeProvider = new() { RefererValue = "https://x.com/notifications" };
@@ -76,6 +82,7 @@ public class BulkApiClientTests
 
         BulkApiClient sut = new(
             NullLogger<BulkApiClient>.Instance,
+            resultPolicy,
             requestFactory,
             routeProvider,
             downloader,
@@ -101,6 +108,7 @@ public class BulkApiClientTests
     [Fact]
     public async Task GetUserMedia_SetsVariablesAndReferer_AndParsesResponse()
     {
+        FakeBulkApiResultPolicyService resultPolicy = new();
         Request request = CreateRequest("https://x.com/graphql/media");
         FakeBulkRequestFactory requestFactory = new() { UserMediaRequest = request };
         FakeBulkSourceRouteProvider routeProvider = new() { RefererValue = "https://x.com/notifications" };
@@ -110,6 +118,7 @@ public class BulkApiClientTests
 
         BulkApiClient sut = new(
             NullLogger<BulkApiClient>.Instance,
+            resultPolicy,
             requestFactory,
             routeProvider,
             downloader,
@@ -139,6 +148,7 @@ public class BulkApiClientTests
     [Fact]
     public async Task GetUserMedia_WhenDownloaderThrows_ReturnsNull()
     {
+        FakeBulkApiResultPolicyService resultPolicy = new();
         Request request = CreateRequest("https://x.com/graphql/media");
         FakeBulkRequestFactory requestFactory = new() { UserMediaRequest = request };
         FakeBulkSourceRouteProvider routeProvider = new();
@@ -147,6 +157,7 @@ public class BulkApiClientTests
 
         BulkApiClient sut = new(
             NullLogger<BulkApiClient>.Instance,
+            resultPolicy,
             requestFactory,
             routeProvider,
             downloader,
@@ -191,14 +202,22 @@ public class BulkApiClientTests
             UserMediaRequest;
     }
 
-    private sealed class FakeBulkSourceRouteProvider : IBulkSourceRouteProvider
+    private sealed class FakeBulkSourceRouteProvider : IBulkSourceRouteService
     {
         public string RefererValue { get; init; } = "https://x.com/notifications";
 
-        public string? GetOrigin(SourceType sourceType) => "media";
+        public string? GetOrigin(BulkSourceType sourceType) => "media";
 
-        public string GetReferer(SourceType sourceType = SourceType.Notifications, string? userName = null) =>
+        public string GetReferer(
+            BulkSourceType sourceType = BulkSourceType.Notifications,
+            string? userName = null
+        ) =>
             RefererValue;
+    }
+
+    private sealed class FakeBulkApiResultPolicyService : IBulkApiResultPolicyService
+    {
+        public bool ShouldLogRawResponse(ParseResult result) => false;
     }
 
     private sealed class FakePostDownloader : IPostDownloader

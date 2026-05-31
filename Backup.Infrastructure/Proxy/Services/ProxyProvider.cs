@@ -30,6 +30,7 @@ public class ProxyProvider(
     IProxyRuntimePoolBuilderService proxyRuntimePoolBuilderService,
     IProxyHealthAcceptanceService proxyHealthAcceptanceService,
     IProxyFailureOrchestrationService proxyFailureOrchestrationService,
+    IProxyRuntimeStatusTransitionService proxyRuntimeStatusTransitionService,
     IProxyUsageTrackingService proxyUsageTrackingService,
     IProxyErrorTrackingService proxyErrorTrackingService
 )
@@ -57,6 +58,8 @@ public class ProxyProvider(
         proxyHealthAcceptanceService;
     private readonly IProxyFailureOrchestrationService _proxyFailureOrchestrationService =
         proxyFailureOrchestrationService;
+    private readonly IProxyRuntimeStatusTransitionService _proxyRuntimeStatusTransitionService =
+        proxyRuntimeStatusTransitionService;
     private readonly IProxyUsageTrackingService _proxyUsageTrackingService = proxyUsageTrackingService;
     private readonly IProxyErrorTrackingService _proxyErrorTrackingService = proxyErrorTrackingService;
 
@@ -228,7 +231,12 @@ public class ProxyProvider(
         {
             ProxyRuntimeRecord runtimeRecord = ToRuntimeRecord(proxy);
             _proxyUsageTrackingService.RegisterUse(runtimeRecord, DateTime.Now);
-            ApplyRuntimeRecord(proxy, runtimeRecord, disabledAt: null);
+            ApplyRuntimeRecord(
+                proxy,
+                runtimeRecord,
+                disabledAt: null,
+                _proxyRuntimeStatusTransitionService
+            );
         }
 
         ResetStopCount();
@@ -243,7 +251,11 @@ public class ProxyProvider(
 
         lock (proxy)
         {
-            if (proxy.Status.Current == StatusEnum.Inactive)
+            if (
+                !_proxyRuntimeStatusTransitionService.ShouldHandleError(
+                    proxy.Status.Current == StatusEnum.Active
+                )
+            )
                 return;
 
             DateTime now = DateTime.Now;
@@ -255,7 +267,11 @@ public class ProxyProvider(
                 _config.Proxy.Threshold.ErrorsToInactive,
                 now
             );
-            ApplyRuntimeRecord(proxy, runtimeRecord, tracking.WasDisabled ? now : null);
+            DateTime? disabledAt = _proxyRuntimeStatusTransitionService.ResolveDisabledAt(
+                tracking.WasDisabled,
+                now
+            );
+            ApplyRuntimeRecord(proxy, runtimeRecord, disabledAt, _proxyRuntimeStatusTransitionService);
 
             if (tracking.WasDisabled)
             {
@@ -346,7 +362,8 @@ public class ProxyProvider(
     private static void ApplyRuntimeRecord(
         ProxyData proxy,
         ProxyRuntimeRecord source,
-        DateTime? disabledAt
+        DateTime? disabledAt,
+        IProxyRuntimeStatusTransitionService transitionService
     )
     {
         proxy.Connections = source.Connections
@@ -369,14 +386,14 @@ public class ProxyProvider(
             })
             .ToList();
 
-        if (source.IsActive)
-            proxy.Status.Current = StatusEnum.Active;
-        else
-        {
-            proxy.Status.Current = StatusEnum.Inactive;
-            if (disabledAt.HasValue)
-                proxy.Status.Date = disabledAt.Value;
-        }
+        ProxyRuntimeStatusTransitionResult status = transitionService.ResolveStatus(
+            source.IsActive,
+            proxy.Status.Date,
+            disabledAt
+        );
+        proxy.Status.Current = status.IsActive ? StatusEnum.Active : StatusEnum.Inactive;
+        if (status.StatusDate.HasValue)
+            proxy.Status.Date = status.StatusDate.Value;
     }
 
     private static ProxyCandidate ToCandidate(ProxyDataConfig proxy) =>

@@ -25,6 +25,7 @@ public partial class MediaBackup(
     IMediaBackupDirectApplyPathService mediaBackupDirectApplyPathService,
     IMediaBackupIntegrityPlanningService mediaBackupIntegrityPlanningService,
     IMediaBackupIntegrityChangeDetectionService mediaBackupIntegrityChangeDetectionService,
+    IMediaBackupIntegrityChunkDataSelectionService mediaBackupIntegrityChunkDataSelectionService,
     IMediaBackupDirectPathCandidateDecisionService mediaBackupDirectPathCandidateDecisionService,
     IMediaBackupDirectPathQueueService mediaBackupDirectPathQueueService,
     IMediaBackupPathProjectionService mediaBackupPathProjectionService,
@@ -35,6 +36,7 @@ public partial class MediaBackup(
     IMediaBackupChunkCountDeltaService mediaBackupChunkCountDeltaService,
     IMediaBackupChunkDeltaLogPlanningService mediaBackupChunkDeltaLogPlanningService,
     IMediaBackupChunkMetadataPolicyService mediaBackupChunkMetadataPolicyService,
+    IMediaBackupChunkMetadataRefreshPlanningService mediaBackupChunkMetadataRefreshPlanningService,
     IMediaBackupChunkReportService mediaBackupChunkReportService,
     IEnumerable<IMediaBackupPipelineStep> _pipelineSteps,
     IDataStoreGuardService dataStoreGuardService
@@ -63,6 +65,8 @@ public partial class MediaBackup(
         mediaBackupIntegrityPlanningService;
     private readonly IMediaBackupIntegrityChangeDetectionService _mediaBackupIntegrityChangeDetectionService =
         mediaBackupIntegrityChangeDetectionService;
+    private readonly IMediaBackupIntegrityChunkDataSelectionService _mediaBackupIntegrityChunkDataSelectionService =
+        mediaBackupIntegrityChunkDataSelectionService;
     private readonly IMediaBackupDirectPathCandidateDecisionService _mediaBackupDirectPathCandidateDecisionService =
         mediaBackupDirectPathCandidateDecisionService;
     private readonly IMediaBackupDirectPathQueueService _mediaBackupDirectPathQueueService =
@@ -83,6 +87,8 @@ public partial class MediaBackup(
         mediaBackupChunkDeltaLogPlanningService;
     private readonly IMediaBackupChunkMetadataPolicyService _mediaBackupChunkMetadataPolicyService =
         mediaBackupChunkMetadataPolicyService;
+    private readonly IMediaBackupChunkMetadataRefreshPlanningService _mediaBackupChunkMetadataRefreshPlanningService =
+        mediaBackupChunkMetadataRefreshPlanningService;
     private readonly IMediaBackupChunkReportService _mediaBackupChunkReportService =
         mediaBackupChunkReportService;
     private BackupChunks _backup = new()

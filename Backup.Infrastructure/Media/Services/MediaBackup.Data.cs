@@ -48,6 +48,7 @@ public partial class MediaBackup
             }
 
             _logger.LogInfo("updating data");
+            List<MediaBackupChunkMetadataRefreshCandidate> candidates = [];
 
             foreach (ChunkData item in kvp.Value.Data)
             {
@@ -56,24 +57,37 @@ public partial class MediaBackup
                     out ZipEntry? value
                 );
 
-                if (value is null)
-                    continue;
-
-                MediaBackupChunkDataMetadata merged = _mediaBackupChunkMetadataPolicyService.Merge(
-                    new MediaBackupChunkDataMetadata
+                candidates.Add(
+                    new MediaBackupChunkMetadataRefreshCandidate
                     {
-                        FileSize = item.FileSize,
-                        Crc32 = item.Crc32,
-                    },
-                    new MediaBackupChunkDataMetadata
-                    {
-                        FileSize = value.FileSize,
-                        Crc32 = value.Crc32,
+                        Path = item.Path,
+                        HasEntry = value is not null,
+                        Current = new MediaBackupChunkDataMetadata
+                        {
+                            FileSize = item.FileSize,
+                            Crc32 = item.Crc32,
+                        },
+                        Entry = new MediaBackupChunkDataMetadata
+                        {
+                            FileSize = value?.FileSize,
+                            Crc32 = value?.Crc32,
+                        },
                     }
                 );
+            }
 
-                item.FileSize = merged.FileSize;
-                item.Crc32 = merged.Crc32;
+            MediaBackupChunkMetadataRefreshPlan plan =
+                _mediaBackupChunkMetadataRefreshPlanningService.Plan(candidates);
+            Dictionary<string, MediaBackupChunkDataMetadata> updates = plan
+                .Updates.ToDictionary(update => update.Path, update => update.Metadata);
+
+            foreach (ChunkData item in kvp.Value.Data)
+            {
+                if (!updates.TryGetValue(item.Path, out MediaBackupChunkDataMetadata? metadata))
+                    continue;
+
+                item.FileSize = metadata.FileSize;
+                item.Crc32 = metadata.Crc32;
             }
 
             _logger.LogInfo("saving chunk");

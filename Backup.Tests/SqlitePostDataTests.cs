@@ -289,12 +289,13 @@ public class SqlitePostDataTests
             NullLogger<SqlitePostData>.Instance,
             storage,
             partition,
-            new PostMergeService(),
+            new PostMergeResolutionService(new PostMergeService()),
             new PostSoftDeleteSelectionService(),
             new PostSnapshotNormalizationService(),
             new PostMediaInputsCompositionService(),
             new PostHashingService(),
-            new PostChangeComputationService()
+            new PostChangeComputationService(),
+            new PostIdentifierFilterService()
         );
         return (sut, root);
     }

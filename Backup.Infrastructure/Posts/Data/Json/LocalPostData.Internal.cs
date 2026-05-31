@@ -111,24 +111,35 @@ public partial class LocalPostData
         {
             List<string> paths = [.. GetDataFilePaths(partition)];
             List<string> pathsFormatted = [.. paths.Select(UtilsPath.GetPathFormatted)];
+            IReadOnlyList<PostDataFileReplicationOperation> operations =
+                _postDataReplicationPlanningService.Plan(mainPaths, paths);
+            IReadOnlyList<PostDataFileReplicationOperation> formattedOperations =
+                _postDataReplicationPlanningService.Plan(mainPathsFormatted, pathsFormatted);
 
-            for (int i = 0; i < paths.Count; i++)
+            foreach (PostDataFileReplicationOperation operation in operations)
             {
-                string? pathDirectory = Path.GetDirectoryName(paths[i]);
+                string? pathDirectory = Path.GetDirectoryName(operation.TargetPath);
 
                 if (!string.IsNullOrWhiteSpace(pathDirectory))
                     Directory.CreateDirectory(pathDirectory);
 
-                File.Delete(paths[i]);
-                File.Copy(mainPaths[i], paths[i]);
+                if (File.Exists(operation.TargetPath))
+                    File.Delete(operation.TargetPath);
 
-                string? formattedPathDirectory = Path.GetDirectoryName(pathsFormatted[i]);
+                File.Copy(operation.SourcePath, operation.TargetPath);
+            }
+
+            foreach (PostDataFileReplicationOperation operation in formattedOperations)
+            {
+                string? formattedPathDirectory = Path.GetDirectoryName(operation.TargetPath);
 
                 if (!string.IsNullOrWhiteSpace(formattedPathDirectory))
                     Directory.CreateDirectory(formattedPathDirectory);
 
-                File.Delete(pathsFormatted[i]);
-                File.Copy(mainPathsFormatted[i], pathsFormatted[i]);
+                if (File.Exists(operation.TargetPath))
+                    File.Delete(operation.TargetPath);
+
+                File.Copy(operation.SourcePath, operation.TargetPath);
             }
         }
     }

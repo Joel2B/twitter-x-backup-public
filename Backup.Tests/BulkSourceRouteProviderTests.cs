@@ -1,26 +1,25 @@
 using Backup.Application.Bulk;
-using Backup.Infrastructure.Bulk.Adapters;
-using Backup.Infrastructure.Bulk.Models;
+using Backup.Application.Bulk.Models;
 
 namespace Backup.Tests;
 
 public class BulkSourceRouteProviderTests
 {
-    private readonly BulkSourceRouteProvider _sut = new(new BulkSourceRouteService());
+    private readonly BulkSourceRouteService _sut = new();
 
     [Fact]
     public void GetOrigin_ReturnsExpectedValues()
     {
-        Assert.Equal("media", _sut.GetOrigin(SourceType.Media));
-        Assert.Equal("notifications", _sut.GetOrigin(SourceType.Notifications));
-        Assert.Null(_sut.GetOrigin(SourceType.Status));
-        Assert.Null(_sut.GetOrigin(SourceType.None));
+        Assert.Equal("media", _sut.GetOrigin(BulkSourceType.Media));
+        Assert.Equal("notifications", _sut.GetOrigin(BulkSourceType.Notifications));
+        Assert.Null(_sut.GetOrigin(BulkSourceType.Status));
+        Assert.Null(_sut.GetOrigin(BulkSourceType.None));
     }
 
     [Fact]
     public void GetReferer_WithoutUserName_UsesOriginPath()
     {
-        string referer = _sut.GetReferer(SourceType.Notifications);
+        string referer = _sut.GetReferer(BulkSourceType.Notifications);
 
         Assert.Equal("https://x.com/notifications", referer);
     }
@@ -28,7 +27,7 @@ public class BulkSourceRouteProviderTests
     [Fact]
     public void GetReferer_WithUserName_UsesUserOriginPath()
     {
-        string referer = _sut.GetReferer(SourceType.Media, "alice");
+        string referer = _sut.GetReferer(BulkSourceType.Media, "alice");
 
         Assert.Equal("https://x.com/alice/media", referer);
     }
@@ -36,7 +35,7 @@ public class BulkSourceRouteProviderTests
     [Fact]
     public void GetReferer_WhenOriginUnknown_StillBuildsUrl()
     {
-        string referer = _sut.GetReferer(SourceType.None);
+        string referer = _sut.GetReferer(BulkSourceType.None);
 
         Assert.Equal("https://x.com/", referer);
     }

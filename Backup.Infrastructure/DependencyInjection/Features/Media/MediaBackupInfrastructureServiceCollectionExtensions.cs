@@ -26,6 +26,7 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaBackupChunkSyncPlanningService, MediaBackupChunkSyncPlanningService>();
         services.AddScoped<IMediaBackupIntegrityPlanningService, MediaBackupIntegrityPlanningService>();
         services.AddScoped<IMediaBackupIntegrityChangeDetectionService, MediaBackupIntegrityChangeDetectionService>();
+        services.AddScoped<IMediaBackupIntegrityChunkDataSelectionService, MediaBackupIntegrityChunkDataSelectionService>();
         services.AddScoped<IMediaBackupDirectPathCandidateDecisionService, MediaBackupDirectPathCandidateDecisionService>();
         services.AddScoped<IMediaBackupDirectPathQueueService, MediaBackupDirectPathQueueService>();
         services.AddScoped<IMediaBackupPathProjectionService, MediaBackupPathProjectionService>();
@@ -40,6 +41,7 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaBackupChunkCountDeltaService, MediaBackupChunkCountDeltaService>();
         services.AddScoped<IMediaBackupChunkDeltaLogPlanningService, MediaBackupChunkDeltaLogPlanningService>();
         services.AddScoped<IMediaBackupChunkMetadataPolicyService, MediaBackupChunkMetadataPolicyService>();
+        services.AddScoped<IMediaBackupChunkMetadataRefreshPlanningService, MediaBackupChunkMetadataRefreshPlanningService>();
         services.AddScoped<IMediaBackupChunkReportService, MediaBackupChunkReportService>();
 
         Dictionary<string, Type> types = new() { ["local"] = typeof(MediaBackup) };

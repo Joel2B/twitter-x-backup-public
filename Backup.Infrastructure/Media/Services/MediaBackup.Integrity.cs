@@ -166,13 +166,21 @@ public partial class MediaBackup
 
             _logger.LogInfo("expanding chunk");
 
-            HashSet<string> changedPaths = [.. change.Paths];
-            Dictionary<string, ChunkData> data = _chunks[change.ChunkId]
-                .Data.Where(chunkData => changedPaths.Contains(chunkData.Path))
-                .ToDictionary(o => o.Path);
+            MediaBackupIntegrityChunkDataSelectionResult selected =
+                _mediaBackupIntegrityChunkDataSelectionService.Select(
+                    change.Paths,
+                    _chunks[change.ChunkId].Data.Select(chunkData => chunkData.Path)
+                );
 
-            if (data.Values.Count != change.Paths.Count)
-                throw new Exception();
+            if (!selected.IsComplete)
+                throw new Exception(
+                    $"missing paths while fixing integrity: {string.Join(", ", selected.MissingPaths)}"
+                );
+
+            HashSet<string> selectedPaths = [.. selected.SelectedPaths];
+            Dictionary<string, ChunkData> data = _chunks[change.ChunkId]
+                .Data.Where(chunkData => selectedPaths.Contains(chunkData.Path))
+                .ToDictionary(o => o.Path);
 
             foreach (var item in data.Values)
             {
