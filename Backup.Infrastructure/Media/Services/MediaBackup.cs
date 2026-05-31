@@ -18,6 +18,7 @@ public partial class MediaBackup(
     IZipWriterFactory _zipWriterFactory,
     IMediaBackupData _mediaBackupData,
     IMediaBackupPathAnalysisService mediaBackupPathAnalysisService,
+    IMediaBackupChunkAssignmentService mediaBackupChunkAssignmentService,
     IEnumerable<IMediaBackupPipelineStep> _pipelineSteps,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaBackupStrategy, IMediaBackupPipelineActions
@@ -33,6 +34,8 @@ public partial class MediaBackup(
     private readonly IMediaBackupData _mediaBackupData = _mediaBackupData;
     private readonly IMediaBackupPathAnalysisService _mediaBackupPathAnalysisService =
         mediaBackupPathAnalysisService;
+    private readonly IMediaBackupChunkAssignmentService _mediaBackupChunkAssignmentService =
+        mediaBackupChunkAssignmentService;
     private BackupChunks _backup = new()
     {
         Chunks = new()

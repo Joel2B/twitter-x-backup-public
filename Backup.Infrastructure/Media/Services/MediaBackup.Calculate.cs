@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Backup.Infrastructure.Logging;
+using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Media.Models.Backup;
@@ -49,58 +50,52 @@ public partial class MediaBackup
             if (!_chunks.ContainsKey(i))
                 _chunks.Add(i, new() { Id = i });
 
-        int currentChunk =
-            _chunks
-                .Values.GroupBy(o => o.Id)
-                .Select(o => new
-                {
-                    id = o.Key,
-                    Size = o.SelectMany(o => o.Data).Sum(o => o.FileSize),
-                })
-                .MinBy(o => o.Size)
-                ?.id ?? 0;
+        IReadOnlyList<MediaBackupChunkState> chunkStates = _chunks
+            .Values.Select(chunk => new MediaBackupChunkState
+            {
+                Id = chunk.Id,
+                PathCount = chunk.Data.Count,
+                SizeBytes = chunk.Data.Sum(item => item.FileSize ?? 0),
+            })
+            .ToList();
 
-        _logger.LogInfo("current chunk: {chunk}", currentChunk);
-
-        List<string> newPaths = [];
+        List<MediaBackupPathCandidate> candidates = [];
 
         foreach (string path in _paths)
         {
             MediaCacheEntry? cache = await MediaData.GetCache(path);
 
-            if (
-                cache is null
-                || data.ContainsKey(cache.Path)
-                || cache.Size?.File > _config.Chunk.Path.Size
-            )
+            if (cache is null)
                 continue;
 
-            while (_chunks[currentChunk].Data.Count >= (pathsPerChunk + increaseCount))
-            {
-                currentChunk++;
-
-                if (currentChunk >= _config.Chunk.Count)
+            candidates.Add(
+                new MediaBackupPathCandidate
                 {
-                    currentChunk = 0;
-
-                    var min = _chunks.MinBy(o => o.Value.Data.Count);
-                    var max = _chunks.MaxBy(o => o.Value.Data.Count);
-
-                    _logger.LogInformation(
-                        "min: {min}/{minCount}, max: {max}/{maxCount}",
-                        min.Key,
-                        min.Value.Data.Count,
-                        max.Key,
-                        max.Value.Data.Count
-                    );
-
-                    if (min.Value.Data.Count != max.Value.Data.Count)
-                        currentChunk = min.Key;
+                    OriginalPath = path,
+                    CachePath = cache.Path,
+                    FileSizeBytes = cache.Size?.File,
+                    IsAlreadyAssigned = data.ContainsKey(cache.Path),
                 }
-            }
+            );
+        }
 
-            _chunks[currentChunk].Data.Add(new() { Path = cache.Path });
-            newPaths.Add(path);
+        MediaBackupChunkAssignmentResult assignment = _mediaBackupChunkAssignmentService.Assign(
+            chunkStates,
+            candidates,
+            _backup.Chunks.Total,
+            pathsPerChunk,
+            increaseCount,
+            _config.Chunk.Path.Size
+        );
+
+        _logger.LogInfo("current chunk: {chunk}", assignment.InitialChunkId);
+
+        List<string> newPaths = [];
+
+        foreach (MediaBackupPathAssignment item in assignment.Assignments)
+        {
+            _chunks[item.ChunkId].Data.Add(new() { Path = item.CachePath });
+            newPaths.Add(item.OriginalPath);
         }
 
         int newPathsCount = 0;
