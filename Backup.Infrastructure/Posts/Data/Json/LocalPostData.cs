@@ -31,6 +31,7 @@ public partial class LocalPostData(
     IPostSnapshotSizeGuardService postSnapshotSizeGuardService,
     IPostChangeComputationService postChangeComputationService,
     IPostStoreCountsAggregationService postStoreCountsAggregationService,
+    IPostProfileCountAggregationService postProfileCountAggregationService,
     IPostIdentifierFilterService postIdentifierFilterService,
     IDataStoreGuardService dataStoreGuardService
 ) : IPostDataStore, ISetup
@@ -67,6 +68,8 @@ public partial class LocalPostData(
         postChangeComputationService;
     private readonly IPostStoreCountsAggregationService _postStoreCountsAggregationService =
         postStoreCountsAggregationService;
+    private readonly IPostProfileCountAggregationService _postProfileCountAggregationService =
+        postProfileCountAggregationService;
     private readonly IPostIdentifierFilterService _postIdentifierFilterService =
         postIdentifierFilterService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
@@ -233,20 +236,17 @@ public partial class LocalPostData(
         if (filter.Count == 0)
             return [];
 
-        static Dictionary<string, int> CountByProfileIds(
-            IEnumerable<string> profileIds,
-            IReadOnlySet<string> filter
-        ) =>
-            profileIds
-                .Where(filter.Contains)
-                .GroupBy(profileId => profileId, StringComparer.Ordinal)
-                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.Ordinal);
-
         Dictionary<string, Post>? cache = await GetCache();
         if (cache is null)
             return [];
 
-        return CountByProfileIds(cache.Values.Select(post => post.Profile.Id), filter);
+        IReadOnlyDictionary<string, int> counts =
+            _postProfileCountAggregationService.CountByProfileIds(
+                cache.Values.Select(post => post.Profile.Id),
+                filter
+            );
+
+        return counts.ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
     }
 
     public async Task Save()
