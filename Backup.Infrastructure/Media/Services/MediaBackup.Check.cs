@@ -109,12 +109,13 @@ public partial class MediaBackup
                 _logger.LogInformation("{paths} duplicate paths removed", cleanupPlan.RemovedPathCount);
             }
 
-            MediaBackupChunkReconciliationResult reconciliation =
-                _mediaBackupChunkReconciliationService.Reconcile(memory, storage);
-            int missing = reconciliation.MissingCount;
-            IReadOnlyList<string> extras = reconciliation.ExtraPaths;
+            MediaBackupStorageConsistencyDecision decision =
+                _mediaBackupStorageConsistencyDecisionService.DecideForDuplicateCheck(
+                    memory,
+                    storage
+                );
 
-            if (reconciliation.IsConsistent)
+            if (decision.IsConsistent)
                 continue;
 
             _logger.LogInfo(
@@ -131,15 +132,15 @@ public partial class MediaBackup
                 kvp.Key,
                 memory.Count(),
                 storage.Count(),
-                missing,
-                extras.Count()
+                decision.MissingCount,
+                decision.ExtraPaths.Count
             );
 
-            if (extras.Any())
+            if (decision.ShouldRemoveExtras)
             {
                 _logger.LogInformation("paths extras (10):");
 
-                foreach (var item in extras.Take(10))
+                foreach (string item in decision.ExtraPaths.Take(10))
                     _logger.LogInfo("{path}", item);
 
                 _logger.LogInformation("processing chunk {chunk}", kvp.Key);
@@ -156,7 +157,7 @@ public partial class MediaBackup
                 {
                     _logger.LogInformation("removing paths extras");
 
-                    foreach (var item in extras)
+                    foreach (string item in decision.ExtraPaths)
                     {
                         writeZip.RemoveEntry(item);
                         _logger.LogInfo("{path} removed", item);
@@ -168,9 +169,12 @@ public partial class MediaBackup
                     writeZip.Dispose();
                 }
 
-                storageCount -= extras.Count();
+                storageCount -= decision.ExtraPaths.Count;
 
-                _logger.LogInformation("{paths} paths extras removed in storage", extras.Count());
+                _logger.LogInformation(
+                    "{paths} paths extras removed in storage",
+                    decision.ExtraPaths.Count
+                );
             }
         }
 

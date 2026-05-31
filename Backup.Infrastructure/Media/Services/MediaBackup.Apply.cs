@@ -73,28 +73,32 @@ public partial class MediaBackup
                     continue;
 
                 List<string> memory = [.. kvp.Value.Data.Select(o => o.Path.Replace('\\', '/'))];
-                MediaBackupChunkReconciliationResult reconciliation =
-                    _mediaBackupChunkReconciliationService.Reconcile(memory, storagePaths);
-                int missing = reconciliation.MissingCount;
-                IReadOnlyList<string> extras = reconciliation.ExtraPaths;
+                MediaBackupStorageConsistencyDecision decision =
+                    _mediaBackupStorageConsistencyDecisionService.DecideForApply(
+                        memory,
+                        storagePaths
+                    );
 
                 _logger.LogInformation(
                     "{memory}/{storage}:{missing}/{extras}",
                     memory.Count,
                     storagePaths.Count,
-                    missing,
-                    extras.Count()
+                    decision.MissingCount,
+                    decision.ExtraPaths.Count
                 );
 
-                if (reconciliation.ShouldFail)
+                if (decision.ShouldFail)
                     throw new Exception();
 
-                if (extras.Any())
+                if (decision.ShouldRemoveExtras)
                 {
-                    foreach (string path in extras)
+                    foreach (string path in decision.ExtraPaths)
                         zip.RemoveEntry(path);
 
-                    _logger.LogInformation("{extras} paths removed in storage", extras.Count());
+                    _logger.LogInformation(
+                        "{extras} paths removed in storage",
+                        decision.ExtraPaths.Count
+                    );
                 }
 
                 if (!_backup.Chunks.Ids.Contains(kvp.Key))
