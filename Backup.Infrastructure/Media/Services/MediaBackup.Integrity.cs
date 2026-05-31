@@ -192,20 +192,16 @@ public partial class MediaBackup
                     metadataByPath
                 );
 
-            Dictionary<string, ChunkData> dataByPath = _chunks[change.ChunkId]
-                .Data.ToDictionary(item => item.Path);
+            MediaBackupIntegrityChunkApplyResult applyResult =
+                _mediaBackupIntegrityChunkApplyService.Apply(
+                    BuildChunkEntryStates(_chunks[change.ChunkId].Data),
+                    selection
+                );
 
-            foreach (string path in selection.SelectedPaths)
-            {
-                if (!dataByPath.TryGetValue(path, out ChunkData? item))
-                    continue;
+            ApplyChunkEntryStates(_chunks[change.ChunkId], applyResult.Entries);
 
-                MediaBackupChunkDataMetadata metadata = selection.PathMetadata[path];
-                item.FileSize = metadata.FileSize;
-                item.Crc32 = metadata.Crc32;
-
-                _logger.LogInfo("{path} updated", item.Path);
-            }
+            foreach (string path in applyResult.UpdatedPaths)
+                _logger.LogInfo("{path} updated", path);
 
             _logger.LogInfo("saving chunk");
             await _mediaBackupChunkPersistenceIoService.SaveChunk(
