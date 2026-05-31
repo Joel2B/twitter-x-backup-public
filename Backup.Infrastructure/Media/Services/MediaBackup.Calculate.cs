@@ -61,22 +61,27 @@ public partial class MediaBackup
             })
             .ToList();
 
-        List<MediaBackupPathCacheObservation> candidateObservations = [];
+        List<MediaBackupPathCacheObservationInput> cacheObservationInputs = [];
 
         foreach (string path in _paths)
         {
             MediaCacheEntry? cache = await MediaData.GetCache(path);
 
-            candidateObservations.Add(
-                new MediaBackupPathCacheObservation
+            cacheObservationInputs.Add(
+                new MediaBackupPathCacheObservationInput
                 {
                     OriginalPath = path,
                     CacheExists = cache is not null,
-                    CachePath = cache?.Path ?? string.Empty,
+                    CachePath = cache?.Path,
                     FileSizeBytes = cache?.Size?.File,
                 }
             );
         }
+
+        IReadOnlyList<MediaBackupPathCacheObservation> candidateObservations =
+            _mediaBackupPathObservationCompositionService.BuildPathCacheObservations(
+                cacheObservationInputs
+            );
 
         IReadOnlyList<MediaBackupPathCandidate> candidates =
             _mediaBackupPathCandidateCompositionService.Compose(
@@ -224,16 +229,18 @@ public partial class MediaBackup
 
                         MediaBackupDirectPathScanResult result =
                             _mediaBackupDirectPathScanOrchestrationService.Evaluate(
-                                new MediaBackupDirectPathCandidateObservation
-                                {
-                                    Path = path,
-                                    CacheExists = cache is not null,
-                                    CachePath = cache?.Path ?? string.Empty,
-                                    FileSizeBytes = cache?.Size?.File,
-                                    SourceExists = existsSource,
-                                    TargetExists = existsTarget,
-                                    MaxPathSizeBytes = _config.Chunk.Path.Size,
-                                }
+                                _mediaBackupPathObservationCompositionService.BuildDirectPathObservation(
+                                    new MediaBackupDirectPathObservationInput
+                                    {
+                                        Path = path,
+                                        CacheExists = cache is not null,
+                                        CachePath = cache?.Path,
+                                        FileSizeBytes = cache?.Size?.File,
+                                        SourceExists = existsSource,
+                                        TargetExists = existsTarget,
+                                        MaxPathSizeBytes = _config.Chunk.Path.Size,
+                                    }
+                                )
                             );
 
                         if (result.ShouldThrowMissingSource)
