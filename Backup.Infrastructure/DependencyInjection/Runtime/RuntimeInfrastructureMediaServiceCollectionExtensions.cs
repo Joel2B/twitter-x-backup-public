@@ -10,6 +10,7 @@ public static class RuntimeInfrastructureMediaServiceCollectionExtensions
     public static IServiceCollection AddMediaRuntimeInfrastructure(this IServiceCollection services)
     {
         services.AddScoped<IMediaOrchestrationService, MediaOrchestrationService>();
+        services.AddScoped<IMediaOrchestrationStorageResolutionService, MediaOrchestrationStorageResolutionService>();
         services.AddScoped<MediaOrchestrationCommandAdapter>();
         services.AddScoped<IMediaService, MediaService>();
         return services;

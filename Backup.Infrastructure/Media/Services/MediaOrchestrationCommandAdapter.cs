@@ -1,5 +1,6 @@
 using Backup.Application.Media.Models;
 using Backup.Application.Media.Ports;
+using Backup.Application.Media;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Posts.Abstractions.Data;
@@ -11,6 +12,7 @@ namespace Backup.Infrastructure.Media.Services;
 public sealed class MediaOrchestrationCommandAdapter(
     ILogger<MediaOrchestrationCommandAdapter> logger,
     IPostDomainData postData,
+    IMediaOrchestrationStorageResolutionService mediaOrchestrationStorageResolutionService,
     IMediaProcessing mediaProcessing,
     IMediaPrune mediaPrune,
     IEnumerable<IMediaStorage> mediaData,
@@ -24,9 +26,13 @@ public sealed class MediaOrchestrationCommandAdapter(
 {
     private readonly ILogger<MediaOrchestrationCommandAdapter> _logger = logger;
     private readonly IPostDomainData _postData = postData;
+    private readonly IMediaOrchestrationStorageResolutionService _mediaOrchestrationStorageResolutionService =
+        mediaOrchestrationStorageResolutionService;
     private readonly IMediaProcessing _mediaProcessing = mediaProcessing;
     private readonly IMediaPrune _mediaPrune = mediaPrune;
-    private readonly List<IMediaStorage> _mediaData = mediaData.ToList();
+    private readonly Dictionary<string, IMediaStorage> _mediaData = mediaData
+        .Where(item => !string.IsNullOrWhiteSpace(item.Id))
+        .ToDictionary(item => item.Id!, item => item, StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, IMediaDataMaintenance> _mediaMaintenance = mediaMaintenance
         .Where(item => item.Id is not null)
         .ToDictionary(item => item.Id!, item => item, StringComparer.OrdinalIgnoreCase);
@@ -69,11 +75,14 @@ public sealed class MediaOrchestrationCommandAdapter(
     }
 
     public IReadOnlyList<string> GetStorageIds() =>
-        _mediaData.Where(item => !string.IsNullOrWhiteSpace(item.Id)).Select(item => item.Id!).ToList();
+        _mediaOrchestrationStorageResolutionService.GetStorageIds(_mediaData.Keys);
 
     public bool HasMaintenance(string storageId)
     {
-        bool has = _mediaMaintenance.ContainsKey(storageId);
+        bool has = _mediaOrchestrationStorageResolutionService.HasMaintenance(
+            storageId,
+            _mediaMaintenance.Keys
+        );
 
         if (!has)
             _logger.LogWarning("no media maintenance configured for media data {storageId}", storageId);
@@ -137,13 +146,16 @@ public sealed class MediaOrchestrationCommandAdapter(
             return;
 
         List<Download> infra = ToInfrastructure(downloads);
-        await _mediaReplication.Replicate(infra, _mediaData, storage);
+        await _mediaReplication.Replicate(infra, _mediaData.Values, storage);
         Sync(downloads, infra);
     }
 
     public async Task RunBackups(List<MediaDownload> downloads)
     {
-        IMediaStorage? backupSource = _mediaData.FirstOrDefault();
+        string? backupSourceId = _mediaOrchestrationStorageResolutionService.SelectBackupSourceId(
+            _mediaData.Keys
+        );
+        IMediaStorage? backupSource = backupSourceId is null ? null : _mediaData[backupSourceId];
 
         if (backupSource is null)
         {
@@ -161,15 +173,18 @@ public sealed class MediaOrchestrationCommandAdapter(
 
     private IMediaStorage? GetStorage(string storageId)
     {
-        IMediaStorage? storage = _mediaData.FirstOrDefault(item =>
-            string.Equals(item.Id, storageId, StringComparison.OrdinalIgnoreCase)
+        string? resolvedId = _mediaOrchestrationStorageResolutionService.ResolveStorageId(
+            storageId,
+            _mediaData.Keys
         );
 
-        if (storage is not null)
-            return storage;
+        if (resolvedId is null)
+        {
+            _logger.LogWarning("media storage not found: {storageId}", storageId);
+            return null;
+        }
 
-        _logger.LogWarning("media storage not found: {storageId}", storageId);
-        return null;
+        return _mediaData[resolvedId];
     }
 
     private IMediaDataMaintenance? GetMaintenance(string storageId)
