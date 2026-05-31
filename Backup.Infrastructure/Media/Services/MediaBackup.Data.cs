@@ -1,4 +1,5 @@
 using Backup.Infrastructure.Logging;
+using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Utility.Abstractions.Services;
 using Backup.Infrastructure.Media.Models.Backup;
@@ -15,8 +16,12 @@ public partial class MediaBackup
 
         foreach (var kvp in _chunks)
         {
-            bool isNull = kvp.Value.Data.Any(o =>
-                o.FileSize is null || o.FileSize == 0 || o.Crc32 is null
+            bool isNull = _mediaBackupChunkMetadataPolicyService.RequiresRefresh(
+                kvp.Value.Data.Select(item => new MediaBackupChunkDataMetadata
+                {
+                    FileSize = item.FileSize,
+                    Crc32 = item.Crc32,
+                })
             );
 
             if (!isNull)
@@ -51,8 +56,21 @@ public partial class MediaBackup
                 if (value is null)
                     continue;
 
-                item.FileSize ??= value?.FileSize;
-                item.Crc32 ??= value?.Crc32;
+                MediaBackupChunkDataMetadata merged = _mediaBackupChunkMetadataPolicyService.Merge(
+                    new MediaBackupChunkDataMetadata
+                    {
+                        FileSize = item.FileSize,
+                        Crc32 = item.Crc32,
+                    },
+                    new MediaBackupChunkDataMetadata
+                    {
+                        FileSize = value.FileSize,
+                        Crc32 = value.Crc32,
+                    }
+                );
+
+                item.FileSize = merged.FileSize;
+                item.Crc32 = merged.Crc32;
             }
 
             _logger.LogInfo("saving chunk");
