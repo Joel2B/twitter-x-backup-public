@@ -21,6 +21,7 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaBackupPartitionPathService, MediaBackupPartitionPathService>();
         services.AddScoped<IMediaBackupChunkFileNamePolicyService, MediaBackupChunkFileNamePolicyService>();
         services.AddScoped<IMediaBackupChunkAssignmentService, MediaBackupChunkAssignmentService>();
+        services.AddScoped<IMediaBackupChunkAssignmentApplyService, MediaBackupChunkAssignmentApplyService>();
         services.AddScoped<IMediaBackupDirectPathSelectionService, MediaBackupDirectPathSelectionService>();
         services.AddScoped<IMediaBackupDirectPathEligibilityService, MediaBackupDirectPathEligibilityService>();
         services.AddScoped<IMediaBackupDirectPathFinalizeService, MediaBackupDirectPathFinalizeService>();

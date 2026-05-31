@@ -101,12 +101,13 @@ public partial class MediaBackup
 
         _logger.LogInfo("current chunk: {chunk}", assignment.InitialChunkId);
 
-        List<string> newPaths = [];
+        MediaBackupChunkAssignmentApplyResult applyAssignments =
+            _mediaBackupChunkAssignmentApplyService.Apply(assignment.Assignments);
 
-        foreach (MediaBackupPathAssignment item in assignment.Assignments)
+        foreach ((int chunkId, IReadOnlyList<string> addedPaths) in applyAssignments.AddedCachePathsByChunk)
         {
-            _chunks[item.ChunkId].Data.Add(new() { Path = item.CachePath });
-            newPaths.Add(item.OriginalPath);
+            foreach (string path in addedPaths)
+                _chunks[chunkId].Data.Add(new() { Path = path });
         }
 
         IReadOnlyList<MediaBackupChunkPathsState> beforeChunkPaths =
@@ -166,7 +167,7 @@ public partial class MediaBackup
         MediaBackupChunkDeltaLogPlan deltaLogPlan = _mediaBackupChunkDeltaLogPlanningService.Plan(
             deltaLogInputs,
             deltas.TotalAddedPaths,
-            newPaths.Count
+            applyAssignments.AddedOriginalPaths.Count
         );
 
         if (deltaLogPlan.Rows.Count > 0)

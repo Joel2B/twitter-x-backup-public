@@ -19,6 +19,7 @@ public partial class MediaBackup(
     IZipWriterFactory _zipWriterFactory,
     IMediaBackupData _mediaBackupData,
     IMediaBackupChunkAssignmentService mediaBackupChunkAssignmentService,
+    IMediaBackupChunkAssignmentApplyService mediaBackupChunkAssignmentApplyService,
     IMediaBackupDirectPathFinalizeService mediaBackupDirectPathFinalizeService,
     IMediaBackupSyncFinalizeService mediaBackupSyncFinalizeService,
     IMediaBackupDirectApplyPathService mediaBackupDirectApplyPathService,
@@ -69,6 +70,8 @@ public partial class MediaBackup(
     private readonly IMediaBackupData _mediaBackupData = _mediaBackupData;
     private readonly IMediaBackupChunkAssignmentService _mediaBackupChunkAssignmentService =
         mediaBackupChunkAssignmentService;
+    private readonly IMediaBackupChunkAssignmentApplyService _mediaBackupChunkAssignmentApplyService =
+        mediaBackupChunkAssignmentApplyService;
     private readonly IMediaBackupDirectPathFinalizeService _mediaBackupDirectPathFinalizeService =
         mediaBackupDirectPathFinalizeService;
     private readonly IMediaBackupSyncFinalizeService _mediaBackupSyncFinalizeService =
