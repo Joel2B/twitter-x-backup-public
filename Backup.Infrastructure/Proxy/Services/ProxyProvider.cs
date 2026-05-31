@@ -7,6 +7,7 @@ using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Proxy.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using Backup.Application.Proxy.Models;
 
 namespace Backup.Infrastructure.Proxy.Services;
 
@@ -26,7 +27,9 @@ public class ProxyProvider(
     IProxyKeyPolicyService proxyKeyPolicyService,
     IProxyEndpointParserService proxyEndpointParserService,
     IProxyProviderTypeResolverService proxyProviderTypeResolverService,
-    IProxySourceLoadService proxySourceLoadService
+    IProxySourceLoadService proxySourceLoadService,
+    IProxyCandidateMergeService proxyCandidateMergeService,
+    IProxyRuntimePoolSelectionService proxyRuntimePoolSelectionService
 )
     : IProxyProvider,
         ISetup,
@@ -50,6 +53,9 @@ public class ProxyProvider(
     private readonly IProxyProviderTypeResolverService _proxyProviderTypeResolverService =
         proxyProviderTypeResolverService;
     private readonly IProxySourceLoadService _proxySourceLoadService = proxySourceLoadService;
+    private readonly IProxyCandidateMergeService _proxyCandidateMergeService = proxyCandidateMergeService;
+    private readonly IProxyRuntimePoolSelectionService _proxyRuntimePoolSelectionService =
+        proxyRuntimePoolSelectionService;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
     private int _proxyIndex = 0;
@@ -93,13 +99,7 @@ public class ProxyProvider(
         }
 
         _proxies = [.. proxiesDict.Values];
-
-        _proxies = _proxies
-            .Where(proxy => _proxyRuntimePolicyService.ShouldIncludeInRuntimePool(
-                proxy.Status.Current == StatusEnum.Active,
-                proxy.Connections.Count
-            ))
-            .ToList();
+        _proxies = SelectRuntimePool(_proxies);
 
         if (_proxies.Count == 0)
             throw new ProxyEmptyException();
@@ -128,8 +128,12 @@ public class ProxyProvider(
             _proxySourceLoadService
         );
         List<ProxyDataConfig> proxiesLoader = await loader.Load();
-        proxies.AddRange(proxiesLoader);
-        proxies = [.. proxies.Distinct()];
+
+        IReadOnlyList<ProxyCandidate> mergedCandidates = _proxyCandidateMergeService.MergeDistinct(
+            proxiesStorage.Select(proxy => ToCandidate(proxy.Proxy)),
+            proxiesLoader.Select(ToCandidate)
+        );
+        proxies = mergedCandidates.Select(ToProxyDataConfig).ToList();
 
         foreach (ProxyDataConfig proxy in proxies)
         {
@@ -393,6 +397,26 @@ public class ProxyProvider(
     {
         await _data.Save(_proxies);
     }
+
+    private List<ProxyData> SelectRuntimePool(List<ProxyData> proxies)
+    {
+        IReadOnlySet<string> runtimeKeys = _proxyRuntimePoolSelectionService.SelectKeys(
+            proxies.Select(proxy => new ProxyRuntimePoolCandidate
+            {
+                Key = GetProxyKey(proxy.Proxy),
+                IsActive = proxy.Status.Current == StatusEnum.Active,
+                ConnectionCount = proxy.Connections.Count,
+            })
+        );
+
+        return proxies.Where(proxy => runtimeKeys.Contains(GetProxyKey(proxy.Proxy))).ToList();
+    }
+
+    private static ProxyCandidate ToCandidate(ProxyDataConfig proxy) =>
+        new() { Ip = proxy.Ip, Port = proxy.Port, Protocol = proxy.Protocol };
+
+    private static ProxyDataConfig ToProxyDataConfig(ProxyCandidate candidate) =>
+        new() { Ip = candidate.Ip, Port = candidate.Port, Protocol = candidate.Protocol };
 
     public void Dispose()
     {
