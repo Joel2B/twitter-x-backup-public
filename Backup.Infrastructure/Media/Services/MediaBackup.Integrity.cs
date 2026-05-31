@@ -44,6 +44,7 @@ public partial class MediaBackup
             }
 
             _logger.LogInfo("checking changes");
+            List<MediaBackupIntegrityObservationInput> observationInputs = [];
 
             foreach (ChunkData item in kvp.Value.Data)
             {
@@ -53,8 +54,8 @@ public partial class MediaBackup
                     out ZipEntry? value2
                 );
 
-                observations.Add(
-                    new MediaBackupIntegrityObservation
+                observationInputs.Add(
+                    new MediaBackupIntegrityObservationInput
                     {
                         ChunkId = kvp.Key,
                         Path = item.Path,
@@ -65,6 +66,12 @@ public partial class MediaBackup
                     }
                 );
             }
+
+            observations.AddRange(
+                _mediaBackupIntegrityObservationCompositionService.BuildObservations(
+                    observationInputs
+                )
+            );
 
             _logger.LogInformation("chunk {chunk} processed", kvp.Key);
         }
@@ -169,20 +176,22 @@ public partial class MediaBackup
             _logger.LogInfo("expanding chunk");
             IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByPath =
                 _mediaBackupChunkMetadataOrchestrationService.BuildPathMetadataMap(
-                    change.Paths.Select(path =>
-                    {
-                        entries.TryGetValue(
-                            _mediaBackupPathProjectionService.ToArchivePath(path),
-                            out ZipEntry? value
-                        );
-
-                        return new MediaBackupChunkPathMetadataState
+                    _mediaBackupIntegrityObservationCompositionService.BuildPathMetadataStates(
+                        change.Paths.Select(path =>
                         {
-                            Path = path,
-                            FileSize = value?.FileSize,
-                            Crc32 = value?.Crc32,
-                        };
-                    })
+                            entries.TryGetValue(
+                                _mediaBackupPathProjectionService.ToArchivePath(path),
+                                out ZipEntry? value
+                            );
+
+                            return new MediaBackupChunkPathMetadataInput
+                            {
+                                Path = path,
+                                FileSize = value?.FileSize,
+                                Crc32 = value?.Crc32,
+                            };
+                        })
+                    )
                 );
 
             MediaBackupIntegrityUpdateSelectionPlan selection =
