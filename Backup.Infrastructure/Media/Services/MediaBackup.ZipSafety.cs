@@ -75,18 +75,12 @@ public partial class MediaBackup
 
         await _mediaBackupData.DeleteChunk(chunk);
 
-        IReadOnlyList<MediaBackupChunkFailureState> resetStates =
-            _mediaBackupChunkFailurePolicyService.ResetForCorruptChunk(
-                chunk.Data.Select(item => new MediaBackupChunkFailureState
-                {
-                    Path = item.Path,
-                    Hash = item.Hash,
-                    FileSize = item.FileSize,
-                    Crc32 = item.Crc32,
-                })
+        IReadOnlyDictionary<string, MediaBackupChunkFailureState> resetByPath =
+            _mediaBackupChunkFailureOrchestrationService.BuildResetMapForCorruptChunk(
+                ToFailureStates(chunk.Data)
             );
 
-        ApplyFailureStates(chunk, resetStates);
+        ApplyFailureStates(chunk, resetByPath);
 
         await _mediaBackupData.Save([chunk]);
     }

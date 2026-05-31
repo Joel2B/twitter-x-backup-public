@@ -29,7 +29,7 @@ public partial class MediaBackup(
     IMediaBackupDirectPathCandidateDecisionService mediaBackupDirectPathCandidateDecisionService,
     IMediaBackupDirectPathQueueService mediaBackupDirectPathQueueService,
     IMediaBackupPathProjectionService mediaBackupPathProjectionService,
-    IMediaBackupChunkFailurePolicyService mediaBackupChunkFailurePolicyService,
+    IMediaBackupChunkFailureOrchestrationService mediaBackupChunkFailureOrchestrationService,
     IMediaBackupApplyChunkPlanningService mediaBackupApplyChunkPlanningService,
     IMediaBackupChunkPlanningService mediaBackupChunkPlanningService,
     IMediaBackupChunkCountDeltaService mediaBackupChunkCountDeltaService,
@@ -75,8 +75,8 @@ public partial class MediaBackup(
         mediaBackupDirectPathQueueService;
     private readonly IMediaBackupPathProjectionService _mediaBackupPathProjectionService =
         mediaBackupPathProjectionService;
-    private readonly IMediaBackupChunkFailurePolicyService _mediaBackupChunkFailurePolicyService =
-        mediaBackupChunkFailurePolicyService;
+    private readonly IMediaBackupChunkFailureOrchestrationService _mediaBackupChunkFailureOrchestrationService =
+        mediaBackupChunkFailureOrchestrationService;
     private readonly IMediaBackupApplyChunkPlanningService _mediaBackupApplyChunkPlanningService =
         mediaBackupApplyChunkPlanningService;
     private readonly IMediaBackupChunkPlanningService _mediaBackupChunkPlanningService =
@@ -172,10 +172,23 @@ public partial class MediaBackup(
         }
     }
 
-    private static void ApplyFailureStates(Chunk chunk, IReadOnlyList<MediaBackupChunkFailureState> states)
-    {
-        Dictionary<string, MediaBackupChunkFailureState> byPath = states.ToDictionary(item => item.Path);
+    private static IReadOnlyList<MediaBackupChunkFailureState> ToFailureStates(
+        IEnumerable<ChunkData> items
+    ) =>
+        items.Select(item => new MediaBackupChunkFailureState
+            {
+                Path = item.Path,
+                Hash = item.Hash,
+                FileSize = item.FileSize,
+                Crc32 = item.Crc32,
+            })
+            .ToList();
 
+    private static void ApplyFailureStates(
+        Chunk chunk,
+        IReadOnlyDictionary<string, MediaBackupChunkFailureState> byPath
+    )
+    {
         foreach (ChunkData data in chunk.Data)
         {
             if (!byPath.TryGetValue(data.Path, out MediaBackupChunkFailureState? state))
