@@ -14,9 +14,7 @@ public partial class SqlitePostData
     {
         PostsDbContext db = await GetDbContext();
 
-        HashSet<string> keep = keepPostIds
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.Ordinal);
+        IReadOnlySet<string> keep = _postIdentifierFilterService.Normalize(keepPostIds);
 
         List<string> scopedIds = await db
             .PostIndexEntries.AsNoTracking()

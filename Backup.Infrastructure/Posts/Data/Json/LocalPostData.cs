@@ -18,7 +18,7 @@ public partial class LocalPostData(
     AppConfig _appConfig,
     StoragePost _config,
     IPartition _partition,
-    IPostMergeService postMergeService,
+    IPostMergeResolutionService postMergeResolutionService,
     IPostSoftDeleteSelectionService postSoftDeleteSelectionService,
     IPostSnapshotNormalizationService postSnapshotNormalizationService,
     IPostMediaInputsCompositionService postMediaInputsCompositionService,
@@ -26,6 +26,8 @@ public partial class LocalPostData(
     IPostHistoryPrunePolicyService postHistoryPrunePolicyService,
     IPostSnapshotSizeGuardService postSnapshotSizeGuardService,
     IPostChangeComputationService postChangeComputationService,
+    IPostStoreCountsAggregationService postStoreCountsAggregationService,
+    IPostIdentifierFilterService postIdentifierFilterService,
     IDataStoreGuardService dataStoreGuardService
 ) : IPostDataStore, ISetup
 {
@@ -36,7 +38,8 @@ public partial class LocalPostData(
     private readonly AppConfig _appConfig = _appConfig;
     private readonly StoragePost _config = _config;
     private readonly IPartition _partition = _partition;
-    private readonly IPostMergeService _postMergeService = postMergeService;
+    private readonly IPostMergeResolutionService _postMergeResolutionService =
+        postMergeResolutionService;
     private readonly IPostSoftDeleteSelectionService _postSoftDeleteSelectionService =
         postSoftDeleteSelectionService;
     private readonly IPostSnapshotNormalizationService _postSnapshotNormalizationService =
@@ -50,6 +53,10 @@ public partial class LocalPostData(
         postSnapshotSizeGuardService;
     private readonly IPostChangeComputationService _postChangeComputationService =
         postChangeComputationService;
+    private readonly IPostStoreCountsAggregationService _postStoreCountsAggregationService =
+        postStoreCountsAggregationService;
+    private readonly IPostIdentifierFilterService _postIdentifierFilterService =
+        postIdentifierFilterService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     private Dictionary<string, Post>? _postsCache = null;
@@ -92,11 +99,7 @@ public partial class LocalPostData(
 
     public async Task<List<Post>> GetByIds(IReadOnlyCollection<string> ids)
     {
-        if (ids.Count == 0)
-            return [];
-
-        HashSet<string> filter = ids.Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.Ordinal);
+        IReadOnlySet<string> filter = _postIdentifierFilterService.Normalize(ids);
 
         if (filter.Count == 0)
             return [];
@@ -124,66 +127,26 @@ public partial class LocalPostData(
     public async Task<PostStoreCounts> GetStoreCounts()
     {
         Dictionary<string, Post>? cache = await GetCache();
+        List<Backup.Domain.Posts.Post> domainPosts = cache is null
+            ? []
+            : cache.Values.Select(PostReplicationMapper.ToDomain).ToList();
 
-        if (cache is null || cache.Count == 0)
-        {
-            return new PostStoreCounts
-            {
-                Posts = 0,
-                Profiles = 0,
-                Hashtags = 0,
-                Medias = 0,
-                MediaVariants = 0,
-                IndexEntries = 0,
-                Changes = 0,
-                ChangeFields = 0,
-                HashMeta = _postMetaCache?.Count ?? 0,
-            };
-        }
-
-        int hashtags = 0;
-        int medias = 0;
-        int mediaVariants = 0;
-        int indexEntries = 0;
-        int changes = 0;
-        int changeFields = 0;
-
-        foreach (Post post in cache.Values)
-        {
-            hashtags += post.Hashtags?.Count ?? 0;
-
-            if (post.Medias is not null)
-            {
-                medias += post.Medias.Count;
-                mediaVariants += post.Medias.Sum(media => media.VideoInfo?.Variants?.Count ?? 0);
-            }
-
-            indexEntries += post.Index.Sum(userIndex => userIndex.Value.Count);
-            if (post.Changes.Count == 0)
-                continue;
-
-            Backup.Domain.Posts.Post domainPost = PostReplicationMapper.ToDomain(post);
-            IReadOnlyList<Backup.Application.Posts.Models.PostComputedChange> computedChanges =
-                _postChangeComputationService.Compute(domainPost);
-
-            changes += computedChanges.Count;
-            changeFields += computedChanges.Sum(change => change.Fields.Count);
-        }
+        Backup.Domain.Posts.PostStoreCounts counts = _postStoreCountsAggregationService.Compute(
+            domainPosts,
+            _postMetaCache?.Count ?? cache?.Count ?? 0
+        );
 
         return new PostStoreCounts
         {
-            Posts = cache.Count,
-            Profiles = cache
-                .Values.Select(post => post.Profile.Id)
-                .Distinct(StringComparer.Ordinal)
-                .Count(),
-            Hashtags = hashtags,
-            Medias = medias,
-            MediaVariants = mediaVariants,
-            IndexEntries = indexEntries,
-            Changes = changes,
-            ChangeFields = changeFields,
-            HashMeta = _postMetaCache?.Count ?? cache.Count,
+            Posts = counts.Posts,
+            Profiles = counts.Profiles,
+            Hashtags = counts.Hashtags,
+            Medias = counts.Medias,
+            MediaVariants = counts.MediaVariants,
+            IndexEntries = counts.IndexEntries,
+            Changes = counts.Changes,
+            ChangeFields = counts.ChangeFields,
+            HashMeta = counts.HashMeta,
         };
     }
 
@@ -205,7 +168,7 @@ public partial class LocalPostData(
         IReadOnlyCollection<string> idsToDelete = _postSoftDeleteSelectionService.SelectIds(
             userId,
             origin,
-            keepPostIds,
+            _postIdentifierFilterService.Normalize(keepPostIds),
             domainPosts
         );
 
@@ -254,19 +217,14 @@ public partial class LocalPostData(
         IReadOnlyCollection<string> profileIds
     )
     {
-        if (profileIds.Count == 0)
-            return [];
-
-        HashSet<string> filter = profileIds
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.Ordinal);
+        IReadOnlySet<string> filter = _postIdentifierFilterService.Normalize(profileIds);
 
         if (filter.Count == 0)
             return [];
 
         static Dictionary<string, int> CountByProfileIds(
             IEnumerable<string> profileIds,
-            HashSet<string> filter
+            IReadOnlySet<string> filter
         ) =>
             profileIds
                 .Where(filter.Contains)

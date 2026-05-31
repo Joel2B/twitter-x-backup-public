@@ -36,11 +36,14 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostProjectionComposer, PostProjectionComposer>();
         services.AddScoped<IPostIndexingService, PostIndexingService>();
         services.AddScoped<IPostStoreParityService, PostStoreParityService>();
+        services.AddScoped<IPostStoreCountsAggregationService, PostStoreCountsAggregationService>();
         services.AddScoped<IPostChangeComputationService, PostChangeComputationService>();
         services.AddScoped<IPostTimelineExtractionService, PostTimelineExtractionService>();
         services.AddScoped<IPostUserParsePolicyService, PostUserParsePolicyService>();
         services.AddScoped<IPostProjectionParseService, PostProjectionParseService>();
         services.AddScoped<IPostTokenMaterializationService, PostTokenMaterializationService>();
+        services.AddScoped<IPostIdentifierFilterService, PostIdentifierFilterService>();
+        services.AddScoped<IPostMergeResolutionService, PostMergeResolutionService>();
         return services;
     }
 }

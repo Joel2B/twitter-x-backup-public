@@ -96,11 +96,7 @@ public partial class SqlitePostData
 
     public async Task<List<Post>> GetByIds(IReadOnlyCollection<string> ids)
     {
-        if (ids.Count == 0)
-            return [];
-
-        HashSet<string> filter = ids.Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.Ordinal);
+        IReadOnlySet<string> filter = _postIdentifierFilterService.Normalize(ids);
 
         if (filter.Count == 0)
             return [];
@@ -122,12 +118,7 @@ public partial class SqlitePostData
         IReadOnlyCollection<string> profileIds
     )
     {
-        if (profileIds.Count == 0)
-            return [];
-
-        HashSet<string> filter = profileIds
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.Ordinal);
+        IReadOnlySet<string> filter = _postIdentifierFilterService.Normalize(profileIds);
 
         if (filter.Count == 0)
             return [];

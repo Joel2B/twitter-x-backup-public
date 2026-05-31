@@ -20,47 +20,56 @@ public partial class LocalPostData
         Dictionary<string, PostMetaRow> postMeta = await GetPostMetaCache();
         _postsCache ??= posts;
 
-        foreach (Post result in incoming)
-        {
-            if (!posts.TryGetValue(result.Id, out Post? post))
-            {
-                Post clone = result.Clone();
-                posts[result.Id] = clone;
+        Dictionary<string, Backup.Domain.Posts.Post> existingDomain = posts.ToDictionary(
+            entry => entry.Key,
+            entry => PostReplicationMapper.ToDomain(entry.Value),
+            StringComparer.Ordinal
+        );
 
-                postMeta[result.Id] = new()
+        List<Backup.Domain.Posts.Post> incomingDomain = incoming
+            .Select(PostReplicationMapper.ToDomain)
+            .ToList();
+
+        Backup.Domain.Posts.MergeOptions domainOptions = PostReplicationMapper.ToDomain(options);
+
+        IReadOnlyList<Backup.Application.Posts.Models.PostMergeResolutionItem> resolved =
+            _postMergeResolutionService.Resolve(
+                userId,
+                origin,
+                incomingDomain,
+                existingDomain,
+                domainOptions
+            );
+
+        foreach (Backup.Application.Posts.Models.PostMergeResolutionItem item in resolved)
+        {
+            Post merged = PostReplicationMapper.ToApp(item.MergedPost);
+
+            if (!posts.TryGetValue(item.Id, out Post? current))
+            {
+                Post clone = merged.Clone();
+                posts[item.Id] = clone;
+
+                postMeta[item.Id] = new()
                 {
-                    Id = result.Id,
+                    Id = item.Id,
                     Hash = ComputePostHash(clone),
                     Deleted = clone.Deleted,
                 };
                 continue;
             }
 
-            Backup.Domain.Posts.Post currentDomain = PostReplicationMapper.ToDomain(post);
-            Backup.Domain.Posts.Post incomingDomain = PostReplicationMapper.ToDomain(result);
-            Backup.Domain.Posts.MergeOptions domainOptions = PostReplicationMapper.ToDomain(options);
+            if (item.HasDataChange)
+                LogDataChange(current, merged, userId);
 
-            Backup.Application.Posts.Models.PostMergeOutcome merge = _postMergeService.Merge(
-                userId,
-                origin,
-                currentDomain,
-                incomingDomain,
-                domainOptions
-            );
+            if (item.HasIndexChange)
+                LogIndexChange(current, merged, userId, origin);
 
-            Post merged = PostReplicationMapper.ToApp(merge.MergedPost);
+            posts[item.Id] = merged;
 
-            if (merge.HasDataChange)
-                LogDataChange(post, merged, userId);
-
-            if (merge.HasIndexChange)
-                LogIndexChange(post, merged, userId, origin);
-
-            posts[result.Id] = merged;
-
-            postMeta[result.Id] = new()
+            postMeta[item.Id] = new()
             {
-                Id = result.Id,
+                Id = item.Id,
                 Hash = ComputePostHash(merged),
                 Deleted = merged.Deleted,
             };

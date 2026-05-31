@@ -35,37 +35,49 @@ public partial class SqlitePostData
             StringComparer.Ordinal
         );
 
-        List<Post> resolved = [];
+        Dictionary<string, Backup.Domain.Posts.Post> existingDomain = existingPosts.ToDictionary(
+            entry => entry.Key,
+            entry => PostReplicationMapper.ToDomain(entry.Value),
+            StringComparer.Ordinal
+        );
+
+        List<Backup.Domain.Posts.Post> incomingDomain = posts
+            .Select(PostReplicationMapper.ToDomain)
+            .ToList();
+
         Backup.Domain.Posts.MergeOptions domainOptions = PostReplicationMapper.ToDomain(options);
 
-        foreach (Post result in posts)
-        {
-            if (!existingPosts.TryGetValue(result.Id, out Post? current))
-            {
-                resolved.Add(result.Clone());
-                continue;
-            }
-
-            Backup.Domain.Posts.Post currentDomain = PostReplicationMapper.ToDomain(current);
-            Backup.Domain.Posts.Post incomingDomain = PostReplicationMapper.ToDomain(result);
-
-            Backup.Application.Posts.Models.PostMergeOutcome merge = _postMergeService.Merge(
+        IReadOnlyList<Backup.Application.Posts.Models.PostMergeResolutionItem> mergeResult =
+            _postMergeResolutionService.Resolve(
                 userId,
                 origin,
-                currentDomain,
                 incomingDomain,
+                existingDomain,
                 domainOptions
             );
 
-            if (!merge.HasChanges)
+        List<Post> resolved = [];
+
+        foreach (Backup.Application.Posts.Models.PostMergeResolutionItem item in mergeResult)
+        {
+            Post merged = PostReplicationMapper.ToApp(item.MergedPost);
+
+            if (item.IsNew)
+            {
+                resolved.Add(merged);
+                continue;
+            }
+
+            if (!item.HasChanges)
                 continue;
 
-            Post merged = PostReplicationMapper.ToApp(merge.MergedPost);
+            if (!existingPosts.TryGetValue(item.Id, out Post? current))
+                continue;
 
-            if (merge.HasDataChange)
+            if (item.HasDataChange)
                 LogDataChange(current, merged, userId);
 
-            if (merge.HasIndexChange)
+            if (item.HasIndexChange)
                 LogIndexChange(current, merged, userId);
 
             resolved.Add(merged);
