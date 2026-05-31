@@ -19,7 +19,7 @@ public class LocalBulkData(
     AppConfig _appConfig,
     StorageBulk _config,
     IPartition _partition,
-    IBulkPrunePartitionPlanningService bulkPrunePartitionPlanningService,
+    IBulkPruneExecutionService bulkPruneExecutionService,
     IBulkReplicationPathPlanningService bulkReplicationPathPlanningService,
     IBulkArchiveFilePolicyService bulkArchiveFilePolicyService,
     IDataStoreGuardService dataStoreGuardService
@@ -32,8 +32,7 @@ public class LocalBulkData(
     private readonly AppConfig _appConfig = _appConfig;
     private readonly StorageBulk _config = _config;
     private readonly IPartition _partition = _partition;
-    private readonly IBulkPrunePartitionPlanningService _bulkPrunePartitionPlanningService =
-        bulkPrunePartitionPlanningService;
+    private readonly IBulkPruneExecutionService _bulkPruneExecutionService = bulkPruneExecutionService;
     private readonly IBulkReplicationPathPlanningService _bulkReplicationPathPlanningService =
         bulkReplicationPathPlanningService;
     private readonly IBulkArchiveFilePolicyService _bulkArchiveFilePolicyService =
@@ -115,56 +114,60 @@ public class LocalBulkData(
         _logger.LogInformation("running prune");
         _logger.LogInformation("prune: {value}", _config.Tasks.Prune);
 
-        if (!_config.Tasks.Prune)
-            return;
+        List<PartitionConfig> partitions = _partition.GetPartitions();
+        Dictionary<int, PartitionConfig> partitionsById = partitions.ToDictionary(partition => partition.Id);
+        List<BulkPrunePartitionExecutionInput> inputs = [];
 
-        foreach (PartitionConfig partition in _partition.GetPartitions())
-            await PrunePartition(partition);
-    }
-
-    private Task PrunePartition(PartitionConfig partition)
-    {
-        _logger.LogInformation("prunning partition: {value}", partition.Id);
-
-        string basePath = GetPath(partition);
-        string[] pathsFiles = Directory.GetFiles(basePath, "*.json", SearchOption.TopDirectoryOnly);
-        _logger.LogInformation("base path: {path}", Path.GetFileName(basePath));
-
-        List<DatedPath> datedPaths = pathsFiles
-            .Select(path => new { Path = path, Date = UtilsPath.ToDate(path) })
-            .Where(entry => entry.Date is not null)
-            .Select(entry => new DatedPath(entry.Path, entry.Date!.Value))
-            .OrderBy(entry => entry.Date)
-            .ToList();
-
-        if (datedPaths.Count == 0)
-            return Task.CompletedTask;
-
-        BulkPrunePartitionPlan plan = _bulkPrunePartitionPlanningService.Plan(
-            datedPaths,
-            _appConfig.Tasks.Prune.Data.Post.KeepDays
-        );
-
-        _logger.LogInformation(
-            "prunning date: {date}, KeepDays: {keepDays}",
-            plan.ThresholdDate,
-            _appConfig.Tasks.Prune.Data.Post.KeepDays
-        );
-
-        List<string> pathsToRemove = [.. plan.PathsToRemove];
-
-        _logger.LogInformation("prunning {value} paths", pathsToRemove.Count);
-
-        if (pathsToRemove.Count == 0)
-            return Task.CompletedTask;
-
-        foreach (string path in pathsToRemove)
+        foreach (PartitionConfig partition in partitions)
         {
-            File.Delete(path);
-            _logger.LogInformation("{path} removed", Path.GetFileName(path));
+            string basePath = GetPath(partition);
+            string[] pathsFiles = Directory.GetFiles(basePath, "*.json", SearchOption.TopDirectoryOnly);
+
+            List<DatedPath> datedPaths = pathsFiles
+                .Select(path => new { Path = path, Date = UtilsPath.ToDate(path) })
+                .Where(entry => entry.Date is not null)
+                .Select(entry => new DatedPath(entry.Path, entry.Date!.Value))
+                .OrderBy(entry => entry.Date)
+                .ToList();
+
+            inputs.Add(
+                new BulkPrunePartitionExecutionInput
+                {
+                    PartitionId = partition.Id,
+                    DatedPaths = datedPaths,
+                }
+            );
         }
 
-        return Task.CompletedTask;
+        IReadOnlyList<BulkPrunePartitionExecutionPlan> plans = _bulkPruneExecutionService.PlanPartitions(
+            inputs,
+            _config.Tasks.Prune,
+            _appConfig.Tasks.Prune.Data.Post.KeepDays
+        );
+
+        foreach (BulkPrunePartitionExecutionPlan plan in plans)
+        {
+            if (!partitionsById.TryGetValue(plan.PartitionId, out PartitionConfig? partition))
+                continue;
+
+            string basePath = GetPath(partition);
+            _logger.LogInformation("prunning partition: {value}", partition.Id);
+            _logger.LogInformation("base path: {path}", Path.GetFileName(basePath));
+            _logger.LogInformation(
+                "prunning date: {date}, KeepDays: {keepDays}",
+                plan.ThresholdDate,
+                _appConfig.Tasks.Prune.Data.Post.KeepDays
+            );
+            _logger.LogInformation("prunning {value} paths", plan.PathsToRemove.Count);
+
+            foreach (string path in plan.PathsToRemove)
+            {
+                File.Delete(path);
+                _logger.LogInformation("{path} removed", Path.GetFileName(path));
+            }
+        }
+
+        await Task.CompletedTask;
     }
 
     public void Replicate()

@@ -28,7 +28,7 @@ public class LocalDumpData(
     IDumpIndexFilePolicyService dumpIndexFilePolicyService,
     IDumpContextGuardService dumpContextGuardService,
     IDumpSessionNamingPolicyService dumpSessionNamingPolicyService,
-    IDumpFlushPlanningService dumpFlushPlanningService,
+    IDumpFlushExecutionService dumpFlushExecutionService,
     IDumpReplicationPlanningService dumpReplicationPlanningService,
     IDataStoreGuardService dataStoreGuardService
 ) : IDumpDataStore
@@ -45,7 +45,7 @@ public class LocalDumpData(
     private readonly IDumpContextGuardService _dumpContextGuardService = dumpContextGuardService;
     private readonly IDumpSessionNamingPolicyService _dumpSessionNamingPolicyService =
         dumpSessionNamingPolicyService;
-    private readonly IDumpFlushPlanningService _dumpFlushPlanningService = dumpFlushPlanningService;
+    private readonly IDumpFlushExecutionService _dumpFlushExecutionService = dumpFlushExecutionService;
     private readonly IDumpReplicationPlanningService _dumpReplicationPlanningService =
         dumpReplicationPlanningService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
@@ -231,25 +231,26 @@ public class LocalDumpData(
             dumpPosts.AddRange(_posts);
         }
 
-        DumpFlushPlan flushPlan = _dumpFlushPlanningService.Build(
-            Data.Type,
-            context.Id,
-            dumpPosts.Select(post => post.Id)
+        List<Backup.Domain.Posts.Post> domainPosts = dumpPosts
+            .Select(PostReplicationMapper.ToDomain)
+            .ToList();
+
+        DumpFlushExecutionResult result = await _dumpFlushExecutionService.Execute(
+            new DumpFlushExecutionRequest
+            {
+                UserId = userId,
+                Type = Data.Type ?? string.Empty,
+                ContextId = context.Id,
+                Posts = domainPosts,
+            },
+            async (sourceId, posts) =>
+                await postData.AddPosts(userId, sourceId, posts.ToList()),
+            async (sourceId, newPostIds) =>
+                await postData.MarkDeletedExcept(userId, sourceId, newPostIds.ToList())
         );
 
-        await postData.AddPosts(
-            userId,
-            flushPlan.SourceId,
-            dumpPosts.Select(PostReplicationMapper.ToDomain).ToList()
-        );
-        _logger.LogInformation("{posts} posts loaded from dump", dumpPosts.Count);
-
-        int deletedCount = await postData.MarkDeletedExcept(
-            userId,
-            flushPlan.SourceId,
-            flushPlan.NewPostIds
-        );
-        _logger.LogInformation("{posts} posts deleted", deletedCount);
+        _logger.LogInformation("{posts} posts loaded from dump", result.LoadedCount);
+        _logger.LogInformation("{posts} posts deleted", result.DeletedCount);
 
         DumpsData dumpsData = await _dumps.GetData();
         dumpsData.Current = null;

@@ -28,8 +28,10 @@ public static class CoreInfrastructureServiceCollectionExtensions
         services.AddSingleton<IDumpContextGuardService, DumpContextGuardService>();
         services.AddSingleton<IDumpSessionNamingPolicyService, DumpSessionNamingPolicyService>();
         services.AddSingleton<IDumpFlushPlanningService, DumpFlushPlanningService>();
+        services.AddSingleton<IDumpFlushExecutionService, DumpFlushExecutionService>();
         services.AddSingleton<IDumpReplicationPlanningService, DumpReplicationPlanningService>();
         services.AddSingleton<IBulkArchiveFilePolicyService, BulkArchiveFilePolicyService>();
+        services.AddSingleton<IBulkPruneExecutionService, BulkPruneExecutionService>();
         services.AddSingleton<IDataStoreGuardService, DataStoreGuardService>();
         services.AddSingleton<IApiRequestBuildService, ApiRequestBuildService>();
 
