@@ -13,6 +13,7 @@ public partial class PostDataMultiStore(
     IEnumerable<IPostDataStore> stores,
     IPostReplication replication,
     IPostStoreParityService postStoreParityService,
+    IPostStoreParityReportService postStoreParityReportService,
     IPrimarySelectionService primarySelectionService,
     ILogger<PostDataMultiStore> logger
 ) : IPostData, IPostStoreParityVerifier
@@ -20,6 +21,8 @@ public partial class PostDataMultiStore(
     private readonly List<IPostDataStore> _stores = [.. stores];
     private readonly IPostReplication _replication = replication;
     private readonly IPostStoreParityService _postStoreParityService = postStoreParityService;
+    private readonly IPostStoreParityReportService _postStoreParityReportService =
+        postStoreParityReportService;
     private readonly IPrimarySelectionService _primarySelectionService = primarySelectionService;
     private readonly ILogger<PostDataMultiStore> _logger = logger;
 
@@ -92,7 +95,9 @@ public partial class PostDataMultiStore(
         }
 
         Backup.Domain.Posts.PostStoreParityResult parity = await VerifyStoreCountsInternal();
-        LogStoreSnapshotCounts(parity);
-        LogStoreParity(parity);
+        Backup.Application.Posts.Models.PostStoreParityReport report =
+            _postStoreParityReportService.Build(parity);
+        LogStoreSnapshotCounts(report);
+        LogStoreParity(report);
     }
 }

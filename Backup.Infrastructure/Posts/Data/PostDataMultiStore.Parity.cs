@@ -1,6 +1,7 @@
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Posts.Adapters;
+using Backup.Application.Posts.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Data;
@@ -20,53 +21,45 @@ public partial class PostDataMultiStore
         return await _postStoreParityService.Verify(adapters);
     }
 
-    private void LogStoreSnapshotCounts(Backup.Domain.Posts.PostStoreParityResult parity)
+    private void LogStoreSnapshotCounts(PostStoreParityReport report)
     {
-        foreach (Backup.Domain.Posts.PostStoreSnapshot snapshot in parity.Snapshots)
+        foreach (PostStoreParitySnapshotItem snapshot in report.Snapshots)
         {
             _logger.LogInfo(
                 "post store counts [{storeId}] posts={posts}, profiles={profiles}, hashtags={hashtags}, medias={medias}, mediaVariants={mediaVariants}, indexEntries={indexEntries}, changes={changes}, changeFields={changeFields}, hashMeta={hashMeta}",
                 snapshot.Label,
-                snapshot.Counts.Posts,
-                snapshot.Counts.Profiles,
-                snapshot.Counts.Hashtags,
-                snapshot.Counts.Medias,
-                snapshot.Counts.MediaVariants,
-                snapshot.Counts.IndexEntries,
-                snapshot.Counts.Changes,
-                snapshot.Counts.ChangeFields,
-                snapshot.Counts.HashMeta
+                snapshot.Posts,
+                snapshot.Profiles,
+                snapshot.Hashtags,
+                snapshot.Medias,
+                snapshot.MediaVariants,
+                snapshot.IndexEntries,
+                snapshot.Changes,
+                snapshot.ChangeFields,
+                snapshot.HashMeta
             );
         }
     }
 
-    private void LogStoreParity(Backup.Domain.Posts.PostStoreParityResult parity)
+    private void LogStoreParity(PostStoreParityReport report)
     {
-        if (parity.Mismatches.Count == 0)
+        foreach (PostStoreParityStatusItem status in report.Statuses)
         {
-            foreach (
-                Backup.Domain.Posts.PostStoreSnapshot snapshot in parity.Snapshots.Where(snapshot =>
-                    !string.Equals(snapshot.Label, parity.PrimaryLabel, StringComparison.Ordinal)
-                )
-            )
+            if (!status.IsMismatch)
             {
                 _logger.LogInfo(
                     "post store parity OK: primary={primary} secondary={secondary}",
-                    parity.PrimaryLabel,
-                    snapshot.Label
+                    status.PrimaryLabel,
+                    status.SecondaryLabel
                 );
+                continue;
             }
 
-            return;
-        }
-
-        foreach (Backup.Domain.Posts.PostStoreMismatch mismatch in parity.Mismatches)
-        {
             _logger.LogWarning(
                 "post store parity MISMATCH: primary={primary} secondary={secondary} diffs={diffs}",
-                mismatch.PrimaryLabel,
-                mismatch.SecondaryLabel,
-                string.Join(", ", mismatch.Diffs)
+                status.PrimaryLabel,
+                status.SecondaryLabel,
+                status.DiffsText
             );
         }
     }
