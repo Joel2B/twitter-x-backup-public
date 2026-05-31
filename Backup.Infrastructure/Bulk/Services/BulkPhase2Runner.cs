@@ -3,7 +3,6 @@ using Backup.Application.Bulk.Models;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Abstractions.Services;
-using Backup.Infrastructure.Bulk.Models;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Bulk.Adapters;
@@ -16,7 +15,7 @@ public sealed class BulkPhase2Runner(
     AppConfig config,
     IPostDomainData postData,
     IBulkData bulkData,
-    IBulkSourceRouteProvider bulkSourceRouteProvider,
+    IBulkSourceRouteService bulkSourceRouteService,
     IBulkApiClient bulkApiClient,
     IBulkPhase2Service bulkPhase2Service
 ) : IBulkPhase2Runner
@@ -25,7 +24,7 @@ public sealed class BulkPhase2Runner(
     private readonly AppConfig _config = config;
     private readonly IPostDomainData _postData = postData;
     private readonly IBulkData _bulkData = bulkData;
-    private readonly IBulkSourceRouteProvider _bulkSourceRouteProvider = bulkSourceRouteProvider;
+    private readonly IBulkSourceRouteService _bulkSourceRouteService = bulkSourceRouteService;
     private readonly IBulkApiClient _bulkApiClient = bulkApiClient;
     private readonly IBulkPhase2Service _bulkPhase2Service = bulkPhase2Service;
 
@@ -33,7 +32,7 @@ public sealed class BulkPhase2Runner(
     {
         _logger.LogInformation("running phase 2");
 
-        string? origin = _bulkSourceRouteProvider.GetOrigin(SourceType.Media);
+        string? origin = _bulkSourceRouteService.GetOrigin(BulkSourceType.Media);
 
         if (origin is null)
         {
