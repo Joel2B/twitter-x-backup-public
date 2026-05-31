@@ -23,7 +23,8 @@ public class ProxyProvider(
     IProxyHttpClientFactoryPolicyService proxyHttpClientFactoryPolicyService,
     IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService,
     IProxyConnectionWindowPolicyService proxyConnectionWindowPolicyService,
-    IProxyKeyPolicyService proxyKeyPolicyService
+    IProxyKeyPolicyService proxyKeyPolicyService,
+    IProxyEndpointParserService proxyEndpointParserService
 )
     : IProxyProvider,
         ISetup,
@@ -42,6 +43,8 @@ public class ProxyProvider(
     private readonly IProxyConnectionWindowPolicyService _proxyConnectionWindowPolicyService =
         proxyConnectionWindowPolicyService;
     private readonly IProxyKeyPolicyService _proxyKeyPolicyService = proxyKeyPolicyService;
+    private readonly IProxyEndpointParserService _proxyEndpointParserService =
+        proxyEndpointParserService;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
     private int _proxyIndex = 0;
@@ -67,7 +70,7 @@ public class ProxyProvider(
 
         Dictionary<ProxyDataConfig, ProxyData> proxiesDict = await _data.GetAllAsDictionary() ?? [];
 
-        ProxyLoader loader = new(_logger, _config);
+        ProxyLoader loader = new(_logger, _config, _proxyEndpointParserService);
         List<ProxyDataConfig> proxies = await loader.Load();
 
         foreach (ProxyDataConfig proxy in proxies)
@@ -106,7 +109,7 @@ public class ProxyProvider(
         List<ProxyData> proxiesStorage = await _data.GetAll() ?? [];
         proxies.AddRange(proxiesStorage.Select(o => o.Proxy));
 
-        ProxyLoader loader = new(_logger, _config);
+        ProxyLoader loader = new(_logger, _config, _proxyEndpointParserService);
         List<ProxyDataConfig> proxiesLoader = await loader.Load();
         proxies.AddRange(proxiesLoader);
         proxies = [.. proxies.Distinct()];
