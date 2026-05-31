@@ -20,8 +20,7 @@ public class LocalMediaDataMaintenance(
     IMediaTempPathPolicyService mediaTempPathPolicyService,
     IMediaMaintenanceDownloadProjectionService mediaMaintenanceDownloadProjectionService,
     IMediaMaintenanceCachedDownloadFilterService mediaMaintenanceCachedDownloadFilterService,
-    IMediaMaintenanceFileProbePolicyService mediaMaintenanceFileProbePolicyService,
-    IMediaMaintenanceIntegrityEvaluationService mediaMaintenanceIntegrityEvaluationService,
+    IMediaMaintenanceIntegrityDecisionService mediaMaintenanceIntegrityDecisionService,
     IMediaMaintenanceIntegritySummaryService mediaMaintenanceIntegritySummaryService,
     IMediaMaintenancePrunePathSelectionService mediaMaintenancePrunePathSelectionService
 ) : IMediaDataMaintenance
@@ -38,16 +37,12 @@ public class LocalMediaDataMaintenance(
         mediaMaintenanceDownloadProjectionService;
     private readonly IMediaMaintenanceCachedDownloadFilterService _mediaMaintenanceCachedDownloadFilterService =
         mediaMaintenanceCachedDownloadFilterService;
-    private readonly IMediaMaintenanceFileProbePolicyService _mediaMaintenanceFileProbePolicyService =
-        mediaMaintenanceFileProbePolicyService;
-    private readonly IMediaMaintenanceIntegrityEvaluationService _mediaMaintenanceIntegrityEvaluationService =
-        mediaMaintenanceIntegrityEvaluationService;
+    private readonly IMediaMaintenanceIntegrityDecisionService _mediaMaintenanceIntegrityDecisionService =
+        mediaMaintenanceIntegrityDecisionService;
     private readonly IMediaMaintenanceIntegritySummaryService _mediaMaintenanceIntegritySummaryService =
         mediaMaintenanceIntegritySummaryService;
     private readonly IMediaMaintenancePrunePathSelectionService _mediaMaintenancePrunePathSelectionService =
         mediaMaintenancePrunePathSelectionService;
-
-    private const long IntegritySizeThreshold = 1000;
 
     public async Task CheckData(List<Download> downloads)
     {
@@ -90,7 +85,7 @@ public class LocalMediaDataMaintenance(
                 string fullPath = string.Empty;
                 bool isValid = false;
 
-                if (_mediaMaintenanceFileProbePolicyService.ShouldProbe(size, IntegritySizeThreshold))
+                if (_mediaMaintenanceIntegrityDecisionService.ShouldProbe(size))
                 {
                     fullPath = await _mediaCache.GetPath(data.Path);
                     isValid = MediaValidator.IsValid(
@@ -100,11 +95,7 @@ public class LocalMediaDataMaintenance(
                 }
 
                 MediaMaintenanceIntegrityEvaluation evaluation =
-                    _mediaMaintenanceIntegrityEvaluationService.Evaluate(
-                    size,
-                    isValid,
-                    IntegritySizeThreshold
-                );
+                    _mediaMaintenanceIntegrityDecisionService.Evaluate(size, isValid);
                 evaluations.Add(evaluation);
 
                 if (evaluation.Remove)

@@ -4,7 +4,6 @@ using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
-using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Data.Json;
@@ -14,7 +13,8 @@ public class LocalPostLogger(
     AppConfig _config,
     IPartition _partition,
     IPostDebugLogPrunePolicyService postDebugLogPrunePolicyService,
-    IPostLogFolderPolicyService postLogFolderPolicyService
+    IPostLogFolderPolicyService postLogFolderPolicyService,
+    IPostHistoryPathExtractionService postHistoryPathExtractionService
 ) : IPostLogger
 {
     private readonly ILogger<LocalPostLogger> _logger = _logger;
@@ -24,6 +24,8 @@ public class LocalPostLogger(
         postDebugLogPrunePolicyService;
     private readonly IPostLogFolderPolicyService _postLogFolderPolicyService =
         postLogFolderPolicyService;
+    private readonly IPostHistoryPathExtractionService _postHistoryPathExtractionService =
+        postHistoryPathExtractionService;
 
     private string _id = "";
     private string _path = "";
@@ -75,12 +77,9 @@ public class LocalPostLogger(
         foreach (string path in paths)
         {
             string[] subPaths = Directory.GetDirectories(path, "*", SearchOption.TopDirectoryOnly);
-
-            List<PostHistoryPath> pathsDate = subPaths
-                .Select(path => new { Path = path, Date = UtilsPath.ToDate(path, true) })
-                .Where(entry => entry.Date is not null)
-                .Select(entry => new PostHistoryPath(entry.Path, entry.Date!.Value))
-                .ToList();
+            IReadOnlyList<PostHistoryPath> pathsDate = _postHistoryPathExtractionService.Extract(
+                subPaths
+            );
 
             List<string> pathsToRemove =
             [
