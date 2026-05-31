@@ -24,7 +24,7 @@ public partial class LocalPostData(
     IPostMediaInputsCompositionService postMediaInputsCompositionService,
     IPostHashingService postHashingService,
     IPostHashMetaParityService postHashMetaParityService,
-    IPostHistoryPrunePolicyService postHistoryPrunePolicyService,
+    IPostHistoryPrunePlanningService postHistoryPrunePlanningService,
     IPostSnapshotSizeGuardService postSnapshotSizeGuardService,
     IPostChangeComputationService postChangeComputationService,
     IPostStoreCountsAggregationService postStoreCountsAggregationService,
@@ -50,8 +50,8 @@ public partial class LocalPostData(
     private readonly IPostHashingService _postHashingService = postHashingService;
     private readonly IPostHashMetaParityService _postHashMetaParityService =
         postHashMetaParityService;
-    private readonly IPostHistoryPrunePolicyService _postHistoryPrunePolicyService =
-        postHistoryPrunePolicyService;
+    private readonly IPostHistoryPrunePlanningService _postHistoryPrunePlanningService =
+        postHistoryPrunePlanningService;
     private readonly IPostSnapshotSizeGuardService _postSnapshotSizeGuardService =
         postSnapshotSizeGuardService;
     private readonly IPostChangeComputationService _postChangeComputationService =

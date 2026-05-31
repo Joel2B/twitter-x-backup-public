@@ -150,19 +150,19 @@ public partial class LocalPostData
         if (pathsDate.Count == 0)
             return Task.CompletedTask;
 
-        int keepDays = Math.Max(1, _appConfig.Tasks.Prune.Data.Post.KeepDays);
-        int keepCount = Math.Max(0, _appConfig.Tasks.Prune.Data.Post.KeepCount);
+        var plan = _postHistoryPrunePlanningService.Plan(
+            pathsDate,
+            _appConfig.Tasks.Prune.Data.Post.KeepDays,
+            _appConfig.Tasks.Prune.Data.Post.KeepCount
+        );
 
         _logger.LogInformation(
             "prunning keep policy: keeping last {keepDays} stored days, found {kept} days",
-            keepDays,
-            pathsDate.Select(path => path.Date.Date).Distinct().Count()
+            plan.NormalizedKeepDays,
+            plan.DistinctDayCount
         );
 
-        List<string> remove =
-        [
-            .. _postHistoryPrunePolicyService.GetPathsToRemove(pathsDate, keepDays, keepCount),
-        ];
+        List<string> remove = [.. plan.PathsToRemove];
 
         _logger.LogInformation("prunning {value} paths", remove.Count);
 
