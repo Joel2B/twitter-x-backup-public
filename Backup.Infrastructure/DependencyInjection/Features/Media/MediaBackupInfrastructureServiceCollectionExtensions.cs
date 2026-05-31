@@ -55,6 +55,7 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaBackupApplyChunkPlanningService, MediaBackupApplyChunkPlanningService>();
         services.AddScoped<IMediaBackupChunkPlanningService, MediaBackupChunkPlanningService>();
         services.AddScoped<IMediaBackupChunkSnapshotCompositionService, MediaBackupChunkSnapshotCompositionService>();
+        services.AddScoped<IMediaBackupChunkRuntimeCompositionService, MediaBackupChunkRuntimeCompositionService>();
         services.AddScoped<IMediaBackupChunkCountDeltaService, MediaBackupChunkCountDeltaService>();
         services.AddScoped<IMediaBackupChunkDeltaInputCompositionService, MediaBackupChunkDeltaInputCompositionService>();
         services.AddScoped<IMediaBackupChunkDeltaLogPlanningService, MediaBackupChunkDeltaLogPlanningService>();

@@ -34,6 +34,7 @@ public partial class MediaBackup(
     IMediaBackupApplyChunkPlanningService mediaBackupApplyChunkPlanningService,
     IMediaBackupChunkPlanningService mediaBackupChunkPlanningService,
     IMediaBackupChunkSnapshotCompositionService mediaBackupChunkSnapshotCompositionService,
+    IMediaBackupChunkRuntimeCompositionService mediaBackupChunkRuntimeCompositionService,
     IMediaBackupChunkCountDeltaService mediaBackupChunkCountDeltaService,
     IMediaBackupChunkDeltaInputCompositionService mediaBackupChunkDeltaInputCompositionService,
     IMediaBackupChunkDeltaLogPlanningService mediaBackupChunkDeltaLogPlanningService,
@@ -93,6 +94,8 @@ public partial class MediaBackup(
         mediaBackupChunkPlanningService;
     private readonly IMediaBackupChunkSnapshotCompositionService _mediaBackupChunkSnapshotCompositionService =
         mediaBackupChunkSnapshotCompositionService;
+    private readonly IMediaBackupChunkRuntimeCompositionService _mediaBackupChunkRuntimeCompositionService =
+        mediaBackupChunkRuntimeCompositionService;
     private readonly IMediaBackupChunkCountDeltaService _mediaBackupChunkCountDeltaService =
         mediaBackupChunkCountDeltaService;
     private readonly IMediaBackupChunkDeltaInputCompositionService _mediaBackupChunkDeltaInputCompositionService =

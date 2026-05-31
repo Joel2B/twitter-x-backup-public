@@ -52,14 +52,15 @@ public partial class MediaBackup
         foreach (int missingChunkId in plan.MissingChunkIds)
             _chunks.Add(missingChunkId, new() { Id = missingChunkId });
 
-        IReadOnlyList<MediaBackupChunkState> chunkStates = _chunks
-            .Values.Select(chunk => new MediaBackupChunkState
-            {
-                Id = chunk.Id,
-                PathCount = chunk.Data.Count,
-                SizeBytes = chunk.Data.Sum(item => item.FileSize ?? 0),
-            })
-            .ToList();
+        IReadOnlyList<MediaBackupChunkState> chunkStates =
+            _mediaBackupChunkRuntimeCompositionService.BuildChunkStates(
+                _chunks.Values.Select(chunk => new MediaBackupChunkStateInput
+                {
+                    Id = chunk.Id,
+                    PathCount = chunk.Data.Count,
+                    SizeBytes = chunk.Data.Sum(item => item.FileSize ?? 0),
+                })
+            );
 
         List<MediaBackupPathCacheObservationInput> cacheObservationInputs = [];
 
@@ -108,21 +109,23 @@ public partial class MediaBackup
             newPaths.Add(item.OriginalPath);
         }
 
-        IReadOnlyList<MediaBackupChunkPathsState> beforeChunkPaths = _chunksClone
-            .Values.Select(chunk => new MediaBackupChunkPathsState
-            {
-                Id = chunk.Id,
-                Paths = chunk.Data.Select(data => data.Path).ToList(),
-            })
-            .ToList();
+        IReadOnlyList<MediaBackupChunkPathsState> beforeChunkPaths =
+            _mediaBackupChunkRuntimeCompositionService.BuildChunkPathStates(
+                _chunksClone.Values.Select(chunk => new MediaBackupChunkPathsInput
+                {
+                    Id = chunk.Id,
+                    Paths = chunk.Data.Select(data => data.Path).ToList(),
+                })
+            );
 
-        IReadOnlyList<MediaBackupChunkPathsState> afterChunkPaths = _chunks
-            .Values.Select(chunk => new MediaBackupChunkPathsState
-            {
-                Id = chunk.Id,
-                Paths = chunk.Data.Select(data => data.Path).ToList(),
-            })
-            .ToList();
+        IReadOnlyList<MediaBackupChunkPathsState> afterChunkPaths =
+            _mediaBackupChunkRuntimeCompositionService.BuildChunkPathStates(
+                _chunks.Values.Select(chunk => new MediaBackupChunkPathsInput
+                {
+                    Id = chunk.Id,
+                    Paths = chunk.Data.Select(data => data.Path).ToList(),
+                })
+            );
 
         IReadOnlyList<MediaBackupChunkCountState> beforeCountStates =
             _mediaBackupChunkSnapshotCompositionService.BuildChunkCountStates(beforeChunkPaths);

@@ -145,12 +145,13 @@ public partial class MediaBackup
     {
         IReadOnlyList<MediaBackupSyncFinalizeInputChunk> chunkStates =
             _mediaBackupChunkEntryStateService.BuildSyncFinalizeInputChunks(
-                _chunks
-                    .Values.Select(chunk => new MediaBackupChunkPathsState
+                _mediaBackupChunkRuntimeCompositionService.BuildChunkPathStates(
+                    _chunks.Values.Select(chunk => new MediaBackupChunkPathsInput
                     {
                         Id = chunk.Id,
                         Paths = chunk.Data.Select(data => data.Path).ToList(),
                     })
+                )
             );
 
         MediaBackupSyncFinalizeResult finalize = _mediaBackupSyncFinalizeService.Finalize(

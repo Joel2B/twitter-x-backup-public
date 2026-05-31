@@ -12,7 +12,7 @@ public partial class MediaBackup
     private async Task ShowInfoChunks()
     {
         _logger.LogInfo("{id,-3} {paths,-10} {size}", "id", "paths", "size (GiB)");
-        List<MediaBackupChunkReportObservation> observations = [];
+        List<MediaBackupChunkReportObservationInput> observationInputs = [];
 
         foreach (var kvp in _chunks)
         {
@@ -29,8 +29,8 @@ public partial class MediaBackup
                     size += cache.Size?.File ?? 0;
             }
 
-            observations.Add(
-                new MediaBackupChunkReportObservation
+            observationInputs.Add(
+                new MediaBackupChunkReportObservationInput
                 {
                     ChunkId = kvp.Key,
                     PathCount = kvp.Value.Data.Count,
@@ -38,6 +38,11 @@ public partial class MediaBackup
                 }
             );
         }
+
+        IReadOnlyList<MediaBackupChunkReportObservation> observations =
+            _mediaBackupChunkRuntimeCompositionService.BuildChunkReportObservations(
+                observationInputs
+            );
 
         IReadOnlyList<MediaBackupChunkReportRow> rows = _mediaBackupChunkReportService.Build(
             observations
