@@ -19,7 +19,8 @@ public class LocalBulkData(
     AppConfig _appConfig,
     StorageBulk _config,
     IPartition _partition,
-    IBulkPrunePolicyService bulkPrunePolicyService,
+    IBulkPrunePartitionPlanningService bulkPrunePartitionPlanningService,
+    IBulkReplicationPathPlanningService bulkReplicationPathPlanningService,
     IBulkArchiveFilePolicyService bulkArchiveFilePolicyService,
     IDataStoreGuardService dataStoreGuardService
 ) : IBulkDataStore, ISetup
@@ -31,7 +32,10 @@ public class LocalBulkData(
     private readonly AppConfig _appConfig = _appConfig;
     private readonly StorageBulk _config = _config;
     private readonly IPartition _partition = _partition;
-    private readonly IBulkPrunePolicyService _bulkPrunePolicyService = bulkPrunePolicyService;
+    private readonly IBulkPrunePartitionPlanningService _bulkPrunePartitionPlanningService =
+        bulkPrunePartitionPlanningService;
+    private readonly IBulkReplicationPathPlanningService _bulkReplicationPathPlanningService =
+        bulkReplicationPathPlanningService;
     private readonly IBulkArchiveFilePolicyService _bulkArchiveFilePolicyService =
         bulkArchiveFilePolicyService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
@@ -136,21 +140,18 @@ public class LocalBulkData(
         if (datedPaths.Count == 0)
             return Task.CompletedTask;
 
-        DateTime date = datedPaths.Last().Date.AddDays(-_appConfig.Tasks.Prune.Data.Post.KeepDays);
-
-        _logger.LogInformation(
-            "prunning date: {date}, KeepDays: {keepDays}",
-            date,
+        BulkPrunePartitionPlan plan = _bulkPrunePartitionPlanningService.Plan(
+            datedPaths,
             _appConfig.Tasks.Prune.Data.Post.KeepDays
         );
 
-        List<string> pathsToRemove =
-        [
-            .. _bulkPrunePolicyService.GetPathsToRemove(
-                datedPaths,
-                _appConfig.Tasks.Prune.Data.Post.KeepDays
-            ),
-        ];
+        _logger.LogInformation(
+            "prunning date: {date}, KeepDays: {keepDays}",
+            plan.ThresholdDate,
+            _appConfig.Tasks.Prune.Data.Post.KeepDays
+        );
+
+        List<string> pathsToRemove = [.. plan.PathsToRemove];
 
         _logger.LogInformation("prunning {value} paths", pathsToRemove.Count);
 
@@ -174,12 +175,15 @@ public class LocalBulkData(
             .ToList();
 
         string mainPath = GetFileBulk();
+        IReadOnlyList<string> replicaPaths = _bulkReplicationPathPlanningService.GetReplicaPaths(
+            mainPath,
+            partitions.Select(GetFileBulk)
+        );
 
-        foreach (PartitionConfig partition in partitions)
+        foreach (string path in replicaPaths)
         {
-            string path = GetFileBulk(partition);
-
-            File.Delete(path);
+            if (File.Exists(path))
+                File.Delete(path);
             File.Copy(mainPath, path);
         }
     }
