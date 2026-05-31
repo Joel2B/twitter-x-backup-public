@@ -20,7 +20,6 @@ public class ProxyProvider(
     ILogger<ProxyProvider> _logger,
     AppConfig _config,
     IProxyData _data,
-    IProxyRuntimePolicyService proxyRuntimePolicyService,
     IProxyHealthProbeService proxyHealthProbeService,
     IProxyHealthProbePort proxyHealthProbePort,
     IProxyHttpClientFactoryPolicyService proxyHttpClientFactoryPolicyService,
@@ -29,8 +28,8 @@ public class ProxyProvider(
     IProxyEndpointParserService proxyEndpointParserService,
     IProxyProviderTypeResolverService proxyProviderTypeResolverService,
     IProxySourceLoadService proxySourceLoadService,
-    IProxyRuntimeRecordMergeService proxyRuntimeRecordMergeService,
-    IProxyRuntimePoolProjectionService proxyRuntimePoolProjectionService,
+    IProxyRuntimePoolBuilderService proxyRuntimePoolBuilderService,
+    IProxyFailureOrchestrationService proxyFailureOrchestrationService,
     IProxyUsageTrackingService proxyUsageTrackingService,
     IProxyErrorTrackingService proxyErrorTrackingService,
     IProxyAcceptedCandidateFactoryService proxyAcceptedCandidateFactoryService,
@@ -43,7 +42,6 @@ public class ProxyProvider(
     private readonly ILogger<ProxyProvider> _logger = _logger;
     private readonly AppConfig _config = _config;
     private readonly IProxyData _data = _data;
-    private readonly IProxyRuntimePolicyService _proxyRuntimePolicyService = proxyRuntimePolicyService;
     private readonly IProxyHealthProbeService _proxyHealthProbeService = proxyHealthProbeService;
     private readonly IProxyHealthProbePort _proxyHealthProbePort = proxyHealthProbePort;
     private readonly IProxyHttpClientFactoryPolicyService _proxyHttpClientFactoryPolicyService =
@@ -56,10 +54,10 @@ public class ProxyProvider(
     private readonly IProxyProviderTypeResolverService _proxyProviderTypeResolverService =
         proxyProviderTypeResolverService;
     private readonly IProxySourceLoadService _proxySourceLoadService = proxySourceLoadService;
-    private readonly IProxyRuntimeRecordMergeService _proxyRuntimeRecordMergeService =
-        proxyRuntimeRecordMergeService;
-    private readonly IProxyRuntimePoolProjectionService _proxyRuntimePoolProjectionService =
-        proxyRuntimePoolProjectionService;
+    private readonly IProxyRuntimePoolBuilderService _proxyRuntimePoolBuilderService =
+        proxyRuntimePoolBuilderService;
+    private readonly IProxyFailureOrchestrationService _proxyFailureOrchestrationService =
+        proxyFailureOrchestrationService;
     private readonly IProxyUsageTrackingService _proxyUsageTrackingService = proxyUsageTrackingService;
     private readonly IProxyErrorTrackingService _proxyErrorTrackingService = proxyErrorTrackingService;
     private readonly IProxyAcceptedCandidateFactoryService _proxyAcceptedCandidateFactoryService =
@@ -92,12 +90,9 @@ public class ProxyProvider(
         List<ProxyData> stored = (await _data.GetAllAsDictionary() ?? [])
             .Values
             .ToList();
-        IReadOnlyList<ProxyRuntimeRecord> merged = _proxyRuntimeRecordMergeService.MergeStoredAndLoaded(
+        IReadOnlyList<ProxyRuntimeRecord> runtimePool = _proxyRuntimePoolBuilderService.BuildPool(
             stored.Select(ToRuntimeRecord),
             await LoadCandidatesFromProviders()
-        );
-        IReadOnlyList<ProxyRuntimeRecord> runtimePool = _proxyRuntimePoolProjectionService.SelectPool(
-            merged
         );
         _proxies = runtimePool.Select(ToProxyData).ToList();
 
@@ -117,7 +112,7 @@ public class ProxyProvider(
         int count = 0;
 
         List<ProxyData> proxiesStorage = await _data.GetAll() ?? [];
-        IReadOnlyList<ProxyRuntimeRecord> merged = _proxyRuntimeRecordMergeService.MergeStoredAndLoaded(
+        IReadOnlyList<ProxyRuntimeRecord> merged = _proxyRuntimePoolBuilderService.BuildPool(
             proxiesStorage.Select(ToRuntimeRecord),
             await LoadCandidatesFromProviders()
         );
@@ -185,36 +180,29 @@ public class ProxyProvider(
         {
             await _proxyLock.WaitAsync(token);
 
-            int value = Interlocked.Increment(ref _failureCount);
+            ProxyFailureOutcome outcome = _proxyFailureOrchestrationService.EvaluateFailure(
+                GetFailureState(),
+                BuildFailureSettings()
+            );
+            ApplyFailureState(outcome.State);
 
-            _logger.LogInformation("failure count: {value}", value);
+            _logger.LogInformation("failure count: {value}", _failureCount);
 
-            if (
-                !_proxyRuntimePolicyService.ShouldAttemptProxySwitch(
-                    value,
-                    _config.Downloads.Threads.Start
-                )
-            )
+            if (!outcome.ShouldAttemptSwitch)
                 return;
-
-            await Reset();
-
-            count++;
 
             _logger.LogInformation("attempt {attempt}", count);
 
-            if (_proxyRuntimePolicyService.ShouldRotateProxy(count, attemptsPerProxy: 3))
-            {
-                count = 0;
+            if (!outcome.ShouldRotateProxy)
+                return;
 
-                _proxyIndex++;
+            if (outcome.IsPoolExhausted)
+                throw new ProxyEmptyException();
 
-                if (_proxyIndex >= _proxies.Count)
-                    throw new ProxyEmptyException();
+            if (outcome.ShouldStopProcess)
+                throw new ProxyException();
 
-                CheckStop();
-                NewClient();
-            }
+            NewClient();
         }
         finally
         {
@@ -227,7 +215,10 @@ public class ProxyProvider(
         if (!_config.Proxy.Enabled)
             return Task.CompletedTask;
 
-        Interlocked.Exchange(ref _failureCount, 0);
+        ProxyFailureState state = _proxyFailureOrchestrationService.ResetFailureCount(
+            GetFailureState()
+        );
+        _failureCount = state.FailureCount;
 
         return Task.CompletedTask;
     }
@@ -270,7 +261,7 @@ public class ProxyProvider(
             ApplyRuntimeRecord(proxy, runtimeRecord, disabledAt: null);
         }
 
-        ResetStop();
+        ResetStopCount();
     }
 
     public void OnError(Exception ex)
@@ -303,40 +294,13 @@ public class ProxyProvider(
         }
     }
 
-    private void ResetStop()
+    private void ResetStopCount()
     {
         if (_stopCount > 0)
             _logger.LogInformation("count to stop reset");
 
-        Interlocked.Exchange(ref _stopCount, 0);
-    }
-
-    private void CheckStop()
-    {
-        if (
-            _proxyRuntimePolicyService.IsStopThresholdDisabled(
-                _config.Proxy.Threshold.ErrorsToStop
-            )
-        )
-            return;
-
-        int value = Interlocked.Increment(ref _stopCount);
-
-        _logger.LogInformation(
-            "{value}/{errorsToStop} count to stop",
-            value,
-            _config.Proxy.Threshold.ErrorsToStop
-        );
-
-        if (
-            !_proxyRuntimePolicyService.ShouldStopProcess(
-                value,
-                _config.Proxy.Threshold.ErrorsToStop
-            )
-        )
-            return;
-
-        throw new ProxyException();
+        ProxyFailureState state = _proxyFailureOrchestrationService.ResetStopCount(GetFailureState());
+        _stopCount = state.StopCount;
     }
 
     public async Task SaveData()
@@ -450,6 +414,32 @@ public class ProxyProvider(
 
     private static ProxyDataConfig ToProxyDataConfig(ProxyCandidate candidate) =>
         new() { Ip = candidate.Ip, Port = candidate.Port, Protocol = candidate.Protocol };
+
+    private ProxyFailureSettings BuildFailureSettings() =>
+        new()
+        {
+            DownloadThreadStart = _config.Downloads.Threads.Start,
+            AttemptsPerProxy = 3,
+            ErrorsToStop = _config.Proxy.Threshold.ErrorsToStop,
+        };
+
+    private ProxyFailureState GetFailureState() =>
+        new()
+        {
+            FailureCount = _failureCount,
+            AttemptCount = count,
+            StopCount = _stopCount,
+            ProxyIndex = _proxyIndex,
+            ProxyCount = _proxies.Count,
+        };
+
+    private void ApplyFailureState(ProxyFailureState state)
+    {
+        _failureCount = state.FailureCount;
+        count = state.AttemptCount;
+        _stopCount = state.StopCount;
+        _proxyIndex = state.ProxyIndex;
+    }
 
     public void Dispose()
     {
