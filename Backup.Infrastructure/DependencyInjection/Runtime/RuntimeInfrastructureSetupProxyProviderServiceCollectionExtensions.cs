@@ -34,6 +34,7 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
         services.AddScoped<IProxyRuntimeRecordMergeService, ProxyRuntimeRecordMergeService>();
         services.AddScoped<IProxyRuntimeStatusTransitionService, ProxyRuntimeStatusTransitionService>();
         services.AddScoped<IProxyFailureOrchestrationService, ProxyFailureOrchestrationService>();
+        services.AddScoped<IProxyFailureStateService, ProxyFailureStateService>();
         services.AddScoped<IProxyUsageTrackingService, ProxyUsageTrackingService>();
         services.AddScoped<IProxyErrorTrackingService, ProxyErrorTrackingService>();
         services.AddScoped<IProxySourceLoadService, ProxySourceLoadService>();

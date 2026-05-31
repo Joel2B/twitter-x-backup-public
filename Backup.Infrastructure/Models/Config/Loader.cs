@@ -19,6 +19,8 @@ public static class ConfigLoader
     private static readonly ConfigApiFileSelectionService _apiFileSelection = new();
     private static readonly ConfigDeserializationGuardService _deserializationGuard = new();
     private static readonly IConfigApiProjectionService _apiProjection = new ConfigApiProjectionService();
+    private static readonly IConfigApiCompositionService _apiComposition =
+        new ConfigApiCompositionService(_normalization, _apiProjection);
 
     public static string GetConfigDirectory() => Path.Combine(AppContext.BaseDirectory, "config");
 
@@ -168,11 +170,10 @@ public static class ConfigLoader
             kvp => kvp.Key,
             kvp => ToProjection(kvp.Key, kvp.Value)
         );
-
-        List<ConfigApiEntry> entries = [.. _apiProjection.ToEntries(projections)];
-
-        _normalization.ValidateAndNormalizeApi(entries);
-        ApplyConfigApiEntries(api, _apiProjection.ToProjections(entries));
+        IReadOnlyDictionary<string, ConfigApiProjection> normalized = _apiComposition.NormalizeApi(
+            projections
+        );
+        ApplyConfigApiEntries(api, normalized);
     }
 
     private static void ApplyFetchToApi(
@@ -184,8 +185,6 @@ public static class ConfigLoader
             kvp => kvp.Key,
             kvp => ToProjection(kvp.Key, kvp.Value)
         );
-        List<ConfigApiEntry> apiEntries = [.. _apiProjection.ToEntries(projections)];
-
         List<ConfigFetchEntry> fetchEntries = fetch
             .Select(kvp => new ConfigFetchEntry
             {
@@ -196,9 +195,11 @@ public static class ConfigLoader
                 Api = kvp.Value.Api,
             })
             .ToList();
-
-        _normalization.ApplyFetchToApi(apiEntries, fetchEntries);
-        ApplyConfigApiEntries(api, _apiProjection.ToProjections(apiEntries));
+        IReadOnlyDictionary<string, ConfigApiProjection> applied = _apiComposition.ApplyFetchToApi(
+            projections,
+            fetchEntries
+        );
+        ApplyConfigApiEntries(api, applied);
     }
 
     private static ConfigApiProjection ToProjection(string key, ApiConfig value) =>

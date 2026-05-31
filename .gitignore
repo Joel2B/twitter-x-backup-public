@@ -406,4 +406,4 @@ App/Config/*.json
 App/Config/**/*.json
 Backup.Infrastructure/App/Config/*.json
 Backup.Infrastructure/App/Config/**/*.json
-config/
+/config/
