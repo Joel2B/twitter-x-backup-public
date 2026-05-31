@@ -15,8 +15,7 @@ public class LocalPartition(
     AppConfig _appConfig,
     ILogger<LocalPartition> _logger,
     IPartitionPolicyService partitionPolicyService,
-    IPartitionPathProbeService partitionPathProbeService,
-    IPartitionPathProbePlanningService partitionPathProbePlanningService,
+    IPartitionPathProbeExecutionService partitionPathProbeExecutionService,
     Storage? _config = null
 ) : IPartition, ISetup
 {
@@ -24,9 +23,8 @@ public class LocalPartition(
     private readonly Storage? _config = _config;
     private readonly AppConfig _appConfig = _appConfig;
     private readonly IPartitionPolicyService _partitionPolicyService = partitionPolicyService;
-    private readonly IPartitionPathProbeService _partitionPathProbeService = partitionPathProbeService;
-    private readonly IPartitionPathProbePlanningService _partitionPathProbePlanningService =
-        partitionPathProbePlanningService;
+    private readonly IPartitionPathProbeExecutionService _partitionPathProbeExecutionService =
+        partitionPathProbeExecutionService;
 
     private readonly ConcurrentDictionary<int, PartitionSize> _partitions = new(
         _appConfig
@@ -88,27 +86,21 @@ public class LocalPartition(
         _logger.LogInformation("{title}", "Testing paths");
         _logger.LogInformation("{partition,-9} {error}", "Partition", "Error");
 
-        bool stop = false;
-        IReadOnlyList<PartitionPathProbeTarget> targets =
-            _partitionPathProbePlanningService.BuildTargets(
-                _partitions.Values.Select(item => new PartitionPathProbeCandidate
-                {
-                    PartitionName = item.Partition.Name ?? item.Partition.Id.ToString(),
-                    Enabled = item.Partition.Enabled,
-                    RootPath = Path.Combine([.. item.Partition.Paths]),
-                })
-            );
+        PartitionPathProbeExecutionResult probe = _partitionPathProbeExecutionService.Execute(
+            _partitions.Values.Select(item => new PartitionPathProbeCandidate
+            {
+                PartitionName = item.Partition.Name ?? item.Partition.Id.ToString(),
+                Enabled = item.Partition.Enabled,
+                RootPath = Path.Combine([.. item.Partition.Paths]),
+            })
+        );
 
-        foreach (PartitionPathProbeTarget target in targets)
+        foreach (PartitionPathProbeResult target in probe.Results)
         {
-            string? error = _partitionPathProbeService.Probe(target.ProbePath);
-            _logger.LogInformation("{partition,-9} {error}", target.PartitionName, error);
-
-            if (error is not null)
-                stop = true;
+            _logger.LogInformation("{partition,-9} {error}", target.PartitionName, target.Error);
         }
 
-        if (stop)
+        if (probe.HasErrors)
             throw new IOException();
     }
 
