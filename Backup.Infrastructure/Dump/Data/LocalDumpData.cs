@@ -11,7 +11,6 @@ using Backup.Infrastructure.Models.Config.Data.Bulk;
 using Backup.Infrastructure.Models.Config.Data.Dump;
 using Backup.Infrastructure.Models.Dump;
 using Backup.Infrastructure.Posts.Models;
-using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -24,9 +23,9 @@ public class LocalDumpData(
     IDumpsData _dumps,
     StorageDump _config,
     IPartition _partition,
-    IDumpIndexFilePolicyService dumpIndexFilePolicyService,
     IDumpLifecycleService dumpLifecycleService,
     IDumpPathService dumpPathService,
+    IDumpIndexLoadService dumpIndexLoadService,
     IDumpFlushExecutionService dumpFlushExecutionService,
     IDumpReplicationPlanningService dumpReplicationPlanningService,
     IDataStoreGuardService dataStoreGuardService
@@ -39,9 +38,9 @@ public class LocalDumpData(
     private readonly AppConfig _appConfig = _appConfig;
     private readonly StorageDump _config = _config;
     private readonly IPartition _partition = _partition;
-    private readonly IDumpIndexFilePolicyService _dumpIndexFilePolicyService = dumpIndexFilePolicyService;
     private readonly IDumpLifecycleService _dumpLifecycleService = dumpLifecycleService;
     private readonly IDumpPathService _dumpPathService = dumpPathService;
+    private readonly IDumpIndexLoadService _dumpIndexLoadService = dumpIndexLoadService;
     private readonly IDumpFlushExecutionService _dumpFlushExecutionService = dumpFlushExecutionService;
     private readonly IDumpReplicationPlanningService _dumpReplicationPlanningService =
         dumpReplicationPlanningService;
@@ -216,28 +215,10 @@ public class LocalDumpData(
         List<string> paths = Directory
             .EnumerateFiles(currentPath, "*.json", SearchOption.AllDirectories)
             .ToList();
-        IReadOnlyList<string> indexPaths = _dumpIndexFilePolicyService.SelectIndexFiles(
+        IReadOnlyList<Backup.Domain.Posts.Post> domainPosts = await _dumpIndexLoadService.LoadPosts(
             paths,
             [.. _config.Paths.Dumps.Dump.Api.Paths]
         );
-
-        List<Post> dumpPosts = [];
-
-        foreach (string path in indexPaths)
-        {
-            string content = await File.ReadAllTextAsync(path);
-            List<Post>? deserialized = JsonConvert.DeserializeObject<List<Post>>(content);
-            List<Post> _posts = _dataStoreGuardService.RequireDeserialized(
-                deserialized,
-                "Error in deserialize"
-            );
-
-            dumpPosts.AddRange(_posts);
-        }
-
-        List<Backup.Domain.Posts.Post> domainPosts = dumpPosts
-            .Select(PostReplicationMapper.ToDomain)
-            .ToList();
 
         DumpFlushExecutionResult result = await _dumpFlushExecutionService.Execute(
             new DumpFlushExecutionRequest
