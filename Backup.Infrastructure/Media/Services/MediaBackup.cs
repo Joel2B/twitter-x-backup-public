@@ -26,6 +26,8 @@ public partial class MediaBackup(
     IMediaBackupIntegrityChangeDetectionService mediaBackupIntegrityChangeDetectionService,
     IMediaBackupDirectPathCandidateDecisionService mediaBackupDirectPathCandidateDecisionService,
     IMediaBackupDirectPathQueueService mediaBackupDirectPathQueueService,
+    IMediaBackupPathProjectionService mediaBackupPathProjectionService,
+    IMediaBackupChunkFailurePolicyService mediaBackupChunkFailurePolicyService,
     IMediaBackupDuplicateCleanupService mediaBackupDuplicateCleanupService,
     IMediaBackupStorageConsistencyDecisionService mediaBackupStorageConsistencyDecisionService,
     IMediaBackupChunkPlanningService mediaBackupChunkPlanningService,
@@ -60,6 +62,10 @@ public partial class MediaBackup(
         mediaBackupDirectPathCandidateDecisionService;
     private readonly IMediaBackupDirectPathQueueService _mediaBackupDirectPathQueueService =
         mediaBackupDirectPathQueueService;
+    private readonly IMediaBackupPathProjectionService _mediaBackupPathProjectionService =
+        mediaBackupPathProjectionService;
+    private readonly IMediaBackupChunkFailurePolicyService _mediaBackupChunkFailurePolicyService =
+        mediaBackupChunkFailurePolicyService;
     private readonly IMediaBackupDuplicateCleanupService _mediaBackupDuplicateCleanupService =
         mediaBackupDuplicateCleanupService;
     private readonly IMediaBackupStorageConsistencyDecisionService _mediaBackupStorageConsistencyDecisionService =
@@ -142,6 +148,21 @@ public partial class MediaBackup(
 
             using (_logger.LogTimer(Id, step.TimerName))
                 await step.Execute(this);
+        }
+    }
+
+    private static void ApplyFailureStates(Chunk chunk, IReadOnlyList<MediaBackupChunkFailureState> states)
+    {
+        Dictionary<string, MediaBackupChunkFailureState> byPath = states.ToDictionary(item => item.Path);
+
+        foreach (ChunkData data in chunk.Data)
+        {
+            if (!byPath.TryGetValue(data.Path, out MediaBackupChunkFailureState? state))
+                continue;
+
+            data.Hash = state.Hash;
+            data.FileSize = state.FileSize;
+            data.Crc32 = state.Crc32;
         }
     }
 

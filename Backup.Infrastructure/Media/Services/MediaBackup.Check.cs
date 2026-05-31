@@ -46,7 +46,9 @@ public partial class MediaBackup
             if (zip is null)
                 continue;
 
-            IEnumerable<string> memory = [.. kvp.Value.Data.Select(o => o.Path.Replace('\\', '/'))];
+            IReadOnlyList<string> memory = _mediaBackupPathProjectionService.ToArchivePaths(
+                kvp.Value.Data.Select(item => item.Path)
+            );
 
             storageCount += storage.Count();
 

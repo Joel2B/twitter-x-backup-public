@@ -55,7 +55,9 @@ public partial class MediaBackup
                         storagePaths = [.. zip.GetEntries().Select(o => o.FullName)];
                     }
 
-                    string relativePath = chunkData.Path.Replace('\\', '/');
+                    string relativePath = _mediaBackupPathProjectionService.ToArchivePath(
+                        chunkData.Path
+                    );
 
                     if (storagePaths.TryGetValue(relativePath, out var _))
                         continue;
@@ -72,7 +74,9 @@ public partial class MediaBackup
                 if (zip is null || storagePaths is null)
                     continue;
 
-                List<string> memory = [.. kvp.Value.Data.Select(o => o.Path.Replace('\\', '/'))];
+                IReadOnlyList<string> memory = _mediaBackupPathProjectionService.ToArchivePaths(
+                    kvp.Value.Data.Select(item => item.Path)
+                );
                 MediaBackupStorageConsistencyDecision decision =
                     _mediaBackupStorageConsistencyDecisionService.DecideForApply(
                         memory,
@@ -113,12 +117,22 @@ public partial class MediaBackup
             {
                 _logger.LogError("Error: {error}", JsonConvert.SerializeObject(ex));
 
-                zip?.Dispose();
+                    zip?.Dispose();
 
                 await _mediaBackupData.DeleteChunk(kvp.Value);
 
-                foreach (ChunkData chunkData in kvp.Value.Data)
-                    chunkData.Hash = null;
+                IReadOnlyList<MediaBackupChunkFailureState> resetStates =
+                    _mediaBackupChunkFailurePolicyService.ResetForApplyFailure(
+                        kvp.Value.Data.Select(item => new MediaBackupChunkFailureState
+                        {
+                            Path = item.Path,
+                            Hash = item.Hash,
+                            FileSize = item.FileSize,
+                            Crc32 = item.Crc32,
+                        })
+                    );
+
+                ApplyFailureStates(kvp.Value, resetStates);
 
                 await _mediaBackupData.Save([kvp.Value]);
 
@@ -170,7 +184,7 @@ public partial class MediaBackup
                     }
 
                     _logger.LogInfo("removing entry", path);
-                    zip.RemoveEntry(path.Replace('\\', '/'));
+                    zip.RemoveEntry(_mediaBackupPathProjectionService.ToArchivePath(path));
                     _logger.LogInfo("entry removed");
 
                     _chunks[chunkPlan.ChunkId].Data.RemoveAll(data => data.Path == path);

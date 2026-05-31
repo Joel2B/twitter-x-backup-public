@@ -13,6 +13,24 @@ public sealed class MediaBackupDirectPathCandidateDecisionService(
         MediaBackupDirectPathCandidateObservation observation
     )
     {
+        if (!observation.CacheExists)
+        {
+            return new MediaBackupDirectPathCandidateDecision
+            {
+                ShouldThrowMissingSource = false,
+                ShouldIncludeDirectPath = false,
+            };
+        }
+
+        if (observation.FileSizeBytes is null || observation.FileSizeBytes <= observation.MaxPathSizeBytes)
+        {
+            return new MediaBackupDirectPathCandidateDecision
+            {
+                ShouldThrowMissingSource = false,
+                ShouldIncludeDirectPath = false,
+            };
+        }
+
         if (!observation.SourceExists)
         {
             return new MediaBackupDirectPathCandidateDecision

@@ -209,10 +209,6 @@ public partial class MediaBackup
                         }
 
                         MediaCacheEntry? cache = await MediaData.GetCache(path);
-
-                        if (cache is null || (cache.Size?.File <= _config.Chunk.Path.Size))
-                            return;
-
                         bool existsSource = await MediaData.Exists(path);
                         bool existsTarget = await _mediaBackupData.Exists(path);
 
@@ -221,8 +217,9 @@ public partial class MediaBackup
                                 new MediaBackupDirectPathCandidateObservation
                                 {
                                     Path = path,
-                                    CachePath = cache.Path,
-                                    FileSizeBytes = cache.Size?.File,
+                                    CacheExists = cache is not null,
+                                    CachePath = cache?.Path ?? string.Empty,
+                                    FileSizeBytes = cache?.Size?.File,
                                     SourceExists = existsSource,
                                     TargetExists = existsTarget,
                                     MaxPathSizeBytes = _config.Chunk.Path.Size,
@@ -235,7 +232,7 @@ public partial class MediaBackup
                         if (!decision.ShouldIncludeDirectPath)
                             return;
 
-                        _pathsDirect.Add(cache.Path);
+                        _pathsDirect.Add(cache!.Path);
                     }
                     catch (OperationCanceledException)
                     {

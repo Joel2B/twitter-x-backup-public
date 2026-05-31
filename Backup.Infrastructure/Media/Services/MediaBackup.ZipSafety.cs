@@ -1,6 +1,7 @@
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Utility.Abstractions.Services;
 using Backup.Infrastructure.Media.Models.Backup;
+using Backup.Application.Media.Backup.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
@@ -74,12 +75,18 @@ public partial class MediaBackup
 
         await _mediaBackupData.DeleteChunk(chunk);
 
-        foreach (ChunkData item in chunk.Data)
-        {
-            item.Hash = null;
-            item.FileSize = null;
-            item.Crc32 = null;
-        }
+        IReadOnlyList<MediaBackupChunkFailureState> resetStates =
+            _mediaBackupChunkFailurePolicyService.ResetForCorruptChunk(
+                chunk.Data.Select(item => new MediaBackupChunkFailureState
+                {
+                    Path = item.Path,
+                    Hash = item.Hash,
+                    FileSize = item.FileSize,
+                    Crc32 = item.Crc32,
+                })
+            );
+
+        ApplyFailureStates(chunk, resetStates);
 
         await _mediaBackupData.Save([chunk]);
     }

@@ -48,7 +48,10 @@ public partial class MediaBackup
             foreach (ChunkData item in kvp.Value.Data)
             {
                 MediaCacheEntry? cache = await MediaData.GetCache(item.Path);
-                entries.TryGetValue(item.Path.Replace('\\', '/'), out ZipEntry? value2);
+                entries.TryGetValue(
+                    _mediaBackupPathProjectionService.ToArchivePath(item.Path),
+                    out ZipEntry? value2
+                );
 
                 observations.Add(
                     new MediaBackupIntegrityObservation
@@ -119,7 +122,7 @@ public partial class MediaBackup
                 foreach (string path in change.Paths)
                 {
                     using Stream read = await MediaData.Read(path);
-                    string relativePath = path.Replace('\\', '/');
+                    string relativePath = _mediaBackupPathProjectionService.ToArchivePath(path);
 
                     zip.RemoveEntry(relativePath);
                     await zip.AddEntry(relativePath, read);
@@ -173,7 +176,10 @@ public partial class MediaBackup
 
             foreach (var item in data.Values)
             {
-                entries.TryGetValue(item.Path.Replace('\\', '/'), out ZipEntry? value);
+                entries.TryGetValue(
+                    _mediaBackupPathProjectionService.ToArchivePath(item.Path),
+                    out ZipEntry? value
+                );
 
                 if (value is null)
                     throw new Exception();

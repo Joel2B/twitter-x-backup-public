@@ -51,7 +51,10 @@ public partial class MediaBackup
 
             foreach (ChunkData item in kvp.Value.Data)
             {
-                entries.TryGetValue(item.Path.Replace('\\', '/'), out ZipEntry? value);
+                entries.TryGetValue(
+                    _mediaBackupPathProjectionService.ToArchivePath(item.Path),
+                    out ZipEntry? value
+                );
 
                 if (value is null)
                     continue;
