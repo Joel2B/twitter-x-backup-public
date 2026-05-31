@@ -73,9 +73,10 @@ public partial class MediaBackup
                     continue;
 
                 List<string> memory = [.. kvp.Value.Data.Select(o => o.Path.Replace('\\', '/'))];
-                MediaPathDiffResult diff = _mediaBackupPathAnalysisService.Diff(memory, storagePaths);
-                int missing = diff.MissingPaths.Count;
-                IReadOnlyList<string> extras = diff.ExtraPaths;
+                MediaBackupChunkReconciliationResult reconciliation =
+                    _mediaBackupChunkReconciliationService.Reconcile(memory, storagePaths);
+                int missing = reconciliation.MissingCount;
+                IReadOnlyList<string> extras = reconciliation.ExtraPaths;
 
                 _logger.LogInformation(
                     "{memory}/{storage}:{missing}/{extras}",
@@ -85,7 +86,7 @@ public partial class MediaBackup
                     extras.Count()
                 );
 
-                if (missing != 0)
+                if (reconciliation.ShouldFail)
                     throw new Exception();
 
                 if (extras.Any())

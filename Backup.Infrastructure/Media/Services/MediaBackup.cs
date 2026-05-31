@@ -24,6 +24,7 @@ public partial class MediaBackup(
     IMediaBackupChunkSyncPlanningService mediaBackupChunkSyncPlanningService,
     IMediaBackupIntegrityPlanningService mediaBackupIntegrityPlanningService,
     IMediaBackupDuplicateCleanupService mediaBackupDuplicateCleanupService,
+    IMediaBackupChunkReconciliationService mediaBackupChunkReconciliationService,
     IEnumerable<IMediaBackupPipelineStep> _pipelineSteps,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaBackupStrategy, IMediaBackupPipelineActions
@@ -51,6 +52,8 @@ public partial class MediaBackup(
         mediaBackupIntegrityPlanningService;
     private readonly IMediaBackupDuplicateCleanupService _mediaBackupDuplicateCleanupService =
         mediaBackupDuplicateCleanupService;
+    private readonly IMediaBackupChunkReconciliationService _mediaBackupChunkReconciliationService =
+        mediaBackupChunkReconciliationService;
     private BackupChunks _backup = new()
     {
         Chunks = new()

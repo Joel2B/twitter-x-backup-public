@@ -109,11 +109,12 @@ public partial class MediaBackup
                 _logger.LogInformation("{paths} duplicate paths removed", cleanupPlan.RemovedPathCount);
             }
 
-            var diff = _mediaBackupPathAnalysisService.Diff(memory, storage);
-            int missing = diff.MissingPaths.Count;
-            IReadOnlyList<string> extras = diff.ExtraPaths;
+            MediaBackupChunkReconciliationResult reconciliation =
+                _mediaBackupChunkReconciliationService.Reconcile(memory, storage);
+            int missing = reconciliation.MissingCount;
+            IReadOnlyList<string> extras = reconciliation.ExtraPaths;
 
-            if (missing == 0 && !extras.Any())
+            if (reconciliation.IsConsistent)
                 continue;
 
             _logger.LogInfo(
