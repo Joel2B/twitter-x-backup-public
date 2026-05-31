@@ -15,6 +15,7 @@ public class LocalPartition(
     AppConfig _appConfig,
     ILogger<LocalPartition> _logger,
     IPartitionPolicyService partitionPolicyService,
+    IPartitionStateProjectionService partitionStateProjectionService,
     IPartitionPathProbeExecutionService partitionPathProbeExecutionService,
     Storage? _config = null
 ) : IPartition, ISetup
@@ -23,6 +24,8 @@ public class LocalPartition(
     private readonly Storage? _config = _config;
     private readonly AppConfig _appConfig = _appConfig;
     private readonly IPartitionPolicyService _partitionPolicyService = partitionPolicyService;
+    private readonly IPartitionStateProjectionService _partitionStateProjectionService =
+        partitionStateProjectionService;
     private readonly IPartitionPathProbeExecutionService _partitionPathProbeExecutionService =
         partitionPathProbeExecutionService;
 
@@ -120,7 +123,7 @@ public class LocalPartition(
     public List<PartitionConfig> GetPartitions(List<int>? ids = null)
     {
         List<int>? selectedIds = ids ?? _config?.Partitions;
-        List<PartitionState> states = BuildPartitionStates(_appConfig.Data.Partitions);
+        IReadOnlyList<PartitionState> states = BuildPartitionStates(_appConfig.Data.Partitions);
         IReadOnlyList<PartitionState> filtered = _partitionPolicyService.FilterEnabled(
             states,
             selectedIds
@@ -132,7 +135,7 @@ public class LocalPartition(
     public PartitionConfig GetPath(int? id = null, long size = 0)
     {
         List<PartitionConfig> available = GetPartitions();
-        List<PartitionState> states = BuildPartitionStates(available);
+        IReadOnlyList<PartitionState> states = BuildPartitionStates(available);
         int selectedId = _partitionPolicyService.ResolvePartitionId(states, id, size);
 
         if (!_partitions.TryGetValue(selectedId, out PartitionSize? partition))
@@ -144,8 +147,17 @@ public class LocalPartition(
         return partition.Partition;
     }
 
-    public List<PartitionConfig> GetCache() =>
-        [.. GetPartitions().Where(partition => _partitionPolicyService.IsCachePartition(ToState(partition)))];
+    public List<PartitionConfig> GetCache()
+    {
+        List<PartitionConfig> available = GetPartitions();
+        HashSet<int> cacheIds =
+        [
+            .. BuildPartitionStates(available)
+                .Where(state => _partitionPolicyService.IsCachePartition(state))
+                .Select(state => state.Id),
+        ];
+        return [.. available.Where(partition => cacheIds.Contains(partition.Id))];
+    }
 
     public PartitionConfig GetPrimary()
     {
@@ -167,21 +179,19 @@ public class LocalPartition(
         return _partitions[id].Partition;
     }
 
-    private List<PartitionState> BuildPartitionStates(IReadOnlyList<PartitionConfig> partitions) =>
-        partitions.Select(ToState).ToList();
-
-    private PartitionState ToState(PartitionConfig partition)
-    {
-        _partitions.TryGetValue(partition.Id, out PartitionSize? current);
-        return new PartitionState
+    private IReadOnlyList<PartitionState> BuildPartitionStates(IReadOnlyList<PartitionConfig> partitions) =>
+        _partitionStateProjectionService.ToStates(partitions.Select(partition =>
         {
-            Id = partition.Id,
-            Type = partition.Type,
-            Tags = partition.Tags,
-            Size = partition.Size,
-            UsableSpace = partition.UsableSpace,
-            Enabled = partition.Enabled,
-            CurrentSize = current?.Size ?? 0,
-        };
-    }
+            _partitions.TryGetValue(partition.Id, out PartitionSize? current);
+            return new PartitionStateSource
+            {
+                Id = partition.Id,
+                Type = partition.Type,
+                Tags = partition.Tags,
+                Size = partition.Size,
+                UsableSpace = partition.UsableSpace,
+                Enabled = partition.Enabled,
+                CurrentSize = current?.Size ?? 0,
+            };
+        }));
 }
