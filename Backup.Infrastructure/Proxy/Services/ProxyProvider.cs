@@ -28,8 +28,7 @@ public class ProxyProvider(
     IProxyProviderTypeResolverService proxyProviderTypeResolverService,
     IProxySourceLoadService proxySourceLoadService,
     IProxyRuntimeRecordMapper proxyRuntimeRecordMapper,
-    IProxyRuntimePoolBuilderService proxyRuntimePoolBuilderService,
-    IProxyHealthAcceptanceService proxyHealthAcceptanceService,
+    IProxyProviderRuntimeOrchestrationService proxyProviderRuntimeOrchestrationService,
     IProxyRuntimeStatusTransitionService proxyRuntimeStatusTransitionService,
     IProxyFailureStateService proxyFailureStateService,
     IProxyUsageTrackingService proxyUsageTrackingService,
@@ -54,10 +53,8 @@ public class ProxyProvider(
         proxyProviderTypeResolverService;
     private readonly IProxySourceLoadService _proxySourceLoadService = proxySourceLoadService;
     private readonly IProxyRuntimeRecordMapper _proxyRuntimeRecordMapper = proxyRuntimeRecordMapper;
-    private readonly IProxyRuntimePoolBuilderService _proxyRuntimePoolBuilderService =
-        proxyRuntimePoolBuilderService;
-    private readonly IProxyHealthAcceptanceService _proxyHealthAcceptanceService =
-        proxyHealthAcceptanceService;
+    private readonly IProxyProviderRuntimeOrchestrationService _proxyProviderRuntimeOrchestrationService =
+        proxyProviderRuntimeOrchestrationService;
     private readonly IProxyRuntimeStatusTransitionService _proxyRuntimeStatusTransitionService =
         proxyRuntimeStatusTransitionService;
     private readonly IProxyFailureStateService _proxyFailureStateService = proxyFailureStateService;
@@ -84,10 +81,11 @@ public class ProxyProvider(
         List<ProxyData> stored = (await _data.GetAllAsDictionary() ?? [])
             .Values
             .ToList();
-        IReadOnlyList<ProxyRuntimeRecord> runtimePool = _proxyRuntimePoolBuilderService.BuildPool(
-            stored.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
-            await LoadCandidatesFromProviders()
-        );
+        IReadOnlyList<ProxyRuntimeRecord> runtimePool =
+            _proxyProviderRuntimeOrchestrationService.BuildRuntimePool(
+                stored.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
+                await LoadCandidatesFromProviders()
+            );
         _proxies = runtimePool.Select(_proxyRuntimeRecordMapper.ToProxyData).ToList();
 
         if (_proxies.Count == 0)
@@ -105,16 +103,14 @@ public class ProxyProvider(
 
         HashSet<string> proxiesAdded = [.. _proxies.Select(o => GetProxyKey(o.Proxy))];
         List<ProxyData> proxiesStorage = await _data.GetAll() ?? [];
-        IReadOnlyList<ProxyRuntimeRecord> merged = _proxyRuntimePoolBuilderService.BuildPool(
-            proxiesStorage.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
-            await LoadCandidatesFromProviders()
-        );
-        ProxyHealthAcceptanceResult acceptance = await _proxyHealthAcceptanceService.AcceptAsync(
-            merged,
-            proxiesAdded,
-            flushEvery: 10,
-            _proxyHealthProbePort
-        );
+        ProxyHealthAcceptanceResult acceptance =
+            await _proxyProviderRuntimeOrchestrationService.AcceptCandidatesAsync(
+                proxiesStorage.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
+                await LoadCandidatesFromProviders(),
+                proxiesAdded,
+                flushEvery: 10,
+                _proxyHealthProbePort
+            );
 
         foreach (string error in acceptance.ProbeErrors)
             _logger.LogError("Error: {error}", error);
