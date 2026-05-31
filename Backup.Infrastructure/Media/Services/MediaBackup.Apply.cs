@@ -22,25 +22,37 @@ public partial class MediaBackup
                 if (_stop)
                     break;
 
-                foreach (ChunkData chunkData in kvp.Value.Data)
-                {
-                    if (chunkData.Hash is not null)
-                        continue;
-
-                    chunkData.Hash = await MediaData.GetHash(
-                        UtilsPath.NormalizePath(chunkData.Path)
+                IReadOnlyList<MediaBackupChunkEntryState> initialEntryStates =
+                    BuildChunkEntryStates(kvp.Value.Data);
+                IReadOnlyList<string> pathsNeedingHash =
+                    _mediaBackupChunkHashPreparationService.SelectPathsNeedingHash(
+                        initialEntryStates
                     );
+                Dictionary<string, string?> hashByPath = new(StringComparer.Ordinal);
 
-                    if (chunkData.Hash is null)
+                foreach (string path in pathsNeedingHash)
+                {
+                    string? hash = await MediaData.GetHash(
+                        UtilsPath.NormalizePath(path)
+                    );
+                    hashByPath[path] = hash;
+
+                    if (hash is null)
                     {
-                        _logger.LogInfo("error in hash: {path}", chunkData.Path);
-                        continue;
+                        _logger.LogInfo("error in hash: {path}", path);
                     }
                 }
 
+                IReadOnlyList<MediaBackupChunkEntryState> hashedEntryStates =
+                    _mediaBackupChunkHashPreparationService.ApplyHashes(
+                        initialEntryStates,
+                        hashByPath
+                    );
+                ApplyChunkEntryStates(kvp.Value, hashedEntryStates);
+
                 IReadOnlyList<MediaBackupApplyChunkPathState> chunkPaths =
                     _mediaBackupChunkEntryStateService.BuildApplyChunkPathStates(
-                        BuildChunkEntryStates(kvp.Value.Data)
+                        hashedEntryStates
                     );
 
                 if (!chunkPaths.Any(item => item.HasHash))

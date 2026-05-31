@@ -42,6 +42,7 @@ public partial class MediaBackup(
     IMediaBackupChunkDeltaLogPlanningService mediaBackupChunkDeltaLogPlanningService,
     IMediaBackupChunkEntryStateService mediaBackupChunkEntryStateService,
     IMediaBackupChunkEntryStateMutationService mediaBackupChunkEntryStateMutationService,
+    IMediaBackupChunkHashPreparationService mediaBackupChunkHashPreparationService,
     IMediaBackupChunkMetadataRefreshExecutionService mediaBackupChunkMetadataRefreshExecutionService,
     IMediaBackupChunkReportObservationAggregationService mediaBackupChunkReportObservationAggregationService,
     IMediaBackupChunkReportService mediaBackupChunkReportService,
@@ -114,6 +115,8 @@ public partial class MediaBackup(
         mediaBackupChunkEntryStateService;
     private readonly IMediaBackupChunkEntryStateMutationService _mediaBackupChunkEntryStateMutationService =
         mediaBackupChunkEntryStateMutationService;
+    private readonly IMediaBackupChunkHashPreparationService _mediaBackupChunkHashPreparationService =
+        mediaBackupChunkHashPreparationService;
     private readonly IMediaBackupChunkMetadataRefreshExecutionService _mediaBackupChunkMetadataRefreshExecutionService =
         mediaBackupChunkMetadataRefreshExecutionService;
     private readonly IMediaBackupChunkReportObservationAggregationService _mediaBackupChunkReportObservationAggregationService =
