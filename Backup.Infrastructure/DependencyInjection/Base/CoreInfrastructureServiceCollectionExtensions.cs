@@ -78,6 +78,7 @@ public static class CoreInfrastructureServiceCollectionExtensions
     public static IServiceCollection AddPartitionInfrastructure(this IServiceCollection services)
     {
         services.AddSingleton<IPartitionPolicyService, PartitionPolicyService>();
+        services.AddSingleton<IPartitionPathProbeService, PartitionPathProbeService>();
         services.AddSingleton<LocalPartition>();
         services.AddSingleton<IPartition>(sp => sp.GetRequiredService<LocalPartition>());
         services.AddSingleton<ISetup>(sp => sp.GetRequiredService<LocalPartition>());

@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Text;
 using Backup.Application.Partition;
 using Backup.Application.Partition.Models;
 using Backup.Infrastructure.Core.Abstractions.Setup;
@@ -16,6 +15,7 @@ public class LocalPartition(
     AppConfig _appConfig,
     ILogger<LocalPartition> _logger,
     IPartitionPolicyService partitionPolicyService,
+    IPartitionPathProbeService partitionPathProbeService,
     Storage? _config = null
 ) : IPartition, ISetup
 {
@@ -23,6 +23,7 @@ public class LocalPartition(
     private readonly Storage? _config = _config;
     private readonly AppConfig _appConfig = _appConfig;
     private readonly IPartitionPolicyService _partitionPolicyService = partitionPolicyService;
+    private readonly IPartitionPathProbeService _partitionPathProbeService = partitionPathProbeService;
 
     private readonly ConcurrentDictionary<int, PartitionSize> _partitions = new(
         _appConfig
@@ -93,7 +94,7 @@ public class LocalPartition(
 
             string fileName = $"{Guid.NewGuid():N}";
             string path = Path.Combine([.. kvp.Value.Partition.Paths, fileName]);
-            string? error = CheckPath(path);
+            string? error = _partitionPathProbeService.Probe(path);
 
             _logger.LogInformation("{partition,-9} {error}", kvp.Value.Partition.Name, error);
 
@@ -103,41 +104,6 @@ public class LocalPartition(
 
         if (stop)
             throw new IOException();
-    }
-
-    private static string? CheckPath(string path)
-    {
-        try
-        {
-            using FileStream fs = new(
-                path,
-                FileMode.CreateNew,
-                FileAccess.ReadWrite,
-                FileShare.None,
-                bufferSize: 16 * 1024,
-                options: FileOptions.WriteThrough
-            );
-
-            byte[] payload = Encoding.UTF8.GetBytes("ok");
-            fs.Write(payload, 0, payload.Length);
-            fs.Flush(true);
-        }
-        catch (Exception ex)
-        {
-            return ex.Message;
-        }
-
-        try
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-        }
-        catch (Exception ex)
-        {
-            return ex.Message;
-        }
-
-        return null;
     }
 
     public void SetupSizes(Dictionary<int, long> sizes)
