@@ -103,39 +103,41 @@ public partial class MediaBackup
             newPaths.Add(item.OriginalPath);
         }
 
-        MediaBackupChunkCountDeltaResult deltas = _mediaBackupChunkCountDeltaService.Compare(
-            _chunksClone.Values.Select(chunk => new MediaBackupChunkCountState
+        IReadOnlyList<MediaBackupChunkPathsState> beforeChunkPaths = _chunksClone
+            .Values.Select(chunk => new MediaBackupChunkPathsState
             {
-                ChunkId = chunk.Id,
-                PathCount = chunk.Data.Count,
-            }),
-            _chunks.Values.Select(chunk => new MediaBackupChunkCountState
-            {
-                ChunkId = chunk.Id,
-                PathCount = chunk.Data.Count,
+                Id = chunk.Id,
+                Paths = chunk.Data.Select(data => data.Path).ToList(),
             })
+            .ToList();
+
+        IReadOnlyList<MediaBackupChunkPathsState> afterChunkPaths = _chunks
+            .Values.Select(chunk => new MediaBackupChunkPathsState
+            {
+                Id = chunk.Id,
+                Paths = chunk.Data.Select(data => data.Path).ToList(),
+            })
+            .ToList();
+
+        IReadOnlyList<MediaBackupChunkCountState> beforeCountStates =
+            _mediaBackupChunkSnapshotCompositionService.BuildChunkCountStates(beforeChunkPaths);
+        IReadOnlyList<MediaBackupChunkCountState> afterCountStates =
+            _mediaBackupChunkSnapshotCompositionService.BuildChunkCountStates(afterChunkPaths);
+
+        MediaBackupChunkCountDeltaResult deltas = _mediaBackupChunkCountDeltaService.Compare(
+            beforeCountStates,
+            afterCountStates
         );
 
-        Dictionary<int, IReadOnlyList<string>> beforePathsByChunk = _chunksClone.ToDictionary(
-            item => item.Key,
-            item => (IReadOnlyList<string>)item.Value.Data.Select(data => data.Path).ToList()
-        );
-        Dictionary<int, IReadOnlyList<string>> afterPathsByChunk = _chunks.ToDictionary(
-            item => item.Key,
-            item => (IReadOnlyList<string>)item.Value.Data.Select(data => data.Path).ToList()
-        );
-
-        HashSet<string> allPathsForSizeLookup = [];
-
-        foreach (IReadOnlyList<string> paths in beforePathsByChunk.Values)
-            allPathsForSizeLookup.UnionWith(paths);
-
-        foreach (IReadOnlyList<string> paths in afterPathsByChunk.Values)
-            allPathsForSizeLookup.UnionWith(paths);
+        MediaBackupChunkPathMaps pathMaps =
+            _mediaBackupChunkSnapshotCompositionService.BuildPathMaps(
+                beforeChunkPaths,
+                afterChunkPaths
+            );
 
         Dictionary<string, long> sizeByPath = [];
 
-        foreach (string path in allPathsForSizeLookup)
+        foreach (string path in pathMaps.DistinctPathsForSizeLookup)
         {
             MediaCacheEntry? cache = await MediaData.GetCache(path);
 
@@ -148,8 +150,8 @@ public partial class MediaBackup
         IReadOnlyList<MediaBackupChunkDeltaLogInput> deltaLogInputs =
             _mediaBackupChunkDeltaInputCompositionService.Compose(
                 deltas.Items,
-                beforePathsByChunk,
-                afterPathsByChunk,
+                pathMaps.BeforePathsByChunk,
+                pathMaps.AfterPathsByChunk,
                 sizeByPath
             );
 
