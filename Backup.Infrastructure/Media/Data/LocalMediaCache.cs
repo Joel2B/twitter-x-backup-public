@@ -21,6 +21,7 @@ public class LocalMediaCache(
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
     IMediaCacheRecheckOrchestrationService mediaCacheRecheckOrchestrationService,
     IMediaCacheJsonSnapshotService mediaCacheJsonSnapshotService,
+    IMediaCacheRecheckApplyPolicyService mediaCacheRecheckApplyPolicyService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
     IMediaCachePartitionSelectionService mediaCachePartitionSelectionService,
@@ -39,6 +40,8 @@ public class LocalMediaCache(
         mediaCacheRecheckOrchestrationService;
     private readonly IMediaCacheJsonSnapshotService _mediaCacheJsonSnapshotService =
         mediaCacheJsonSnapshotService;
+    private readonly IMediaCacheRecheckApplyPolicyService _mediaCacheRecheckApplyPolicyService =
+        mediaCacheRecheckApplyPolicyService;
     private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
         mediaCacheEntryPathPolicyService;
     private readonly IMediaCacheEntryStateFactoryService _mediaCacheEntryStateFactoryService =
@@ -180,10 +183,13 @@ public class LocalMediaCache(
                             }
                         );
 
-                        if (decision.IsInvalid)
+                        MediaCacheRecheckApplyResult applyDecision =
+                            _mediaCacheRecheckApplyPolicyService.Apply(path, decision);
+
+                        if (applyDecision.IsInvalid)
                             throw new Exception();
 
-                        if (decision.ShouldRemove)
+                        if (applyDecision.ShouldRemove)
                         {
                             bool removed = _cache.TryRemove(path, out _);
 
@@ -195,20 +201,10 @@ public class LocalMediaCache(
                             return;
                         }
 
-                        if (!decision.ShouldUpdate)
+                        if (applyDecision.UpdatedEntryState is null)
                             return;
 
-                        if (decision.PartitionId is null)
-                            return;
-
-                        MediaCacheEntryState updatedEntryState =
-                            _mediaCacheEntryStateFactoryService.Create(
-                                path,
-                                decision.PartitionId.Value,
-                                decision.StreamSizeBytes,
-                                decision.FileSizeBytes
-                            );
-                        MediaCacheEntry newCache = ToCacheEntry(updatedEntryState);
+                        MediaCacheEntry newCache = ToCacheEntry(applyDecision.UpdatedEntryState);
 
                         _cache.TryUpdate(path, newCache, cache);
                     }
