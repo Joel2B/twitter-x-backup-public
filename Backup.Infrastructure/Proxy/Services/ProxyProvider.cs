@@ -21,7 +21,8 @@ public class ProxyProvider(
     IProxyRuntimePolicyService proxyRuntimePolicyService,
     IProxyHealthCheckPolicyService proxyHealthCheckPolicyService,
     IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService,
-    IProxyConnectionWindowPolicyService proxyConnectionWindowPolicyService
+    IProxyConnectionWindowPolicyService proxyConnectionWindowPolicyService,
+    IProxyKeyPolicyService proxyKeyPolicyService
 )
     : IProxyProvider,
         ISetup,
@@ -37,6 +38,7 @@ public class ProxyProvider(
         proxyHttpClientHeaderPolicyService;
     private readonly IProxyConnectionWindowPolicyService _proxyConnectionWindowPolicyService =
         proxyConnectionWindowPolicyService;
+    private readonly IProxyKeyPolicyService _proxyKeyPolicyService = proxyKeyPolicyService;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
     private int _proxyIndex = 0;
@@ -176,8 +178,8 @@ public class ProxyProvider(
         await SaveData();
     }
 
-    private static string GetProxyKey(ProxyDataConfig proxy) =>
-        $"{proxy.Ip}:{proxy.Port}:{proxy.Protocol}".ToLowerInvariant();
+    private string GetProxyKey(ProxyDataConfig proxy) =>
+        _proxyKeyPolicyService.Build(proxy.Ip, proxy.Port, proxy.Protocol);
 
     public HttpClient GetClient()
     {

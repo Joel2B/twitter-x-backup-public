@@ -16,6 +16,7 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
         services.AddScoped<IProxyHealthCheckPolicyService, ProxyHealthCheckPolicyService>();
         services.AddScoped<IProxyHttpClientHeaderPolicyService, ProxyHttpClientHeaderPolicyService>();
         services.AddScoped<IProxyConnectionWindowPolicyService, ProxyConnectionWindowPolicyService>();
+        services.AddScoped<IProxyKeyPolicyService, ProxyKeyPolicyService>();
         services.AddScoped<ProxyProvider>();
         services.AddScoped<IProxyProvider>(sp => sp.GetRequiredService<ProxyProvider>());
         services.AddScoped<ISetup>(sp => sp.GetRequiredService<ProxyProvider>());
