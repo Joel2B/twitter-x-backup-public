@@ -42,6 +42,7 @@ public partial class MediaBackup(
     IMediaBackupZipEntryReaderIOService mediaBackupZipEntryReaderIoService,
     IMediaBackupZipMutationIOService mediaBackupZipMutationIoService,
     IMediaBackupChunkPersistenceIOService mediaBackupChunkPersistenceIoService,
+    IMediaBackupPhaseOrchestrationService mediaBackupPhaseOrchestrationService,
     IEnumerable<IMediaBackupPipelineStep> _pipelineSteps,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaBackupStrategy, IMediaBackupPipelineActions
@@ -103,6 +104,8 @@ public partial class MediaBackup(
         mediaBackupZipMutationIoService;
     private readonly IMediaBackupChunkPersistenceIOService _mediaBackupChunkPersistenceIoService =
         mediaBackupChunkPersistenceIoService;
+    private readonly IMediaBackupPhaseOrchestrationService _mediaBackupPhaseOrchestrationService =
+        mediaBackupPhaseOrchestrationService;
     private BackupChunks _backup = new()
     {
         Chunks = new()
@@ -119,10 +122,8 @@ public partial class MediaBackup(
 
     private readonly ILogger<MediaBackup> _logger = _logger;
     private readonly IZipWriterFactory _zipWriterFactory = _zipWriterFactory;
-    private readonly List<IMediaBackupPipelineStep> _pipelineSteps = _pipelineSteps
-        .OrderBy(step => step.Order)
-        .ThenBy(step => step.TimerName, StringComparer.Ordinal)
-        .ToList();
+    private readonly IReadOnlyDictionary<string, IMediaBackupPipelineStep> _pipelineStepsById =
+        _pipelineSteps.ToDictionary(GetPipelineStepId, StringComparer.Ordinal);
 
     private readonly bool _stop = false;
 
@@ -168,15 +169,35 @@ public partial class MediaBackup(
 
     private async Task RunPipeline()
     {
-        foreach (IMediaBackupPipelineStep step in _pipelineSteps)
-        {
-            if (_stop && step.SkipWhenStopped)
-                break;
+        IReadOnlyList<MediaBackupPhaseExecutionStep> plan =
+            _mediaBackupPhaseOrchestrationService.BuildExecutionPlan(
+                BuildPipelinePhaseSteps(_pipelineStepsById.Values),
+                _stop
+            );
 
-            using (_logger.LogTimer(Id, step.TimerName))
+        foreach (MediaBackupPhaseExecutionStep planStep in plan)
+        {
+            IMediaBackupPipelineStep step = _pipelineStepsById[planStep.StepId];
+
+            using (_logger.LogTimer(Id, planStep.TimerName))
                 await step.Execute(this);
         }
     }
+
+    private static IReadOnlyList<MediaBackupPhaseStep> BuildPipelinePhaseSteps(
+        IEnumerable<IMediaBackupPipelineStep> steps
+    ) =>
+        steps.Select(step => new MediaBackupPhaseStep
+            {
+                StepId = GetPipelineStepId(step),
+                Order = step.Order,
+                TimerName = step.TimerName,
+                SkipWhenStopped = step.SkipWhenStopped,
+            })
+            .ToList();
+
+    private static string GetPipelineStepId(IMediaBackupPipelineStep step) =>
+        step.GetType().FullName ?? step.GetType().Name;
 
     private static IReadOnlyList<MediaBackupChunkFailureState> ToFailureStates(
         IEnumerable<ChunkData> items
