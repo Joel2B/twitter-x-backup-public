@@ -24,7 +24,8 @@ public class ProxyProvider(
     IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService,
     IProxyConnectionWindowPolicyService proxyConnectionWindowPolicyService,
     IProxyKeyPolicyService proxyKeyPolicyService,
-    IProxyEndpointParserService proxyEndpointParserService
+    IProxyEndpointParserService proxyEndpointParserService,
+    IProxyProviderTypeResolverService proxyProviderTypeResolverService
 )
     : IProxyProvider,
         ISetup,
@@ -45,6 +46,8 @@ public class ProxyProvider(
     private readonly IProxyKeyPolicyService _proxyKeyPolicyService = proxyKeyPolicyService;
     private readonly IProxyEndpointParserService _proxyEndpointParserService =
         proxyEndpointParserService;
+    private readonly IProxyProviderTypeResolverService _proxyProviderTypeResolverService =
+        proxyProviderTypeResolverService;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
     private int _proxyIndex = 0;
@@ -70,7 +73,12 @@ public class ProxyProvider(
 
         Dictionary<ProxyDataConfig, ProxyData> proxiesDict = await _data.GetAllAsDictionary() ?? [];
 
-        ProxyLoader loader = new(_logger, _config, _proxyEndpointParserService);
+        ProxyLoader loader = new(
+            _logger,
+            _config,
+            _proxyEndpointParserService,
+            _proxyProviderTypeResolverService
+        );
         List<ProxyDataConfig> proxies = await loader.Load();
 
         foreach (ProxyDataConfig proxy in proxies)
@@ -109,7 +117,12 @@ public class ProxyProvider(
         List<ProxyData> proxiesStorage = await _data.GetAll() ?? [];
         proxies.AddRange(proxiesStorage.Select(o => o.Proxy));
 
-        ProxyLoader loader = new(_logger, _config, _proxyEndpointParserService);
+        ProxyLoader loader = new(
+            _logger,
+            _config,
+            _proxyEndpointParserService,
+            _proxyProviderTypeResolverService
+        );
         List<ProxyDataConfig> proxiesLoader = await loader.Load();
         proxies.AddRange(proxiesLoader);
         proxies = [.. proxies.Distinct()];

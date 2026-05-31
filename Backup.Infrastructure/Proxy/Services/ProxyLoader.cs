@@ -11,12 +11,15 @@ namespace Backup.Infrastructure.Proxy.Services;
 public class ProxyLoader(
     ILogger _logger,
     AppConfig _config,
-    IProxyEndpointParserService proxyEndpointParserService
+    IProxyEndpointParserService proxyEndpointParserService,
+    IProxyProviderTypeResolverService proxyProviderTypeResolverService
 )
 {
     private readonly ILogger _logger = _logger;
     private readonly AppConfig _config = _config;
     private readonly IProxyEndpointParserService _proxyEndpointParserService = proxyEndpointParserService;
+    private readonly IProxyProviderTypeResolverService _proxyProviderTypeResolverService =
+        proxyProviderTypeResolverService;
     private readonly List<ProxyDataConfig> _proxies = [];
 
     public async Task<List<ProxyDataConfig>> Load()
@@ -28,6 +31,7 @@ public class ProxyLoader(
                 IProxyDownloader downloader = new ProxyDownloader(
                     _logger,
                     _proxyEndpointParserService,
+                    _proxyProviderTypeResolverService,
                     provider.Format
                 ).Create(provider.Type);
 
