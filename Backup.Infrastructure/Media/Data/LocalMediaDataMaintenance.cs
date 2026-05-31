@@ -17,7 +17,9 @@ public class LocalMediaDataMaintenance(
     IPartition _partition,
     IMediaCache _mediaCache,
     IMediaMaintenanceCachedDownloadFilterService mediaMaintenanceCachedDownloadFilterService,
+    IMediaMaintenanceFileProbePolicyService mediaMaintenanceFileProbePolicyService,
     IMediaMaintenanceIntegrityEvaluationService mediaMaintenanceIntegrityEvaluationService,
+    IMediaMaintenanceIntegritySummaryService mediaMaintenanceIntegritySummaryService,
     IMediaMaintenancePrunePathSelectionService mediaMaintenancePrunePathSelectionService
 ) : IMediaDataMaintenance
 {
@@ -29,8 +31,12 @@ public class LocalMediaDataMaintenance(
     private readonly IMediaCache _mediaCache = _mediaCache;
     private readonly IMediaMaintenanceCachedDownloadFilterService _mediaMaintenanceCachedDownloadFilterService =
         mediaMaintenanceCachedDownloadFilterService;
+    private readonly IMediaMaintenanceFileProbePolicyService _mediaMaintenanceFileProbePolicyService =
+        mediaMaintenanceFileProbePolicyService;
     private readonly IMediaMaintenanceIntegrityEvaluationService _mediaMaintenanceIntegrityEvaluationService =
         mediaMaintenanceIntegrityEvaluationService;
+    private readonly IMediaMaintenanceIntegritySummaryService _mediaMaintenanceIntegritySummaryService =
+        mediaMaintenanceIntegritySummaryService;
     private readonly IMediaMaintenancePrunePathSelectionService _mediaMaintenancePrunePathSelectionService =
         mediaMaintenancePrunePathSelectionService;
 
@@ -72,9 +78,7 @@ public class LocalMediaDataMaintenance(
 
     public async Task CheckIntegrity(List<Download> downloads)
     {
-        int nullCount = 0;
-        int sizeCount = 0;
-        int invalidCount = 0;
+        List<MediaMaintenanceIntegrityEvaluation> evaluations = [];
 
         foreach (Download download in downloads)
         {
@@ -86,27 +90,22 @@ public class LocalMediaDataMaintenance(
                 string fullPath = string.Empty;
                 bool isValid = false;
 
-                if (size is not null)
+                if (_mediaMaintenanceFileProbePolicyService.ShouldProbe(size, IntegritySizeThreshold))
                 {
-                    if (size < IntegritySizeThreshold)
-                    {
-                        fullPath = await _mediaCache.GetPath(data.Path);
-                        isValid = MediaValidator.IsValid(
-                            fullPath,
-                            () => _logger.LogWarning("path {path} not exist", fullPath)
-                        );
-                    }
+                    fullPath = await _mediaCache.GetPath(data.Path);
+                    isValid = MediaValidator.IsValid(
+                        fullPath,
+                        () => _logger.LogWarning("path {path} not exist", fullPath)
+                    );
                 }
 
-                var evaluation = _mediaMaintenanceIntegrityEvaluationService.Evaluate(
+                MediaMaintenanceIntegrityEvaluation evaluation =
+                    _mediaMaintenanceIntegrityEvaluationService.Evaluate(
                     size,
                     isValid,
                     IntegritySizeThreshold
                 );
-
-                nullCount += evaluation.NullCountIncrement;
-                sizeCount += evaluation.SizeCountIncrement;
-                invalidCount += evaluation.InvalidCountIncrement;
+                evaluations.Add(evaluation);
 
                 if (evaluation.Remove)
                     download.Data.RemoveAt(i);
@@ -114,12 +113,15 @@ public class LocalMediaDataMaintenance(
         }
 
         downloads.RemoveAll(dl => dl.Data.Count == 0);
+        MediaMaintenanceIntegritySummary summary = _mediaMaintenanceIntegritySummaryService.Summarize(
+            evaluations
+        );
 
         _logger.LogInformation(
             "null: {nullCount}, size: {sizeCount}, invalid: {invalidCount}",
-            nullCount,
-            sizeCount,
-            invalidCount
+            summary.NullCount,
+            summary.SizeCount,
+            summary.InvalidCount
         );
     }
 
