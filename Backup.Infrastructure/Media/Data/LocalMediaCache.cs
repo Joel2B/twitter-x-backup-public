@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 using Backup.Application.IO;
+using Backup.Application.Media.Maintenance;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Media.Abstractions.Services;
@@ -18,13 +19,19 @@ public class LocalMediaCache(
     ILogger<LocalMediaCache> _logger,
     StorageMedia _config,
     IPartition _partition,
-    IDataStoreGuardService dataStoreGuardService
+    IDataStoreGuardService dataStoreGuardService,
+    IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
+    IMediaCacheRecheckPolicyService mediaCacheRecheckPolicyService
 ) : IMediaCache
 {
     private readonly ILogger<LocalMediaCache> _logger = _logger;
     private readonly StorageMedia _config = _config;
     private readonly IPartition _partition = _partition;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
+    private readonly IMediaCacheDirectoryPolicyService _mediaCacheDirectoryPolicyService =
+        mediaCacheDirectoryPolicyService;
+    private readonly IMediaCacheRecheckPolicyService _mediaCacheRecheckPolicyService =
+        mediaCacheRecheckPolicyService;
 
     private readonly ConcurrentDictionary<string, MediaCacheEntry> _cache = new(
         StringComparer.OrdinalIgnoreCase
@@ -42,17 +49,14 @@ public class LocalMediaCache(
         foreach (PartitionConfig partition in _partition.GetPartitions())
         {
             if (
-                partition.Type == "primary"
-                || partition.Type == "cache"
-                || (partition.Tags is not null && partition.Tags.Contains("cache"))
+                _mediaCacheDirectoryPolicyService.ShouldCreateCacheDirectory(
+                    partition.Type,
+                    partition.Tags
+                )
             )
                 Directory.CreateDirectory(GetPathCache(partition));
 
-            if (
-                partition.Type == "primary"
-                || partition.Type == "extension"
-                || partition.Type == "heavy"
-            )
+            if (_mediaCacheDirectoryPolicyService.ShouldCreateMediaDirectory(partition.Type))
                 Directory.CreateDirectory(GetPathMedia(partition));
         }
 
@@ -101,8 +105,10 @@ public class LocalMediaCache(
             foreach (MediaCacheEntry entry in _cache.Values)
             {
                 if (
-                    entry.Size?.Stream is null
-                    || (entry.Size.File is not null && entry.Size.File != 0)
+                    !_mediaCacheRecheckPolicyService.ShouldRecheck(
+                        entry.Size?.Stream,
+                        entry.Size?.File
+                    )
                 )
                     continue;
 
