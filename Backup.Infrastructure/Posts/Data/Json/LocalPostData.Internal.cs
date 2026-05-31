@@ -63,13 +63,9 @@ public partial class LocalPostData
             return Task.CompletedTask;
 
         string basePath = GetPath(_partition.GetPrimary());
-
-        List<PostHistoryPath> historyPaths = Directory
-            .GetDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
-            .Select(path => new { Path = path, Date = UtilsPath.ToDate(path, isDir: true) })
-            .Where(entry => entry.Date is not null)
-            .Select(entry => new PostHistoryPath(entry.Path, entry.Date!.Value))
-            .ToList();
+        IReadOnlyList<PostHistoryPath> historyPaths = _postHistoryPathExtractionService.Extract(
+            Directory.GetDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
+        );
         PostSnapshotVerificationPlan plan = _postSnapshotVerificationPlanningService.Plan(
             Path.GetFileName(NormalizedPostsFileName),
             historyPaths
@@ -149,12 +145,9 @@ public partial class LocalPostData
         string basePath = GetPath(partition);
         _logger.LogInformation("base path: {path}", Path.GetFileName(basePath));
 
-        List<PostHistoryPath> pathsDate = Directory
-            .GetDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
-            .Select(path => new { Path = path, Date = UtilsPath.ToDate(path, isDir: true) })
-            .Where(entry => entry.Date is not null)
-            .Select(entry => new PostHistoryPath(entry.Path, entry.Date!.Value))
-            .ToList();
+        IReadOnlyList<PostHistoryPath> pathsDate = _postHistoryPathExtractionService.Extract(
+            Directory.GetDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
+        );
 
         _logger.LogInformation("paths: {value}", pathsDate.Count);
 

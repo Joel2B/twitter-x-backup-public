@@ -25,6 +25,7 @@ public partial class LocalPostData(
     IPostHashingService postHashingService,
     IPostHashMetaParityService postHashMetaParityService,
     IPostMetaReconciliationService postMetaReconciliationService,
+    IPostHistoryPathExtractionService postHistoryPathExtractionService,
     IPostHistoryPrunePlanningService postHistoryPrunePlanningService,
     IPostSnapshotVerificationPlanningService postSnapshotVerificationPlanningService,
     IPostDataReplicationPlanningService postDataReplicationPlanningService,
@@ -57,6 +58,8 @@ public partial class LocalPostData(
         postHashMetaParityService;
     private readonly IPostMetaReconciliationService _postMetaReconciliationService =
         postMetaReconciliationService;
+    private readonly IPostHistoryPathExtractionService _postHistoryPathExtractionService =
+        postHistoryPathExtractionService;
     private readonly IPostHistoryPrunePlanningService _postHistoryPrunePlanningService =
         postHistoryPrunePlanningService;
     private readonly IPostSnapshotVerificationPlanningService _postSnapshotVerificationPlanningService =

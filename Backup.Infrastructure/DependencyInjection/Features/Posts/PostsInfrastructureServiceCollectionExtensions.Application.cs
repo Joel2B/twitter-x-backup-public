@@ -52,6 +52,7 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostMetaReconciliationService, PostMetaReconciliationService>();
         services.AddScoped<IPostProfileCountAggregationService, PostProfileCountAggregationService>();
         services.AddScoped<IPostMetaConsistencyValidationService, PostMetaConsistencyValidationService>();
+        services.AddScoped<IPostHistoryPathExtractionService, PostHistoryPathExtractionService>();
         return services;
     }
 }
