@@ -1,6 +1,4 @@
 using Backup.Application.IO;
-using Backup.Infrastructure.Models.Config;
-using Backup.Infrastructure.Models.Config.Data;
 
 namespace Backup.Infrastructure.Utils;
 
@@ -40,13 +38,4 @@ public class UtilsPath
     public static string NormalizePath(string path, bool save = false)
         => PathFormattingPolicy.NormalizePathForCurrentOs(path, save);
 
-    public static string GetPartitionPath(AppConfig config, PartitionConfig partition)
-    {
-        IReadOnlyList<string> resolvedPaths = PathAliasResolutionPolicy.ResolveAliases(
-            partition.Paths,
-            config.Data.Aliases
-        );
-
-        return GetPath([.. resolvedPaths]);
-    }
 }

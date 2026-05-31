@@ -1,6 +1,6 @@
+using Backup.Application.IO;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
-using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -29,7 +29,14 @@ public static class StructuredLoggingInfrastructureServiceCollectionExtensions
             AppConfig config = GetAppConfig(services);
             int partitionId = config.Debug.Partitions.First();
             PartitionConfig partition = config.Data.Partitions.First(o => o.Id == partitionId);
-            string basePath = UtilsPath.GetPartitionPath(config, partition);
+            IReadOnlyList<string> resolvedPaths = PathAliasResolutionPolicy.ResolveAliases(
+                partition.Paths,
+                config.Data.Aliases
+            );
+            string basePath = PathCompositionPolicy.ComposePath(
+                resolvedPaths,
+                AppDomain.CurrentDomain.BaseDirectory
+            );
 
             string directory = Path.Combine(
                 [basePath, .. config.Debug.Paths, .. config.Debug.Log.Paths]
