@@ -19,8 +19,8 @@ public class LocalMediaCache(
     IPartition _partition,
     IDataStoreGuardService dataStoreGuardService,
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
-    IMediaCacheRecheckOrchestrationService mediaCacheRecheckOrchestrationService,
     IMediaCacheRecheckDecisionService mediaCacheRecheckDecisionService,
+    IMediaCacheRecheckPlanningService mediaCacheRecheckPlanningService,
     IMediaCacheJsonSnapshotService mediaCacheJsonSnapshotService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
@@ -37,10 +37,10 @@ public class LocalMediaCache(
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
     private readonly IMediaCacheDirectoryPolicyService _mediaCacheDirectoryPolicyService =
         mediaCacheDirectoryPolicyService;
-    private readonly IMediaCacheRecheckOrchestrationService _mediaCacheRecheckOrchestrationService =
-        mediaCacheRecheckOrchestrationService;
     private readonly IMediaCacheRecheckDecisionService _mediaCacheRecheckDecisionService =
         mediaCacheRecheckDecisionService;
+    private readonly IMediaCacheRecheckPlanningService _mediaCacheRecheckPlanningService =
+        mediaCacheRecheckPlanningService;
     private readonly IMediaCacheJsonSnapshotService _mediaCacheJsonSnapshotService =
         mediaCacheJsonSnapshotService;
     private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
@@ -131,11 +131,9 @@ public class LocalMediaCache(
             }
 
             _logger.LogWarning("cache: {count}", _cache.Count);
-            IReadOnlyList<MediaCacheRecheckCandidate> candidates =
-                _mediaCacheStoredEntryProjectionService.ToRecheckCandidates(
-                    _cache.Values.Select(ToStoredEntry)
-                );
-            recheck = _mediaCacheRecheckOrchestrationService.SelectRecheckPaths(candidates);
+            recheck = _mediaCacheRecheckPlanningService.SelectPathsToRecheck(
+                _cache.Values.Select(ToStoredEntry).ToList()
+            );
         }
         else
             _logger.LogWarning("cache file not exist, {path}", file);
