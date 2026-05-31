@@ -51,41 +51,36 @@ public partial class MediaBackup
             );
 
             storageCount += storage.Count();
+            MediaBackupDuplicateCheckPlan plan = _mediaBackupDuplicateCheckPlanningService.Plan(
+                memory,
+                storage.ToList()
+            );
 
-            _logger.LogInfo("reading memory for duplicates");
-
-            var memoryDuplicates = _mediaBackupPathAnalysisService.FindDuplicates(memory);
-
-            _logger.LogInfo("reading storage for duplicates");
-
-            var storageDuplicates = _mediaBackupPathAnalysisService.FindDuplicates(storage);
-
-            if (memoryDuplicates.Count != 0)
+            if (plan.MemoryDuplicatePathCount != 0)
             {
                 _logger.LogInformation("memory duplicates");
 
                 _logger.LogInformation(
                     "{id,-3} {paths} {duplicates}",
                     kvp.Key,
-                    memoryDuplicates.Count,
-                    memoryDuplicates.Sum(o => o.Entries.Count)
+                    plan.MemoryDuplicatePathCount,
+                    plan.MemoryDuplicateEntryCount
                 );
             }
 
-            if (storageDuplicates.Count != 0)
+            if (plan.StorageDuplicatePathCount != 0)
             {
                 _logger.LogInformation("storage duplicates");
 
                 _logger.LogInformation(
                     "{id,-3} {paths} {duplicates}",
                     kvp.Key,
-                    storageDuplicates.Count,
-                    storageDuplicates.Sum(o => o.Entries.Count)
+                    plan.StorageDuplicatePathCount,
+                    plan.StorageDuplicateEntryCount
                 );
 
                 _logger.LogInformation("processing chunk {chunk}", kvp.Key);
-                MediaBackupDuplicateCleanupPlan cleanupPlan =
-                    _mediaBackupDuplicateCleanupService.BuildPlan(storageDuplicates);
+                MediaBackupDuplicateCleanupPlan cleanupPlan = plan.StorageCleanupPlan!;
 
                 IZipWriter? writeZip = await OpenChunkZipWrite(
                     kvp.Value,
@@ -111,11 +106,7 @@ public partial class MediaBackup
                 _logger.LogInformation("{paths} duplicate paths removed", cleanupPlan.RemovedPathCount);
             }
 
-            MediaBackupStorageConsistencyDecision decision =
-                _mediaBackupStorageConsistencyDecisionService.DecideForDuplicateCheck(
-                    memory,
-                    storage
-                );
+            MediaBackupStorageConsistencyDecision decision = plan.ConsistencyDecision;
 
             if (decision.IsConsistent)
                 continue;

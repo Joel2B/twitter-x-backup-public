@@ -18,7 +18,7 @@ public partial class MediaBackup(
     StorageBackup _config,
     IZipWriterFactory _zipWriterFactory,
     IMediaBackupData _mediaBackupData,
-    IMediaBackupPathAnalysisService mediaBackupPathAnalysisService,
+    IMediaBackupDuplicateCheckPlanningService mediaBackupDuplicateCheckPlanningService,
     IMediaBackupChunkAssignmentService mediaBackupChunkAssignmentService,
     IMediaBackupDirectPathSelectionService mediaBackupDirectPathSelectionService,
     IMediaBackupChunkSyncPlanningService mediaBackupChunkSyncPlanningService,
@@ -28,7 +28,6 @@ public partial class MediaBackup(
     IMediaBackupDirectPathQueueService mediaBackupDirectPathQueueService,
     IMediaBackupPathProjectionService mediaBackupPathProjectionService,
     IMediaBackupChunkFailurePolicyService mediaBackupChunkFailurePolicyService,
-    IMediaBackupDuplicateCleanupService mediaBackupDuplicateCleanupService,
     IMediaBackupStorageConsistencyDecisionService mediaBackupStorageConsistencyDecisionService,
     IMediaBackupChunkPlanningService mediaBackupChunkPlanningService,
     IMediaBackupChunkCountDeltaService mediaBackupChunkCountDeltaService,
@@ -47,8 +46,8 @@ public partial class MediaBackup(
     private IMediaStorage MediaData =>
         _dataStoreGuardService.RequireInitialized(_mediaData, "media data not initialized");
     private readonly IMediaBackupData _mediaBackupData = _mediaBackupData;
-    private readonly IMediaBackupPathAnalysisService _mediaBackupPathAnalysisService =
-        mediaBackupPathAnalysisService;
+    private readonly IMediaBackupDuplicateCheckPlanningService _mediaBackupDuplicateCheckPlanningService =
+        mediaBackupDuplicateCheckPlanningService;
     private readonly IMediaBackupChunkAssignmentService _mediaBackupChunkAssignmentService =
         mediaBackupChunkAssignmentService;
     private readonly IMediaBackupDirectPathSelectionService _mediaBackupDirectPathSelectionService =
@@ -67,8 +66,6 @@ public partial class MediaBackup(
         mediaBackupPathProjectionService;
     private readonly IMediaBackupChunkFailurePolicyService _mediaBackupChunkFailurePolicyService =
         mediaBackupChunkFailurePolicyService;
-    private readonly IMediaBackupDuplicateCleanupService _mediaBackupDuplicateCleanupService =
-        mediaBackupDuplicateCleanupService;
     private readonly IMediaBackupStorageConsistencyDecisionService _mediaBackupStorageConsistencyDecisionService =
         mediaBackupStorageConsistencyDecisionService;
     private readonly IMediaBackupChunkPlanningService _mediaBackupChunkPlanningService =
