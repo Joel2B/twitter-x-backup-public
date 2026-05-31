@@ -16,6 +16,7 @@ public class LocalPartition(
     ILogger<LocalPartition> _logger,
     IPartitionPolicyService partitionPolicyService,
     IPartitionPathProbeService partitionPathProbeService,
+    IPartitionPathProbePlanningService partitionPathProbePlanningService,
     Storage? _config = null
 ) : IPartition, ISetup
 {
@@ -24,6 +25,8 @@ public class LocalPartition(
     private readonly AppConfig _appConfig = _appConfig;
     private readonly IPartitionPolicyService _partitionPolicyService = partitionPolicyService;
     private readonly IPartitionPathProbeService _partitionPathProbeService = partitionPathProbeService;
+    private readonly IPartitionPathProbePlanningService _partitionPathProbePlanningService =
+        partitionPathProbePlanningService;
 
     private readonly ConcurrentDictionary<int, PartitionSize> _partitions = new(
         _appConfig
@@ -86,17 +89,20 @@ public class LocalPartition(
         _logger.LogInformation("{partition,-9} {error}", "Partition", "Error");
 
         bool stop = false;
+        IReadOnlyList<PartitionPathProbeTarget> targets =
+            _partitionPathProbePlanningService.BuildTargets(
+                _partitions.Values.Select(item => new PartitionPathProbeCandidate
+                {
+                    PartitionName = item.Partition.Name ?? item.Partition.Id.ToString(),
+                    Enabled = item.Partition.Enabled,
+                    RootPath = Path.Combine([.. item.Partition.Paths]),
+                })
+            );
 
-        foreach (var kvp in _partitions)
+        foreach (PartitionPathProbeTarget target in targets)
         {
-            if (!kvp.Value.Partition.Enabled)
-                continue;
-
-            string fileName = $"{Guid.NewGuid():N}";
-            string path = Path.Combine([.. kvp.Value.Partition.Paths, fileName]);
-            string? error = _partitionPathProbeService.Probe(path);
-
-            _logger.LogInformation("{partition,-9} {error}", kvp.Value.Partition.Name, error);
+            string? error = _partitionPathProbeService.Probe(target.ProbePath);
+            _logger.LogInformation("{partition,-9} {error}", target.PartitionName, error);
 
             if (error is not null)
                 stop = true;
