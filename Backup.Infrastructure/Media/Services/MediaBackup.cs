@@ -29,6 +29,7 @@ public partial class MediaBackup(
     IMediaBackupDirectPathScanOrchestrationService mediaBackupDirectPathScanOrchestrationService,
     IMediaBackupProgressPolicyService mediaBackupProgressPolicyService,
     IMediaBackupPathProjectionService mediaBackupPathProjectionService,
+    IMediaBackupArchiveMetadataMapService mediaBackupArchiveMetadataMapService,
     IMediaBackupPathArchiveMetadataProjectionService mediaBackupPathArchiveMetadataProjectionService,
     IMediaBackupPathCandidateCompositionService mediaBackupPathCandidateCompositionService,
     IMediaBackupChunkFailureApplyService mediaBackupChunkFailureApplyService,
@@ -86,6 +87,8 @@ public partial class MediaBackup(
         mediaBackupProgressPolicyService;
     private readonly IMediaBackupPathProjectionService _mediaBackupPathProjectionService =
         mediaBackupPathProjectionService;
+    private readonly IMediaBackupArchiveMetadataMapService _mediaBackupArchiveMetadataMapService =
+        mediaBackupArchiveMetadataMapService;
     private readonly IMediaBackupPathArchiveMetadataProjectionService _mediaBackupPathArchiveMetadataProjectionService =
         mediaBackupPathArchiveMetadataProjectionService;
     private readonly IMediaBackupPathCandidateCompositionService _mediaBackupPathCandidateCompositionService =

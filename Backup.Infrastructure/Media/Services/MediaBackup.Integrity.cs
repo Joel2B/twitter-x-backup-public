@@ -169,14 +169,13 @@ public partial class MediaBackup
 
             _logger.LogInfo("expanding chunk");
             IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByArchivePath =
-                entries.ToDictionary(
-                    item => item.Key,
-                    item => new MediaBackupChunkDataMetadata
+                _mediaBackupArchiveMetadataMapService.BuildByArchivePath(
+                    entries.Select(item => new MediaBackupArchiveMetadataInput
                     {
+                        ArchivePath = item.Key,
                         FileSize = item.Value.FileSize,
                         Crc32 = item.Value.Crc32,
-                    },
-                    StringComparer.Ordinal
+                    })
                 );
 
             IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByPath =
