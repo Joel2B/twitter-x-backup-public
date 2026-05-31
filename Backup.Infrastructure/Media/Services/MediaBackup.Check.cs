@@ -50,37 +50,37 @@ public partial class MediaBackup
                 kvp.Value.Data.Select(item => item.Path)
             );
 
-            storageCount += storage.Count();
             MediaBackupDuplicateCheckPlan plan = _mediaBackupDuplicateCheckPlanningService.Plan(
                 memory,
                 storage.ToList()
             );
+            MediaBackupDuplicateChunkExecutionPlan executionPlan =
+                _mediaBackupDuplicateChunkOrchestrationService.BuildExecutionPlan(plan, 10);
 
-            if (plan.MemoryDuplicatePathCount != 0)
+            if (executionPlan.HasMemoryDuplicates)
             {
                 _logger.LogInformation("memory duplicates");
 
                 _logger.LogInformation(
                     "{id,-3} {paths} {duplicates}",
                     kvp.Key,
-                    plan.MemoryDuplicatePathCount,
-                    plan.MemoryDuplicateEntryCount
+                    executionPlan.MemoryDuplicatePathCount,
+                    executionPlan.MemoryDuplicateEntryCount
                 );
             }
 
-            if (plan.StorageDuplicatePathCount != 0)
+            if (executionPlan.HasStorageDuplicates)
             {
                 _logger.LogInformation("storage duplicates");
 
                 _logger.LogInformation(
                     "{id,-3} {paths} {duplicates}",
                     kvp.Key,
-                    plan.StorageDuplicatePathCount,
-                    plan.StorageDuplicateEntryCount
+                    executionPlan.StorageDuplicatePathCount,
+                    executionPlan.StorageDuplicateEntryCount
                 );
 
                 _logger.LogInformation("processing chunk {chunk}", kvp.Key);
-                MediaBackupDuplicateCleanupPlan cleanupPlan = plan.StorageCleanupPlan!;
 
                 IZipWriter? writeZip = await OpenChunkZipWrite(
                     kvp.Value,
@@ -94,7 +94,7 @@ public partial class MediaBackup
                 {
                     _logger.LogInfo("removing entries");
 
-                    foreach (MediaBackupDuplicateCleanupOperation operation in cleanupPlan.Operations)
+                    foreach (MediaBackupDuplicateCleanupOperation operation in executionPlan.CleanupOperations)
                         writeZip.RemoveEntry(operation.EntryPath, operation.RemoveDuplicateEntries);
                 }
                 finally
@@ -103,72 +103,80 @@ public partial class MediaBackup
                     writeZip.Dispose();
                 }
 
-                _logger.LogInformation("{paths} duplicate paths removed", cleanupPlan.RemovedPathCount);
+                _logger.LogInformation(
+                    "{paths} duplicate paths removed",
+                    executionPlan.RemovedDuplicatePathCount
+                );
             }
 
-            MediaBackupStorageConsistencyDecision decision = plan.ConsistencyDecision;
-
-            if (decision.IsConsistent)
-                continue;
-
-            _logger.LogInfo(
-                "{id,-3} {memory,-6} {storage,-6} {missing,-6} {extras,-6}",
-                "id",
-                "memory",
-                "storage",
-                "missing",
-                "extras"
-            );
-
-            _logger.LogInformation(
-                "{id,-3} {memory,-6} {storage,-6} {missing,-6} {extras,-6}",
-                kvp.Key,
-                memory.Count(),
-                storage.Count(),
-                decision.MissingCount,
-                decision.ExtraPaths.Count
-            );
-
-            if (decision.ShouldRemoveExtras)
+            if (!executionPlan.IsConsistent)
             {
-                _logger.LogInformation("paths extras (10):");
-
-                foreach (string item in decision.ExtraPaths.Take(10))
-                    _logger.LogInfo("{path}", item);
-
-                _logger.LogInformation("processing chunk {chunk}", kvp.Key);
-
-                IZipWriter? writeZip = await OpenChunkZipWrite(
-                    kvp.Value,
-                    "check-duplicates-extras"
+                _logger.LogInfo(
+                    "{id,-3} {memory,-6} {storage,-6} {missing,-6} {extras,-6}",
+                    "id",
+                    "memory",
+                    "storage",
+                    "missing",
+                    "extras"
                 );
-
-                if (writeZip is null)
-                    continue;
-
-                try
-                {
-                    _logger.LogInformation("removing paths extras");
-
-                    foreach (string item in decision.ExtraPaths)
-                    {
-                        writeZip.RemoveEntry(item);
-                        _logger.LogInfo("{path} removed", item);
-                    }
-                }
-                finally
-                {
-                    _logger.LogInfo("disposing");
-                    writeZip.Dispose();
-                }
-
-                storageCount -= decision.ExtraPaths.Count;
 
                 _logger.LogInformation(
-                    "{paths} paths extras removed in storage",
-                    decision.ExtraPaths.Count
+                    "{id,-3} {memory,-6} {storage,-6} {missing,-6} {extras,-6}",
+                    kvp.Key,
+                    memory.Count(),
+                    storage.Count(),
+                    executionPlan.MissingCount,
+                    executionPlan.ExtrasCount
                 );
+
+                if (executionPlan.ShouldRemoveExtras)
+                {
+                    _logger.LogInformation("paths extras (10):");
+
+                    foreach (string item in executionPlan.ExtraPathsPreview)
+                        _logger.LogInfo("{path}", item);
+
+                    _logger.LogInformation("processing chunk {chunk}", kvp.Key);
+
+                    IZipWriter? writeZip = await OpenChunkZipWrite(
+                        kvp.Value,
+                        "check-duplicates-extras"
+                    );
+
+                    if (writeZip is null)
+                        continue;
+
+                    try
+                    {
+                        _logger.LogInformation("removing paths extras");
+
+                        foreach (string item in executionPlan.ExtraPathsToRemove)
+                        {
+                            writeZip.RemoveEntry(item);
+                            _logger.LogInfo("{path} removed", item);
+                        }
+                    }
+                    finally
+                    {
+                        _logger.LogInfo("disposing");
+                        writeZip.Dispose();
+                    }
+
+                    _logger.LogInformation(
+                        "{paths} paths extras removed in storage",
+                        executionPlan.ExtraPathsToRemove.Count
+                    );
+                }
             }
+
+            int removedExtras = executionPlan.ShouldRemoveExtras
+                ? executionPlan.ExtraPathsToRemove.Count
+                : 0;
+            storageCount = _mediaBackupDuplicateChunkOrchestrationService.UpdateStorageCount(
+                storageCount,
+                storage.Count(),
+                removedExtras
+            );
         }
 
         // algunos posts comparten los mismos medios
