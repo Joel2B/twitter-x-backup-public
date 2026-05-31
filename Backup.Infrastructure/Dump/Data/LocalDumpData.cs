@@ -29,6 +29,7 @@ public class LocalDumpData(
     IDumpContextGuardService dumpContextGuardService,
     IDumpSessionNamingPolicyService dumpSessionNamingPolicyService,
     IDumpFlushPlanningService dumpFlushPlanningService,
+    IDumpReplicationPlanningService dumpReplicationPlanningService,
     IDataStoreGuardService dataStoreGuardService
 ) : IDumpDataStore
 {
@@ -45,6 +46,8 @@ public class LocalDumpData(
     private readonly IDumpSessionNamingPolicyService _dumpSessionNamingPolicyService =
         dumpSessionNamingPolicyService;
     private readonly IDumpFlushPlanningService _dumpFlushPlanningService = dumpFlushPlanningService;
+    private readonly IDumpReplicationPlanningService _dumpReplicationPlanningService =
+        dumpReplicationPlanningService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     private DumpData? _dumpData;
@@ -263,11 +266,14 @@ public class LocalDumpData(
 
         string mainPath = await GetPathCurrent(context);
         string primaryPath = GetPath(_partition.GetPrimary());
-        string relativePath = Path.GetRelativePath(primaryPath, mainPath);
+        DumpReplicationPlan plan = _dumpReplicationPlanningService.Plan(
+            primaryPath,
+            mainPath,
+            partitions.Select(GetPath)
+        );
 
-        foreach (PartitionConfig partition in partitions)
+        foreach (string path in plan.TargetPaths)
         {
-            string path = Path.Combine(GetPath(partition), relativePath);
             UtilsPath.CopyDirectory(mainPath, path);
         }
     }
