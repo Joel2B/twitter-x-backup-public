@@ -1,6 +1,4 @@
 using System.Collections.Concurrent;
-using System.Security.Cryptography;
-using System.Text;
 using Backup.Application.IO;
 using Backup.Application.Media.Maintenance;
 using Backup.Application.Media.Maintenance.Models;
@@ -10,7 +8,6 @@ using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
 using Backup.Infrastructure.Media.Models;
-using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -22,8 +19,9 @@ public class LocalMediaCache(
     IPartition _partition,
     IDataStoreGuardService dataStoreGuardService,
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
-    IMediaCacheRecheckPolicyService mediaCacheRecheckPolicyService,
     IMediaCacheRecheckOrchestrationService mediaCacheRecheckOrchestrationService,
+    IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
+    IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
     IMediaCachePartitionSizeAggregationService mediaCachePartitionSizeAggregationService,
     IMediaCacheReplicationPathService mediaCacheReplicationPathService
 ) : IMediaCache
@@ -34,10 +32,12 @@ public class LocalMediaCache(
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
     private readonly IMediaCacheDirectoryPolicyService _mediaCacheDirectoryPolicyService =
         mediaCacheDirectoryPolicyService;
-    private readonly IMediaCacheRecheckPolicyService _mediaCacheRecheckPolicyService =
-        mediaCacheRecheckPolicyService;
     private readonly IMediaCacheRecheckOrchestrationService _mediaCacheRecheckOrchestrationService =
         mediaCacheRecheckOrchestrationService;
+    private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
+        mediaCacheEntryPathPolicyService;
+    private readonly IMediaCacheEntryStateFactoryService _mediaCacheEntryStateFactoryService =
+        mediaCacheEntryStateFactoryService;
     private readonly IMediaCachePartitionSizeAggregationService _mediaCachePartitionSizeAggregationService =
         mediaCachePartitionSizeAggregationService;
     private readonly IMediaCacheReplicationPathService _mediaCacheReplicationPathService =
@@ -149,7 +149,10 @@ public class LocalMediaCache(
                         {
                             PartitionConfig partition = _partition.GetPath(partitionId);
                             string fullPath = Path.Combine(
-                                [GetPathMedia(partition), UtilsPath.NormalizePath(path)]
+                                [
+                                    GetPathMedia(partition),
+                                    _mediaCacheEntryPathPolicyService.NormalizeForStoragePath(path),
+                                ]
                             );
                             FileInfo fi = new(fullPath);
                             fileExists = fi.Exists;
@@ -172,12 +175,12 @@ public class LocalMediaCache(
 
                         if (decision.ShouldRemove)
                         {
-                            bool removed = _cache.TryRemove(path, out var _);
+                            bool removed = _cache.TryRemove(path, out _);
 
-                        if (removed)
-                            _logger.LogWarning("{path} path removed from cache", path);
-                        else
-                            _logger.LogError("error removing path {path}", path);
+                            if (removed)
+                                _logger.LogWarning("{path} path removed from cache", path);
+                            else
+                                _logger.LogError("error removing path {path}", path);
 
                             return;
                         }
@@ -185,16 +188,17 @@ public class LocalMediaCache(
                         if (!decision.ShouldUpdate)
                             return;
 
-                        MediaCacheEntry newCache = new()
-                        {
-                            Path = path,
-                            PartitionId = decision.PartitionId,
-                            Size = new()
-                            {
-                                Stream = decision.StreamSizeBytes,
-                                File = decision.FileSizeBytes,
-                            },
-                        };
+                        if (decision.PartitionId is null)
+                            return;
+
+                        MediaCacheEntryState updatedEntryState =
+                            _mediaCacheEntryStateFactoryService.Create(
+                                path,
+                                decision.PartitionId.Value,
+                                decision.StreamSizeBytes,
+                                decision.FileSizeBytes
+                            );
+                        MediaCacheEntry newCache = ToCacheEntry(updatedEntryState);
 
                         _cache.TryUpdate(path, newCache, cache);
                     }
@@ -246,12 +250,12 @@ public class LocalMediaCache(
         }
     }
 
-    private async Task Replicate()
+    private Task Replicate()
     {
         string primaryFilePath = GetPathCacheFilePrimary();
 
         if (!File.Exists(primaryFilePath))
-            return;
+            return Task.CompletedTask;
 
         List<PartitionConfig> partitions = _partition.GetCache();
         IReadOnlyList<string> replicaPaths = _mediaCacheReplicationPathService.GetReplicaPaths(
@@ -266,19 +270,18 @@ public class LocalMediaCache(
 
             File.Copy(primaryFilePath, path);
         }
+
+        return Task.CompletedTask;
     }
 
     private async Task SaveCache(MediaCacheEntry cache, CancellationToken ct)
     {
         PartitionConfig primary = _partition.GetPrimary();
         string pathCache = GetPathCacheDownload(primary);
-        string name = $"{cache.Path}{cache.PartitionId}";
-
-        byte[] data = Encoding.UTF8.GetBytes(name);
-        byte[] bytes = SHA256.HashData(data);
-
-        string hash = Convert.ToHexString(bytes).ToLower();
-        string fileName = $"{hash}.cache";
+        string fileName = _mediaCacheEntryPathPolicyService.BuildCacheSnapshotFileName(
+            cache.Path,
+            cache.PartitionId
+        );
         string path = Path.Combine(pathCache, fileName);
 
         string json = JsonConvert.SerializeObject(cache);
@@ -323,21 +326,25 @@ public class LocalMediaCache(
 
         if (size > 0)
         {
-            string normalizedPath = UtilsPath.NormalizePath(path, true);
-
-            MediaCacheEntry newCache = new()
-            {
-                Path = normalizedPath,
-                PartitionId = partition.Id,
-                Size = new() { Stream = size },
-            };
+            string normalizedPath = _mediaCacheEntryPathPolicyService.NormalizeForCacheKey(path);
+            MediaCacheEntryState newEntryState = _mediaCacheEntryStateFactoryService.Create(
+                normalizedPath,
+                partition.Id,
+                size
+            );
+            MediaCacheEntry newCache = ToCacheEntry(newEntryState);
 
             _cache.AddOrUpdate(
                 normalizedPath,
                 _ => newCache,
                 (_, old) =>
                 {
-                    if (old.Size?.Stream != newCache.Size.Stream)
+                    if (
+                        _mediaCacheEntryStateFactoryService.HasStreamSizeConflict(
+                            old.Size?.Stream,
+                            newEntryState.StreamSizeBytes
+                        )
+                    )
                         throw new Exception("different sizes");
 
                     return old;
@@ -352,9 +359,21 @@ public class LocalMediaCache(
 
     public MediaCacheEntry? Get(string path)
     {
-        path = UtilsPath.NormalizePath(path, true);
+        path = _mediaCacheEntryPathPolicyService.NormalizeForCacheKey(path);
         _cache.TryGetValue(path, out MediaCacheEntry? cache);
 
         return cache;
     }
+
+    private static MediaCacheEntry ToCacheEntry(MediaCacheEntryState state)
+        => new()
+        {
+            Path = state.Path,
+            PartitionId = state.PartitionId,
+            Size = new MediaCacheSize
+            {
+                Stream = state.StreamSizeBytes,
+                File = state.FileSizeBytes,
+            },
+        };
 }
