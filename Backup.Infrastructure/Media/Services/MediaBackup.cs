@@ -18,7 +18,6 @@ public partial class MediaBackup(
     StorageBackup _config,
     IZipWriterFactory _zipWriterFactory,
     IMediaBackupData _mediaBackupData,
-    IMediaBackupDuplicateCheckPlanningService mediaBackupDuplicateCheckPlanningService,
     IMediaBackupDuplicateChunkOrchestrationService mediaBackupDuplicateChunkOrchestrationService,
     IMediaBackupChunkAssignmentService mediaBackupChunkAssignmentService,
     IMediaBackupDirectPathFinalizeService mediaBackupDirectPathFinalizeService,
@@ -44,6 +43,7 @@ public partial class MediaBackup(
     IMediaBackupChunkMetadataOrchestrationService mediaBackupChunkMetadataOrchestrationService,
     IMediaBackupIntegrityChunkUpdateOrchestrationService mediaBackupIntegrityChunkUpdateOrchestrationService,
     IMediaBackupIntegrityChunkApplyService mediaBackupIntegrityChunkApplyService,
+    IMediaBackupDuplicateChunkExecutionService mediaBackupDuplicateChunkExecutionService,
     IMediaBackupZipEntryReaderIOService mediaBackupZipEntryReaderIoService,
     IMediaBackupZipMutationIOService mediaBackupZipMutationIoService,
     IMediaBackupChunkPersistenceIOService mediaBackupChunkPersistenceIoService,
@@ -61,8 +61,6 @@ public partial class MediaBackup(
     private IMediaStorage MediaData =>
         _dataStoreGuardService.RequireInitialized(_mediaData, "media data not initialized");
     private readonly IMediaBackupData _mediaBackupData = _mediaBackupData;
-    private readonly IMediaBackupDuplicateCheckPlanningService _mediaBackupDuplicateCheckPlanningService =
-        mediaBackupDuplicateCheckPlanningService;
     private readonly IMediaBackupDuplicateChunkOrchestrationService _mediaBackupDuplicateChunkOrchestrationService =
         mediaBackupDuplicateChunkOrchestrationService;
     private readonly IMediaBackupChunkAssignmentService _mediaBackupChunkAssignmentService =
@@ -113,6 +111,8 @@ public partial class MediaBackup(
         mediaBackupIntegrityChunkUpdateOrchestrationService;
     private readonly IMediaBackupIntegrityChunkApplyService _mediaBackupIntegrityChunkApplyService =
         mediaBackupIntegrityChunkApplyService;
+    private readonly IMediaBackupDuplicateChunkExecutionService _mediaBackupDuplicateChunkExecutionService =
+        mediaBackupDuplicateChunkExecutionService;
     private readonly IMediaBackupZipEntryReaderIOService _mediaBackupZipEntryReaderIoService =
         mediaBackupZipEntryReaderIoService;
     private readonly IMediaBackupZipMutationIOService _mediaBackupZipMutationIoService =

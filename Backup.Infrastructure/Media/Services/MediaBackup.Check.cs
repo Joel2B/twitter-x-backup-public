@@ -46,16 +46,15 @@ public partial class MediaBackup
             if (zip is null)
                 continue;
 
-            IReadOnlyList<string> memory = _mediaBackupPathProjectionService.ToArchivePaths(
-                kvp.Value.Data.Select(item => item.Path)
-            );
-
-            MediaBackupDuplicateCheckPlan plan = _mediaBackupDuplicateCheckPlanningService.Plan(
-                memory,
-                storage.ToList()
-            );
-            MediaBackupDuplicateChunkExecutionPlan executionPlan =
-                _mediaBackupDuplicateChunkOrchestrationService.BuildExecutionPlan(plan, 10);
+            MediaBackupDuplicateChunkExecutionResult executionResult =
+                _mediaBackupDuplicateChunkExecutionService.Execute(
+                    kvp.Value.Data.Select(item => item.Path),
+                    storage,
+                    10
+                );
+            IReadOnlyList<string> memory = executionResult.MemoryArchivePaths;
+            IReadOnlyList<string> storagePaths = executionResult.StorageArchivePaths;
+            MediaBackupDuplicateChunkExecutionPlan executionPlan = executionResult.ExecutionPlan;
 
             if (executionPlan.HasMemoryDuplicates)
             {
@@ -124,7 +123,7 @@ public partial class MediaBackup
                     "{id,-3} {memory,-6} {storage,-6} {missing,-6} {extras,-6}",
                     kvp.Key,
                     memory.Count(),
-                    storage.Count(),
+                    storagePaths.Count,
                     executionPlan.MissingCount,
                     executionPlan.ExtrasCount
                 );
@@ -169,13 +168,10 @@ public partial class MediaBackup
                 }
             }
 
-            int removedExtras = executionPlan.ShouldRemoveExtras
-                ? executionPlan.ExtraPathsToRemove.Count
-                : 0;
             storageCount = _mediaBackupDuplicateChunkOrchestrationService.UpdateStorageCount(
                 storageCount,
-                storage.Count(),
-                removedExtras
+                storagePaths.Count,
+                executionResult.RemovedExtrasCount
             );
         }
 
