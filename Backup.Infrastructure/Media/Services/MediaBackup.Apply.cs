@@ -38,13 +38,10 @@ public partial class MediaBackup
                     }
                 }
 
-                IReadOnlyList<MediaBackupApplyChunkPathState> chunkPaths = kvp.Value.Data
-                    .Select(item => new MediaBackupApplyChunkPathState
-                    {
-                        SourcePath = item.Path,
-                        HasHash = item.Hash is not null,
-                    })
-                    .ToList();
+                IReadOnlyList<MediaBackupApplyChunkPathState> chunkPaths =
+                    _mediaBackupChunkEntryStateService.BuildApplyChunkPathStates(
+                        BuildChunkEntryStates(kvp.Value.Data)
+                    );
 
                 if (!chunkPaths.Any(item => item.HasHash))
                     continue;
@@ -113,16 +110,23 @@ public partial class MediaBackup
             {
                 _logger.LogError("Error: {error}", JsonConvert.SerializeObject(ex));
 
-                    zip?.Dispose();
+                zip?.Dispose();
 
                 await _mediaBackupData.DeleteChunk(kvp.Value);
 
                 IReadOnlyDictionary<string, MediaBackupChunkFailureState> resetByPath =
                     _mediaBackupChunkFailureOrchestrationService.BuildResetMapForApplyFailure(
-                        ToFailureStates(kvp.Value.Data)
+                        _mediaBackupChunkEntryStateService.BuildFailureStates(
+                            BuildChunkEntryStates(kvp.Value.Data)
+                        )
                     );
 
-                ApplyFailureStates(kvp.Value, resetByPath);
+                IReadOnlyList<MediaBackupChunkEntryState> resetStates =
+                    _mediaBackupChunkEntryStateService.ApplyFailureStates(
+                        BuildChunkEntryStates(kvp.Value.Data),
+                        resetByPath
+                    );
+                ApplyChunkEntryStates(kvp.Value, resetStates);
 
                 await _mediaBackupData.Save([kvp.Value]);
 
@@ -139,18 +143,15 @@ public partial class MediaBackup
 
     private async Task SyncChunks()
     {
-        List<MediaBackupSyncFinalizeInputChunk> chunkStates = _chunks
-            .Values.Select(chunk => new MediaBackupChunkPathsState
-            {
-                Id = chunk.Id,
-                Paths = chunk.Data.Select(data => data.Path).ToList(),
-            })
-            .Select(chunk => new MediaBackupSyncFinalizeInputChunk
-            {
-                ChunkId = chunk.Id,
-                Paths = chunk.Paths,
-            })
-            .ToList();
+        IReadOnlyList<MediaBackupSyncFinalizeInputChunk> chunkStates =
+            _mediaBackupChunkEntryStateService.BuildSyncFinalizeInputChunks(
+                _chunks
+                    .Values.Select(chunk => new MediaBackupChunkPathsState
+                    {
+                        Id = chunk.Id,
+                        Paths = chunk.Data.Select(data => data.Path).ToList(),
+                    })
+            );
 
         MediaBackupSyncFinalizeResult finalize = _mediaBackupSyncFinalizeService.Finalize(
             chunkStates,

@@ -77,10 +77,17 @@ public partial class MediaBackup
 
         IReadOnlyDictionary<string, MediaBackupChunkFailureState> resetByPath =
             _mediaBackupChunkFailureOrchestrationService.BuildResetMapForCorruptChunk(
-                ToFailureStates(chunk.Data)
+                _mediaBackupChunkEntryStateService.BuildFailureStates(
+                    BuildChunkEntryStates(chunk.Data)
+                )
             );
 
-        ApplyFailureStates(chunk, resetByPath);
+        IReadOnlyList<MediaBackupChunkEntryState> resetStates =
+            _mediaBackupChunkEntryStateService.ApplyFailureStates(
+                BuildChunkEntryStates(chunk.Data),
+                resetByPath
+            );
+        ApplyChunkEntryStates(chunk, resetStates);
 
         await _mediaBackupData.Save([chunk]);
     }
