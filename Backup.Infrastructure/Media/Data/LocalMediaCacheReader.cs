@@ -1,4 +1,6 @@
 using System.Text;
+using Backup.Application.Media.Maintenance;
+using Backup.Application.Media.Maintenance.Models;
 using Backup.Infrastructure.Media.Models;
 using Newtonsoft.Json;
 
@@ -6,21 +8,23 @@ namespace Backup.Infrastructure.Media.Data;
 
 public class LocalMediaCacheReader
 {
-    public static long? ReadNullableLong(JsonTextReader jr)
+    private static long? ReadNullableLong(JsonTextReader jr, IMediaCacheJsonSnapshotService snapshotService)
     {
         if (jr.TokenType == JsonToken.Null)
             return null;
-        if (jr.TokenType == JsonToken.Integer)
-            return Convert.ToInt64(jr.Value);
-        if (jr.TokenType == JsonToken.String && long.TryParse((string)jr.Value!, out var v))
-            return v;
+
+        if (jr.TokenType is JsonToken.Integer or JsonToken.String)
+            return snapshotService.ParseNullableLong(jr.Value);
 
         jr.Skip();
 
         return null;
     }
 
-    public static async Task<MediaCacheSize?> ReadSizeAsync(JsonTextReader jr)
+    public static async Task<MediaCacheSize?> ReadSizeAsync(
+        JsonTextReader jr,
+        IMediaCacheJsonSnapshotService snapshotService
+    )
     {
         MediaCacheSize size = new();
 
@@ -43,11 +47,11 @@ public class LocalMediaCacheReader
             switch (name)
             {
                 case "Stream":
-                    size.Stream = ReadNullableLong(jr);
+                    size.Stream = ReadNullableLong(jr, snapshotService);
                     break;
 
                 case "File":
-                    size.File = ReadNullableLong(jr);
+                    size.File = ReadNullableLong(jr, snapshotService);
                     break;
 
                 default:
@@ -59,7 +63,11 @@ public class LocalMediaCacheReader
         return size;
     }
 
-    public static async IAsyncEnumerable<MediaCacheEntry> Get(string file, int bufferSize = 1 << 20)
+    public static async IAsyncEnumerable<MediaCacheEntry> Get(
+        string file,
+        IMediaCacheJsonSnapshotService snapshotService,
+        int bufferSize = 1 << 20
+    )
     {
         await using FileStream fs = new(
             file,
@@ -115,21 +123,16 @@ public class LocalMediaCacheReader
                             if (jr.TokenType == JsonToken.Null)
                                 size = null;
                             else if (jr.TokenType == JsonToken.StartObject)
-                                size = await ReadSizeAsync(jr).ConfigureAwait(false);
+                                size = await ReadSizeAsync(jr, snapshotService).ConfigureAwait(false);
                             else
                                 jr.Skip();
                         }
                         else if (name.Equals("PartitionId", StringComparison.OrdinalIgnoreCase))
                         {
-                            if (jr.TokenType == JsonToken.Integer)
-                                partitionIdl = Convert.ToInt32(jr.Value);
-                            else if (
-                                jr.TokenType == JsonToken.String
-                                && int.TryParse((string)jr.Value!, out var l)
-                            )
-                                partitionIdl = l;
-                            else if (jr.TokenType == JsonToken.Null)
+                            if (jr.TokenType == JsonToken.Null)
                                 partitionIdl = null;
+                            else if (jr.TokenType is JsonToken.Integer or JsonToken.String)
+                                partitionIdl = snapshotService.ParseNullableInt(jr.Value);
                             else
                                 jr.Skip();
                         }
@@ -138,12 +141,23 @@ public class LocalMediaCacheReader
                     }
                     else if (jr.TokenType == JsonToken.EndObject)
                     {
-                        if (pathVal != null)
+                        MediaCacheJsonSnapshot? snapshot = snapshotService.CreateSnapshot(
+                            pathVal,
+                            size?.Stream,
+                            size?.File,
+                            partitionIdl
+                        );
+
+                        if (snapshot is not null)
                             yield return new MediaCacheEntry
                             {
-                                Path = pathVal,
-                                PartitionId = partitionIdl,
-                                Size = size,
+                                Path = snapshot.Path,
+                                PartitionId = snapshot.PartitionId,
+                                Size = new MediaCacheSize
+                                {
+                                    Stream = snapshot.StreamSizeBytes,
+                                    File = snapshot.FileSizeBytes,
+                                },
                             };
                         break;
                     }
@@ -156,11 +170,16 @@ public class LocalMediaCacheReader
         }
     }
 
-    public static async Task Save(string file, List<MediaCacheEntry> lstCache, int bufferSize = 1 << 20)
+    public static async Task Save(
+        string file,
+        List<MediaCacheEntry> lstCache,
+        IMediaCacheJsonSnapshotService snapshotService,
+        int bufferSize = 1 << 20
+    )
     {
         string tmpPath = $"{file}.tmp";
 
-        await Write(tmpPath, lstCache, bufferSize);
+        await Write(tmpPath, lstCache, snapshotService, bufferSize);
 
         if (OperatingSystem.IsWindows())
             File.Replace(tmpPath, file, null);
@@ -168,7 +187,12 @@ public class LocalMediaCacheReader
             File.Move(tmpPath, file, true);
     }
 
-    private static async Task Write(string file, List<MediaCacheEntry> lstCache, int bufferSize)
+    private static async Task Write(
+        string file,
+        List<MediaCacheEntry> lstCache,
+        IMediaCacheJsonSnapshotService snapshotService,
+        int bufferSize
+    )
     {
         await using FileStream fs = new(
             file,
@@ -187,18 +211,32 @@ public class LocalMediaCacheReader
 
         using JsonTextWriter jw = new(sw) { Formatting = Formatting.Indented };
 
+        List<MediaCacheJsonSnapshot> snapshots = snapshotService
+            .PrepareForWrite(
+                lstCache.Select(cache =>
+                    new MediaCacheJsonSnapshot
+                    {
+                        Path = cache.Path,
+                        StreamSizeBytes = cache.Size?.Stream,
+                        FileSizeBytes = cache.Size?.File,
+                        PartitionId = cache.PartitionId,
+                    }
+                )
+            )
+            .ToList();
+
         await jw.WriteStartArrayAsync().ConfigureAwait(false);
 
-        foreach (MediaCacheEntry cache in lstCache.ToArray())
+        foreach (MediaCacheJsonSnapshot snapshot in snapshots)
         {
             await jw.WriteStartObjectAsync().ConfigureAwait(false);
 
             await jw.WritePropertyNameAsync("Path").ConfigureAwait(false);
-            await jw.WriteValueAsync(cache.Path).ConfigureAwait(false);
+            await jw.WriteValueAsync(snapshot.Path).ConfigureAwait(false);
 
             await jw.WritePropertyNameAsync("Size").ConfigureAwait(false);
 
-            if (cache.Size is null)
+            if (snapshot.StreamSizeBytes is null && snapshot.FileSizeBytes is null)
                 await jw.WriteNullAsync().ConfigureAwait(false);
             else
             {
@@ -206,15 +244,15 @@ public class LocalMediaCacheReader
 
                 await jw.WritePropertyNameAsync("Stream").ConfigureAwait(false);
 
-                if (cache.Size.Stream.HasValue)
-                    await jw.WriteValueAsync(cache.Size.Stream.Value).ConfigureAwait(false);
+                if (snapshot.StreamSizeBytes.HasValue)
+                    await jw.WriteValueAsync(snapshot.StreamSizeBytes.Value).ConfigureAwait(false);
                 else
                     await jw.WriteNullAsync().ConfigureAwait(false);
 
                 await jw.WritePropertyNameAsync("File").ConfigureAwait(false);
 
-                if (cache.Size.File.HasValue)
-                    await jw.WriteValueAsync(cache.Size.File.Value).ConfigureAwait(false);
+                if (snapshot.FileSizeBytes.HasValue)
+                    await jw.WriteValueAsync(snapshot.FileSizeBytes.Value).ConfigureAwait(false);
                 else
                     await jw.WriteNullAsync().ConfigureAwait(false);
 
@@ -223,8 +261,8 @@ public class LocalMediaCacheReader
 
             await jw.WritePropertyNameAsync("PartitionId").ConfigureAwait(false);
 
-            if (cache.PartitionId.HasValue)
-                await jw.WriteValueAsync(cache.PartitionId.Value).ConfigureAwait(false);
+            if (snapshot.PartitionId.HasValue)
+                await jw.WriteValueAsync(snapshot.PartitionId.Value).ConfigureAwait(false);
             else
                 await jw.WriteNullAsync().ConfigureAwait(false);
 

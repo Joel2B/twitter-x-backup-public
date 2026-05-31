@@ -20,6 +20,7 @@ public class LocalMediaCache(
     IDataStoreGuardService dataStoreGuardService,
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
     IMediaCacheRecheckOrchestrationService mediaCacheRecheckOrchestrationService,
+    IMediaCacheJsonSnapshotService mediaCacheJsonSnapshotService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
     IMediaCachePartitionSelectionService mediaCachePartitionSelectionService,
@@ -36,6 +37,8 @@ public class LocalMediaCache(
         mediaCacheDirectoryPolicyService;
     private readonly IMediaCacheRecheckOrchestrationService _mediaCacheRecheckOrchestrationService =
         mediaCacheRecheckOrchestrationService;
+    private readonly IMediaCacheJsonSnapshotService _mediaCacheJsonSnapshotService =
+        mediaCacheJsonSnapshotService;
     private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
         mediaCacheEntryPathPolicyService;
     private readonly IMediaCacheEntryStateFactoryService _mediaCacheEntryStateFactoryService =
@@ -112,7 +115,12 @@ public class LocalMediaCache(
             {
                 await LoadCache();
 
-                await foreach (MediaCacheEntry entry in LocalMediaCacheReader.Get(file))
+                await foreach (
+                    MediaCacheEntry entry in LocalMediaCacheReader.Get(
+                        file,
+                        _mediaCacheJsonSnapshotService
+                    )
+                )
                     _cache[entry.Path] = entry;
             }
 
@@ -221,7 +229,7 @@ public class LocalMediaCache(
 
         if (recheck.Count > 0)
         {
-            await LocalMediaCacheReader.Save(file, [.. _cache.Values]);
+            await LocalMediaCacheReader.Save(file, [.. _cache.Values], _mediaCacheJsonSnapshotService);
             DeleteCache();
         }
     }
