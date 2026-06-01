@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
+using Backup.Application.Core;
 using Backup.Application.Bulk;
 using Backup.Application.Bulk.Models;
 using Backup.Application.IO;
@@ -19,6 +20,7 @@ public class LocalBulkData(
     AppConfig _appConfig,
     StorageBulk _config,
     IPartition _partition,
+    ISecondaryStoreSelectionService secondaryStoreSelectionService,
     IBulkDatedPathExtractionService bulkDatedPathExtractionService,
     IBulkPruneExecutionService bulkPruneExecutionService,
     IBulkReplicationPathPlanningService bulkReplicationPathPlanningService,
@@ -33,6 +35,8 @@ public class LocalBulkData(
     private readonly AppConfig _appConfig = _appConfig;
     private readonly StorageBulk _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly ISecondaryStoreSelectionService _secondaryStoreSelectionService =
+        secondaryStoreSelectionService;
     private readonly IBulkDatedPathExtractionService _bulkDatedPathExtractionService =
         bulkDatedPathExtractionService;
     private readonly IBulkPruneExecutionService _bulkPruneExecutionService = bulkPruneExecutionService;
@@ -172,10 +176,11 @@ public class LocalBulkData(
 
     public void Replicate()
     {
-        List<PartitionConfig> partitions = _partition
-            .GetPartitions()
-            .Except([_partition.GetPrimary()])
-            .ToList();
+        PartitionConfig primary = _partition.GetPrimary();
+        IReadOnlyList<PartitionConfig> partitions = _secondaryStoreSelectionService.SelectSecondaries(
+            _partition.GetPartitions(),
+            primary
+        );
 
         string mainPath = GetFileBulk();
         IReadOnlyList<string> replicaPaths = _bulkReplicationPathPlanningService.GetReplicaPaths(

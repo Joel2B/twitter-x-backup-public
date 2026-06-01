@@ -1,5 +1,6 @@
 using Backup.Application.Dump;
 using Backup.Application.Dump.Models;
+using Backup.Application.Core;
 using Backup.Application.IO;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Dump.Abstractions.Data;
@@ -23,6 +24,7 @@ public class LocalDumpData(
     IDumpsData _dumps,
     StorageDump _config,
     IPartition _partition,
+    ISecondaryStoreSelectionService secondaryStoreSelectionService,
     IDumpLifecycleService dumpLifecycleService,
     IDumpPathService dumpPathService,
     IDumpIndexLoadService dumpIndexLoadService,
@@ -38,6 +40,8 @@ public class LocalDumpData(
     private readonly AppConfig _appConfig = _appConfig;
     private readonly StorageDump _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly ISecondaryStoreSelectionService _secondaryStoreSelectionService =
+        secondaryStoreSelectionService;
     private readonly IDumpLifecycleService _dumpLifecycleService = dumpLifecycleService;
     private readonly IDumpPathService _dumpPathService = dumpPathService;
     private readonly IDumpIndexLoadService _dumpIndexLoadService = dumpIndexLoadService;
@@ -245,13 +249,14 @@ public class LocalDumpData(
 
     private async Task Replicate(ApiContext context)
     {
-        List<PartitionConfig> partitions = _partition
-            .GetPartitions()
-            .Except([_partition.GetPrimary()])
-            .ToList();
+        PartitionConfig primary = _partition.GetPrimary();
+        IReadOnlyList<PartitionConfig> partitions = _secondaryStoreSelectionService.SelectSecondaries(
+            _partition.GetPartitions(),
+            primary
+        );
 
         string mainPath = await GetPathCurrent(context);
-        string primaryPath = GetPath(_partition.GetPrimary());
+        string primaryPath = GetPath(primary);
         DumpReplicationPlan plan = _dumpReplicationPlanningService.Plan(
             primaryPath,
             mainPath,

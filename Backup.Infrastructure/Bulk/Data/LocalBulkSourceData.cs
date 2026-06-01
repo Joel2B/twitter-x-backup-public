@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
+using Backup.Application.Core;
 using Backup.Application.Bulk;
 using Backup.Application.Bulk.Models;
 using Backup.Infrastructure.Core.Abstractions.Partition;
@@ -14,6 +15,7 @@ public class LocalBulkSourceData(
     ILogger<LocalBulkSourceData> _logger,
     StorageBulk _config,
     IPartition _partition,
+    ISecondaryStoreSelectionService secondaryStoreSelectionService,
     IBulkSourceExtractionService bulkSourceExtractionService,
     IBulkSourceReplicationPolicyService bulkSourceReplicationPolicyService
 ) : IBulkSourceDataStore, ISetup
@@ -22,6 +24,8 @@ public class LocalBulkSourceData(
     private readonly ILogger<LocalBulkSourceData> _logger = _logger;
     private readonly StorageBulk _config = _config;
     private readonly IPartition _partition = _partition;
+    private readonly ISecondaryStoreSelectionService _secondaryStoreSelectionService =
+        secondaryStoreSelectionService;
     private readonly IBulkSourceExtractionService _bulkSourceExtractionService = bulkSourceExtractionService;
     private readonly IBulkSourceReplicationPolicyService _bulkSourceReplicationPolicyService =
         bulkSourceReplicationPolicyService;
@@ -80,10 +84,11 @@ public class LocalBulkSourceData(
 
     private void Replicate()
     {
-        List<PartitionConfig> partitions = _partition
-            .GetPartitions()
-            .Except([_partition.GetPrimary()])
-            .ToList();
+        PartitionConfig primary = _partition.GetPrimary();
+        IReadOnlyList<PartitionConfig> partitions = _secondaryStoreSelectionService.SelectSecondaries(
+            _partition.GetPartitions(),
+            primary
+        );
 
         string mainPath = GetPathSources();
 
