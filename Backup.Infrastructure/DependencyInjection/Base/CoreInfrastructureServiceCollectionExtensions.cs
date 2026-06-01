@@ -26,6 +26,7 @@ public static class CoreInfrastructureServiceCollectionExtensions
         services.AddSingleton<IPrimarySelectionService, PrimarySelectionService>();
         services.AddSingleton<ISecondaryStoreSelectionService, SecondaryStoreSelectionService>();
         services.AddSingleton<IStorageRegistrationPolicyService, StorageRegistrationPolicyService>();
+        services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddSingleton<IDumpProgressPolicyService, DumpProgressPolicyService>();
         services.AddSingleton<IDumpIndexFilePolicyService, DumpIndexFilePolicyService>();
         services.AddSingleton<IDumpContextGuardService, DumpContextGuardService>();

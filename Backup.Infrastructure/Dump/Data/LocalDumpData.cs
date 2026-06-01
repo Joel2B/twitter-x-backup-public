@@ -30,7 +30,8 @@ public class LocalDumpData(
     IDumpIndexLoadService dumpIndexLoadService,
     IDumpFlushExecutionService dumpFlushExecutionService,
     IDumpReplicationPlanningService dumpReplicationPlanningService,
-    IDataStoreGuardService dataStoreGuardService
+    IDataStoreGuardService dataStoreGuardService,
+    IDateTimeProvider dateTimeProvider
 ) : IDumpDataStore
 {
     public string? Id { get; set; }
@@ -49,6 +50,7 @@ public class LocalDumpData(
     private readonly IDumpReplicationPlanningService _dumpReplicationPlanningService =
         dumpReplicationPlanningService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
+    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
 
     private DumpData? _dumpData;
     private DumpData Data =>
@@ -64,7 +66,7 @@ public class LocalDumpData(
         DumpsData dumpsData = await _dumps.GetData();
         DumpCurrentSessionResolution resolution = _dumpLifecycleService.ResolveCurrentSession(
             dumpsData.Current,
-            DateTime.Now
+            _dateTimeProvider.Now
         );
 
         if (resolution.ShouldPersist)
@@ -196,7 +198,7 @@ public class LocalDumpData(
         await File.WriteAllTextAsync(apiFullPath, response);
 
         Data.Cursor = cursor;
-        Data.LastUpdate = DateTime.Now;
+        Data.LastUpdate = _dateTimeProvider.Now;
 
         await SaveData(context);
         await Replicate(context);
