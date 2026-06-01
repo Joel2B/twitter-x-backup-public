@@ -15,6 +15,7 @@ public static partial class PostDataInfrastructureServiceCollectionExtensions
     private static IServiceCollection RegisterPostDataStores(this IServiceCollection services)
     {
         services.AddScoped<LocalPostDataDependencies>();
+        services.AddScoped<SqlitePostDataDependencies>();
 
         Dictionary<string, Type> types = new()
         {
