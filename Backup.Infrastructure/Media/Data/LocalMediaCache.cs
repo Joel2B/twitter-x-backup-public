@@ -21,6 +21,7 @@ public class LocalMediaCache(
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
     IMediaCacheRecheckPlanningService mediaCacheRecheckPlanningService,
     IMediaCacheRecheckEvaluationService mediaCacheRecheckEvaluationService,
+    IMediaCacheRecheckMutationPlanningService mediaCacheRecheckMutationPlanningService,
     IMediaCacheJsonSnapshotService mediaCacheJsonSnapshotService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
@@ -41,6 +42,8 @@ public class LocalMediaCache(
         mediaCacheRecheckPlanningService;
     private readonly IMediaCacheRecheckEvaluationService _mediaCacheRecheckEvaluationService =
         mediaCacheRecheckEvaluationService;
+    private readonly IMediaCacheRecheckMutationPlanningService _mediaCacheRecheckMutationPlanningService =
+        mediaCacheRecheckMutationPlanningService;
     private readonly IMediaCacheJsonSnapshotService _mediaCacheJsonSnapshotService =
         mediaCacheJsonSnapshotService;
     private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
@@ -143,7 +146,12 @@ public class LocalMediaCache(
         IReadOnlyList<MediaCacheRecheckEvaluation> evaluations = _mediaCacheRecheckEvaluationService.Evaluate(
             observations
         );
-        ApplyRecheckEvaluations(evaluations);
+        IReadOnlyList<MediaCacheRecheckMutation> mutations =
+            _mediaCacheRecheckMutationPlanningService.Plan(
+                evaluations,
+                _cache.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase)
+            );
+        ApplyRecheckMutations(mutations);
 
         IReadOnlyDictionary<int, long> sizes = _mediaCachePartitionSizeAggregationService.Aggregate(
             _mediaCacheStoredEntryProjectionService.ToPartitionFileSizes(
@@ -353,39 +361,42 @@ public class LocalMediaCache(
         return observations;
     }
 
-    private void ApplyRecheckEvaluations(IReadOnlyList<MediaCacheRecheckEvaluation> evaluations)
+    private void ApplyRecheckMutations(IReadOnlyList<MediaCacheRecheckMutation> mutations)
     {
-        foreach (MediaCacheRecheckEvaluation evaluation in evaluations)
+        foreach (MediaCacheRecheckMutation mutation in mutations)
         {
-            string path = evaluation.Path;
-            MediaCacheEntry? old = Get(path);
-
-            if (old is null)
-                continue;
-
-            if (evaluation.IsInvalid)
+            switch (mutation.Kind)
             {
-                _logger.LogError("invalid recheck evaluation for path {path}", path);
-                continue;
+                case MediaCacheRecheckMutationKind.Invalid:
+                    _logger.LogError("invalid recheck evaluation for path {path}", mutation.Path);
+                    break;
+                case MediaCacheRecheckMutationKind.Remove:
+                {
+                    bool removed = _cache.TryRemove(mutation.Path, out _);
+
+                    if (removed)
+                        _logger.LogWarning("{path} path removed from cache", mutation.Path);
+                    else
+                        _logger.LogError("error removing path {path}", mutation.Path);
+                    break;
+                }
+                case MediaCacheRecheckMutationKind.Update:
+                {
+                    if (mutation.UpdatedEntryState is null)
+                        break;
+
+                    if (!_cache.TryGetValue(mutation.Path, out MediaCacheEntry? old))
+                        break;
+
+                    MediaCacheEntry updated = ToCacheEntry(mutation.UpdatedEntryState);
+                    _cache.TryUpdate(mutation.Path, updated, old);
+                    break;
+                }
+                case MediaCacheRecheckMutationKind.None:
+                case MediaCacheRecheckMutationKind.SkipMissing:
+                default:
+                    break;
             }
-
-            if (evaluation.ShouldRemove)
-            {
-                bool removed = _cache.TryRemove(path, out _);
-
-                if (removed)
-                    _logger.LogWarning("{path} path removed from cache", path);
-                else
-                    _logger.LogError("error removing path {path}", path);
-
-                continue;
-            }
-
-            if (evaluation.UpdatedEntryState is null)
-                continue;
-
-            MediaCacheEntry updated = ToCacheEntry(evaluation.UpdatedEntryState);
-            _cache.TryUpdate(path, updated, old);
         }
     }
 
