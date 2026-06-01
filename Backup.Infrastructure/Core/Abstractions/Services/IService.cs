@@ -2,5 +2,5 @@ namespace Backup.Infrastructure.Core.Abstractions.Services;
 
 public interface IService
 {
-    public Task Download();
+    public Task Download(CancellationToken cancellationToken = default);
 }

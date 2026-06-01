@@ -2,5 +2,5 @@ namespace Backup.Infrastructure.Hosting;
 
 public interface IBackupCliRunner
 {
-    Task RunBackup();
+    Task RunBackup(CancellationToken cancellationToken = default);
 }

@@ -8,5 +8,9 @@ public sealed class MediaExecutionServiceAdapter(IMediaService mediaService)
 {
     private readonly IMediaService _mediaService = mediaService;
 
-    public Task Download() => _mediaService.Download();
+    public Task Download(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return _mediaService.Download(cancellationToken);
+    }
 }

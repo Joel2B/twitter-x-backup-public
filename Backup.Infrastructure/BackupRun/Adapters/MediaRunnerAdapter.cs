@@ -16,9 +16,10 @@ public class MediaRunnerAdapter(
         mediaExecutionServices;
     private readonly ILogger<MediaRunnerAdapter> _logger = logger;
 
-    public Task Run() =>
+    public Task Run(CancellationToken cancellationToken = default) =>
         _stepExecutor.Run(
-            _mediaExecutionServices.Select(service => new MediaStep(_logger, service))
+            _mediaExecutionServices.Select(service => new MediaStep(_logger, service)),
+            cancellationToken
         );
 
     private sealed class MediaStep(
@@ -26,10 +27,10 @@ public class MediaRunnerAdapter(
         IMediaExecutionService service
     ) : IBackupRunStep
     {
-        public async Task Run()
+        public async Task Run(CancellationToken cancellationToken = default)
         {
             using (logger.LogTimer($"media execution service: {service.GetType().Name}"))
-                await service.Download();
+                await service.Download(cancellationToken);
         }
     }
 }

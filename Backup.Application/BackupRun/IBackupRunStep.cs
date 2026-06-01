@@ -2,5 +2,5 @@ namespace Backup.Application.BackupRun;
 
 public interface IBackupRunStep
 {
-    Task Run();
+    Task Run(CancellationToken cancellationToken = default);
 }

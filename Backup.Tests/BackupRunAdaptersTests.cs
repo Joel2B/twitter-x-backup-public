@@ -104,7 +104,10 @@ public class BackupRunAdaptersTests
     {
         public List<BackupRunSourceExecution> DownloadCalls { get; } = [];
 
-        public Task Download(BackupRunSourceExecution execution)
+        public Task Download(
+            BackupRunSourceExecution execution,
+            CancellationToken cancellationToken = default
+        )
         {
             DownloadCalls.Add(execution);
             return Task.CompletedTask;
@@ -115,7 +118,10 @@ public class BackupRunAdaptersTests
     {
         public List<BackupRunRecoveryExecution> RecoverCalls { get; } = [];
 
-        public Task Recover(BackupRunRecoveryExecution execution)
+        public Task Recover(
+            BackupRunRecoveryExecution execution,
+            CancellationToken cancellationToken = default
+        )
         {
             RecoverCalls.Add(execution);
             return Task.CompletedTask;

@@ -13,5 +13,9 @@ public class MediaService(
     private readonly MediaOrchestrationCommandAdapter _mediaOrchestrationCommand =
         mediaOrchestrationCommand;
 
-    public Task Download() => _mediaOrchestrationService.Run(_mediaOrchestrationCommand);
+    public Task Download(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return _mediaOrchestrationService.Run(_mediaOrchestrationCommand);
+    }
 }

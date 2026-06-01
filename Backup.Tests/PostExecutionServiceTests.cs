@@ -31,13 +31,13 @@ public class PostExecutionServiceTests
 
     private sealed class FakeDownloadExecution(List<string> calls) : IPostDownloadExecution
     {
-        public Task Download()
+        public Task Download(CancellationToken cancellationToken = default)
         {
             calls.Add("download");
             return Task.CompletedTask;
         }
 
-        public Task Prune()
+        public Task Prune(CancellationToken cancellationToken = default)
         {
             calls.Add("prune");
             return Task.CompletedTask;
@@ -46,7 +46,7 @@ public class PostExecutionServiceTests
 
     private sealed class FakeRecoveryExecution(Action callback) : IPostRecoveryExecution
     {
-        public Task Recover()
+        public Task Recover(CancellationToken cancellationToken = default)
         {
             callback();
             return Task.CompletedTask;

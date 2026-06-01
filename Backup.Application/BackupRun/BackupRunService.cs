@@ -21,28 +21,45 @@ public class BackupRunService(
     private readonly IMediaRunner _mediaRunner = mediaRunner;
     private readonly IPostStoreVerifier _postStoreVerifier = postStoreVerifier;
 
-    public async Task RunBackup()
+    public async Task RunBackup(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         BackupRunPlan plan = _planProvider.GetPlan();
 
         foreach (BackupRunUserPlan user in plan.Users)
         {
             foreach (BackupRunSourcePlan source in user.Sources)
-                await _postSourceRunner.Run(_executionMapper.MapSource(user.UserId, source));
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await _postSourceRunner.Run(
+                    _executionMapper.MapSource(user.UserId, source),
+                    cancellationToken
+                );
+            }
         }
 
         foreach (BackupRunUserPlan user in plan.Users.Where(user => user.RunRecovery))
-            await _postRecoveryRunner.Run(_executionMapper.MapRecovery(user));
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await _postRecoveryRunner.Run(_executionMapper.MapRecovery(user), cancellationToken);
+        }
 
         if (plan.IsBulkEnabled)
         {
             foreach (BackupRunUserPlan user in plan.Users.Where(user => user.RunBulk))
-                await _bulkRunner.Run(user.UserId);
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await _bulkRunner.Run(user.UserId, cancellationToken);
+            }
         }
 
         if (plan.IsMediaEnabled)
-            await _mediaRunner.Run();
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await _mediaRunner.Run(cancellationToken);
+        }
 
-        await _postStoreVerifier.Verify();
+        cancellationToken.ThrowIfCancellationRequested();
+        await _postStoreVerifier.Verify(cancellationToken);
     }
 }

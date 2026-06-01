@@ -17,13 +17,17 @@ public class PostRecoveryRunnerAdapter(
         postRecoveryExecutionServices;
     private readonly ILogger<PostRecoveryRunnerAdapter> _logger = logger;
 
-    public Task Run(BackupRunRecoveryExecution execution) =>
+    public Task Run(
+        BackupRunRecoveryExecution execution,
+        CancellationToken cancellationToken = default
+    ) =>
         _stepExecutor.Run(
             _postRecoveryExecutionServices.Select(service => new PostRecoveryStep(
                 _logger,
                 service,
                 execution
-            ))
+            )),
+            cancellationToken
         );
 
     private sealed class PostRecoveryStep(
@@ -32,10 +36,10 @@ public class PostRecoveryRunnerAdapter(
         BackupRunRecoveryExecution execution
     ) : IBackupRunStep
     {
-        public async Task Run()
+        public async Task Run(CancellationToken cancellationToken = default)
         {
             using (logger.LogTimer($"post recovery execution service: {service.GetType().Name}"))
-                await service.Recover(execution);
+                await service.Recover(execution, cancellationToken);
         }
     }
 }

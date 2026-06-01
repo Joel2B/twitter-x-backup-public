@@ -6,5 +6,6 @@ public sealed class BackupCliRunner(Backup.Application.BackupRun.IBackupRunServi
     private readonly Backup.Application.BackupRun.IBackupRunService _backupRunService =
         backupRunService;
 
-    public Task RunBackup() => _backupRunService.RunBackup();
+    public Task RunBackup(CancellationToken cancellationToken = default) =>
+        _backupRunService.RunBackup(cancellationToken);
 }

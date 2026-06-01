@@ -19,5 +19,6 @@ internal sealed class PostServiceRecoveryCommandAdapter(
         logger.LogInformation(data.Id, "recovering posts in {data}", data.GetType().Name);
     }
 
-    public Task RunRecovery() => recovery.Recovery(data, context);
+    public Task RunRecovery(CancellationToken cancellationToken = default) =>
+        recovery.Recovery(data, context, cancellationToken);
 }

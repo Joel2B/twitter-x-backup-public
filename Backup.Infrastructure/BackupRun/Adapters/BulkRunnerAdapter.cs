@@ -32,8 +32,9 @@ public class BulkRunnerAdapter(
     private readonly IBulkData _bulkData = bulkData;
     private readonly ILogger<BulkRunnerAdapter> _logger = logger;
 
-    public async Task Run(string userId)
+    public async Task Run(string userId, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         UsersContext? userContext = _config.UsersContext.FirstOrDefault(context =>
             context.UserId == userId
         );
@@ -52,7 +53,7 @@ public class BulkRunnerAdapter(
                     _phase2ResetRunner,
                     _bulkData
                 ),
-                CancellationToken.None
+                cancellationToken
             );
     }
 }

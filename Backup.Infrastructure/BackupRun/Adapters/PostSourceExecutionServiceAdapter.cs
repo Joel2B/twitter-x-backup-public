@@ -12,6 +12,8 @@ public sealed class PostSourceExecutionServiceAdapter(
     private readonly IPostService _postService = postService;
     private readonly IBackupRunExecutionContextMapper _contextMapper = contextMapper;
 
-    public Task Download(BackupRunSourceExecution execution) =>
-        _postService.Download(_contextMapper.ToApiContext(execution));
+    public Task Download(
+        BackupRunSourceExecution execution,
+        CancellationToken cancellationToken = default
+    ) => _postService.Download(_contextMapper.ToApiContext(execution), cancellationToken);
 }

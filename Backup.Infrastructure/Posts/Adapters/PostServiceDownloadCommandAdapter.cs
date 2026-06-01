@@ -16,7 +16,12 @@ internal sealed class PostServiceDownloadCommandAdapter(
     public void OnDownloadStarting() =>
         logger.LogInformation(data.Id, "downloading posts and pruning");
 
-    public Task RunDownload() => download.Download(data, context);
+    public Task RunDownload(CancellationToken cancellationToken = default) =>
+        download.Download(data, context, cancellationToken);
 
-    public Task RunPrune() => data.Prune();
+    public Task RunPrune(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return data.Prune();
+    }
 }

@@ -4,5 +4,8 @@ namespace Backup.Application.BackupRun.Ports;
 
 public interface IPostSourceExecutionService
 {
-    Task Download(BackupRunSourceExecution execution);
+    Task Download(
+        BackupRunSourceExecution execution,
+        CancellationToken cancellationToken = default
+    );
 }

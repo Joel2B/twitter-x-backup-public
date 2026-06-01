@@ -21,13 +21,18 @@ public class PostService(
     private readonly IPostRecovery _postRecovery = _postRecovery;
     private readonly IPostDownload _postDownload = _postDownload;
 
-    public async Task Recover(UsersContext context) =>
+    public async Task Recover(
+        UsersContext context,
+        CancellationToken cancellationToken = default
+    ) =>
         await _postRuntimeService.Recover(
-            new PostServiceRecoveryCommandAdapter(_logger, _postRecovery, _postData, context)
+            new PostServiceRecoveryCommandAdapter(_logger, _postRecovery, _postData, context),
+            cancellationToken
         );
 
-    public async Task Download(ApiContext context) =>
+    public async Task Download(ApiContext context, CancellationToken cancellationToken = default) =>
         await _postRuntimeService.Download(
-            new PostServiceDownloadCommandAdapter(_logger, _postDownload, _postData, context)
+            new PostServiceDownloadCommandAdapter(_logger, _postDownload, _postData, context),
+            cancellationToken
         );
 }

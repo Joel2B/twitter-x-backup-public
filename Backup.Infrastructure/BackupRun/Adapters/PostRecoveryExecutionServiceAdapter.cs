@@ -12,6 +12,8 @@ public sealed class PostRecoveryExecutionServiceAdapter(
     private readonly IPostService _postService = postService;
     private readonly IBackupRunExecutionContextMapper _contextMapper = contextMapper;
 
-    public Task Recover(BackupRunRecoveryExecution execution) =>
-        _postService.Recover(_contextMapper.ToUsersContext(execution));
+    public Task Recover(
+        BackupRunRecoveryExecution execution,
+        CancellationToken cancellationToken = default
+    ) => _postService.Recover(_contextMapper.ToUsersContext(execution), cancellationToken);
 }

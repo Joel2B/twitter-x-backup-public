@@ -2,5 +2,5 @@ namespace Backup.Application.BackupRun.Ports;
 
 public interface IMediaRunner
 {
-    Task Run();
+    Task Run(CancellationToken cancellationToken = default);
 }

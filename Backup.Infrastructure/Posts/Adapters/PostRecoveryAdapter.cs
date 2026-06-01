@@ -30,10 +30,12 @@ public class PostRecovery(
     private readonly IPostDownloader _downloader = _downloader;
     private readonly IPostDomainParser _parser = _parser;
 
-    public async Task Recovery(IPostDomainData postData, UsersContext context)
+    public async Task Recovery(
+        IPostDomainData postData,
+        UsersContext context,
+        CancellationToken cancellationToken = default
+    )
     {
-        using CancellationTokenSource tokenSource = new();
-
         await _postRecoveryCommandService.Execute(
             new PostRecoveryCommandAdapter(
                 _logger,
@@ -46,7 +48,7 @@ public class PostRecovery(
                 context,
                 RecoveryOrigin
             ),
-            tokenSource.Token
+            cancellationToken
         );
     }
 }

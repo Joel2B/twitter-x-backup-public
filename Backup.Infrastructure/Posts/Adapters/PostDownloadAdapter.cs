@@ -25,10 +25,12 @@ public class PostDownload(
     private readonly IPostDomainParser _parser = _parser;
     private readonly IDumpData _dump = _dump;
 
-    public async Task Download(IPostDomainData postData, ApiContext context)
+    public async Task Download(
+        IPostDomainData postData,
+        ApiContext context,
+        CancellationToken cancellationToken = default
+    )
     {
-        using CancellationTokenSource tokenSource = new();
-
         await _postDownloadCommandService.Execute(
             new PostDownloadCommandAdapter(
                 _logger,
@@ -39,7 +41,7 @@ public class PostDownload(
                 postData,
                 context
             ),
-            tokenSource.Token
+            cancellationToken
         );
     }
 }

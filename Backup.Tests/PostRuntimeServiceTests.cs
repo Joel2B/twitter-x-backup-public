@@ -36,13 +36,13 @@ public class PostRuntimeServiceTests
     {
         public void OnDownloadStarting() => calls.Add("start");
 
-        public Task RunDownload()
+        public Task RunDownload(CancellationToken cancellationToken = default)
         {
             calls.Add("download");
             return Task.CompletedTask;
         }
 
-        public Task RunPrune()
+        public Task RunPrune(CancellationToken cancellationToken = default)
         {
             calls.Add("prune");
             return Task.CompletedTask;
@@ -54,7 +54,7 @@ public class PostRuntimeServiceTests
     {
         public void OnRecoveryStarting() => calls.Add("start");
 
-        public Task RunRecovery()
+        public Task RunRecovery(CancellationToken cancellationToken = default)
         {
             calls.Add("recover");
             return Task.CompletedTask;

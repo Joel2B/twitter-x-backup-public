@@ -21,6 +21,7 @@ public class PostsController(IPostIngestionService postIngestionService) : Contr
     /// <param name="userId">Target user id used for index/merge context.</param>
     /// <param name="origin">Origin key used for index/merge context.</param>
     /// <param name="rawRequest">Raw JSON response body from X GraphQL.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
     /// <returns>Ingestion counts plus next cursor when present.</returns>
     [HttpPost("raw")]
     [ProducesResponseType(typeof(PostIngestResult), StatusCodes.Status200OK)]
@@ -35,7 +36,8 @@ public class PostsController(IPostIngestionService postIngestionService) : Contr
         [Required(ErrorMessage = "Query param 'origin' is required.")]
         [RegularExpression(@".*\S.*", ErrorMessage = "Query param 'origin' is required.")]
             string origin,
-        [FromBody] JsonElement rawRequest
+        [FromBody] JsonElement rawRequest,
+        CancellationToken cancellationToken
     )
     {
         if (!ModelState.IsValid)
@@ -50,7 +52,8 @@ public class PostsController(IPostIngestionService postIngestionService) : Contr
         PostIngestResult result = await _postIngestionService.IngestRaw(
             userId,
             origin,
-            rawRequest.GetRawText()
+            rawRequest.GetRawText(),
+            cancellationToken
         );
 
         return Ok(result);
@@ -62,6 +65,7 @@ public class PostsController(IPostIngestionService postIngestionService) : Contr
     /// <param name="userId">Target user id used for index/merge context.</param>
     /// <param name="origin">Origin key used for index/merge context.</param>
     /// <param name="posts">Processed post list that matches extension upload schema.</param>
+    /// <param name="cancellationToken">Request cancellation token.</param>
     /// <returns>Ingestion counts for received and saved posts.</returns>
     [HttpPost("processed")]
     [ProducesResponseType(typeof(PostIngestResult), StatusCodes.Status200OK)]
@@ -79,7 +83,8 @@ public class PostsController(IPostIngestionService postIngestionService) : Contr
         [FromBody]
         [Required(ErrorMessage = "Body is required.")]
         [MinLength(1, ErrorMessage = "At least one processed post is required.")]
-            List<ProcessedPostInput> posts
+            List<ProcessedPostInput> posts,
+        CancellationToken cancellationToken
     )
     {
         if (!ModelState.IsValid)
@@ -88,7 +93,8 @@ public class PostsController(IPostIngestionService postIngestionService) : Contr
         PostIngestResult result = await _postIngestionService.IngestProcessed(
             userId,
             origin,
-            posts
+            posts,
+            cancellationToken
         );
 
         return Ok(result);

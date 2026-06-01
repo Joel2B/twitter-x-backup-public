@@ -17,8 +17,12 @@ public class PostSourceRunnerAdapter(
         postSourceExecutionServices;
     private readonly ILogger<PostSourceRunnerAdapter> _logger = logger;
 
-    public async Task Run(BackupRunSourceExecution execution)
+    public async Task Run(
+        BackupRunSourceExecution execution,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         _logger.LogInfo("source: {source}", execution.ApiId);
 
         await _stepExecutor.Run(
@@ -26,7 +30,8 @@ public class PostSourceRunnerAdapter(
                 _logger,
                 service,
                 execution
-            ))
+            )),
+            cancellationToken
         );
     }
 
@@ -36,10 +41,10 @@ public class PostSourceRunnerAdapter(
         BackupRunSourceExecution execution
     ) : IBackupRunStep
     {
-        public async Task Run()
+        public async Task Run(CancellationToken cancellationToken = default)
         {
             using (logger.LogTimer($"post source execution service: {service.GetType().Name}"))
-                await service.Download(execution);
+                await service.Download(execution, cancellationToken);
         }
     }
 }

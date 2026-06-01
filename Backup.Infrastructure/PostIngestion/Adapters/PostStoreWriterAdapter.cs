@@ -8,10 +8,26 @@ public class PostStoreWriterAdapter(IPostDomainData postData) : IPostStoreWriter
 {
     private readonly IPostDomainData _postData = postData;
 
-    public Task<int> GetCount() => _postData.GetCount();
+    public Task<int> GetCount(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return _postData.GetCount();
+    }
 
-    public Task AddPosts(string userId, string origin, List<Post> posts) =>
-        _postData.AddPosts(userId, origin, posts);
+    public Task AddPosts(
+        string userId,
+        string origin,
+        List<Post> posts,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return _postData.AddPosts(userId, origin, posts);
+    }
 
-    public Task Save() => _postData.Save();
+    public Task Save(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return _postData.Save();
+    }
 }

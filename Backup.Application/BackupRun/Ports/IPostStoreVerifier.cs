@@ -2,5 +2,5 @@ namespace Backup.Application.BackupRun.Ports;
 
 public interface IPostStoreVerifier
 {
-    Task Verify();
+    Task Verify(CancellationToken cancellationToken = default);
 }

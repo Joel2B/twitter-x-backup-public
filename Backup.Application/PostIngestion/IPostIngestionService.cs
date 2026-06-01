@@ -5,11 +5,17 @@ namespace Backup.Application.PostIngestion;
 
 public interface IPostIngestionService
 {
-    Task<PostIngestResult> IngestRaw(string userId, string origin, string rawRequestBody);
+    Task<PostIngestResult> IngestRaw(
+        string userId,
+        string origin,
+        string rawRequestBody,
+        CancellationToken cancellationToken = default
+    );
 
     Task<PostIngestResult> IngestProcessed(
         string userId,
         string origin,
-        IReadOnlyCollection<Post> posts
+        IReadOnlyCollection<Post> posts,
+        CancellationToken cancellationToken = default
     );
 }

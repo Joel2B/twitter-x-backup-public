@@ -4,5 +4,5 @@ namespace Backup.Application.BackupRun.Ports;
 
 public interface IPostSourceRunner
 {
-    Task Run(BackupRunSourceExecution execution);
+    Task Run(BackupRunSourceExecution execution, CancellationToken cancellationToken = default);
 }

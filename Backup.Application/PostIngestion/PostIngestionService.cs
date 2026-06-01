@@ -14,11 +14,13 @@ public class PostIngestionService(IRawPostParser postParser, IPostStoreWriter po
     public async Task<PostIngestResult> IngestRaw(
         string userId,
         string origin,
-        string rawRequestBody
+        string rawRequestBody,
+        CancellationToken cancellationToken = default
     )
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             RawPostParseResult parsed = _postParser.Parse(userId, origin, rawRequestBody);
             int receivedPosts = parsed.Posts.Count;
             int savedPosts = parsed.Posts.Count;
@@ -27,10 +29,15 @@ public class PostIngestionService(IRawPostParser postParser, IPostStoreWriter po
                 origin,
                 [.. parsed.Posts],
                 receivedPosts,
-                savedPosts
+                savedPosts,
+                cancellationToken
             );
 
             return new PostIngestResult(receivedPosts, savedPosts, parsed.NextCursor, diagnostics);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -41,11 +48,13 @@ public class PostIngestionService(IRawPostParser postParser, IPostStoreWriter po
     public async Task<PostIngestResult> IngestProcessed(
         string userId,
         string origin,
-        IReadOnlyCollection<Post> posts
+        IReadOnlyCollection<Post> posts,
+        CancellationToken cancellationToken = default
     )
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             int receivedPosts = posts.Count;
             int savedPosts = posts.Count;
 
@@ -54,10 +63,15 @@ public class PostIngestionService(IRawPostParser postParser, IPostStoreWriter po
                 origin,
                 [.. posts],
                 receivedPosts,
-                savedPosts
+                savedPosts,
+                cancellationToken
             );
 
             return new PostIngestResult(receivedPosts, savedPosts, null, diagnostics);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -70,14 +84,16 @@ public class PostIngestionService(IRawPostParser postParser, IPostStoreWriter po
         string origin,
         List<Post> posts,
         int receivedPosts,
-        int savedPosts
+        int savedPosts,
+        CancellationToken cancellationToken = default
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         Stopwatch timer = Stopwatch.StartNew();
-        int beforeCount = await _postStore.GetCount();
-        await _postStore.AddPosts(userId, origin, posts);
-        await _postStore.Save();
-        int afterCount = await _postStore.GetCount();
+        int beforeCount = await _postStore.GetCount(cancellationToken);
+        await _postStore.AddPosts(userId, origin, posts, cancellationToken);
+        await _postStore.Save(cancellationToken);
+        int afterCount = await _postStore.GetCount(cancellationToken);
         timer.Stop();
 
         return new PostIngestDiagnostics(

@@ -13,8 +13,9 @@ public class PostStoreVerifierAdapter(
     private readonly IPostStoreParityVerifier _postStoreParityVerifier = postStoreParityVerifier;
     private readonly ILogger<PostStoreVerifierAdapter> _logger = logger;
 
-    public async Task Verify()
+    public async Task Verify(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         using (_logger.LogTimer("post store parity check"))
             await _postStoreParityVerifier.VerifyStoreCounts();
     }

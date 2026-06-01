@@ -29,5 +29,13 @@ await scope.ServiceProvider.RunBackupInfrastructureSetup();
 Console.Error.WriteLine("[startup] resolving app");
 IBackupCliRunner cliRunner = scope.ServiceProvider.GetRequiredService<IBackupCliRunner>();
 
+using CancellationTokenSource cts = new();
+Console.CancelKeyPress += (_, eventArgs) =>
+{
+    eventArgs.Cancel = true;
+    cts.Cancel();
+    Console.Error.WriteLine("[shutdown] cancellation requested (Ctrl+C)");
+};
+
 Console.Error.WriteLine("[startup] running backup");
-await cliRunner.RunBackup();
+await cliRunner.RunBackup(cts.Token);

@@ -4,6 +4,6 @@ namespace Backup.Infrastructure.Posts.Abstractions.Services;
 
 public interface IPostService
 {
-    public Task Recover(UsersContext context);
-    public Task Download(ApiContext context);
+    public Task Recover(UsersContext context, CancellationToken cancellationToken = default);
+    public Task Download(ApiContext context, CancellationToken cancellationToken = default);
 }

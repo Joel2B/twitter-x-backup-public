@@ -12,13 +12,15 @@ public class PostIngestionService(Backup.Application.PostIngestion.IPostIngestio
     public async Task<PostIngestResult> IngestRaw(
         string userId,
         string origin,
-        string rawRequestBody
+        string rawRequestBody,
+        CancellationToken cancellationToken = default
     )
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             Backup.Application.PostIngestion.Models.PostIngestResult result =
-                await _appService.IngestRaw(userId, origin, rawRequestBody);
+                await _appService.IngestRaw(userId, origin, rawRequestBody, cancellationToken);
 
             return new PostIngestResult(
                 result.ReceivedPosts,
@@ -26,6 +28,10 @@ public class PostIngestionService(Backup.Application.PostIngestion.IPostIngestio
                 result.NextCursor,
                 MapDiagnostics(result.Diagnostics)
             );
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Backup.Application.PostIngestion.PostIngestionException ex)
         {
@@ -36,16 +42,19 @@ public class PostIngestionService(Backup.Application.PostIngestion.IPostIngestio
     public async Task<PostIngestResult> IngestProcessed(
         string userId,
         string origin,
-        IReadOnlyCollection<ProcessedPostInput> posts
+        IReadOnlyCollection<ProcessedPostInput> posts,
+        CancellationToken cancellationToken = default
     )
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             Backup.Application.PostIngestion.Models.PostIngestResult result =
                 await _appService.IngestProcessed(
                     userId,
                     origin,
-                    ProcessedPostInputMapper.MapMany(posts)
+                    ProcessedPostInputMapper.MapMany(posts),
+                    cancellationToken
                 );
 
             return new PostIngestResult(
@@ -54,6 +63,10 @@ public class PostIngestionService(Backup.Application.PostIngestion.IPostIngestio
                 result.NextCursor,
                 MapDiagnostics(result.Diagnostics)
             );
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
         }
         catch (Backup.Application.PostIngestion.PostIngestionException ex)
         {
