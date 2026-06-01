@@ -32,12 +32,11 @@ public class ProxyProvider(
     IProxyCandidateLoadService proxyCandidateLoadService,
     IProxyRuntimeRecordMapper proxyRuntimeRecordMapper,
     IProxyProviderRuntimeOrchestrationService proxyProviderRuntimeOrchestrationService,
-    IProxyRuntimeStatusTransitionService proxyRuntimeStatusTransitionService,
     IProxyFailureStateService proxyFailureStateService,
     IProxyFailureExecutionPlanService proxyFailureExecutionPlanService,
     IProxyFailureSettingsPolicyService proxyFailureSettingsPolicyService,
     IProxyUsageTrackingService proxyUsageTrackingService,
-    IProxyErrorTrackingService proxyErrorTrackingService,
+    IProxyErrorHandlingOrchestrationService proxyErrorHandlingOrchestrationService,
     IDateTimeProvider dateTimeProvider
 )
     : IProxyProvider,
@@ -61,15 +60,14 @@ public class ProxyProvider(
     private readonly IProxyRuntimeRecordMapper _proxyRuntimeRecordMapper = proxyRuntimeRecordMapper;
     private readonly IProxyProviderRuntimeOrchestrationService _proxyProviderRuntimeOrchestrationService =
         proxyProviderRuntimeOrchestrationService;
-    private readonly IProxyRuntimeStatusTransitionService _proxyRuntimeStatusTransitionService =
-        proxyRuntimeStatusTransitionService;
     private readonly IProxyFailureStateService _proxyFailureStateService = proxyFailureStateService;
     private readonly IProxyFailureExecutionPlanService _proxyFailureExecutionPlanService =
         proxyFailureExecutionPlanService;
     private readonly IProxyFailureSettingsPolicyService _proxyFailureSettingsPolicyService =
         proxyFailureSettingsPolicyService;
     private readonly IProxyUsageTrackingService _proxyUsageTrackingService = proxyUsageTrackingService;
-    private readonly IProxyErrorTrackingService _proxyErrorTrackingService = proxyErrorTrackingService;
+    private readonly IProxyErrorHandlingOrchestrationService _proxyErrorHandlingOrchestrationService =
+        proxyErrorHandlingOrchestrationService;
     private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
@@ -253,29 +251,27 @@ public class ProxyProvider(
 
         lock (proxy)
         {
-            if (
-                !_proxyRuntimeStatusTransitionService.ShouldHandleError(
-                    proxy.Status.Current == StatusEnum.Active
-                )
-            )
-                return;
-
             DateTime now = _dateTimeProvider.Now;
             ProxyRuntimeRecord runtimeRecord = _proxyRuntimeRecordMapper.ToRuntimeRecord(proxy);
-            ProxyErrorTrackingResult tracking = _proxyErrorTrackingService.RegisterError(
+            ProxyErrorHandlingOutcome outcome = _proxyErrorHandlingOrchestrationService.Handle(
                 runtimeRecord,
+                proxy.Status.Current == StatusEnum.Active,
                 ex.Message,
                 JsonConvert.SerializeObject(ex),
                 _config.Proxy.Threshold.ErrorsToInactive,
                 now
             );
-            DateTime? disabledAt = _proxyRuntimeStatusTransitionService.ResolveDisabledAt(
-                tracking.WasDisabled,
-                now
-            );
-            _proxyRuntimeRecordMapper.ApplyRuntimeRecord(proxy, runtimeRecord, disabledAt);
 
-            if (tracking.WasDisabled)
+            if (!outcome.ShouldApplyRuntimeRecord)
+                return;
+
+            _proxyRuntimeRecordMapper.ApplyRuntimeRecord(
+                proxy,
+                runtimeRecord,
+                outcome.DisabledAt
+            );
+
+            if (outcome.WasDisabled)
             {
                 _logger.LogInformation("proxy {proxy} disabled", proxy.Proxy.ToString());
             }
