@@ -18,7 +18,10 @@ public sealed class MediaCacheLoadExecutionService(
     public MediaCacheLoadExecutionResult Execute(
         IReadOnlyList<MediaCacheStoredEntry> entries,
         IReadOnlyCollection<string> existingCachePaths,
-        Func<IReadOnlyList<MediaCacheRecheckProbeInput>, MediaCacheRecheckProbeExecutionResult> probe
+        Func<
+            IReadOnlyList<MediaCacheRecheckProbeInput>,
+            MediaCacheRecheckProbeExecutionResult
+        > probe
     )
     {
         MediaCacheRecheckExecutionInput input = _mediaCacheRecheckExecutionInputService.BuildInputs(

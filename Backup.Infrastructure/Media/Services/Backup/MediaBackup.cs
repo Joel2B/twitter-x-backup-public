@@ -91,7 +91,10 @@ internal sealed class MediaBackup(
     {
         cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<MediaBackupPhaseExecutionStep> plan =
-            _mediaBackupPipelinePlanService.BuildExecutionPlan(_pipelineStepsById.Values, _runtime.Stop);
+            _mediaBackupPipelinePlanService.BuildExecutionPlan(
+                _pipelineStepsById.Values,
+                _runtime.Stop
+            );
 
         foreach (MediaBackupPhaseExecutionStep planStep in plan)
         {

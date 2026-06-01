@@ -8,7 +8,8 @@ public sealed class PostStoreMergeMutationService(
     IPostHashingService postHashingService
 ) : IPostStoreMergeMutationService
 {
-    private readonly IPostMergeExecutionService _postMergeExecutionService = postMergeExecutionService;
+    private readonly IPostMergeExecutionService _postMergeExecutionService =
+        postMergeExecutionService;
     private readonly IPostHashingService _postHashingService = postHashingService;
 
     public IReadOnlyList<PostStoreMergeMutation> BuildMergeMutations(
