@@ -80,6 +80,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaFilter, MediaFilter>();
         services.AddScoped<IMediaReplication, MediaReplication>();
         services.AddScoped<IMediaDownloadService, MediaDownloadService>();
+        services.AddScoped<IMediaDownloadModelMapper, MediaDownloadModelMapper>();
         services.AddScoped<IMediaDownloadParallelRunner, MediaDownloadParallelRunnerAdapter>();
         services.AddScoped<IMediaDownloader, MediaDownloaderHttp>();
         services.AddScoped<IMediaLogger, LocalMediaLogger>();
