@@ -77,9 +77,14 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
             IProxyCandidateLoadExecutionService,
             ProxyCandidateLoadExecutionService
         >();
+        services.AddScoped<
+            IProxyProviderCandidateLoadOrchestrationService,
+            ProxyProviderCandidateLoadOrchestrationService
+        >();
         services.AddScoped<IProxySetupExecutionService, ProxySetupExecutionService>();
         services.AddScoped<IProxyCheckExecutionService, ProxyCheckExecutionService>();
         services.AddScoped<IProxyHealthProbePort, ProxyHealthProbePortAdapter>();
+        services.AddScoped<IProxyResourceLoadPort, ProxyResourceLoadPortAdapter>();
         services.AddScoped<IProxyRuntimeRecordMapper, ProxyRuntimeRecordMapper>();
         services.AddScoped<ProxyProvider>();
         services.AddScoped<IProxyProvider>(sp => sp.GetRequiredService<ProxyProvider>());

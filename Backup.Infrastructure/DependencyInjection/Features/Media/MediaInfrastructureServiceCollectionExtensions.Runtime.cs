@@ -137,6 +137,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
             IMediaCacheRecheckExecutionInputService,
             MediaCacheRecheckExecutionInputService
         >();
+        services.AddScoped<IMediaCacheLoadExecutionService, MediaCacheLoadExecutionService>();
         services.AddScoped<
             IMediaCacheRecheckMutationPlanningService,
             MediaCacheRecheckMutationPlanningService

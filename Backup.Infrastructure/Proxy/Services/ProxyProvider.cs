@@ -8,7 +8,6 @@ using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Proxy;
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Abstractions.Data;
-using Backup.Infrastructure.Proxy.Adapters;
 using Backup.Infrastructure.Proxy.Models;
 using Microsoft.Extensions.Logging;
 
@@ -23,12 +22,11 @@ public class ProxyProvider(
     AppConfig _config,
     IProxyData _data,
     IProxyHealthProbePort proxyHealthProbePort,
+    IProxyResourceLoadPort proxyResourceLoadPort,
     IProxyHttpClientFactoryPolicyService proxyHttpClientFactoryPolicyService,
     IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService,
     IProxyKeyPolicyService proxyKeyPolicyService,
-    IProxyEndpointParserService proxyEndpointParserService,
-    IProxyProviderTypeResolverService proxyProviderTypeResolverService,
-    IProxyCandidateLoadExecutionService proxyCandidateLoadExecutionService,
+    IProxyProviderCandidateLoadOrchestrationService proxyProviderCandidateLoadOrchestrationService,
     IProxySetupExecutionService proxySetupExecutionService,
     IProxyCheckExecutionService proxyCheckExecutionService,
     IProxyRuntimeRecordMapper proxyRuntimeRecordMapper,
@@ -45,17 +43,14 @@ public class ProxyProvider(
     private readonly AppConfig _config = _config;
     private readonly IProxyData _data = _data;
     private readonly IProxyHealthProbePort _proxyHealthProbePort = proxyHealthProbePort;
+    private readonly IProxyResourceLoadPort _proxyResourceLoadPort = proxyResourceLoadPort;
     private readonly IProxyHttpClientFactoryPolicyService _proxyHttpClientFactoryPolicyService =
         proxyHttpClientFactoryPolicyService;
     private readonly IProxyHttpClientHeaderPolicyService _proxyHttpClientHeaderPolicyService =
         proxyHttpClientHeaderPolicyService;
     private readonly IProxyKeyPolicyService _proxyKeyPolicyService = proxyKeyPolicyService;
-    private readonly IProxyEndpointParserService _proxyEndpointParserService =
-        proxyEndpointParserService;
-    private readonly IProxyProviderTypeResolverService _proxyProviderTypeResolverService =
-        proxyProviderTypeResolverService;
-    private readonly IProxyCandidateLoadExecutionService _proxyCandidateLoadExecutionService =
-        proxyCandidateLoadExecutionService;
+    private readonly IProxyProviderCandidateLoadOrchestrationService _proxyProviderCandidateLoadOrchestrationService =
+        proxyProviderCandidateLoadOrchestrationService;
     private readonly IProxySetupExecutionService _proxySetupExecutionService =
         proxySetupExecutionService;
     private readonly IProxyCheckExecutionService _proxyCheckExecutionService =
@@ -293,25 +288,23 @@ public class ProxyProvider(
 
     private async Task<IReadOnlyList<ProxyCandidate>> LoadCandidatesFromProviders()
     {
-        IReadOnlyList<ProxyLoadProviderDefinition> providers = _config
+        IReadOnlyList<ProxyProviderSourceInput> sources = _config
             .Proxy.Providers.Select(ToProviderDefinition)
             .ToList();
-        IProxyResourceLoadPort port = new ProxyResourceLoadPortAdapter(
-            _logger,
-            _proxyEndpointParserService,
-            _proxyProviderTypeResolverService
-        );
 
-        return await _proxyCandidateLoadExecutionService.ExecuteAsync(providers, port);
+        return await _proxyProviderCandidateLoadOrchestrationService.ExecuteAsync(
+            sources,
+            _proxyResourceLoadPort
+        );
     }
 
-    private static ProxyLoadProviderDefinition ToProviderDefinition(Provider provider) =>
+    private static ProxyProviderSourceInput ToProviderDefinition(Provider provider) =>
         new()
         {
             ProviderType = provider.Type,
             ProviderFormat = provider.Format,
             Resources = provider
-                .Resources.Select(resource => new ProxyLoadResourceDefinition
+                .Resources.Select(resource => new ProxyProviderSourceResourceInput
                 {
                     ResourceType = resource.Type,
                     ResourceValue = resource.Value,

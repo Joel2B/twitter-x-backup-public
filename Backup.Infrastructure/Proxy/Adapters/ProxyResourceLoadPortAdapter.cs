@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 namespace Backup.Infrastructure.Proxy.Adapters;
 
 public sealed class ProxyResourceLoadPortAdapter(
-    ILogger logger,
+    ILogger<ProxyResourceLoadPortAdapter> logger,
     IProxyEndpointParserService proxyEndpointParserService,
     IProxyProviderTypeResolverService proxyProviderTypeResolverService
 ) : IProxyResourceLoadPort
