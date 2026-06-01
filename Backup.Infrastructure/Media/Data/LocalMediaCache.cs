@@ -20,6 +20,7 @@ public class LocalMediaCache(
     IDataStoreGuardService dataStoreGuardService,
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
     IMediaCacheRecheckPlanningService mediaCacheRecheckPlanningService,
+    IMediaCacheRecheckObservationCompositionService mediaCacheRecheckObservationCompositionService,
     IMediaCacheRecheckEvaluationService mediaCacheRecheckEvaluationService,
     IMediaCacheRecheckMutationPlanningService mediaCacheRecheckMutationPlanningService,
     IMediaCacheJsonSnapshotService mediaCacheJsonSnapshotService,
@@ -40,6 +41,8 @@ public class LocalMediaCache(
         mediaCacheDirectoryPolicyService;
     private readonly IMediaCacheRecheckPlanningService _mediaCacheRecheckPlanningService =
         mediaCacheRecheckPlanningService;
+    private readonly IMediaCacheRecheckObservationCompositionService _mediaCacheRecheckObservationCompositionService =
+        mediaCacheRecheckObservationCompositionService;
     private readonly IMediaCacheRecheckEvaluationService _mediaCacheRecheckEvaluationService =
         mediaCacheRecheckEvaluationService;
     private readonly IMediaCacheRecheckMutationPlanningService _mediaCacheRecheckMutationPlanningService =
@@ -142,7 +145,12 @@ public class LocalMediaCache(
             _logger.LogWarning("cache file not exist, {path}", file);
 
         _logger.LogWarning("recheck: {count}", recheck.Count);
-        IReadOnlyList<MediaCacheRecheckObservation> observations = BuildRecheckObservations(recheck);
+        IReadOnlyList<MediaCacheRecheckProbeInput> probeInputs =
+            _mediaCacheRecheckObservationCompositionService.BuildProbeInputs(
+                recheck,
+                _cache.Values.Select(ToStoredEntry).ToList()
+            );
+        IReadOnlyList<MediaCacheRecheckObservation> observations = BuildRecheckObservations(probeInputs);
         IReadOnlyList<MediaCacheRecheckEvaluation> evaluations = _mediaCacheRecheckEvaluationService.Evaluate(
             observations
         );
@@ -308,32 +316,25 @@ public class LocalMediaCache(
     }
 
     private IReadOnlyList<MediaCacheRecheckObservation> BuildRecheckObservations(
-        IReadOnlyCollection<string> paths
+        IReadOnlyList<MediaCacheRecheckProbeInput> probeInputs
     )
     {
-        List<MediaCacheRecheckObservation> observations = [];
+        List<MediaCacheRecheckProbeOutcome> outcomes = [];
 
-        foreach (string path in paths)
+        foreach (MediaCacheRecheckProbeInput probeInput in probeInputs)
         {
             try
             {
-                MediaCacheEntry? cache = Get(path);
-
-                if (cache is null)
-                    continue;
-
-                int? partitionId = cache.PartitionId;
-                long? streamSize = cache.Size?.Stream;
                 bool fileExists = false;
                 long? fileSize = null;
 
-                if (partitionId is not null)
+                if (probeInput.PartitionId is not null)
                 {
-                    PartitionConfig partition = _partition.GetPath(partitionId);
+                    PartitionConfig partition = _partition.GetPath(probeInput.PartitionId);
                     string fullPath = Path.Combine(
                         [
                             GetPathMedia(partition),
-                            _mediaCacheEntryPathPolicyService.NormalizeForStoragePath(path),
+                            _mediaCacheEntryPathPolicyService.NormalizeForStoragePath(probeInput.Path),
                         ]
                     );
                     FileInfo fi = new(fullPath);
@@ -341,12 +342,12 @@ public class LocalMediaCache(
                     fileSize = fileExists ? fi.Length : null;
                 }
 
-                observations.Add(
-                    new MediaCacheRecheckObservation
+                outcomes.Add(
+                    new MediaCacheRecheckProbeOutcome
                     {
-                        Path = path,
-                        PartitionId = partitionId,
-                        StreamSizeBytes = streamSize,
+                        Path = probeInput.Path,
+                        PartitionId = probeInput.PartitionId,
+                        StreamSizeBytes = probeInput.StreamSizeBytes,
                         FileExists = fileExists,
                         FileSizeBytes = fileSize,
                     }
@@ -354,11 +355,11 @@ public class LocalMediaCache(
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error in {path}: {error}", path, ex.Message);
+                _logger.LogError("Error in {path}: {error}", probeInput.Path, ex.Message);
             }
         }
 
-        return observations;
+        return _mediaCacheRecheckObservationCompositionService.ToObservations(outcomes);
     }
 
     private void ApplyRecheckMutations(IReadOnlyList<MediaCacheRecheckMutation> mutations)
