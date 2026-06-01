@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Linq;
 
-namespace Backup.Application.Posts;
+namespace Backup.Infrastructure.Posts.Abstractions.Services;
 
 public interface IPostTimelineExtractionService
 {

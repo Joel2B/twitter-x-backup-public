@@ -30,8 +30,7 @@ internal static class BackupConfigurationDirectoryResolver
 
         string currentDirectory = Directory.GetCurrentDirectory();
         candidates.Add(Path.Combine(currentDirectory, "config"));
-        candidates.Add(Path.Combine(currentDirectory, "App", "Config"));
-        candidates.Add(Path.Combine(currentDirectory, "App", "Config.example"));
+        candidates.Add(Path.Combine(currentDirectory, "config.example"));
         candidates.Add(Path.Combine(AppContext.BaseDirectory, "config"));
 
         foreach (string candidate in candidates.Select(Path.GetFullPath).Distinct())

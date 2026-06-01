@@ -232,7 +232,5 @@ public partial class ConfigApiTests
     [
         Path.Combine(root, "config"),
         Path.Combine(root, "config.example"),
-        Path.Combine(root, "App", "Config"),
-        Path.Combine(root, "App", "Config.example"),
     ];
 }

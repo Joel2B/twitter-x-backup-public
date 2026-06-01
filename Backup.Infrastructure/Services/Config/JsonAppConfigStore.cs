@@ -51,7 +51,5 @@ public sealed class JsonAppConfigStore : IAppConfigStore
     {
         candidates.Add(Path.Combine(basePath, "config"));
         candidates.Add(Path.Combine(basePath, "config.example"));
-        candidates.Add(Path.Combine(basePath, "App", "Config"));
-        candidates.Add(Path.Combine(basePath, "App", "Config.example"));
     }
 }

@@ -1,4 +1,6 @@
 using Backup.Application.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Services;
+using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Posts.Models;
 using Newtonsoft.Json.Linq;
 

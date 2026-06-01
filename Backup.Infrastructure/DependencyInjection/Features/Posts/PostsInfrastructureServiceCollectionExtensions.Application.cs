@@ -61,10 +61,8 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
             IPostChangeReadModelProjectionService,
             PostChangeReadModelProjectionService
         >();
-        services.AddScoped<IPostTimelineExtractionService, PostTimelineExtractionService>();
         services.AddScoped<IPostUserParsePolicyService, PostUserParsePolicyService>();
         services.AddScoped<IPostProjectionParseService, PostProjectionParseService>();
-        services.AddScoped<IPostTokenMaterializationService, PostTokenMaterializationService>();
         services.AddScoped<IPostIdentifierFilterService, PostIdentifierFilterService>();
         services.AddScoped<IPostMergeResolutionService, PostMergeResolutionService>();
         services.AddScoped<IPostHistoryArchivePathService, PostHistoryArchivePathService>();

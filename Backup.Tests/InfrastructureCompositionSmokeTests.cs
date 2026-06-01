@@ -102,12 +102,8 @@ public class InfrastructureCompositionSmokeTests
             if (Directory.Exists(primary))
                 return primary;
 
-            string legacy = Path.Combine(repoRoot, "App", "Config.example");
-            if (Directory.Exists(legacy))
-                return legacy;
-
             throw new DirectoryNotFoundException(
-                "Could not locate config example directory. Expected 'config.example' or 'App/Config.example'."
+                "Could not locate config example directory. Expected 'config.example'."
             );
         }
 

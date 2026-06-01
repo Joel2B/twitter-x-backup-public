@@ -30,8 +30,6 @@ Configuration directory resolution order:
 - env var `BACKUP__CONFIG__DIRECTORY`
 - `./config`
 - `./config.example`
-- `./App/Config`
-- `./App/Config.example`
 - `<app-base>/config`
 
 Note: runtime config files are intended for local/deployment use and should not be committed.

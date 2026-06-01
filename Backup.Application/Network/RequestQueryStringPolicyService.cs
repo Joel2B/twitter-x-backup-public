@@ -1,9 +1,11 @@
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Backup.Application.Network;
 
 public sealed class RequestQueryStringPolicyService : IRequestQueryStringPolicyService
 {
+    private static readonly JsonSerializerOptions JsonOptions = new();
+
     public string Build(
         string baseUrl,
         IReadOnlyDictionary<string, object?> variables,
@@ -17,9 +19,9 @@ public sealed class RequestQueryStringPolicyService : IRequestQueryStringPolicyS
 
         Dictionary<string, string> queryBuilder = new()
         {
-            ["variables"] = JsonConvert.SerializeObject(filteredVariables),
-            ["features"] = JsonConvert.SerializeObject(features),
-            ["fieldToggles"] = JsonConvert.SerializeObject(fieldToggles),
+            ["variables"] = JsonSerializer.Serialize(filteredVariables, JsonOptions),
+            ["features"] = JsonSerializer.Serialize(features, JsonOptions),
+            ["fieldToggles"] = JsonSerializer.Serialize(fieldToggles, JsonOptions),
         };
 
         string queryUri = queryBuilder.Aggregate(

@@ -1,16 +1,18 @@
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using Backup.Domain.Posts;
-using Newtonsoft.Json;
 
 namespace Backup.Application.Posts;
 
 public sealed class PostHashingService : IPostHashingService
 {
+    private static readonly JsonSerializerOptions JsonOptions = new();
+
     public string Compute(Post post)
     {
         object normalized = Normalize(post);
-        string json = JsonConvert.SerializeObject(normalized);
+        string json = JsonSerializer.Serialize(normalized, JsonOptions);
         byte[] bytes = Encoding.UTF8.GetBytes(json);
         byte[] hash = SHA256.HashData(bytes);
 
