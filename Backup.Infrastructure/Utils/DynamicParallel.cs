@@ -4,6 +4,8 @@ using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
+namespace Backup.Infrastructure.Utils;
+
 public sealed class DynamicParallelOptions
 {
     public int MinDegreeOfParallelism { get; set; } = 4;
@@ -28,7 +30,7 @@ public sealed class DynamicParallelOptions
     /// <summary>Habilita logs de depuración.</summary>
     public bool EnableDebug { get; set; } = false;
 
-    /// <summary>Destino para logs. Si es null y EnableDebug=true, usa Console.WriteLine.</summary>
+    /// <summary>Destino para logs. Si es null, no se emiten logs.</summary>
     public Action<string>? DebugSink { get; set; } = null;
 
     /// <summary>Nombre opcional para identificar la ejecución en logs.</summary>
@@ -164,7 +166,7 @@ public static class DynamicParallel
             _inFlight = 0;
 
             _dbg = enableDebug;
-            _sink = debugSink ?? (enableDebug ? (s => Console.WriteLine(s)) : null);
+            _sink = debugSink;
             _name = string.IsNullOrWhiteSpace(debugName) ? "DynamicParallel" : debugName!;
             Debug(
                 $"INIT current={_current} min={_min} max={_max} win={_sampleWindow} banked={_banked} inFlight={_inFlight}"

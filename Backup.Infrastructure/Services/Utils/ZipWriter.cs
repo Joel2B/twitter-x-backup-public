@@ -38,7 +38,7 @@ public class ZipWriter : IZipWriter
             {
                 List<ZipArchiveEntry> duplicates = _zip
                     .Entries.Where(e => !string.IsNullOrEmpty(e.Name))
-                    .Where(o => o.FullName.Contains(entryName))
+                    .Where(o => o.FullName.Equals(entryName, StringComparison.Ordinal))
                     .Skip(skip)
                     .ToList();
 

@@ -9,12 +9,9 @@ public partial class ConfigApiTests
     public void Fetch_Config_HasPostsLikesBookmarks_InProdAndExample()
     {
         string root = ConfigApiTestSupport.FindRepositoryRoot();
-
-        string[] paths =
-        [
-            Path.Combine(root, "App", "Config", "Fetch.json"),
-            Path.Combine(root, "App", "Config.example", "Fetch.json"),
-        ];
+        string[] paths = GetConfigDirectories(root)
+            .Select(directory => Path.Combine(directory, "Fetch.json"))
+            .ToArray();
 
         int validatedConfigs = 0;
 
@@ -43,7 +40,7 @@ public partial class ConfigApiTests
 
         Assert.True(
             validatedConfigs > 0,
-            "No Fetch.json found in App/Config or App/Config.example."
+            "No Fetch.json found in config directories."
         );
     }
 
@@ -51,11 +48,7 @@ public partial class ConfigApiTests
     public void ConfigLoader_AppliesFetchApiCount_IntoFinalApi()
     {
         string root = ConfigApiTestSupport.FindRepositoryRoot();
-        string[] directories =
-        [
-            Path.Combine(root, "App", "Config"),
-            Path.Combine(root, "App", "Config.example"),
-        ];
+        string[] directories = GetConfigDirectories(root);
 
         int validatedConfigs = 0;
 
@@ -117,12 +110,7 @@ public partial class ConfigApiTests
     public void ConfigLoader_NormalizesApiCountVariables_ToInt()
     {
         string root = ConfigApiTestSupport.FindRepositoryRoot();
-
-        string[] directories =
-        [
-            Path.Combine(root, "App", "Config"),
-            Path.Combine(root, "App", "Config.example"),
-        ];
+        string[] directories = GetConfigDirectories(root);
 
         int validatedConfigs = 0;
 
@@ -183,12 +171,7 @@ public partial class ConfigApiTests
     public void ConfigLoader_NormalizesBooleanVariables_ToBool()
     {
         string root = ConfigApiTestSupport.FindRepositoryRoot();
-
-        string[] directories =
-        [
-            Path.Combine(root, "App", "Config"),
-            Path.Combine(root, "App", "Config.example"),
-        ];
+        string[] directories = GetConfigDirectories(root);
 
         int validatedConfigs = 0;
 
@@ -244,4 +227,12 @@ public partial class ConfigApiTests
 
         return Directory.GetFiles(folderPath, "*.json", SearchOption.TopDirectoryOnly).Length > 0;
     }
+
+    private static string[] GetConfigDirectories(string root) =>
+    [
+        Path.Combine(root, "config"),
+        Path.Combine(root, "config.example"),
+        Path.Combine(root, "App", "Config"),
+        Path.Combine(root, "App", "Config.example"),
+    ];
 }

@@ -16,8 +16,8 @@ This project is maintained for personal use, but contributions are welcome if th
 dotnet restore
 ```
 3. Create local runtime config from samples:
-   - Source: `Backup.Infrastructure/App/Config.example/`
-   - Local target: `Backup.Infrastructure/App/Config/`
+   - Source: `config.example/`
+   - Local target: `config/`
 
 Do not commit real config values.
 
@@ -58,9 +58,9 @@ If your change affects only one area, still run the full suite before merge.
 
 - Never commit credentials, tokens, cookies, or live session data.
 - Never commit local runtime config files:
-  - `Backup.Infrastructure/App/Config/*.json`
-  - `Backup.Infrastructure/App/Config/**/*.json`
-- Keep only sanitized sample values in `Backup.Infrastructure/App/Config.example/`.
+  - `config/*.json`
+  - `config/**/*.json`
+- Keep only sanitized sample values in `config.example/`.
 
 ## Pull Request Checklist
 

@@ -16,7 +16,7 @@ This project is under active personal development. Structure and configuration f
 
 ## Configuration
 
-1. Use files in `App/Config.example/` as a starting point.
+1. Use files in `config.example/` as a starting point.
 2. Copy them to your runtime config directory (recommended: `./config/`) and replace all fields marked as `{REPLACE_THIS}`.
 3. Adjust data/debug paths and download settings for your environment.
 4. Optional host-level override:
@@ -29,6 +29,7 @@ Configuration directory resolution order:
 - `Backup:Configuration:ConfigDirectory` from host configuration (`appsettings*.json`/env/providers)
 - env var `BACKUP__CONFIG__DIRECTORY`
 - `./config`
+- `./config.example`
 - `./App/Config`
 - `./App/Config.example`
 - `<app-base>/config`
@@ -99,7 +100,6 @@ For Windows CIFS volumes, create `.env` from `.env.example` and set your credent
 
 - `Backup.Domain/`: domain entities and core contracts.
 - `Backup.Application/`: application workflows/use-cases.
-- `Backup.Configuration/`: shared host configuration bootstrap (API + CLI).
 - `Backup.Infrastructure/`: adapters and implementations.
   - `Backup.Infrastructure/Data/`: storage adapters (post/media/bulk/dump/proxy/partition).
   - `Backup.Infrastructure/Services/`: runtime services (post/media/bulk/proxy/config/utils).
@@ -114,7 +114,7 @@ For Windows CIFS volumes, create `.env` from `.env.example` and set your credent
 
 - Do not commit real tokens/cookies/sessions.
 - Keep runtime `config/*.json` out of version control.
-- Keep only sanitized sample values in `App/Config.example/*.json`.
+- Keep only sanitized sample values in `config.example/*.json`.
 
 ## License
 

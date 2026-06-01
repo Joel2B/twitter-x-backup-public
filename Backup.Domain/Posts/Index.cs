@@ -15,8 +15,5 @@ public class IndexData
 
     public IndexData Clone() => new() { Previous = Previous, Next = Next };
 
-    public override int GetHashCode()
-    {
-        throw new NotImplementedException();
-    }
+    public override int GetHashCode() => HashCode.Combine(Previous, Next);
 }

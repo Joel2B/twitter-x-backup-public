@@ -1,7 +1,6 @@
 using Backup.Api.Errors;
 using Backup.Api.Services;
 using Backup.Api.Swagger;
-using Backup.Configuration;
 using Backup.Infrastructure.DependencyInjection.Composition;
 using Backup.Infrastructure.DependencyInjection.Runtime;
 using Microsoft.AspNetCore.Builder;
@@ -11,7 +10,7 @@ Console.Error.WriteLine("[startup] creating web application builder");
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 Console.Error.WriteLine("[startup] registering services");
-builder.Services.AddBackupConfiguration(builder.Configuration);
+builder.Services.AddRuntimeConfiguration(builder.Configuration);
 builder.Services.AddBackupApiInfrastructure();
 
 builder.Services.AddControllers();

@@ -58,7 +58,7 @@ public class InfrastructureCompositionSmokeTests
             bool createdByTest = false;
 
             string repoRoot = FindRepoRoot(baseDir);
-            string source = Path.Combine(repoRoot, "App", "Config.example");
+            string source = ResolveConfigExampleDirectory(repoRoot);
             if (!Directory.Exists(configPath))
             {
                 CopyDirectory(source, configPath);
@@ -90,6 +90,21 @@ public class InfrastructureCompositionSmokeTests
             }
 
             throw new DirectoryNotFoundException("Could not locate repo root (Backup.sln).");
+        }
+
+        private static string ResolveConfigExampleDirectory(string repoRoot)
+        {
+            string primary = Path.Combine(repoRoot, "config.example");
+            if (Directory.Exists(primary))
+                return primary;
+
+            string legacy = Path.Combine(repoRoot, "App", "Config.example");
+            if (Directory.Exists(legacy))
+                return legacy;
+
+            throw new DirectoryNotFoundException(
+                "Could not locate config example directory. Expected 'config.example' or 'App/Config.example'."
+            );
         }
 
         private static void CopyDirectory(string source, string destination)

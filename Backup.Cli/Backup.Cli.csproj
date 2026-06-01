@@ -9,7 +9,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Backup.Infrastructure\Backup.Infrastructure.csproj" />
-    <ProjectReference Include="..\Backup.Configuration\Backup.Configuration.csproj" />
   </ItemGroup>
 
 </Project>

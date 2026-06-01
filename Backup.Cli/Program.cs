@@ -1,4 +1,3 @@
-using Backup.Configuration;
 using Backup.Infrastructure.DependencyInjection.Composition;
 using Backup.Infrastructure.DependencyInjection.Runtime;
 using Backup.Infrastructure.Hosting;
@@ -15,7 +14,7 @@ configuration.AddJsonFile(
 );
 configuration.AddEnvironmentVariables();
 
-services.AddBackupConfiguration(configuration);
+services.AddRuntimeConfiguration(configuration);
 services.AddBackupCliInfrastructure();
 
 Console.Error.WriteLine("[startup] building service provider");

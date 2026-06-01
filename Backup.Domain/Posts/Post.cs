@@ -69,6 +69,36 @@ public class Post : PostData
 
     public override int GetHashCode()
     {
-        throw new NotImplementedException();
+        HashCode hash = new();
+
+        hash.Add(Description);
+        hash.Add(Retweeted);
+        hash.Add(Favorited);
+        hash.Add(Bookmarked);
+        hash.Add(Deleted);
+
+        hash.Add(Profile.UserName);
+        hash.Add(Profile.Name);
+        hash.Add(Profile.BannerUrl);
+        hash.Add(Profile.ImageUrl);
+        hash.Add(Profile.Following);
+
+        if (Hashtags is not null)
+        {
+            foreach (string item in Hashtags.OrderBy(item => item, StringComparer.Ordinal))
+                hash.Add(item, StringComparer.Ordinal);
+        }
+
+        if (Medias is not null)
+        {
+            foreach (
+                string mediaUrl in Medias
+                    .Select(media => media.Url)
+                    .OrderBy(url => url, StringComparer.Ordinal)
+            )
+                hash.Add(mediaUrl, StringComparer.Ordinal);
+        }
+
+        return hash.ToHashCode();
     }
 }

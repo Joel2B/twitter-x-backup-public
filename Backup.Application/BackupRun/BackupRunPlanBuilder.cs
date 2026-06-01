@@ -15,8 +15,8 @@ public sealed class BackupRunPlanBuilder : IBackupRunPlanBuilder
                         UserId = user.UserId,
                         Api = user.Api.ToDictionary(kvp => kvp.Key, kvp => CloneApi(kvp.Value)),
                         Sources = GetSources(user, input.Fetch),
-                        RunRecovery = index == 0,
-                        RunBulk = index == 0,
+                        RunRecovery = ShouldRunRecoveryForUser(index),
+                        RunBulk = ShouldRunBulkForUser(index),
                     }
             )
             .ToList();
@@ -28,6 +28,10 @@ public sealed class BackupRunPlanBuilder : IBackupRunPlanBuilder
             IsMediaEnabled = input.IsMediaEnabled,
         };
     }
+
+    private static bool ShouldRunRecoveryForUser(int index) => index == 0;
+
+    private static bool ShouldRunBulkForUser(int index) => index == 0;
 
     private static IReadOnlyList<BackupRunSourcePlan> GetSources(
         BackupRunUserInput user,
