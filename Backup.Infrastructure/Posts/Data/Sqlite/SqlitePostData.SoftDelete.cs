@@ -14,8 +14,6 @@ public partial class SqlitePostData
     {
         PostsDbContext db = await GetDbContext();
 
-        IReadOnlySet<string> keep = _postIdentifierFilterService.Normalize(keepPostIds);
-
         List<string> scopedIds = await db
             .PostIndexEntries.AsNoTracking()
             .Where(entry => entry.UserId == userId && entry.Origin == origin)
@@ -51,10 +49,18 @@ public partial class SqlitePostData
             .Select(entity => ToModel(entity, metaById[entity.Id].Deleted))
             .Select(PostReplicationMapper.ToDomain)
             .ToList();
-
-        HashSet<string> idsToDelete = _postSoftDeleteSelectionService
-            .SelectIds(userId, origin, keep, domainPosts)
-            .ToHashSet(StringComparer.Ordinal);
+        Dictionary<string, bool> deletedById = metaById.ToDictionary(
+            entry => entry.Key,
+            entry => entry.Value.Deleted,
+            StringComparer.Ordinal
+        );
+        IReadOnlySet<string> idsToDelete = _postSoftDeleteExecutionService.SelectIdsToMarkDeleted(
+            userId,
+            origin,
+            keepPostIds,
+            domainPosts,
+            deletedById
+        );
 
         if (idsToDelete.Count == 0)
             return 0;

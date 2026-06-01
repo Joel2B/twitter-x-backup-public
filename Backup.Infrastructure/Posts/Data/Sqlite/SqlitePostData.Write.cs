@@ -55,12 +55,20 @@ public partial class SqlitePostData
                 existingDomain,
                 domainOptions
             );
+        Backup.Application.Posts.Models.PostMergeApplyPlan plan =
+            _postMergeApplyPlanningService.BuildPlan(
+                mergeResult,
+                existingPosts.Keys.ToHashSet(StringComparer.Ordinal)
+            );
 
         List<Post> resolved = [];
 
-        foreach (Backup.Application.Posts.Models.PostMergeResolutionItem item in mergeResult)
+        foreach (Backup.Application.Posts.Models.PostMergeApplyPlanItem item in plan.Items)
         {
             Post merged = PostReplicationMapper.ToApp(item.MergedPost);
+
+            if (!item.ShouldPersist)
+                continue;
 
             if (item.IsNew)
             {
@@ -68,16 +76,13 @@ public partial class SqlitePostData
                 continue;
             }
 
-            if (!item.HasChanges)
-                continue;
-
             if (!existingPosts.TryGetValue(item.Id, out Post? current))
                 continue;
 
-            if (item.HasDataChange)
+            if (item.ShouldLogDataChange)
                 LogDataChange(current, merged, userId);
 
-            if (item.HasIndexChange)
+            if (item.ShouldLogIndexChange)
                 LogIndexChange(current, merged, userId);
 
             resolved.Add(merged);

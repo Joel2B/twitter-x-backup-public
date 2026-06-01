@@ -15,7 +15,8 @@ public partial class SqlitePostData(
     StoragePost config,
     IPartition partition,
     IPostMergeResolutionService postMergeResolutionService,
-    IPostSoftDeleteSelectionService postSoftDeleteSelectionService,
+    IPostMergeApplyPlanningService postMergeApplyPlanningService,
+    IPostSoftDeleteExecutionService postSoftDeleteExecutionService,
     IPostSnapshotNormalizationService postSnapshotNormalizationService,
     IPostMediaInputsCompositionService postMediaInputsCompositionService,
     IPostHashingService postHashingService,
@@ -32,8 +33,10 @@ public partial class SqlitePostData(
     private readonly IPartition _partition = partition;
     private readonly IPostMergeResolutionService _postMergeResolutionService =
         postMergeResolutionService;
-    private readonly IPostSoftDeleteSelectionService _postSoftDeleteSelectionService =
-        postSoftDeleteSelectionService;
+    private readonly IPostMergeApplyPlanningService _postMergeApplyPlanningService =
+        postMergeApplyPlanningService;
+    private readonly IPostSoftDeleteExecutionService _postSoftDeleteExecutionService =
+        postSoftDeleteExecutionService;
     private readonly IPostSnapshotNormalizationService _postSnapshotNormalizationService =
         postSnapshotNormalizationService;
     private readonly IPostMediaInputsCompositionService _postMediaInputsCompositionService =
