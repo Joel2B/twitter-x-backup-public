@@ -11,12 +11,14 @@ namespace Backup.Infrastructure.Media.Services;
 
 public class MediaProcessing(
     AppConfig config,
-    IMediaDownloadProjectionService mediaDownloadProjectionService
+    IMediaDownloadProjectionService mediaDownloadProjectionService,
+    IMediaDownloadModelMapper mediaDownloadModelMapper
 ) : IMediaProcessing
 {
     private readonly AppConfig _config = config;
     private readonly IMediaDownloadProjectionService _mediaDownloadProjectionService =
         mediaDownloadProjectionService;
+    private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper = mediaDownloadModelMapper;
 
     private readonly List<Download> _all = [];
     private readonly List<Download> _filtered = [];
@@ -34,10 +36,10 @@ public class MediaProcessing(
         );
 
         _all.Clear();
-        _all.AddRange(ToInfrastructure(projected.All));
+        _all.AddRange(_mediaDownloadModelMapper.ToInfrastructure(projected.All));
 
         _filtered.Clear();
-        _filtered.AddRange(ToInfrastructure(projected.Filtered));
+        _filtered.AddRange(_mediaDownloadModelMapper.ToInfrastructure(projected.Filtered));
 
         return Task.CompletedTask;
     }
@@ -52,17 +54,6 @@ public class MediaProcessing(
             Id = source.Id,
             Data = source.Data.Select(data => data.Clone()).ToList(),
         };
-
-    private static List<Download> ToInfrastructure(IEnumerable<MediaDownload> projected) =>
-        projected
-            .Select(download => new Download
-            {
-                Id = download.Id,
-                Data = download
-                    .Data.Select(item => new DataDownload { Url = item.Url, Path = item.Path })
-                    .ToList(),
-            })
-            .ToList();
 
     private static MediaDownloadProjectionConfig ToProjectionConfig(MediasConfig config) =>
         new()

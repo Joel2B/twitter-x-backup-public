@@ -21,7 +21,8 @@ public sealed class MediaOrchestrationCommandAdapter(
     IMediaFilter mediaFilter,
     IMediaReplication mediaReplication,
     IEnumerable<IMediaBackupStrategy> mediaBackups,
-    IMediaDownloadService mediaDownload
+    IMediaDownloadService mediaDownload,
+    IMediaDownloadModelMapper mediaDownloadModelMapper
 ) : IMediaOrchestrationCommand
 {
     private readonly ILogger<MediaOrchestrationCommandAdapter> _logger = logger;
@@ -41,6 +42,7 @@ public sealed class MediaOrchestrationCommandAdapter(
     private readonly IMediaReplication _mediaReplication = mediaReplication;
     private readonly List<IMediaBackupStrategy> _mediaBackups = mediaBackups.ToList();
     private readonly IMediaDownloadService _mediaDownload = mediaDownload;
+    private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper = mediaDownloadModelMapper;
 
     public async Task<IReadOnlyList<Backup.Domain.Posts.MediaInput>> GetMediaInputs() =>
         await _postData.GetMediaInputs() ?? [];
@@ -55,21 +57,21 @@ public sealed class MediaOrchestrationCommandAdapter(
 
         return new()
         {
-            All = _mediaProcessing.GetMedia().Select(ToApplication).ToList(),
-            Filtered = _mediaProcessing.GetFilteredMedia().Select(ToApplication).ToList(),
+            All = _mediaDownloadModelMapper.ToApplication(_mediaProcessing.GetMedia()),
+            Filtered = _mediaDownloadModelMapper.ToApplication(_mediaProcessing.GetFilteredMedia()),
         };
     }
 
     public async Task Prune(List<MediaDownload> downloads)
     {
-        List<Download> infra = ToInfrastructure(downloads);
+        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
         await _mediaPrune.Prune(infra);
         Sync(downloads, infra);
     }
 
     public async Task Filter(List<MediaDownload> downloads)
     {
-        List<Download> infra = ToInfrastructure(downloads);
+        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
         await _mediaFilter.Check(infra);
         Sync(downloads, infra);
     }
@@ -97,7 +99,7 @@ public sealed class MediaOrchestrationCommandAdapter(
         if (maintenance is null)
             return;
 
-        List<Download> infra = ToInfrastructure(downloads);
+        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
         await maintenance.Prune(infra);
         Sync(downloads, infra);
     }
@@ -109,7 +111,7 @@ public sealed class MediaOrchestrationCommandAdapter(
         if (maintenance is null)
             return;
 
-        List<Download> infra = ToInfrastructure(downloads);
+        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
         await maintenance.CheckData(infra);
         Sync(downloads, infra);
     }
@@ -121,7 +123,7 @@ public sealed class MediaOrchestrationCommandAdapter(
         if (maintenance is null)
             return;
 
-        List<Download> infra = ToInfrastructure(downloads);
+        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
         await _mediaIntegrity.Check(infra, maintenance);
         Sync(downloads, infra);
     }
@@ -133,7 +135,7 @@ public sealed class MediaOrchestrationCommandAdapter(
         if (storage is null)
             return;
 
-        List<Download> infra = ToInfrastructure(downloads);
+        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
         await _mediaDownload.Download(infra, storage);
         Sync(downloads, infra);
     }
@@ -145,7 +147,7 @@ public sealed class MediaOrchestrationCommandAdapter(
         if (storage is null)
             return;
 
-        List<Download> infra = ToInfrastructure(downloads);
+        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
         await _mediaReplication.Replicate(infra, _mediaData.Values, storage);
         Sync(downloads, infra);
     }
@@ -165,7 +167,7 @@ public sealed class MediaOrchestrationCommandAdapter(
             return;
         }
 
-        List<Download> infra = ToInfrastructure(downloads);
+        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
 
         foreach (IMediaBackupStrategy backup in _mediaBackups)
             await backup.Backup(infra, backupSource);
@@ -198,31 +200,9 @@ public sealed class MediaOrchestrationCommandAdapter(
         return null;
     }
 
-    private static List<Download> ToInfrastructure(IEnumerable<MediaDownload> downloads) =>
-        downloads
-            .Select(download =>
-                new Download
-                {
-                    Id = download.Id,
-                    Data = download
-                        .Data.Select(item => new DataDownload { Url = item.Url, Path = item.Path })
-                        .ToList(),
-                }
-            )
-            .ToList();
-
-    private static MediaDownload ToApplication(Download download) =>
-        new()
-        {
-            Id = download.Id,
-            Data = download
-                .Data.Select(item => new MediaDownloadData { Url = item.Url, Path = item.Path })
-                .ToList(),
-        };
-
-    private static void Sync(List<MediaDownload> target, List<Download> source)
+    private void Sync(List<MediaDownload> target, List<Download> source)
     {
         target.Clear();
-        target.AddRange(source.Select(ToApplication));
+        target.AddRange(_mediaDownloadModelMapper.ToApplication(source));
     }
 }
