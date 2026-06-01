@@ -20,7 +20,7 @@ public class LocalMediaDataMaintenance(
     IMediaStoragePathService mediaStoragePathService,
     IMediaMaintenanceDownloadProjectionService mediaMaintenanceDownloadProjectionService,
     IMediaMaintenanceCachedDownloadFilterService mediaMaintenanceCachedDownloadFilterService,
-    IMediaMaintenanceIntegrityDecisionService mediaMaintenanceIntegrityDecisionService,
+    IMediaMaintenanceIntegrityObservationCompositionService mediaMaintenanceIntegrityObservationCompositionService,
     IMediaMaintenanceIntegrityBatchService mediaMaintenanceIntegrityBatchService,
     IMediaMaintenanceIntegrityTargetService mediaMaintenanceIntegrityTargetService,
     IMediaMaintenancePrunePathSelectionService mediaMaintenancePrunePathSelectionService
@@ -37,8 +37,8 @@ public class LocalMediaDataMaintenance(
         mediaMaintenanceDownloadProjectionService;
     private readonly IMediaMaintenanceCachedDownloadFilterService _mediaMaintenanceCachedDownloadFilterService =
         mediaMaintenanceCachedDownloadFilterService;
-    private readonly IMediaMaintenanceIntegrityDecisionService _mediaMaintenanceIntegrityDecisionService =
-        mediaMaintenanceIntegrityDecisionService;
+    private readonly IMediaMaintenanceIntegrityObservationCompositionService _mediaMaintenanceIntegrityObservationCompositionService =
+        mediaMaintenanceIntegrityObservationCompositionService;
     private readonly IMediaMaintenanceIntegrityBatchService _mediaMaintenanceIntegrityBatchService =
         mediaMaintenanceIntegrityBatchService;
     private readonly IMediaMaintenanceIntegrityTargetService _mediaMaintenanceIntegrityTargetService =
@@ -78,32 +78,42 @@ public class LocalMediaDataMaintenance(
         List<MediaDownload> appDownloads = ToApplication(downloads);
         IReadOnlyList<MediaMaintenanceIntegrityTarget> targets =
             _mediaMaintenanceIntegrityTargetService.BuildTargets(appDownloads);
-        List<MediaMaintenanceIntegrityObservation> observations = [];
+        Dictionary<string, long?> cacheSizesByPath = targets
+            .Select(target => target.Path)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(path => path, path => _mediaCache.Get(path)?.Size?.File, StringComparer.OrdinalIgnoreCase);
+        IReadOnlyList<MediaMaintenanceIntegrityProbeItem> probeItems =
+            _mediaMaintenanceIntegrityObservationCompositionService.BuildProbeItems(
+                targets,
+                cacheSizesByPath
+            );
+        List<MediaMaintenanceIntegrityProbeOutcome> probeOutcomes = [];
 
-        foreach (MediaMaintenanceIntegrityTarget target in targets)
+        foreach (MediaMaintenanceIntegrityProbeItem probeItem in probeItems)
         {
-            long? size = _mediaCache.Get(target.Path)?.Size?.File;
-            string fullPath = string.Empty;
             bool isValid = false;
 
-            if (_mediaMaintenanceIntegrityDecisionService.ShouldProbe(size))
+            if (probeItem.ShouldProbe)
             {
-                fullPath = await _mediaCache.GetPath(target.Path);
+                string fullPath = await _mediaCache.GetPath(probeItem.Path);
                 isValid = MediaValidator.IsValid(
                     fullPath,
                     () => _logger.LogWarning("path {path} not exist", fullPath)
                 );
             }
 
-            observations.Add(
-                new MediaMaintenanceIntegrityObservation
+            probeOutcomes.Add(
+                new MediaMaintenanceIntegrityProbeOutcome
                 {
-                    CorrelationId = target.CorrelationId,
-                    CacheFileSize = size,
+                    CorrelationId = probeItem.CorrelationId,
+                    CacheFileSize = probeItem.CacheFileSize,
                     IsValidMediaFile = isValid,
                 }
             );
         }
+
+        IReadOnlyList<MediaMaintenanceIntegrityObservation> observations =
+            _mediaMaintenanceIntegrityObservationCompositionService.ToObservations(probeOutcomes);
 
         MediaMaintenanceIntegrityBatchResult result = _mediaMaintenanceIntegrityBatchService.Evaluate(
             observations
