@@ -7,7 +7,6 @@ using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Media.Models.Backup;
 using Backup.Infrastructure.Models.Config.Data.Backup;
-using Backup.Infrastructure.Utility.Abstractions.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
@@ -15,17 +14,10 @@ namespace Backup.Infrastructure.Media.Services;
 internal sealed class MediaBackup(
     ILogger<MediaBackup> logger,
     StorageBackup config,
-    IZipWriterFactory zipWriterFactory,
     IMediaBackupData mediaBackupData,
     IEnumerable<IMediaBackupPipelineStep> pipelineSteps,
-    IDataStoreGuardService dataStoreGuardService,
-    IMediaBackupChunkEntryStateOrchestrationService chunkEntryStateOrchestrationService,
-    IMediaBackupChunkFailureApplyService chunkFailureApplyService,
-    IMediaBackupChunkReportObservationAggregationService chunkReportObservationAggregationService,
-    IMediaBackupChunkRuntimeCompositionService chunkRuntimeCompositionService,
-    IMediaBackupChunkReportService chunkReportService,
-    IMediaBackupPhaseOrchestrationService phaseOrchestrationService,
-    IMediaBackupPipelineStepCompositionService pipelineStepCompositionService,
+    IMediaBackupRuntimeFactory mediaBackupRuntimeFactory,
+    IMediaBackupPipelinePlanService mediaBackupPipelinePlanService,
     IMediaBackupCalculatePhase calculatePhase,
     IMediaBackupApplyPhase applyPhase,
     IMediaBackupDuplicatePhase duplicatePhase,
@@ -38,10 +30,8 @@ internal sealed class MediaBackup(
     private readonly IReadOnlyDictionary<string, IMediaBackupPipelineStep> _pipelineStepsById =
         pipelineSteps.ToDictionary(GetPipelineStepId, StringComparer.Ordinal);
 
-    private readonly IMediaBackupPhaseOrchestrationService _phaseOrchestrationService =
-        phaseOrchestrationService;
-    private readonly IMediaBackupPipelineStepCompositionService _pipelineStepCompositionService =
-        pipelineStepCompositionService;
+    private readonly IMediaBackupPipelinePlanService _mediaBackupPipelinePlanService =
+        mediaBackupPipelinePlanService;
 
     private readonly IMediaBackupCalculatePhase _calculatePhase = calculatePhase;
     private readonly IMediaBackupApplyPhase _applyPhase = applyPhase;
@@ -49,27 +39,10 @@ internal sealed class MediaBackup(
     private readonly IMediaBackupMetadataPhase _metadataPhase = metadataPhase;
     private readonly IMediaBackupIntegrityPhase _integrityPhase = integrityPhase;
 
-    private readonly MediaBackupRuntime _runtime = new(
+    private readonly MediaBackupRuntime _runtime = mediaBackupRuntimeFactory.Create(
         logger,
         config,
-        zipWriterFactory,
-        mediaBackupData,
-        dataStoreGuardService,
-        chunkEntryStateOrchestrationService,
-        chunkFailureApplyService,
-        chunkReportObservationAggregationService,
-        chunkRuntimeCompositionService,
-        chunkReportService,
-        new MediaBackupExecutionContext(
-            new BackupChunks
-            {
-                Chunks = new()
-                {
-                    Total = config.Chunk.Count,
-                    Path = new() { Increase = config.Chunk.Path.Increase },
-                },
-            }
-        )
+        mediaBackupData
     );
 
     public async Task Backup(
@@ -118,20 +91,7 @@ internal sealed class MediaBackup(
     {
         cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<MediaBackupPhaseExecutionStep> plan =
-            _phaseOrchestrationService.BuildExecutionPlan(
-                _pipelineStepCompositionService.BuildPhaseSteps(
-                    _pipelineStepsById.Values.Select(
-                        step => new MediaBackupPipelineStepDescriptorInput
-                        {
-                            StepId = GetPipelineStepId(step),
-                            Order = step.Order,
-                            TimerName = step.TimerName,
-                            SkipWhenStopped = step.SkipWhenStopped,
-                        }
-                    )
-                ),
-                _runtime.Stop
-            );
+            _mediaBackupPipelinePlanService.BuildExecutionPlan(_pipelineStepsById.Values, _runtime.Stop);
 
         foreach (MediaBackupPhaseExecutionStep planStep in plan)
         {
@@ -142,9 +102,6 @@ internal sealed class MediaBackup(
                 await step.Execute(this, cancellationToken);
         }
     }
-
-    private static string GetPipelineStepId(IMediaBackupPipelineStep step) =>
-        step.GetType().FullName ?? step.GetType().Name;
 
     bool IMediaBackupPipelineActions.ShouldStop => _runtime.Stop;
 
@@ -171,4 +128,7 @@ internal sealed class MediaBackup(
 
     Task IMediaBackupPipelineActions.FixIntegrityAsync(CancellationToken cancellationToken) =>
         _integrityPhase.FixIntegrity(_runtime, cancellationToken);
+
+    private static string GetPipelineStepId(IMediaBackupPipelineStep step) =>
+        step.GetType().FullName ?? step.GetType().Name;
 }

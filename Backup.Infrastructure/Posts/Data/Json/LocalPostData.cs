@@ -20,7 +20,7 @@ public partial class LocalPostData(
     StoragePost _config,
     IPartition _partition,
     IPostMergeExecutionService postMergeExecutionService,
-    IPostSoftDeleteSelectionService postSoftDeleteSelectionService,
+    IPostSoftDeleteExecutionService postSoftDeleteExecutionService,
     IPostSnapshotNormalizationService postSnapshotNormalizationService,
     IPostMediaInputsCompositionService postMediaInputsCompositionService,
     IPostHashingService postHashingService,
@@ -52,8 +52,8 @@ public partial class LocalPostData(
     private readonly IPartition _partition = _partition;
     private readonly IPostMergeExecutionService _postMergeExecutionService =
         postMergeExecutionService;
-    private readonly IPostSoftDeleteSelectionService _postSoftDeleteSelectionService =
-        postSoftDeleteSelectionService;
+    private readonly IPostSoftDeleteExecutionService _postSoftDeleteExecutionService =
+        postSoftDeleteExecutionService;
     private readonly IPostSnapshotNormalizationService _postSnapshotNormalizationService =
         postSnapshotNormalizationService;
     private readonly IPostMediaInputsCompositionService _postMediaInputsCompositionService =
@@ -192,12 +192,18 @@ public partial class LocalPostData(
         List<Backup.Domain.Posts.Post> domainPosts = _postsCache
             .Values.Select(PostReplicationMapper.ToDomain)
             .ToList();
+        IReadOnlyDictionary<string, bool> deletedById = domainPosts.ToDictionary(
+            post => post.Id,
+            post => post.Deleted,
+            StringComparer.Ordinal
+        );
 
-        IReadOnlyCollection<string> idsToDelete = _postSoftDeleteSelectionService.SelectIds(
+        IReadOnlySet<string> idsToDelete = _postSoftDeleteExecutionService.SelectIdsToMarkDeleted(
             userId,
             origin,
-            _postIdentifierFilterService.Normalize(keepPostIds),
-            domainPosts
+            keepPostIds,
+            domainPosts,
+            deletedById
         );
 
         if (idsToDelete.Count == 0)
