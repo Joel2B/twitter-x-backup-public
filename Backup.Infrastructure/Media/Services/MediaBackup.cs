@@ -234,6 +234,11 @@ public partial class MediaBackup(
     private static string GetPipelineStepId(IMediaBackupPipelineStep step) =>
         step.GetType().FullName ?? step.GetType().Name;
 
+    private int GetDuplicateCleanupPreviewLimit() =>
+        _config.Chunk.Path.DuplicateCleanupPreviewLimit > 0
+            ? _config.Chunk.Path.DuplicateCleanupPreviewLimit
+            : 10;
+
     private IReadOnlyList<MediaBackupChunkEntryState> BuildChunkEntryStates(IEnumerable<ChunkData> items) =>
         _mediaBackupChunkEntryStateOrchestrationService.BuildStates(
             items.Select(ToEntryRecord)

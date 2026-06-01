@@ -14,4 +14,5 @@ public class PathChunkConfig : PathConfig
 {
     public int Increase { get; set; }
     public int Size { get; set; }
+    public int DuplicateCleanupPreviewLimit { get; set; }
 }

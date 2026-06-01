@@ -5,7 +5,6 @@ using Backup.Infrastructure.Utility.Abstractions.Services;
 using Backup.Infrastructure.Media.Models.Backup;
 using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Media.Services;
 
@@ -120,9 +119,7 @@ public partial class MediaBackup
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error: {error}", JsonConvert.SerializeObject(ex));
-
-                zip?.Dispose();
+                _logger.LogError(ex, "error applying backup chunk {chunk}", kvp.Key);
 
                 await _mediaBackupData.DeleteChunk(kvp.Value);
 
@@ -201,9 +198,7 @@ public partial class MediaBackup
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error: {error}", JsonConvert.SerializeObject(ex));
-
-                zip?.Dispose();
+                _logger.LogError(ex, "error syncing backup chunk {chunk}", chunkPlan.ChunkId);
 
                 break;
             }

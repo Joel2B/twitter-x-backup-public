@@ -77,7 +77,7 @@ public class MediaReplication(
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error: {error}", ex.Message);
+            _logger.LogError(ex, "error replicating media to target {targetId}", target.Id);
         }
 
         IReadOnlyList<Backup.Application.Media.Models.MediaDownload> remaining =

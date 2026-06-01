@@ -3,7 +3,6 @@ using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Utility.Abstractions.Services;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Media.Services;
 
@@ -35,7 +34,7 @@ public partial class MediaBackup
             }
             catch (Exception ex)
             {
-                _logger.LogError("Error: {error}", JsonConvert.SerializeObject(ex));
+                _logger.LogError(ex, "error while checking duplicates for chunk {chunk}", kvp.Key);
             }
             finally
             {
@@ -50,7 +49,7 @@ public partial class MediaBackup
                 _mediaBackupDuplicateChunkExecutionService.Execute(
                     kvp.Value.Data.Select(item => item.Path),
                     storage,
-                    10
+                    GetDuplicateCleanupPreviewLimit()
                 );
             IReadOnlyList<string> memory = executionResult.MemoryArchivePaths;
             IReadOnlyList<string> storagePaths = executionResult.StorageArchivePaths;

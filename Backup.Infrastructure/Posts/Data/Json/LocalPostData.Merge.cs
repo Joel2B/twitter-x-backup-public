@@ -1,7 +1,6 @@
 using Backup.Infrastructure.Models.Data.Json;
 using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Posts.Models;
-using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Data.Json;
 
@@ -20,32 +19,21 @@ public partial class LocalPostData
         Dictionary<string, PostMetaRow> postMeta = await GetPostMetaCache();
         _postsCache ??= posts;
 
-        Dictionary<string, Backup.Domain.Posts.Post> existingDomain = posts.ToDictionary(
-            entry => entry.Key,
-            entry => PostReplicationMapper.ToDomain(entry.Value),
-            StringComparer.Ordinal
+        IReadOnlyList<PostMergePlanDecision> decisions = PostMergePlanAdapter.BuildDecisions(
+            _postMergeExecutionService,
+            userId,
+            origin,
+            incoming,
+            posts,
+            options
         );
 
-        List<Backup.Domain.Posts.Post> incomingDomain = incoming
-            .Select(PostReplicationMapper.ToDomain)
-            .ToList();
-
-        Backup.Domain.Posts.MergeOptions domainOptions = PostReplicationMapper.ToDomain(options);
-
-        Backup.Application.Posts.Models.PostMergeApplyPlan plan =
-            _postMergeExecutionService.BuildApplyPlan(
-                userId,
-                origin,
-                incomingDomain,
-                existingDomain,
-                domainOptions
-            );
-
-        foreach (Backup.Application.Posts.Models.PostMergeApplyPlanItem item in plan.Items)
+        foreach (PostMergePlanDecision item in decisions)
         {
-            Post merged = PostReplicationMapper.ToApp(item.MergedPost);
+            Post merged = item.Merged;
+            Post? current = item.Current;
 
-            if (!posts.TryGetValue(item.Id, out Post? current))
+            if (current is null)
             {
                 Post clone = merged.Clone();
                 posts[item.Id] = clone;
@@ -130,24 +118,16 @@ public partial class LocalPostData
 
     private IReadOnlyList<Post> NormalizePosts(IReadOnlyCollection<Post> posts)
     {
-        List<Backup.Domain.Posts.Post> domainPosts = posts.Select(PostReplicationMapper.ToDomain).ToList();
-        IReadOnlyList<Backup.Domain.Posts.Post> normalized = _postSnapshotNormalizationService.Normalize(domainPosts);
-        return normalized.Select(PostReplicationMapper.ToApp).ToList();
+        return PostSnapshotNormalizationAdapter.Normalize(_postSnapshotNormalizationService, posts);
     }
 
     private void LogDataChange(Post current, Post merged, string userId)
     {
-        _logger.LogInformation(
-            "id: {id}, userId: {userId}, userName: {userName}",
-            current.Id,
-            userId,
-            merged.Profile.UserName
-        );
-
-        Backup.Infrastructure.Logging.LoggingExtensions.LogAsJsonDiff(
+        PostMergeDiagnosticsLogger.LogDataChange(
             _logger,
-            "old data",
-            "new data",
+            current,
+            merged,
+            userId,
             ((PostData)current).Clone(),
             ((PostData)merged).Clone()
         );
@@ -155,31 +135,6 @@ public partial class LocalPostData
 
     private void LogIndexChange(Post current, Post merged, string userId, string origin)
     {
-        if (!current.Index.TryGetValue(userId, out Dictionary<string, IndexData>? oldUserIndex))
-            return;
-
-        if (!oldUserIndex.ContainsKey(origin))
-            return;
-
-        if (!merged.Index.TryGetValue(userId, out Dictionary<string, IndexData>? newUserIndex))
-            return;
-
-        if (!newUserIndex.ContainsKey(origin))
-            return;
-
-        _logger.LogInformation(
-            "id: {id}, userId: {userId}, userName: {userName}",
-            current.Id,
-            userId,
-            merged.Profile.UserName
-        );
-
-        Backup.Infrastructure.Logging.LoggingExtensions.LogAsJsonDiff(
-            _logger,
-            "old index",
-            "new index",
-            oldUserIndex,
-            newUserIndex
-        );
+        PostMergeDiagnosticsLogger.TryLogIndexChange(_logger, current, merged, userId, origin);
     }
 }

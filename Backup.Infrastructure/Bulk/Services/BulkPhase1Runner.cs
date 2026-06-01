@@ -37,23 +37,10 @@ public sealed class BulkPhase1Runner(
     {
         _logger.LogInformation("running phase 1");
 
-        string? origin = _bulkSourceRouteService.GetOrigin(BulkSourceType.Media);
-
-        if (origin is null)
-        {
-            _logger.LogInformation("origin is null");
+        if (!BulkRunnerExecution.TryResolveOrigin(_logger, _bulkSourceRouteService, out string? origin))
             return;
-        }
 
-        BulkPhase1Options options = new()
-        {
-            UsersPerCycle = _config.Bulk.UsersPerCycle,
-            SavePerAction = _config.Bulk.SavePerAction,
-            ApiPerCycle = _config.Bulk.ApiPerCycle,
-            MediaPerApi = _config.Bulk.MediaPerApi,
-            MaxCountPost = _config.Bulk.MaxCountPost,
-            ApiRetryCount = _config.Bulk.ApiRetryCount,
-        };
+        BulkPhase1Options options = BulkRunnerExecution.CreatePhase1Options(_config);
 
         await _bulkPhase1Service.Run(
             new BulkPhase1CommandAdapter(

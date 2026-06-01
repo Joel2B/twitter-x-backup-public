@@ -11,7 +11,6 @@ using Backup.Infrastructure.Proxy.Models;
 using Backup.Application.Proxy.Models;
 using Backup.Application.Core;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Proxy.Services;
 
@@ -275,7 +274,7 @@ public class ProxyProvider(
                 runtimeRecord,
                 proxy.Status.Current == StatusEnum.Active,
                 ex.Message,
-                JsonConvert.SerializeObject(ex),
+                ex.ToString(),
                 _config.Proxy.Threshold.ErrorsToInactive,
                 now
             );

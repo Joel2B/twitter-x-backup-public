@@ -34,7 +34,7 @@ public sealed class BulkImportRunner(
     {
         _logger.LogInformation("running import");
 
-        BulkImportOptions options = new() { UsersPerCycle = _config.Bulk.UsersPerCycle };
+        BulkImportOptions options = BulkRunnerExecution.CreateImportOptions(_config);
 
         await _bulkImportService.Run(
             new BulkImportCommandAdapter(
