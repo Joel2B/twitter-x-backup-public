@@ -21,7 +21,9 @@ public class InfrastructureCompositionSmokeTests
             descriptor => descriptor.ServiceType == typeof(IPostRuntimeService)
         );
 
-        using ServiceProvider provider = services.BuildServiceProvider();
+        using ServiceProvider provider = services.BuildServiceProvider(
+            new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true }
+        );
 
         Assert.NotNull(provider.GetRequiredService<AppConfig>());
     }
@@ -34,7 +36,9 @@ public class InfrastructureCompositionSmokeTests
         ServiceCollection services = new();
         services.AddBackupCliInfrastructure();
 
-        using ServiceProvider provider = services.BuildServiceProvider();
+        using ServiceProvider provider = services.BuildServiceProvider(
+            new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true }
+        );
         using IServiceScope scope = provider.CreateScope();
 
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<IBackupCliRunner>());

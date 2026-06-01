@@ -8,7 +8,6 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
     {
         services.AddPostDataInfrastructure();
         services.AddPostParserInfrastructure();
-        services.AddPostRuntimeDomainInfrastructure();
         services.AddPostApplicationInfrastructure();
         services.AddPostAdapterInfrastructure();
 

@@ -46,7 +46,6 @@ public static class CoreInfrastructureServiceCollectionExtensions
         services.AddSingleton<IDumpSaveExecutionService, DumpSaveExecutionService>();
         services.AddSingleton<IDumpReplicationPlanningService, DumpReplicationPlanningService>();
         services.AddSingleton<IBulkArchiveFilePolicyService, BulkArchiveFilePolicyService>();
-        services.AddSingleton<IBulkPruneExecutionService, BulkPruneExecutionService>();
         services.AddSingleton<IDataStoreGuardService, DataStoreGuardService>();
         services.AddSingleton<IApiRequestBuildService, ApiRequestBuildService>();
 

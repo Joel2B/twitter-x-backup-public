@@ -15,6 +15,7 @@ public static class RuntimeInfrastructureBulkServiceCollectionExtensions
         services.AddScoped<IBulkDatedPathExtractionService, BulkDatedPathExtractionService>();
         services.AddScoped<IBulkPrunePolicyService, BulkPrunePolicyService>();
         services.AddScoped<IBulkPrunePartitionPlanningService, BulkPrunePartitionPlanningService>();
+        services.AddScoped<IBulkPruneExecutionService, BulkPruneExecutionService>();
         services.AddScoped<
             IBulkReplicationPathPlanningService,
             BulkReplicationPathPlanningService
