@@ -29,9 +29,8 @@ public partial class LocalPostData(
     IPostMetaReconciliationService postMetaReconciliationService,
     IPostHistoryPathExtractionService postHistoryPathExtractionService,
     IPostHistoryPrunePlanningService postHistoryPrunePlanningService,
-    IPostSnapshotVerificationPlanningService postSnapshotVerificationPlanningService,
+    IPostSnapshotVerificationExecutionService postSnapshotVerificationExecutionService,
     IPostDataReplicationPlanningService postDataReplicationPlanningService,
-    IPostSnapshotSizeGuardService postSnapshotSizeGuardService,
     IPostChangeComputationService postChangeComputationService,
     IPostStoreCountsAggregationService postStoreCountsAggregationService,
     IPostProfileCountAggregationService postProfileCountAggregationService,
@@ -70,12 +69,10 @@ public partial class LocalPostData(
         postHistoryPathExtractionService;
     private readonly IPostHistoryPrunePlanningService _postHistoryPrunePlanningService =
         postHistoryPrunePlanningService;
-    private readonly IPostSnapshotVerificationPlanningService _postSnapshotVerificationPlanningService =
-        postSnapshotVerificationPlanningService;
+    private readonly IPostSnapshotVerificationExecutionService _postSnapshotVerificationExecutionService =
+        postSnapshotVerificationExecutionService;
     private readonly IPostDataReplicationPlanningService _postDataReplicationPlanningService =
         postDataReplicationPlanningService;
-    private readonly IPostSnapshotSizeGuardService _postSnapshotSizeGuardService =
-        postSnapshotSizeGuardService;
     private readonly IPostChangeComputationService _postChangeComputationService =
         postChangeComputationService;
     private readonly IPostStoreCountsAggregationService _postStoreCountsAggregationService =

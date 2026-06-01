@@ -54,38 +54,39 @@ public partial class LocalPostData
 
     private Task Verify()
     {
-        if (!_config.Tasks.Verify)
-            return Task.CompletedTask;
-
         string currentPath = GetCurrentTablesFilePath(NormalizedPostsFileName);
-
-        if (!File.Exists(currentPath))
-            return Task.CompletedTask;
+        bool currentExists = File.Exists(currentPath);
 
         string basePath = GetPath(_partition.GetPrimary());
         IReadOnlyList<PostHistoryPath> historyPaths = _postHistoryPathExtractionService.Extract(
             Directory.GetDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
         );
-        PostSnapshotVerificationPlan plan = _postSnapshotVerificationPlanningService.Plan(
-            Path.GetFileName(NormalizedPostsFileName),
-            historyPaths
-        );
+        PostSnapshotVerificationDecision decision =
+            _postSnapshotVerificationExecutionService.BuildDecision(
+                _config.Tasks.Verify,
+                currentExists,
+                Path.GetFileName(NormalizedPostsFileName),
+                historyPaths
+            );
 
-        if (!plan.ShouldCompareWithHistory)
+        if (!decision.ShouldInspectHistoryFile)
             return Task.CompletedTask;
-        string historyPath = plan.HistoryFilePath;
+        string historyPath = decision.HistoryFilePath;
 
-        if (!File.Exists(historyPath))
+        bool historyExists = File.Exists(historyPath);
+
+        if (!historyExists)
             return Task.CompletedTask;
 
         long currentLength = new FileInfo(currentPath).Length;
         long historyLength = new FileInfo(historyPath).Length;
-        _postSnapshotSizeGuardService.EnsureNotShrunkBeyondThreshold(
+
+        _postSnapshotVerificationExecutionService.ValidateIfNeeded(
+            decision,
+            historyExists,
             currentLength,
             historyLength,
-            _config.Tasks.VerifyMaxSizeDiffBytes,
-            NormalizedPostsFileName,
-            plan.HistoryDirectoryName
+            _config.Tasks.VerifyMaxSizeDiffBytes
         );
 
         return Task.CompletedTask;

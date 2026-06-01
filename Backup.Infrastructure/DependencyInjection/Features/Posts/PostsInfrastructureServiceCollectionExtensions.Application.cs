@@ -35,6 +35,7 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostHistoryPrunePlanningService, PostHistoryPrunePlanningService>();
         services.AddScoped<IPostHistoryLatestSelectionService, PostHistoryLatestSelectionService>();
         services.AddScoped<IPostSnapshotVerificationPlanningService, PostSnapshotVerificationPlanningService>();
+        services.AddScoped<IPostSnapshotVerificationExecutionService, PostSnapshotVerificationExecutionService>();
         services.AddScoped<IPostDataReplicationPlanningService, PostDataReplicationPlanningService>();
         services.AddScoped<IPostSnapshotSizeGuardService, PostSnapshotSizeGuardService>();
         services.AddScoped<IPostProjectionComposer, PostProjectionComposer>();
