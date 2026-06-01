@@ -19,8 +19,12 @@ public class MediaFilter(
         mediaErrorDownloadFilterService;
     private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper = mediaDownloadModelMapper;
 
-    public async Task Check(List<Download> downloads)
+    public async Task Check(
+        List<Download> downloads,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         List<Logs> logs = await _mediaLogger.GetErrors() ?? [];
 
         IReadOnlySet<string> ids = _mediaErrorExclusionService.GetExcludedIds(

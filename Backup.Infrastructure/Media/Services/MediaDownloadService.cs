@@ -44,8 +44,13 @@ class MediaDownloadService(
     private IMediaStorage Data =>
         _dataStoreGuardService.RequireInitialized(_mediaData, "media data not initialized");
 
-    public async Task Download(List<Download> downloads, IMediaStorage data)
+    public async Task Download(
+        List<Download> downloads,
+        IMediaStorage data,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (!_config.Downloads.Enabled)
             return;
 
@@ -73,7 +78,8 @@ class MediaDownloadService(
             this,
             _mediaDownloadParallelRunner,
             queue,
-            settings
+            settings,
+            cancellationToken
         );
     }
 

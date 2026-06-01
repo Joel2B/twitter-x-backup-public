@@ -13,8 +13,9 @@ public class MediaPrune(
         mediaPruneExecutionService;
     private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper = mediaDownloadModelMapper;
 
-    public Task Prune(List<Download> downloads)
+    public Task Prune(List<Download> downloads, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<Backup.Application.Media.Models.MediaDownload> appDownloads =
             _mediaDownloadModelMapper.ToApplication(downloads);
         IReadOnlyList<Backup.Application.Media.Models.MediaDownload> pruned =

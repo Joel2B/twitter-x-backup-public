@@ -13,8 +13,12 @@ internal sealed class MediaBackupDuplicatePhase(
     private readonly IMediaBackupDuplicateChunkExecutionService _duplicateChunkExecutionService =
         duplicateChunkExecutionService;
 
-    public async Task CheckDuplicates(MediaBackupRuntime runtime)
+    public async Task CheckDuplicates(
+        MediaBackupRuntime runtime,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         int storageCount = 0;
 
         foreach (
@@ -23,6 +27,7 @@ internal sealed class MediaBackupDuplicatePhase(
                 .Chunks
         )
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (kvp.Value.Data.Count == 0)
                 continue;
 
@@ -105,7 +110,10 @@ internal sealed class MediaBackupDuplicatePhase(
                     foreach (
                         MediaBackupDuplicateCleanupOperation operation in executionPlan.CleanupOperations
                     )
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
                         writeZip.RemoveEntry(operation.EntryPath, operation.RemoveDuplicateEntries);
+                    }
                 }
                 finally
                 {
@@ -162,6 +170,7 @@ internal sealed class MediaBackupDuplicatePhase(
 
                         foreach (string item in executionPlan.ExtraPathsToRemove)
                         {
+                            cancellationToken.ThrowIfCancellationRequested();
                             writeZip.RemoveEntry(item);
                             runtime.Logger.LogInfo("{path} removed", item);
                         }

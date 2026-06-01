@@ -48,8 +48,12 @@ public class LocalMediaDataMaintenance(
     private readonly IMediaMaintenancePrunePathSelectionService _mediaMaintenancePrunePathSelectionService =
         mediaMaintenancePrunePathSelectionService;
 
-    public async Task CheckData(List<Download> downloads)
+    public async Task CheckData(
+        List<Download> downloads,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         DeleteTemp();
         await _mediaCache.Load();
 
@@ -81,8 +85,12 @@ public class LocalMediaDataMaintenance(
         downloads.RemoveAll(dl => dl.Data.Count == 0);
     }
 
-    public async Task CheckIntegrity(List<Download> downloads)
+    public async Task CheckIntegrity(
+        List<Download> downloads,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         List<MediaDownload> appDownloads = _mediaDownloadModelMapper.ToApplication(downloads);
         IReadOnlyList<MediaMaintenanceIntegrityTarget> targets =
             _mediaMaintenanceIntegrityTargetService.BuildTargets(appDownloads);
@@ -103,11 +111,12 @@ public class LocalMediaDataMaintenance(
 
         foreach (MediaMaintenanceIntegrityProbeItem probeItem in probeItems)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             bool isValid = false;
 
             if (probeItem.ShouldProbe)
             {
-                string fullPath = await _mediaCache.GetPath(probeItem.Path);
+                    string fullPath = await _mediaCache.GetPath(probeItem.Path);
                 isValid = MediaValidator.IsValid(
                     fullPath,
                     () => _logger.LogWarning("path {path} not exist", fullPath)
@@ -149,8 +158,12 @@ public class LocalMediaDataMaintenance(
         );
     }
 
-    public async Task Prune(List<Download> downloads)
+    public async Task Prune(
+        List<Download> downloads,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (!_config.Tasks.Prune)
             return;
 
@@ -160,12 +173,10 @@ public class LocalMediaDataMaintenance(
             _mediaDownloadModelMapper.ToApplication(downloads)
         );
 
-        CancellationTokenSource cts = new();
-
         ParallelOptions options = new()
         {
             MaxDegreeOfParallelism = 64,
-            CancellationToken = cts.Token,
+            CancellationToken = cancellationToken,
         };
 
         await Parallel.ForEachAsync(

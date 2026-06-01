@@ -7,6 +7,7 @@ public interface IMediaReplication
     public Task Replicate(
         List<Download> downloads,
         IEnumerable<IMediaStorage> data,
-        IMediaStorage current
+        IMediaStorage current,
+        CancellationToken cancellationToken = default
     );
 }

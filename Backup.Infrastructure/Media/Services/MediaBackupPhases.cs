@@ -4,28 +4,36 @@ namespace Backup.Infrastructure.Media.Services;
 
 internal interface IMediaBackupCalculatePhase
 {
-    Task Calculate(MediaBackupRuntime runtime, string? backupId);
-    Task CalculateDirect(MediaBackupRuntime runtime);
+    Task Calculate(
+        MediaBackupRuntime runtime,
+        string? backupId,
+        CancellationToken cancellationToken = default
+    );
+    Task CalculateDirect(MediaBackupRuntime runtime, CancellationToken cancellationToken = default);
 }
 
 internal interface IMediaBackupApplyPhase
 {
-    Task Apply(MediaBackupRuntime runtime, string? backupId);
-    Task ApplyDirect(MediaBackupRuntime runtime);
+    Task Apply(
+        MediaBackupRuntime runtime,
+        string? backupId,
+        CancellationToken cancellationToken = default
+    );
+    Task ApplyDirect(MediaBackupRuntime runtime, CancellationToken cancellationToken = default);
 }
 
 internal interface IMediaBackupDuplicatePhase
 {
-    Task CheckDuplicates(MediaBackupRuntime runtime);
+    Task CheckDuplicates(MediaBackupRuntime runtime, CancellationToken cancellationToken = default);
 }
 
 internal interface IMediaBackupMetadataPhase
 {
-    Task SetFileSizes(MediaBackupRuntime runtime);
+    Task SetFileSizes(MediaBackupRuntime runtime, CancellationToken cancellationToken = default);
 }
 
 internal interface IMediaBackupIntegrityPhase
 {
-    Task CheckIntegrity(MediaBackupRuntime runtime);
-    Task FixIntegrity(MediaBackupRuntime runtime);
+    Task CheckIntegrity(MediaBackupRuntime runtime, CancellationToken cancellationToken = default);
+    Task FixIntegrity(MediaBackupRuntime runtime, CancellationToken cancellationToken = default);
 }

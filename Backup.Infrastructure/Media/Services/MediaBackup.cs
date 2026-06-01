@@ -72,13 +72,18 @@ internal sealed class MediaBackup(
         )
     );
 
-    public async Task Backup(List<Download> downloads, IMediaStorage mediaData)
+    public async Task Backup(
+        List<Download> downloads,
+        IMediaStorage mediaData,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         _runtime.Context.MediaData = mediaData;
         LoadPaths(downloads);
-        await LoadBackupState();
-        await LoadChunks();
-        await RunPipeline();
+        await LoadBackupState(cancellationToken);
+        await LoadChunks(cancellationToken);
+        await RunPipeline(cancellationToken);
     }
 
     private void LoadPaths(List<Download> downloads)
@@ -87,8 +92,9 @@ internal sealed class MediaBackup(
             _runtime.Context.Paths = [.. downloads.SelectMany(o => o.Data).Select(o => o.Path)];
     }
 
-    private async Task LoadBackupState()
+    private async Task LoadBackupState(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         BackupChunks? backup = await _runtime.MediaBackupData.GetBackup();
 
         if (backup is not null)
@@ -98,8 +104,9 @@ internal sealed class MediaBackup(
         _runtime.Context.Backup.Chunks.Path.Increase = _runtime.Config.Chunk.Path.Increase;
     }
 
-    private async Task LoadChunks()
+    private async Task LoadChunks(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         using (_runtime.Logger.LogTimer(Id, "processing chunks"))
         {
             List<Chunk>? chunks = await _runtime.MediaBackupData.GetChunks();
@@ -107,8 +114,9 @@ internal sealed class MediaBackup(
         }
     }
 
-    private async Task RunPipeline()
+    private async Task RunPipeline(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<MediaBackupPhaseExecutionStep> plan =
             _phaseOrchestrationService.BuildExecutionPlan(
                 _pipelineStepCompositionService.BuildPhaseSteps(
@@ -127,10 +135,11 @@ internal sealed class MediaBackup(
 
         foreach (MediaBackupPhaseExecutionStep planStep in plan)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             IMediaBackupPipelineStep step = _pipelineStepsById[planStep.StepId];
 
             using (_runtime.Logger.LogTimer(Id, planStep.TimerName))
-                await step.Execute(this);
+                await step.Execute(this, cancellationToken);
         }
     }
 
@@ -139,22 +148,27 @@ internal sealed class MediaBackup(
 
     bool IMediaBackupPipelineActions.ShouldStop => _runtime.Stop;
 
-    Task IMediaBackupPipelineActions.CalculateAsync() => _calculatePhase.Calculate(_runtime, Id);
+    Task IMediaBackupPipelineActions.CalculateAsync(CancellationToken cancellationToken) =>
+        _calculatePhase.Calculate(_runtime, Id, cancellationToken);
 
-    Task IMediaBackupPipelineActions.CalculateDirectAsync() =>
-        _calculatePhase.CalculateDirect(_runtime);
+    Task IMediaBackupPipelineActions.CalculateDirectAsync(CancellationToken cancellationToken) =>
+        _calculatePhase.CalculateDirect(_runtime, cancellationToken);
 
-    Task IMediaBackupPipelineActions.ApplyDirectAsync() => _applyPhase.ApplyDirect(_runtime);
+    Task IMediaBackupPipelineActions.ApplyDirectAsync(CancellationToken cancellationToken) =>
+        _applyPhase.ApplyDirect(_runtime, cancellationToken);
 
-    Task IMediaBackupPipelineActions.ApplyAsync() => _applyPhase.Apply(_runtime, Id);
+    Task IMediaBackupPipelineActions.ApplyAsync(CancellationToken cancellationToken) =>
+        _applyPhase.Apply(_runtime, Id, cancellationToken);
 
-    Task IMediaBackupPipelineActions.CheckDuplicatesAsync() =>
-        _duplicatePhase.CheckDuplicates(_runtime);
+    Task IMediaBackupPipelineActions.CheckDuplicatesAsync(CancellationToken cancellationToken) =>
+        _duplicatePhase.CheckDuplicates(_runtime, cancellationToken);
 
-    Task IMediaBackupPipelineActions.SetFileSizesAsync() => _metadataPhase.SetFileSizes(_runtime);
+    Task IMediaBackupPipelineActions.SetFileSizesAsync(CancellationToken cancellationToken) =>
+        _metadataPhase.SetFileSizes(_runtime, cancellationToken);
 
-    Task IMediaBackupPipelineActions.CheckIntegrityAsync() =>
-        _integrityPhase.CheckIntegrity(_runtime);
+    Task IMediaBackupPipelineActions.CheckIntegrityAsync(CancellationToken cancellationToken) =>
+        _integrityPhase.CheckIntegrity(_runtime, cancellationToken);
 
-    Task IMediaBackupPipelineActions.FixIntegrityAsync() => _integrityPhase.FixIntegrity(_runtime);
+    Task IMediaBackupPipelineActions.FixIntegrityAsync(CancellationToken cancellationToken) =>
+        _integrityPhase.FixIntegrity(_runtime, cancellationToken);
 }

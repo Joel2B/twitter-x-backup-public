@@ -21,9 +21,11 @@ public class MediaReplication(
     public async Task Replicate(
         List<Download> downloads,
         IEnumerable<IMediaStorage> data,
-        IMediaStorage target
+        IMediaStorage target,
+        CancellationToken cancellationToken = default
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IMediaStorage source = data.First();
 
         if (target == source)
@@ -33,6 +35,7 @@ public class MediaReplication(
 
         foreach (Download download in downloads)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             foreach (DataDownload dataDownload in download.Data)
             {
                 bool existsSource = await source.Exists(dataDownload.Path);
@@ -61,10 +64,11 @@ public class MediaReplication(
                 Backup.Application.Media.Models.MediaReplicationCopyAction action in copyActions
             )
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 using Stream read = await source.Read(action.Path);
                 using Stream write = await target.Write(action.Path);
 
-                await read.CopyToAsync(write);
+                await read.CopyToAsync(write, cancellationToken);
 
                 _logger.LogInformation(
                     "target={TargetId} id={Id} url={Url} path={Path}",

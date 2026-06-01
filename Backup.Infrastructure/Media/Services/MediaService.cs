@@ -16,6 +16,6 @@ public class MediaService(
     public Task Download(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        return _mediaOrchestrationService.Run(_mediaOrchestrationCommand);
+        return _mediaOrchestrationService.Run(_mediaOrchestrationCommand, cancellationToken);
     }
 }

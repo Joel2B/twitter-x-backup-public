@@ -35,8 +35,13 @@ internal sealed class MediaBackupApplyPhase(
     private readonly IMediaBackupPathProjectionService _pathProjectionService =
         pathProjectionService;
 
-    public async Task Apply(MediaBackupRuntime runtime, string? backupId)
+    public async Task Apply(
+        MediaBackupRuntime runtime,
+        string? backupId,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         foreach (KeyValuePair<int, Chunk> kvp in runtime.Context.Chunks)
         {
             IZipWriter? zip = null;
@@ -45,6 +50,7 @@ internal sealed class MediaBackupApplyPhase(
             {
                 if (runtime.Stop)
                     break;
+                cancellationToken.ThrowIfCancellationRequested();
 
                 IReadOnlyList<MediaBackupChunkEntryState> initialEntryStates =
                     runtime.BuildChunkEntryStates(kvp.Value.Data);
@@ -54,6 +60,7 @@ internal sealed class MediaBackupApplyPhase(
 
                 foreach (string path in pathsNeedingHash)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     string? hash = await runtime.MediaData.GetHash(UtilsPath.NormalizePath(path));
                     hashByPath[path] = hash;
 
@@ -92,6 +99,7 @@ internal sealed class MediaBackupApplyPhase(
 
                 foreach (MediaBackupApplyEntryCandidate item in chunkPlan.EntriesToAdd)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     storagePaths.Add(item.ArchivePath);
                     await using Stream read = await runtime.MediaData.Read(
                         UtilsPath.NormalizePath(item.SourcePath)
@@ -158,19 +166,21 @@ internal sealed class MediaBackupApplyPhase(
         await runtime.ShowInfoChunks(backupId);
     }
 
-    public async Task ApplyDirect(MediaBackupRuntime runtime)
+    public async Task ApplyDirect(
+        MediaBackupRuntime runtime,
+        CancellationToken cancellationToken = default
+    )
     {
-        await SyncChunks(runtime);
+        cancellationToken.ThrowIfCancellationRequested();
+        await SyncChunks(runtime, cancellationToken);
         IReadOnlyList<string> directPaths = _directApplyPathService.GetPaths(
             runtime.Context.PathsDirect
         );
 
-        CancellationTokenSource cts = new();
-
         ParallelOptions options = new()
         {
             MaxDegreeOfParallelism = 16,
-            CancellationToken = cts.Token,
+            CancellationToken = cancellationToken,
         };
 
         try
@@ -203,11 +213,15 @@ internal sealed class MediaBackupApplyPhase(
                 }
             );
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
     }
 
-    private async Task SyncChunks(MediaBackupRuntime runtime)
+    private async Task SyncChunks(
+        MediaBackupRuntime runtime,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<MediaBackupSyncFinalizeInputChunk> chunkStates =
             _chunkEntryStateService.BuildSyncFinalizeInputChunks(
                 _chunkRuntimeCompositionService.BuildChunkPathStates(
@@ -234,9 +248,11 @@ internal sealed class MediaBackupApplyPhase(
             {
                 if (runtime.Stop)
                     break;
+                cancellationToken.ThrowIfCancellationRequested();
 
                 foreach (string path in chunkPlan.PathsToRemove)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     if (zip is null)
                     {
                         runtime.Logger.LogInformation(

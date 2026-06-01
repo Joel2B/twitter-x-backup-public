@@ -30,8 +30,13 @@ internal sealed class MediaBackupCalculatePhase(
     private readonly IMediaBackupDirectPathFinalizeService _directPathFinalizeService =
         directPathFinalizeService;
 
-    public async Task Calculate(MediaBackupRuntime runtime, string? backupId)
+    public async Task Calculate(
+        MediaBackupRuntime runtime,
+        string? backupId,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         await runtime.ShowInfoChunks(backupId);
 
         runtime.Logger.LogInfo("cloning chunks");
@@ -45,6 +50,7 @@ internal sealed class MediaBackupCalculatePhase(
 
         foreach (string path in runtime.Context.Paths)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             MediaCacheEntry? cache = await runtime.MediaData.GetCache(path);
 
             cacheObservationInputs.Add(
@@ -182,14 +188,17 @@ internal sealed class MediaBackupCalculatePhase(
         );
     }
 
-    public async Task CalculateDirect(MediaBackupRuntime runtime)
+    public async Task CalculateDirect(
+        MediaBackupRuntime runtime,
+        CancellationToken cancellationToken = default
+    )
     {
-        CancellationTokenSource cts = new();
+        cancellationToken.ThrowIfCancellationRequested();
 
         ParallelOptions options = new()
         {
             MaxDegreeOfParallelism = 64,
-            CancellationToken = cts.Token,
+            CancellationToken = cancellationToken,
         };
 
         int total = runtime.Context.Paths.Count;
@@ -274,7 +283,7 @@ internal sealed class MediaBackupCalculatePhase(
                 }
             );
         }
-        catch (OperationCanceledException) { }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
 
         List<string> pathsInChunks = runtime
             .Context.Chunks.Values.SelectMany(o => o.Data)

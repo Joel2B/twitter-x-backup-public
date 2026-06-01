@@ -5,23 +5,29 @@ namespace Backup.Application.Media;
 
 public sealed class MediaOrchestrationService : IMediaOrchestrationService
 {
-    public async Task Run(IMediaOrchestrationCommand command)
+    public async Task Run(
+        IMediaOrchestrationCommand command,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<global::Backup.Domain.Posts.MediaInput> posts =
-            await command.GetMediaInputs();
+            await command.GetMediaInputs(cancellationToken);
 
         if (posts.Count == 0)
             return;
 
-        MediaProcessingResult result = await command.Process(posts);
+        cancellationToken.ThrowIfCancellationRequested();
+        MediaProcessingResult result = await command.Process(posts, cancellationToken);
 
         List<MediaDownload> all = result.All.Select(download => download.Clone()).ToList();
         List<MediaDownload> filtered = result
             .Filtered.Select(download => download.Clone())
             .ToList();
 
-        await command.Prune(all);
-        await command.Filter(filtered);
+        cancellationToken.ThrowIfCancellationRequested();
+        await command.Prune(all, cancellationToken);
+        await command.Filter(filtered, cancellationToken);
 
         foreach (string storageId in command.GetStorageIds())
         {
@@ -35,19 +41,22 @@ public sealed class MediaOrchestrationService : IMediaOrchestrationService
                 .Select(download => download.Clone())
                 .ToList();
 
-            await command.PruneStorage(storageId, all);
-            await command.CheckStorageData(storageId, filteredCloned);
-            await command.CheckStorageIntegrity(storageId, filteredIntegrity);
+            cancellationToken.ThrowIfCancellationRequested();
+            await command.PruneStorage(storageId, all, cancellationToken);
+            await command.CheckStorageData(storageId, filteredCloned, cancellationToken);
+            await command.CheckStorageIntegrity(storageId, filteredIntegrity, cancellationToken);
 
             filteredCloned.AddRange(filteredIntegrity);
 
-            await command.DownloadToStorage(storageId, filteredCloned);
-            await command.Filter(filteredCloned);
-            await command.CheckStorageData(storageId, filteredCloned);
-            await command.ReplicateFromStorage(storageId, filteredCloned);
-            await command.Filter(filtered);
+            cancellationToken.ThrowIfCancellationRequested();
+            await command.DownloadToStorage(storageId, filteredCloned, cancellationToken);
+            await command.Filter(filteredCloned, cancellationToken);
+            await command.CheckStorageData(storageId, filteredCloned, cancellationToken);
+            await command.ReplicateFromStorage(storageId, filteredCloned, cancellationToken);
+            await command.Filter(filtered, cancellationToken);
         }
 
-        await command.RunBackups(filtered);
+        cancellationToken.ThrowIfCancellationRequested();
+        await command.RunBackups(filtered, cancellationToken);
     }
 }

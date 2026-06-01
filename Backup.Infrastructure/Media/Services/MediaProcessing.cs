@@ -23,8 +23,9 @@ public class MediaProcessing(
     private readonly List<Download> _all = [];
     private readonly List<Download> _filtered = [];
 
-    public Task Process(List<MediaInput> posts)
+    public Task Process(List<MediaInput> posts, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IReadOnlyList<Backup.Domain.Posts.MediaInput> domainPosts = posts
             .Select(PostReplicationMapper.ToDomain)
             .ToList();

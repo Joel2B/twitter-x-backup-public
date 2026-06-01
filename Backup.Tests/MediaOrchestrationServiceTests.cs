@@ -80,22 +80,33 @@ public class MediaOrchestrationServiceTests
         public int ReplicationCalls { get; private set; }
         public int BackupCalls { get; private set; }
 
-        public Task<IReadOnlyList<MediaInput>> GetMediaInputs() =>
+        public Task<IReadOnlyList<MediaInput>> GetMediaInputs(
+            CancellationToken cancellationToken = default
+        ) =>
             Task.FromResult<IReadOnlyList<MediaInput>>(MediaInputs);
 
-        public Task<MediaProcessingResult> Process(IReadOnlyList<MediaInput> posts)
+        public Task<MediaProcessingResult> Process(
+            IReadOnlyList<MediaInput> posts,
+            CancellationToken cancellationToken = default
+        )
         {
             ProcessCalls++;
             return Task.FromResult(ProcessingResult);
         }
 
-        public Task Prune(List<MediaDownload> downloads)
+        public Task Prune(
+            List<MediaDownload> downloads,
+            CancellationToken cancellationToken = default
+        )
         {
             PruneCalls++;
             return Task.CompletedTask;
         }
 
-        public Task Filter(List<MediaDownload> downloads)
+        public Task Filter(
+            List<MediaDownload> downloads,
+            CancellationToken cancellationToken = default
+        )
         {
             FilterCalls++;
             return Task.CompletedTask;
@@ -106,28 +117,51 @@ public class MediaOrchestrationServiceTests
         public bool HasMaintenance(string storageId) =>
             MaintenanceByStorage.TryGetValue(storageId, out bool enabled) && enabled;
 
-        public Task PruneStorage(string storageId, List<MediaDownload> downloads) =>
+        public Task PruneStorage(
+            string storageId,
+            List<MediaDownload> downloads,
+            CancellationToken cancellationToken = default
+        ) =>
             Task.CompletedTask;
 
-        public Task CheckStorageData(string storageId, List<MediaDownload> downloads) =>
+        public Task CheckStorageData(
+            string storageId,
+            List<MediaDownload> downloads,
+            CancellationToken cancellationToken = default
+        ) =>
             Task.CompletedTask;
 
-        public Task CheckStorageIntegrity(string storageId, List<MediaDownload> downloads) =>
+        public Task CheckStorageIntegrity(
+            string storageId,
+            List<MediaDownload> downloads,
+            CancellationToken cancellationToken = default
+        ) =>
             Task.CompletedTask;
 
-        public Task DownloadToStorage(string storageId, List<MediaDownload> downloads)
+        public Task DownloadToStorage(
+            string storageId,
+            List<MediaDownload> downloads,
+            CancellationToken cancellationToken = default
+        )
         {
             DownloadCalls++;
             return Task.CompletedTask;
         }
 
-        public Task ReplicateFromStorage(string storageId, List<MediaDownload> downloads)
+        public Task ReplicateFromStorage(
+            string storageId,
+            List<MediaDownload> downloads,
+            CancellationToken cancellationToken = default
+        )
         {
             ReplicationCalls++;
             return Task.CompletedTask;
         }
 
-        public Task RunBackups(List<MediaDownload> downloads)
+        public Task RunBackups(
+            List<MediaDownload> downloads,
+            CancellationToken cancellationToken = default
+        )
         {
             BackupCalls++;
             return Task.CompletedTask;

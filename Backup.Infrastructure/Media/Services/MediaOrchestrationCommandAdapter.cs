@@ -44,18 +44,25 @@ public sealed class MediaOrchestrationCommandAdapter(
     private readonly IMediaDownloadService _mediaDownload = mediaDownload;
     private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper = mediaDownloadModelMapper;
 
-    public async Task<IReadOnlyList<Backup.Domain.Posts.MediaInput>> GetMediaInputs() =>
-        await _postData.GetMediaInputs() ?? [];
-
-    public async Task<MediaProcessingResult> Process(
-        IReadOnlyList<Backup.Domain.Posts.MediaInput> posts
+    public async Task<IReadOnlyList<Backup.Domain.Posts.MediaInput>> GetMediaInputs(
+        CancellationToken cancellationToken = default
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
+        return await _postData.GetMediaInputs() ?? [];
+    }
+
+    public async Task<MediaProcessingResult> Process(
+        IReadOnlyList<Backup.Domain.Posts.MediaInput> posts,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         List<Backup.Infrastructure.Posts.Models.MediaInput> appPosts = posts
             .Select(PostReplicationMapper.ToApp)
             .ToList();
 
-        await _mediaProcessing.Process(appPosts);
+        await _mediaProcessing.Process(appPosts, cancellationToken);
 
         return new()
         {
@@ -64,14 +71,28 @@ public sealed class MediaOrchestrationCommandAdapter(
         };
     }
 
-    public async Task Prune(List<MediaDownload> downloads)
+    public async Task Prune(
+        List<MediaDownload> downloads,
+        CancellationToken cancellationToken = default
+    )
     {
-        await ExecuteOnInfrastructureDownloads(downloads, _mediaPrune.Prune);
+        await ExecuteOnInfrastructureDownloads(
+            downloads,
+            (infra, ct) => _mediaPrune.Prune(infra, ct),
+            cancellationToken
+        );
     }
 
-    public async Task Filter(List<MediaDownload> downloads)
+    public async Task Filter(
+        List<MediaDownload> downloads,
+        CancellationToken cancellationToken = default
+    )
     {
-        await ExecuteOnInfrastructureDownloads(downloads, _mediaFilter.Check);
+        await ExecuteOnInfrastructureDownloads(
+            downloads,
+            (infra, ct) => _mediaFilter.Check(infra, ct),
+            cancellationToken
+        );
     }
 
     public IReadOnlyList<string> GetStorageIds() =>
@@ -93,28 +114,13 @@ public sealed class MediaOrchestrationCommandAdapter(
         return has;
     }
 
-    public async Task PruneStorage(string storageId, List<MediaDownload> downloads)
+    public async Task PruneStorage(
+        string storageId,
+        List<MediaDownload> downloads,
+        CancellationToken cancellationToken = default
+    )
     {
-        IMediaDataMaintenance? maintenance = GetMaintenance(storageId);
-
-        if (maintenance is null)
-            return;
-
-        await ExecuteOnInfrastructureDownloads(downloads, maintenance.Prune);
-    }
-
-    public async Task CheckStorageData(string storageId, List<MediaDownload> downloads)
-    {
-        IMediaDataMaintenance? maintenance = GetMaintenance(storageId);
-
-        if (maintenance is null)
-            return;
-
-        await ExecuteOnInfrastructureDownloads(downloads, maintenance.CheckData);
-    }
-
-    public async Task CheckStorageIntegrity(string storageId, List<MediaDownload> downloads)
-    {
+        cancellationToken.ThrowIfCancellationRequested();
         IMediaDataMaintenance? maintenance = GetMaintenance(storageId);
 
         if (maintenance is null)
@@ -122,15 +128,60 @@ public sealed class MediaOrchestrationCommandAdapter(
 
         await ExecuteOnInfrastructureDownloads(
             downloads,
-            async infra =>
+            (infra, ct) => maintenance.Prune(infra, ct),
+            cancellationToken
+        );
+    }
+
+    public async Task CheckStorageData(
+        string storageId,
+        List<MediaDownload> downloads,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        IMediaDataMaintenance? maintenance = GetMaintenance(storageId);
+
+        if (maintenance is null)
+            return;
+
+        await ExecuteOnInfrastructureDownloads(
+            downloads,
+            (infra, ct) => maintenance.CheckData(infra, ct),
+            cancellationToken
+        );
+    }
+
+    public async Task CheckStorageIntegrity(
+        string storageId,
+        List<MediaDownload> downloads,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        IMediaDataMaintenance? maintenance = GetMaintenance(storageId);
+
+        if (maintenance is null)
+            return;
+
+        await ExecuteOnInfrastructureDownloads(
+            downloads,
+            async (infra, ct) =>
             {
+                ct.ThrowIfCancellationRequested();
                 await _mediaIntegrity.Check(infra, maintenance);
-            }
+            },
+            cancellationToken
         );
     }
 
-    public async Task DownloadToStorage(string storageId, List<MediaDownload> downloads)
+    public async Task DownloadToStorage(
+        string storageId,
+        List<MediaDownload> downloads,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IMediaStorage? storage = GetStorage(storageId);
 
         if (storage is null)
@@ -138,15 +189,21 @@ public sealed class MediaOrchestrationCommandAdapter(
 
         await ExecuteOnInfrastructureDownloads(
             downloads,
-            async infra =>
+            async (infra, ct) =>
             {
-                await _mediaDownload.Download(infra, storage);
-            }
+                await _mediaDownload.Download(infra, storage, ct);
+            },
+            cancellationToken
         );
     }
 
-    public async Task ReplicateFromStorage(string storageId, List<MediaDownload> downloads)
+    public async Task ReplicateFromStorage(
+        string storageId,
+        List<MediaDownload> downloads,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IMediaStorage? storage = GetStorage(storageId);
 
         if (storage is null)
@@ -154,15 +211,20 @@ public sealed class MediaOrchestrationCommandAdapter(
 
         await ExecuteOnInfrastructureDownloads(
             downloads,
-            async infra =>
+            async (infra, ct) =>
             {
-                await _mediaReplication.Replicate(infra, _mediaData.Values, storage);
-            }
+                await _mediaReplication.Replicate(infra, _mediaData.Values, storage, ct);
+            },
+            cancellationToken
         );
     }
 
-    public async Task RunBackups(List<MediaDownload> downloads)
+    public async Task RunBackups(
+        List<MediaDownload> downloads,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         string? backupSourceId = _mediaOrchestrationStorageResolutionService.SelectBackupSourceId(
             _mediaData.Keys
         );
@@ -182,7 +244,10 @@ public sealed class MediaOrchestrationCommandAdapter(
         List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
 
         foreach (IMediaBackupStrategy backup in _mediaBackups)
-            await backup.Backup(infra, backupSource);
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await backup.Backup(infra, backupSource, cancellationToken);
+        }
     }
 
     private IMediaStorage? GetStorage(string storageId)
@@ -220,11 +285,13 @@ public sealed class MediaOrchestrationCommandAdapter(
 
     private async Task ExecuteOnInfrastructureDownloads(
         List<MediaDownload> downloads,
-        Func<List<Download>, Task> action
+        Func<List<Download>, CancellationToken, Task> action,
+        CancellationToken cancellationToken = default
     )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
-        await action(infra);
+        await action(infra, cancellationToken);
         Sync(downloads, infra);
     }
 }

@@ -4,5 +4,5 @@ namespace Backup.Application.Media;
 
 public interface IMediaOrchestrationService
 {
-    Task Run(IMediaOrchestrationCommand command);
+    Task Run(IMediaOrchestrationCommand command, CancellationToken cancellationToken = default);
 }

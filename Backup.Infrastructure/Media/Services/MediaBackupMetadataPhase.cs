@@ -28,8 +28,12 @@ internal sealed class MediaBackupMetadataPhase(
     private readonly IMediaBackupChunkPersistenceIOService _chunkPersistenceIoService =
         chunkPersistenceIoService;
 
-    public async Task SetFileSizes(MediaBackupRuntime runtime)
+    public async Task SetFileSizes(
+        MediaBackupRuntime runtime,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         runtime.Logger.LogInformation("setting file sizes");
 
         foreach (
@@ -38,6 +42,7 @@ internal sealed class MediaBackupMetadataPhase(
                 .Chunks
         )
         {
+            cancellationToken.ThrowIfCancellationRequested();
             IReadOnlyList<MediaBackupChunkEntryState> entryStates = runtime.BuildChunkEntryStates(
                 kvp.Value.Data
             );
