@@ -32,6 +32,7 @@ public class ProxyProvider(
     IProxyCandidateLoadService proxyCandidateLoadService,
     IProxyRuntimeRecordMapper proxyRuntimeRecordMapper,
     IProxyProviderRuntimeOrchestrationService proxyProviderRuntimeOrchestrationService,
+    IProxySetupOrchestrationService proxySetupOrchestrationService,
     IProxyAcceptanceApplyOrchestrationService proxyAcceptanceApplyOrchestrationService,
     IProxyFailureStateService proxyFailureStateService,
     IProxyFailureExecutionPlanService proxyFailureExecutionPlanService,
@@ -61,6 +62,8 @@ public class ProxyProvider(
     private readonly IProxyRuntimeRecordMapper _proxyRuntimeRecordMapper = proxyRuntimeRecordMapper;
     private readonly IProxyProviderRuntimeOrchestrationService _proxyProviderRuntimeOrchestrationService =
         proxyProviderRuntimeOrchestrationService;
+    private readonly IProxySetupOrchestrationService _proxySetupOrchestrationService =
+        proxySetupOrchestrationService;
     private readonly IProxyAcceptanceApplyOrchestrationService _proxyAcceptanceApplyOrchestrationService =
         proxyAcceptanceApplyOrchestrationService;
     private readonly IProxyFailureStateService _proxyFailureStateService = proxyFailureStateService;
@@ -99,13 +102,18 @@ public class ProxyProvider(
                 stored.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
                 await LoadCandidatesFromProviders()
             );
+        ProxySetupPlan setupPlan = _proxySetupOrchestrationService.BuildPlan(runtimePool.Count);
         _proxies = runtimePool.Select(_proxyRuntimeRecordMapper.ToProxyData).ToList();
 
-        if (_proxies.Count == 0)
+        if (setupPlan.ShouldThrowPoolEmpty)
             throw new ProxyEmptyException();
 
-        _proxyFailureStateService.Initialize(_proxies.Count);
-        await SaveData();
+        if (setupPlan.ShouldInitializeFailureState)
+            _proxyFailureStateService.Initialize(_proxies.Count);
+
+        if (setupPlan.ShouldPersistPool)
+            await SaveData();
+
         NewClient();
     }
 
