@@ -27,6 +27,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaPrune, MediaPrune>();
         services.AddScoped<IMediaErrorFilterPolicyService, MediaErrorFilterPolicyService>();
         services.AddScoped<IMediaErrorExclusionService, MediaErrorExclusionService>();
+        services.AddScoped<IMediaErrorDownloadFilterService, MediaErrorDownloadFilterService>();
         services.AddScoped<IMediaDownloadFilterPolicyService, MediaDownloadFilterPolicyService>();
         services.AddScoped<IMediaDownloadDataBuilderService, MediaDownloadDataBuilderService>();
         services.AddScoped<IMediaDownloadProjectionService, MediaDownloadProjectionService>();
@@ -48,6 +49,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaVideoVariantPolicyService, MediaVideoVariantPolicyService>();
         services.AddScoped<IMediaIntegrityPolicyService, MediaIntegrityPolicyService>();
         services.AddScoped<IMediaPruneSelectionService, MediaPruneSelectionService>();
+        services.AddScoped<IMediaPruneExecutionService, MediaPruneExecutionService>();
         services.AddScoped<IMediaMaintenanceDataPolicyService, MediaMaintenanceDataPolicyService>();
         services.AddScoped<IMediaMaintenanceDownloadProjectionService, MediaMaintenanceDownloadProjectionService>();
         services.AddScoped<IMediaMaintenanceCachedDownloadFilterService, MediaMaintenanceCachedDownloadFilterService>();
