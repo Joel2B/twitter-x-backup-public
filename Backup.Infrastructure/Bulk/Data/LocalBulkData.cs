@@ -25,7 +25,8 @@ public class LocalBulkData(
     IBulkPruneExecutionService bulkPruneExecutionService,
     IBulkReplicationPathPlanningService bulkReplicationPathPlanningService,
     IBulkArchiveFilePolicyService bulkArchiveFilePolicyService,
-    IDataStoreGuardService dataStoreGuardService
+    IDataStoreGuardService dataStoreGuardService,
+    IDateTimeProvider dateTimeProvider
 ) : IBulkDataStore, ISetup
 {
     public string? Id { get; set; }
@@ -45,6 +46,7 @@ public class LocalBulkData(
     private readonly IBulkArchiveFilePolicyService _bulkArchiveFilePolicyService =
         bulkArchiveFilePolicyService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
+    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
 
     public Task Setup()
     {
@@ -110,7 +112,7 @@ public class LocalBulkData(
         if (!File.Exists(path))
             return;
 
-        string newPath = _bulkArchiveFilePolicyService.BuildArchivePath(path, DateTime.Now);
+        string newPath = _bulkArchiveFilePolicyService.BuildArchivePath(path, _dateTimeProvider.Now);
 
         await Task.Delay(1000);
         File.Move(path, newPath);

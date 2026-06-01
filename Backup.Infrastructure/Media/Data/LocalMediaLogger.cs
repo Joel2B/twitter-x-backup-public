@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Backup.Application.Core;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Application.Media;
@@ -18,7 +19,8 @@ public class LocalMediaLogger(
     IPartition _partition,
     IMediaStoragePathService mediaStoragePathService,
     IMediaLogFilePolicyService mediaLogFilePolicyService,
-    IDataStoreGuardService dataStoreGuardService
+    IDataStoreGuardService dataStoreGuardService,
+    IDateTimeProvider dateTimeProvider
 ) : IMediaLogger, ISetup
 {
     private readonly ILogger<LocalMediaLogger> _logger = _logger;
@@ -28,6 +30,7 @@ public class LocalMediaLogger(
     private readonly IMediaLogFilePolicyService _mediaLogFilePolicyService =
         mediaLogFilePolicyService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
+    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
 
     private readonly ConcurrentDictionary<string, Logs> _errors = new();
     private readonly ConcurrentDictionary<string, Logs> _logs = new();
@@ -75,7 +78,7 @@ public class LocalMediaLogger(
         if (logs.Count == 0)
             return;
 
-        string fileName = _mediaLogFilePolicyService.CreateFileName(DateTime.Now);
+        string fileName = _mediaLogFilePolicyService.CreateFileName(_dateTimeProvider.Now);
         string _path = Path.Combine(path, fileName);
 
         string log = JsonConvert.SerializeObject(logs, Formatting.Indented);

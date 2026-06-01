@@ -9,6 +9,7 @@ using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Proxy;
 using Backup.Infrastructure.Proxy.Models;
 using Backup.Application.Proxy.Models;
+using Backup.Application.Core;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -35,7 +36,8 @@ public class ProxyProvider(
     IProxyFailureStateService proxyFailureStateService,
     IProxyFailureSettingsPolicyService proxyFailureSettingsPolicyService,
     IProxyUsageTrackingService proxyUsageTrackingService,
-    IProxyErrorTrackingService proxyErrorTrackingService
+    IProxyErrorTrackingService proxyErrorTrackingService,
+    IDateTimeProvider dateTimeProvider
 )
     : IProxyProvider,
         ISetup,
@@ -65,6 +67,7 @@ public class ProxyProvider(
         proxyFailureSettingsPolicyService;
     private readonly IProxyUsageTrackingService _proxyUsageTrackingService = proxyUsageTrackingService;
     private readonly IProxyErrorTrackingService _proxyErrorTrackingService = proxyErrorTrackingService;
+    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
 
@@ -225,7 +228,7 @@ public class ProxyProvider(
         lock (proxy)
         {
             ProxyRuntimeRecord runtimeRecord = _proxyRuntimeRecordMapper.ToRuntimeRecord(proxy);
-            _proxyUsageTrackingService.RegisterUse(runtimeRecord, DateTime.Now);
+            _proxyUsageTrackingService.RegisterUse(runtimeRecord, _dateTimeProvider.Now);
             _proxyRuntimeRecordMapper.ApplyRuntimeRecord(proxy, runtimeRecord, disabledAt: null);
         }
 
@@ -249,7 +252,7 @@ public class ProxyProvider(
             )
                 return;
 
-            DateTime now = DateTime.Now;
+            DateTime now = _dateTimeProvider.Now;
             ProxyRuntimeRecord runtimeRecord = _proxyRuntimeRecordMapper.ToRuntimeRecord(proxy);
             ProxyErrorTrackingResult tracking = _proxyErrorTrackingService.RegisterError(
                 runtimeRecord,

@@ -1,6 +1,7 @@
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Application.Posts;
 using Backup.Application.Posts.Models;
+using Backup.Application.Core;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
@@ -14,7 +15,8 @@ public class LocalPostLogger(
     IPartition _partition,
     IPostDebugLogPrunePolicyService postDebugLogPrunePolicyService,
     IPostLogFolderPolicyService postLogFolderPolicyService,
-    IPostHistoryPathExtractionService postHistoryPathExtractionService
+    IPostHistoryPathExtractionService postHistoryPathExtractionService,
+    IDateTimeProvider dateTimeProvider
 ) : IPostLogger
 {
     private readonly ILogger<LocalPostLogger> _logger = _logger;
@@ -26,6 +28,7 @@ public class LocalPostLogger(
         postLogFolderPolicyService;
     private readonly IPostHistoryPathExtractionService _postHistoryPathExtractionService =
         postHistoryPathExtractionService;
+    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
 
     private string _id = "";
     private string _path = "";
@@ -38,7 +41,7 @@ public class LocalPostLogger(
 
         _id = sourceId;
 
-        string date = _postLogFolderPolicyService.CreateSessionFolderName(DateTime.Now);
+        string date = _postLogFolderPolicyService.CreateSessionFolderName(_dateTimeProvider.Now);
 
         _path = Path.Combine([GetPath(), _id, date]);
         Directory.CreateDirectory(_path);
