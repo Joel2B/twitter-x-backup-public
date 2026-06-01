@@ -18,6 +18,7 @@ public class LocalMediaBackup(
     IPartition _partition,
     IMediaBackupPartitionPathService mediaBackupPartitionPathService,
     IMediaBackupChunkFileNamePolicyService mediaBackupChunkFileNamePolicyService,
+    IMediaBackupChunkLoadDecisionService mediaBackupChunkLoadDecisionService,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaBackupData, ISetup
 {
@@ -28,6 +29,8 @@ public class LocalMediaBackup(
         mediaBackupPartitionPathService;
     private readonly IMediaBackupChunkFileNamePolicyService _mediaBackupChunkFileNamePolicyService =
         mediaBackupChunkFileNamePolicyService;
+    private readonly IMediaBackupChunkLoadDecisionService _mediaBackupChunkLoadDecisionService =
+        mediaBackupChunkLoadDecisionService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     public Task Setup()
@@ -83,32 +86,31 @@ public class LocalMediaBackup(
 
     public async Task<List<Chunk>?> GetChunks(CancellationToken token = default)
     {
-        if (string.IsNullOrWhiteSpace(_config.Chunk.Data.File))
-            return null;
-
         BackupChunks? backup = await GetBackup();
+        MediaBackupChunkLoadDecision decision = _mediaBackupChunkLoadDecisionService.Decide(
+            _config.Chunk.Data.File,
+            backup?.Chunks.Ids
+        );
 
-        if (backup is null)
+        if (decision.Action == MediaBackupChunkLoadAction.SkipAsNull)
             return null;
 
-        if (backup.Chunks.Ids.Count == 0)
+        if (decision.Action == MediaBackupChunkLoadAction.ReturnEmpty)
             return [];
 
-        Chunk[] chunks = new Chunk[backup.Chunks.Ids.Count];
+        Chunk[] chunks = new Chunk[decision.ReadDescriptors.Count];
 
         ParallelOptions options = new() { MaxDegreeOfParallelism = 16, CancellationToken = token };
 
         try
         {
             await Parallel.ForEachAsync(
-                Enumerable.Range(0, backup.Chunks.Ids.Count),
+                decision.ReadDescriptors,
                 options,
-                async (i, ct) =>
+                async (descriptor, ct) =>
                 {
-                    int id = backup.Chunks.Ids[i];
-
                     string fileName = _mediaBackupChunkFileNamePolicyService.BuildDataFileName(
-                        id,
+                        descriptor.ChunkId,
                         _config.Chunk.Data.File!
                     );
                     string path = Path.Combine([GetPathChunks(), fileName]);
@@ -119,9 +121,9 @@ public class LocalMediaBackup(
                     if (chunk is null)
                         throw new InvalidOperationException($"chunk null: {path}");
 
-                    chunks[i] = chunk;
+                    chunks[descriptor.Index] = chunk;
 
-                    _logger.LogInformation("chunk {chunk} processed", i);
+                    _logger.LogInformation("chunk {chunk} processed", descriptor.Index);
                 }
             );
         }
