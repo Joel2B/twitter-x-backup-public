@@ -22,6 +22,13 @@ public static class RuntimeInfrastructureServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddApiSetupInfrastructure(this IServiceCollection services)
+    {
+        services.AddProxyDataSetupInfrastructure();
+        services.AddProxyProviderSetupInfrastructure();
+        return services;
+    }
+
     public static IServiceCollection AddBackupRunInfrastructure(this IServiceCollection services)
     {
         services.AddBackupRunAdapters();

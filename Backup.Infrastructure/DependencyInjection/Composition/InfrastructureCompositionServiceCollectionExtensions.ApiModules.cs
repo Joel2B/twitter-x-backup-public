@@ -9,7 +9,7 @@ public static partial class InfrastructureCompositionServiceCollectionExtensions
     private static IServiceCollection AddApiFeatureModules(this IServiceCollection services)
     {
         services.AddPostsInfrastructure();
-        services.AddSetupInfrastructure();
+        services.AddApiSetupInfrastructure();
         return services;
     }
 }
