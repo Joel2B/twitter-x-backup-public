@@ -16,7 +16,7 @@ public partial class SqlitePostData
     {
         PostsDbContext db = await GetDbContext();
 
-        List<Post> posts = incoming.Where(post => !string.IsNullOrWhiteSpace(post.Id)).ToList();
+        List<Post> posts = NormalizePosts(incoming).ToList();
 
         if (posts.Count == 0)
             return;
