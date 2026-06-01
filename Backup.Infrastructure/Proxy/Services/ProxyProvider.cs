@@ -32,6 +32,7 @@ public class ProxyProvider(
     IProxyCandidateLoadService proxyCandidateLoadService,
     IProxyRuntimeRecordMapper proxyRuntimeRecordMapper,
     IProxyProviderRuntimeOrchestrationService proxyProviderRuntimeOrchestrationService,
+    IProxyAcceptanceApplyOrchestrationService proxyAcceptanceApplyOrchestrationService,
     IProxyFailureStateService proxyFailureStateService,
     IProxyFailureExecutionPlanService proxyFailureExecutionPlanService,
     IProxyFailureSettingsPolicyService proxyFailureSettingsPolicyService,
@@ -60,6 +61,8 @@ public class ProxyProvider(
     private readonly IProxyRuntimeRecordMapper _proxyRuntimeRecordMapper = proxyRuntimeRecordMapper;
     private readonly IProxyProviderRuntimeOrchestrationService _proxyProviderRuntimeOrchestrationService =
         proxyProviderRuntimeOrchestrationService;
+    private readonly IProxyAcceptanceApplyOrchestrationService _proxyAcceptanceApplyOrchestrationService =
+        proxyAcceptanceApplyOrchestrationService;
     private readonly IProxyFailureStateService _proxyFailureStateService = proxyFailureStateService;
     private readonly IProxyFailureExecutionPlanService _proxyFailureExecutionPlanService =
         proxyFailureExecutionPlanService;
@@ -125,15 +128,15 @@ public class ProxyProvider(
         foreach (string error in acceptance.ProbeErrors)
             _logger.LogError("Error: {error}", error);
 
-        foreach (ProxyHealthAcceptanceItem item in acceptance.AcceptedItems)
-        {
-            _proxies.Add(_proxyRuntimeRecordMapper.ToProxyData(item.Record));
-
-            if (item.ShouldFlush)
-                await SaveData();
-        }
-
-        await SaveData();
+        await _proxyAcceptanceApplyOrchestrationService.ApplyAsync(
+            acceptance.AcceptedItems,
+            record =>
+            {
+                _proxies.Add(_proxyRuntimeRecordMapper.ToProxyData(record));
+                return Task.CompletedTask;
+            },
+            SaveData
+        );
     }
 
     private string GetProxyKey(ProxyDataConfig proxy) =>
