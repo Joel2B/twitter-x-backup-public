@@ -92,11 +92,11 @@ public partial class SqlitePostData
 
     private async Task UpsertHashMetaForPosts(PostsDbContext db, IEnumerable<Post> posts)
     {
-        Dictionary<string, Post> normalized = posts
-            .Where(post => !string.IsNullOrWhiteSpace(post.Id))
-            .GroupBy(post => post.Id, StringComparer.Ordinal)
-            .Select(group => group.Last())
-            .ToDictionary(post => post.Id, StringComparer.Ordinal);
+        IReadOnlyList<Post> normalizedPosts = NormalizePosts(posts.ToList());
+        Dictionary<string, Post> normalized = normalizedPosts.ToDictionary(
+            post => post.Id,
+            StringComparer.Ordinal
+        );
 
         if (normalized.Count == 0)
             return;
