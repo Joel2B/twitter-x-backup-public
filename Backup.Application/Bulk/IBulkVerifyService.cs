@@ -5,5 +5,8 @@ namespace Backup.Application.Bulk;
 
 public interface IBulkVerifyService
 {
-    Task<IReadOnlyList<BulkVerifyRow>> Run(IBulkVerifyCommand command);
+    Task<IReadOnlyList<BulkVerifyRow>> Run(
+        IBulkVerifyCommand command,
+        CancellationToken cancellationToken = default
+    );
 }

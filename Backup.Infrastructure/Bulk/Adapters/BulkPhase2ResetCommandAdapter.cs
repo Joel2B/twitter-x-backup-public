@@ -20,9 +20,12 @@ internal sealed class BulkPhase2ResetCommandAdapter(
     private List<BulkData>? _sourceBulks;
     private Dictionary<string, BulkData>? _bulkMap;
 
-    public async Task<IReadOnlyList<BulkItem>> GetBulks()
+    public async Task<IReadOnlyList<BulkItem>> GetBulks(
+        CancellationToken cancellationToken = default
+    )
     {
-        _sourceBulks = await _bulkData.GetBulks() ?? [];
+        cancellationToken.ThrowIfCancellationRequested();
+        _sourceBulks = await _bulkData.GetBulks(cancellationToken) ?? [];
 
         List<BulkItem> items = _sourceBulks.Select(BulkPhaseItemMapper.ToApplication).ToList();
         IReadOnlyDictionary<string, int> lastSourceIndexByKey =
@@ -37,8 +40,12 @@ internal sealed class BulkPhase2ResetCommandAdapter(
         return items;
     }
 
-    public async Task SaveBulks(IReadOnlyList<BulkItem> bulks)
+    public async Task SaveBulks(
+        IReadOnlyList<BulkItem> bulks,
+        CancellationToken cancellationToken = default
+    )
     {
+        cancellationToken.ThrowIfCancellationRequested();
         if (_sourceBulks is null || _bulkMap is null)
             return;
 
@@ -50,6 +57,6 @@ internal sealed class BulkPhase2ResetCommandAdapter(
             BulkPhaseItemMapper.ApplyToInfrastructure(bulk, source);
         }
 
-        await _bulkData.Save(_sourceBulks);
+        await _bulkData.Save(_sourceBulks, cancellationToken);
     }
 }

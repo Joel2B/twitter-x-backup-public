@@ -5,9 +5,13 @@ namespace Backup.Application.Bulk;
 
 public sealed class BulkVerifyService : IBulkVerifyService
 {
-    public async Task<IReadOnlyList<BulkVerifyRow>> Run(IBulkVerifyCommand command)
+    public async Task<IReadOnlyList<BulkVerifyRow>> Run(
+        IBulkVerifyCommand command,
+        CancellationToken cancellationToken = default
+    )
     {
-        IReadOnlyList<BulkItem> bulks = await command.GetBulks();
+        cancellationToken.ThrowIfCancellationRequested();
+        IReadOnlyList<BulkItem> bulks = await command.GetBulks(cancellationToken);
 
         List<BulkItem> filtered = bulks
             .Where(item => item.UserStatus == BulkUserStatus.Active && item.Phase1Order is null)
@@ -19,7 +23,11 @@ public sealed class BulkVerifyService : IBulkVerifyService
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
-        Dictionary<string, int> postCounts = await command.GetPostCountsByProfileIds(userIds);
+        cancellationToken.ThrowIfCancellationRequested();
+        Dictionary<string, int> postCounts = await command.GetPostCountsByProfileIds(
+            userIds,
+            cancellationToken
+        );
 
         return filtered
             .Select(item => new BulkVerifyRow

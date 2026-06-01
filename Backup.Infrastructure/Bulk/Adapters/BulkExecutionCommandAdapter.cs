@@ -26,7 +26,8 @@ public sealed class BulkExecutionCommandAdapter(
     public Task RunImport(CancellationToken cancellationToken) =>
         _importRunner.Run(_api, cancellationToken);
 
-    public Task RunVerify() => _verifyRunner.Run();
+    public Task RunVerify(CancellationToken cancellationToken) =>
+        _verifyRunner.Run(cancellationToken);
 
     public Task RunPhase1(CancellationToken cancellationToken) =>
         _phase1Runner.Run(_api, cancellationToken);
@@ -34,7 +35,8 @@ public sealed class BulkExecutionCommandAdapter(
     public Task RunPhase2(CancellationToken cancellationToken) =>
         _phase2Runner.Run(_api, cancellationToken);
 
-    public Task RunPhase2Reset() => _phase2ResetRunner.Run();
+    public Task RunPhase2Reset(CancellationToken cancellationToken) =>
+        _phase2ResetRunner.Run(cancellationToken);
 
-    public Task Prune() => _bulkData.Prune();
+    public Task Prune(CancellationToken cancellationToken) => _bulkData.Prune(cancellationToken);
 }

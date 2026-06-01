@@ -32,12 +32,21 @@ public class DumpDataMultiStore(
         set => Primary.Id = value;
     }
 
-    public Task<DumpData?> GetData(ApiContext context) => Primary.GetData(context);
+    public Task<DumpData?> GetData(
+        ApiContext context,
+        CancellationToken cancellationToken = default
+    ) => Primary.GetData(context, cancellationToken);
 
-    public async Task Save(string response, List<Post> posts, string cursor, ApiContext context)
+    public async Task Save(
+        string response,
+        List<Post> posts,
+        string cursor,
+        ApiContext context,
+        CancellationToken cancellationToken = default
+    )
     {
         IDumpDataStore primary = Primary;
-        await primary.Save(response, posts, cursor, context);
+        await primary.Save(response, posts, cursor, context, cancellationToken);
 
         foreach (
             IDumpDataStore store in _secondaryStoreSelectionService.SelectSecondaries(
@@ -45,9 +54,16 @@ public class DumpDataMultiStore(
                 primary
             )
         )
-            await store.Save(response, posts, cursor, context);
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await store.Save(response, posts, cursor, context, cancellationToken);
+        }
     }
 
-    public Task Flush(IPostDomainData postData, string userId, ApiContext context) =>
-        Primary.Flush(postData, userId, context);
+    public Task Flush(
+        IPostDomainData postData,
+        string userId,
+        ApiContext context,
+        CancellationToken cancellationToken = default
+    ) => Primary.Flush(postData, userId, context, cancellationToken);
 }

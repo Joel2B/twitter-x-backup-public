@@ -71,9 +71,12 @@ public class LocalDumpData(
             _config.Paths.Dumps.Paths
         );
 
-    private async Task<string> GetPathCurrent(ApiContext context)
+    private async Task<string> GetPathCurrent(
+        ApiContext context,
+        CancellationToken cancellationToken = default
+    )
     {
-        DumpsData dumpsData = await _dumps.GetData();
+        DumpsData dumpsData = await _dumps.GetData(cancellationToken);
         DumpCurrentSessionResolution resolution = _dumpLifecycleService.ResolveCurrentSession(
             dumpsData.Current,
             _dateTimeProvider.Now
@@ -82,7 +85,7 @@ public class LocalDumpData(
         if (resolution.ShouldPersist)
         {
             dumpsData.Current = resolution.Current;
-            await _dumps.Save(dumpsData);
+            await _dumps.Save(dumpsData, cancellationToken);
         }
 
         string path = _dumpPathService.BuildCurrentUserPath(
@@ -96,9 +99,12 @@ public class LocalDumpData(
         return path;
     }
 
-    private async Task<string> GetPathData(ApiContext context)
+    private async Task<string> GetPathData(
+        ApiContext context,
+        CancellationToken cancellationToken = default
+    )
     {
-        string path = await GetPathCurrent(context);
+        string path = await GetPathCurrent(context, cancellationToken);
         string fileName = _dataStoreGuardService.RequireConfiguredFileName(
             _config.Paths.Dumps.Dump.File
         );
@@ -106,23 +112,29 @@ public class LocalDumpData(
         return _dumpPathService.BuildDataFilePath(path, fileName);
     }
 
-    private async Task<string> GetPathIndex(ApiContext context)
+    private async Task<string> GetPathIndex(
+        ApiContext context,
+        CancellationToken cancellationToken = default
+    )
     {
-        string path = await GetPathCurrent(context);
+        string path = await GetPathCurrent(context, cancellationToken);
 
         return _dumpPathService.BuildIndexPath(path, Data.Index);
     }
 
-    private async Task<string> GetPathApi(ApiContext context)
+    private async Task<string> GetPathApi(
+        ApiContext context,
+        CancellationToken cancellationToken = default
+    )
     {
-        string path = await GetPathIndex(context);
+        string path = await GetPathIndex(context, cancellationToken);
 
         return _dumpPathService.BuildApiPath(path, _config.Paths.Dumps.Dump.Api.Paths);
     }
 
-    private async Task CreateData(ApiContext context)
+    private async Task CreateData(ApiContext context, CancellationToken cancellationToken = default)
     {
-        string path = await GetPathData(context);
+        string path = await GetPathData(context, cancellationToken);
 
         if (File.Exists(path))
             return;
@@ -135,16 +147,16 @@ public class LocalDumpData(
         DumpData dump = new() { Count = initialized.Count, QueryCount = initialized.QueryCount };
 
         string content = JsonConvert.SerializeObject(dump);
-        await File.WriteAllTextAsync(path, content);
+        await File.WriteAllTextAsync(path, content, cancellationToken);
     }
 
-    private async Task SetupData(ApiContext context)
+    private async Task SetupData(ApiContext context, CancellationToken cancellationToken = default)
     {
-        string path = await GetPathData(context);
+        string path = await GetPathData(context, cancellationToken);
 
         _dataStoreGuardService.EnsureFileExists(path);
 
-        string content = await File.ReadAllTextAsync(path);
+        string content = await File.ReadAllTextAsync(path, cancellationToken);
         DumpData? deserialized = JsonConvert.DeserializeObject<DumpData>(content);
         DumpData data = _dataStoreGuardService.RequireDeserialized(
             deserialized,
@@ -156,7 +168,8 @@ public class LocalDumpData(
 
     private async Task<DumpSaveExecutionResult> SetupDirectoryForSave(
         ApiContext context,
-        string cursor
+        string cursor,
+        CancellationToken cancellationToken = default
     )
     {
         DumpSaveExecutionResult result = _dumpSaveExecutionService.Execute(
@@ -170,8 +183,8 @@ public class LocalDumpData(
         Data.Index = result.DirectoryState.Index;
         Data.IndexFile = result.SaveState.IndexFile;
 
-        string indexPath = await GetPathIndex(context);
-        string apiPath = await GetPathApi(context);
+        string indexPath = await GetPathIndex(context, cancellationToken);
+        string apiPath = await GetPathApi(context, cancellationToken);
 
         Directory.CreateDirectory(indexPath);
         Directory.CreateDirectory(apiPath);
@@ -179,26 +192,39 @@ public class LocalDumpData(
         return result;
     }
 
-    public async Task<DumpData?> GetData(ApiContext context)
+    public async Task<DumpData?> GetData(
+        ApiContext context,
+        CancellationToken cancellationToken = default
+    )
     {
         if (!_dumpContextEligibilityService.ShouldLoadDumpData(context.Count))
             return null;
 
-        DumpsData dumpsData = await _dumps.GetData();
-        await CreateData(context);
-        await SetupData(context);
+        DumpsData dumpsData = await _dumps.GetData(cancellationToken);
+        await CreateData(context, cancellationToken);
+        await SetupData(context, cancellationToken);
 
         Data.Type = _dumpLifecycleService.ResolveType(dumpsData.Current, context.Id, Data.Type);
 
         return Data;
     }
 
-    public async Task Save(string response, List<Post> posts, string cursor, ApiContext context)
+    public async Task Save(
+        string response,
+        List<Post> posts,
+        string cursor,
+        ApiContext context,
+        CancellationToken cancellationToken = default
+    )
     {
-        DumpSaveExecutionResult saveExecution = await SetupDirectoryForSave(context, cursor);
+        DumpSaveExecutionResult saveExecution = await SetupDirectoryForSave(
+            context,
+            cursor,
+            cancellationToken
+        );
 
-        string indexPath = await GetPathIndex(context);
-        string apiPath = await GetPathApi(context);
+        string indexPath = await GetPathIndex(context, cancellationToken);
+        string apiPath = await GetPathApi(context, cancellationToken);
 
         string fileName = saveExecution.FileName;
 
@@ -207,29 +233,34 @@ public class LocalDumpData(
 
         string indexJson = JsonConvert.SerializeObject(posts);
 
-        await File.WriteAllTextAsync(indexFullPath, indexJson);
-        await File.WriteAllTextAsync(apiFullPath, response);
+        await File.WriteAllTextAsync(indexFullPath, indexJson, cancellationToken);
+        await File.WriteAllTextAsync(apiFullPath, response, cancellationToken);
 
         Data.Cursor = saveExecution.SaveState.Cursor;
         Data.LastUpdate = saveExecution.SaveState.LastUpdate;
 
-        await SaveData(context);
-        await Replicate(context);
+        await SaveData(context, cancellationToken);
+        await Replicate(context, cancellationToken);
     }
 
-    private async Task SaveData(ApiContext context)
+    private async Task SaveData(ApiContext context, CancellationToken cancellationToken = default)
     {
         string content = JsonConvert.SerializeObject(Data);
-        string path = await GetPathData(context);
+        string path = await GetPathData(context, cancellationToken);
 
-        await File.WriteAllTextAsync(path, content);
+        await File.WriteAllTextAsync(path, content, cancellationToken);
     }
 
-    public async Task Flush(IPostDomainData postData, string userId, ApiContext context)
+    public async Task Flush(
+        IPostDomainData postData,
+        string userId,
+        ApiContext context,
+        CancellationToken cancellationToken = default
+    )
     {
         _logger.LogInformation("dumping data");
 
-        string currentPath = await GetPathCurrent(context);
+        string currentPath = await GetPathCurrent(context, cancellationToken);
 
         List<string> paths = Directory
             .EnumerateFiles(currentPath, "*.json", SearchOption.AllDirectories)
@@ -238,7 +269,7 @@ public class LocalDumpData(
             paths,
             [.. _config.Paths.Dumps.Dump.Api.Paths]
         );
-        DumpsData dumpsData = await _dumps.GetData();
+        DumpsData dumpsData = await _dumps.GetData(cancellationToken);
         DumpFlushOrchestrationResult orchestration =
             await _dumpFlushOrchestrationService.ExecuteAsync(
                 userId,
@@ -261,16 +292,19 @@ public class LocalDumpData(
         dumpsData.Current = orchestration.SessionCloseResolution.Current;
 
         if (orchestration.SessionCloseResolution.ShouldPersist)
-            await _dumps.Save(dumpsData);
+            await _dumps.Save(dumpsData, cancellationToken);
     }
 
-    private async Task Replicate(ApiContext context)
+    private async Task Replicate(
+        ApiContext context,
+        CancellationToken cancellationToken = default
+    )
     {
         PartitionConfig primary = _partition.GetPrimary();
         IReadOnlyList<PartitionConfig> partitions =
             _secondaryStoreSelectionService.SelectSecondaries(_partition.GetPartitions(), primary);
 
-        string mainPath = await GetPathCurrent(context);
+        string mainPath = await GetPathCurrent(context, cancellationToken);
         string primaryPath = GetPath(primary);
         DumpReplicationPlan plan = _dumpReplicationPlanningService.Plan(
             primaryPath,
@@ -280,6 +314,7 @@ public class LocalDumpData(
 
         foreach (string path in plan.TargetPaths)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             UtilsPath.CopyDirectory(mainPath, path);
         }
     }

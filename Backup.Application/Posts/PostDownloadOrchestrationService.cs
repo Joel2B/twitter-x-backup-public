@@ -12,7 +12,7 @@ public class PostDownloadOrchestrationService(IPostDownloadFlowService postDownl
     {
         ArgumentNullException.ThrowIfNull(session);
 
-        PostDownloadResumePoint? resumePoint = await session.GetResumePoint();
+        PostDownloadResumePoint? resumePoint = await session.GetResumePoint(cancellationToken);
         bool hasResumePoint = resumePoint is not null;
 
         PostDownloadPlan plan = _postDownloadFlowService.CreatePlan(
@@ -52,20 +52,20 @@ public class PostDownloadOrchestrationService(IPostDownloadFlowService postDownl
                 if (decision.Outcome == PostDownloadPageOutcome.Retry)
                 {
                     attemptCount++;
-                    await Task.Delay(1 * 1000);
+                    await Task.Delay(1 * 1000, cancellationToken);
                     continue;
                 }
 
                 if (decision.Outcome == PostDownloadPageOutcome.Abort)
                 {
                     if (decision.ShouldFlushDump && hasResumePoint)
-                        await session.FlushResumeState();
+                        await session.FlushResumeState(cancellationToken);
 
                     return;
                 }
 
                 if (hasResumePoint)
-                    await session.PersistResumeState(pageResult);
+                    await session.PersistResumeState(pageResult, cancellationToken);
 
                 break;
             }
@@ -75,7 +75,7 @@ public class PostDownloadOrchestrationService(IPostDownloadFlowService postDownl
             _postDownloadFlowService.ApplySuccess(plan, pageResult.NextCursor!);
             session.SetCursor(plan.Cursor!);
 
-            await Task.Delay(5 * 1000);
+            await Task.Delay(5 * 1000, cancellationToken);
         }
     }
 }

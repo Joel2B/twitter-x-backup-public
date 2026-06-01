@@ -4,5 +4,5 @@ namespace Backup.Application.Bulk;
 
 public interface IBulkPhase2ResetService
 {
-    Task Run(IBulkPhase2ResetCommand command);
+    Task Run(IBulkPhase2ResetCommand command, CancellationToken cancellationToken = default);
 }

@@ -21,8 +21,9 @@ public sealed class BulkPhase2ResetRunner(
         bulkIdentityLastWriteWinsService;
     private readonly IBulkPhase2ResetService _bulkPhase2ResetService = bulkPhase2ResetService;
 
-    public async Task Run()
+    public async Task Run(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         _logger.LogInformation("reset phase 2");
 
         await _bulkPhase2ResetService.Run(
@@ -30,7 +31,8 @@ public sealed class BulkPhase2ResetRunner(
                 _bulkData,
                 _bulkItemIdentityService,
                 _bulkIdentityLastWriteWinsService
-            )
+            ),
+            cancellationToken
         );
     }
 }

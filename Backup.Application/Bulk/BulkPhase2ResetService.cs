@@ -5,9 +5,13 @@ namespace Backup.Application.Bulk;
 
 public sealed class BulkPhase2ResetService : IBulkPhase2ResetService
 {
-    public async Task Run(IBulkPhase2ResetCommand command)
+    public async Task Run(
+        IBulkPhase2ResetCommand command,
+        CancellationToken cancellationToken = default
+    )
     {
-        IReadOnlyList<BulkItem> data = await command.GetBulks();
+        cancellationToken.ThrowIfCancellationRequested();
+        IReadOnlyList<BulkItem> data = await command.GetBulks(cancellationToken);
 
         if (
             data.Where(item => item.UserStatus == BulkUserStatus.Active)
@@ -18,6 +22,7 @@ public sealed class BulkPhase2ResetService : IBulkPhase2ResetService
         foreach (BulkItem bulk in data)
             bulk.Phase2Order = 0;
 
-        await command.SaveBulks(data);
+        cancellationToken.ThrowIfCancellationRequested();
+        await command.SaveBulks(data, cancellationToken);
     }
 }

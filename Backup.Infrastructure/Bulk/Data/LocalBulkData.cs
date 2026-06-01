@@ -77,14 +77,15 @@ public class LocalBulkData(
             Directory.CreateDirectory(GetPath(partition));
     }
 
-    public async Task<List<BulkData>?> GetBulks()
+    public async Task<List<BulkData>?> GetBulks(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         string path = GetFileBulk();
 
         if (!File.Exists(path))
             return null;
 
-        string content = await File.ReadAllTextAsync(path);
+        string content = await File.ReadAllTextAsync(path, cancellationToken);
 
         List<BulkData>? deserialized = JsonConvert.DeserializeObject<List<BulkData>>(content);
         List<BulkData> bulks = _dataStoreGuardService.RequireDeserialized(
@@ -95,19 +96,21 @@ public class LocalBulkData(
         return bulks;
     }
 
-    public async Task Save(List<BulkData> bulks)
+    public async Task Save(List<BulkData> bulks, CancellationToken cancellationToken = default)
     {
-        await RenameFile();
+        cancellationToken.ThrowIfCancellationRequested();
+        await RenameFile(cancellationToken);
 
         string path = GetFileBulk();
         string data = JsonConvert.SerializeObject(bulks, Formatting.Indented);
 
-        await File.WriteAllTextAsync(path, data);
+        await File.WriteAllTextAsync(path, data, cancellationToken);
         Replicate();
     }
 
-    private async Task RenameFile()
+    private async Task RenameFile(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         string path = GetFileBulk();
 
         if (!File.Exists(path))
@@ -118,12 +121,13 @@ public class LocalBulkData(
             _dateTimeProvider.Now
         );
 
-        await Task.Delay(1000);
+        await Task.Delay(1000, cancellationToken);
         File.Move(path, newPath);
     }
 
-    public async Task Prune()
+    public async Task Prune(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         _logger.LogInformation("running prune");
         _logger.LogInformation("prune: {value}", _config.Tasks.Prune);
 
@@ -135,6 +139,7 @@ public class LocalBulkData(
 
         foreach (PartitionConfig partition in partitions)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             string basePath = GetPath(partition);
             string[] pathsFiles = Directory.GetFiles(
                 basePath,
@@ -164,6 +169,7 @@ public class LocalBulkData(
 
         foreach (BulkPrunePartitionExecutionPlan plan in plans)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (!partitionsById.TryGetValue(plan.PartitionId, out PartitionConfig? partition))
                 continue;
 
@@ -179,12 +185,11 @@ public class LocalBulkData(
 
             foreach (string path in plan.PathsToRemove)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 File.Delete(path);
                 _logger.LogInformation("{path} removed", Path.GetFileName(path));
             }
         }
-
-        await Task.CompletedTask;
     }
 
     public void Replicate()

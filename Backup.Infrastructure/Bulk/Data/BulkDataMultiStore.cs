@@ -29,12 +29,14 @@ public class BulkDataMultiStore(
         set => Primary.Id = value;
     }
 
-    public Task<List<BulkData>?> GetBulks() => Primary.GetBulks();
+    public Task<List<BulkData>?> GetBulks(CancellationToken cancellationToken = default) =>
+        Primary.GetBulks(cancellationToken);
 
-    public async Task Save(List<BulkData> bulks)
+    public async Task Save(List<BulkData> bulks, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         IBulkDataStore primary = Primary;
-        await primary.Save(bulks);
+        await primary.Save(bulks, cancellationToken);
 
         foreach (
             IBulkDataStore store in _secondaryStoreSelectionService.SelectSecondaries(
@@ -42,12 +44,18 @@ public class BulkDataMultiStore(
                 primary
             )
         )
-            await store.Save(bulks);
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await store.Save(bulks, cancellationToken);
+        }
     }
 
-    public async Task Prune()
+    public async Task Prune(CancellationToken cancellationToken = default)
     {
         foreach (IBulkDataStore store in _stores)
-            await store.Prune();
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await store.Prune(cancellationToken);
+        }
     }
 }

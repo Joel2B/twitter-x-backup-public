@@ -56,13 +56,13 @@ public class LocalDumpsData(
         return path;
     }
 
-    public async Task<DumpsData> GetData()
+    public async Task<DumpsData> GetData(CancellationToken cancellationToken = default)
     {
         string path = GetPathFile();
 
         _dataStoreGuardService.EnsureFileExists(path);
 
-        string content = await File.ReadAllTextAsync(path);
+        string content = await File.ReadAllTextAsync(path, cancellationToken);
         DumpsData? deserialized = JsonConvert.DeserializeObject<DumpsData>(content);
         DumpsData data = _dataStoreGuardService.RequireDeserialized(
             deserialized,
@@ -72,11 +72,11 @@ public class LocalDumpsData(
         return data;
     }
 
-    public async Task Save(DumpsData dumps)
+    public async Task Save(DumpsData dumps, CancellationToken cancellationToken = default)
     {
         string content = JsonConvert.SerializeObject(dumps);
         string path = GetPathFile();
 
-        await File.WriteAllTextAsync(path, content);
+        await File.WriteAllTextAsync(path, content, cancellationToken);
     }
 }

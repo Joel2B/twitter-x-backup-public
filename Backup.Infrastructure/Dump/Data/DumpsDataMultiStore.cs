@@ -23,12 +23,13 @@ public class DumpsDataMultiStore(
             "Only one dumps data store can be marked as default."
         );
 
-    public Task<DumpsData> GetData() => Primary.GetData();
+    public Task<DumpsData> GetData(CancellationToken cancellationToken = default) =>
+        Primary.GetData(cancellationToken);
 
-    public async Task Save(DumpsData dumps)
+    public async Task Save(DumpsData dumps, CancellationToken cancellationToken = default)
     {
         IDumpsDataStore primary = Primary;
-        await primary.Save(dumps);
+        await primary.Save(dumps, cancellationToken);
 
         foreach (
             IDumpsDataStore store in _secondaryStoreSelectionService.SelectSecondaries(
@@ -36,6 +37,9 @@ public class DumpsDataMultiStore(
                 primary
             )
         )
-            await store.Save(dumps);
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await store.Save(dumps, cancellationToken);
+        }
     }
 }

@@ -20,12 +20,14 @@ public sealed class BulkVerifyRunner(
     private readonly IBulkData _bulkData = bulkData;
     private readonly IBulkVerifyService _bulkVerifyService = bulkVerifyService;
 
-    public async Task Run()
+    public async Task Run(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         _logger.LogInformation("running verify");
 
         IReadOnlyList<BulkVerifyRow> rows = await _bulkVerifyService.Run(
-            new BulkVerifyCommandAdapter(_postData, _bulkData)
+            new BulkVerifyCommandAdapter(_postData, _bulkData),
+            cancellationToken
         );
 
         foreach (BulkVerifyRow item in rows)

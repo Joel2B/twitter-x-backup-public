@@ -38,9 +38,9 @@ public sealed class PostDownloadSessionAdapter(
             ? cursorValue?.ToString()
             : null;
 
-    public async Task<PostDownloadResumePoint?> GetResumePoint()
+    public async Task<PostDownloadResumePoint?> GetResumePoint(CancellationToken cancellationToken)
     {
-        _resumeData = await _dump.GetData(_context);
+        _resumeData = await _dump.GetData(_context, cancellationToken);
 
         return _resumeData is null
             ? null
@@ -105,7 +105,10 @@ public sealed class PostDownloadSessionAdapter(
         };
     }
 
-    public async Task PersistResumeState(PostDownloadPageResult pageResult)
+    public async Task PersistResumeState(
+        PostDownloadPageResult pageResult,
+        CancellationToken cancellationToken
+    )
     {
         if (_resumeData is null)
             return;
@@ -114,16 +117,17 @@ public sealed class PostDownloadSessionAdapter(
             pageResult.RawResponse,
             pageResult.Posts.Select(PostReplicationMapper.ToApp).ToList(),
             pageResult.NextCursor!,
-            _context
+            _context,
+            cancellationToken
         );
     }
 
-    public async Task FlushResumeState()
+    public async Task FlushResumeState(CancellationToken cancellationToken)
     {
         if (_resumeData is null)
             return;
 
-        await _dump.Flush(_postData, _context.UserId, _context);
+        await _dump.Flush(_postData, _context.UserId, _context, cancellationToken);
     }
 
     public async Task AddPosts(IReadOnlyCollection<Backup.Domain.Posts.Post> posts) =>

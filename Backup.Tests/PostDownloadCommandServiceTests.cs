@@ -103,7 +103,7 @@ public class PostDownloadCommandServiceTests
 
         public string? DefaultCursor => null;
 
-        public Task<PostDownloadResumePoint?> GetResumePoint() =>
+        public Task<PostDownloadResumePoint?> GetResumePoint(CancellationToken cancellationToken) =>
             Task.FromResult<PostDownloadResumePoint?>(null);
 
         public void ApplyPlan(PostDownloadPlan plan) { }
@@ -117,9 +117,12 @@ public class PostDownloadCommandServiceTests
         public Task<PostDownloadPageResult> FetchPage(CancellationToken cancellationToken) =>
             throw new NotImplementedException();
 
-        public Task PersistResumeState(PostDownloadPageResult pageResult) => Task.CompletedTask;
+        public Task PersistResumeState(
+            PostDownloadPageResult pageResult,
+            CancellationToken cancellationToken
+        ) => Task.CompletedTask;
 
-        public Task FlushResumeState() => Task.CompletedTask;
+        public Task FlushResumeState(CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task AddPosts(IReadOnlyCollection<Backup.Domain.Posts.Post> posts) =>
             Task.CompletedTask;

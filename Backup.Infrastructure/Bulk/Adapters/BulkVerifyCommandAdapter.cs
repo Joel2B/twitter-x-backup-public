@@ -12,13 +12,21 @@ internal sealed class BulkVerifyCommandAdapter(IPostDomainData postData, IBulkDa
     private readonly IPostDomainData _postData = postData;
     private readonly IBulkData _bulkData = bulkData;
 
-    public async Task<IReadOnlyList<BulkItem>> GetBulks()
+    public async Task<IReadOnlyList<BulkItem>> GetBulks(
+        CancellationToken cancellationToken = default
+    )
     {
-        List<BulkData> bulks = await _bulkData.GetBulks() ?? [];
+        cancellationToken.ThrowIfCancellationRequested();
+        List<BulkData> bulks = await _bulkData.GetBulks(cancellationToken) ?? [];
         return bulks.Select(BulkPhaseItemMapper.ToApplication).ToList();
     }
 
     public Task<Dictionary<string, int>> GetPostCountsByProfileIds(
-        IReadOnlyCollection<string> profileIds
-    ) => _postData.GetPostCountsByProfileIds(profileIds);
+        IReadOnlyCollection<string> profileIds,
+        CancellationToken cancellationToken = default
+    )
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return _postData.GetPostCountsByProfileIds(profileIds);
+    }
 }

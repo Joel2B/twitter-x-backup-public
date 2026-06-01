@@ -4,11 +4,17 @@ public sealed class BulkExecutionService : IBulkExecutionService
 {
     public async Task Run(IBulkExecutionCommand command, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         await command.RunImport(cancellationToken);
-        await command.RunVerify();
+        cancellationToken.ThrowIfCancellationRequested();
+        await command.RunVerify(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         await command.RunPhase1(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
         await command.RunPhase2(cancellationToken);
-        await command.RunPhase2Reset();
-        await command.Prune();
+        cancellationToken.ThrowIfCancellationRequested();
+        await command.RunPhase2Reset(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+        await command.Prune(cancellationToken);
     }
 }
