@@ -69,6 +69,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaCacheRecheckEvaluationService, MediaCacheRecheckEvaluationService>();
         services.AddScoped<IMediaCacheRecheckPlanningService, MediaCacheRecheckPlanningService>();
         services.AddScoped<IMediaCacheRecheckObservationCompositionService, MediaCacheRecheckObservationCompositionService>();
+        services.AddScoped<IMediaCacheRecheckExecutionInputService, MediaCacheRecheckExecutionInputService>();
         services.AddScoped<IMediaCacheRecheckMutationPlanningService, MediaCacheRecheckMutationPlanningService>();
         services.AddScoped<IMediaCacheRecheckMutationApplyPlanService, MediaCacheRecheckMutationApplyPlanService>();
         services.AddScoped<IMediaCacheRecheckMutationApplySelectionService, MediaCacheRecheckMutationApplySelectionService>();

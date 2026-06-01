@@ -19,7 +19,7 @@ public class LocalMediaCache(
     IPartition _partition,
     IDataStoreGuardService dataStoreGuardService,
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
-    IMediaCacheRecheckPlanningService mediaCacheRecheckPlanningService,
+    IMediaCacheRecheckExecutionInputService mediaCacheRecheckExecutionInputService,
     IMediaCacheRecheckObservationCompositionService mediaCacheRecheckObservationCompositionService,
     IMediaCacheRecheckEvaluationService mediaCacheRecheckEvaluationService,
     IMediaCacheRecheckMutationPlanningService mediaCacheRecheckMutationPlanningService,
@@ -41,8 +41,8 @@ public class LocalMediaCache(
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
     private readonly IMediaCacheDirectoryPolicyService _mediaCacheDirectoryPolicyService =
         mediaCacheDirectoryPolicyService;
-    private readonly IMediaCacheRecheckPlanningService _mediaCacheRecheckPlanningService =
-        mediaCacheRecheckPlanningService;
+    private readonly IMediaCacheRecheckExecutionInputService _mediaCacheRecheckExecutionInputService =
+        mediaCacheRecheckExecutionInputService;
     private readonly IMediaCacheRecheckObservationCompositionService _mediaCacheRecheckObservationCompositionService =
         mediaCacheRecheckObservationCompositionService;
     private readonly IMediaCacheRecheckEvaluationService _mediaCacheRecheckEvaluationService =
@@ -143,19 +143,17 @@ public class LocalMediaCache(
             }
 
             _logger.LogWarning("cache: {count}", _cache.Count);
-            recheck = _mediaCacheRecheckPlanningService.SelectPathsToRecheck(
-                _cache.Values.Select(ToStoredEntry).ToList()
-            );
         }
         else
             _logger.LogWarning("cache file not exist, {path}", file);
 
+        IReadOnlyList<MediaCacheStoredEntry> storedEntries = _cache.Values.Select(ToStoredEntry).ToList();
+        MediaCacheRecheckExecutionInput recheckInput =
+            _mediaCacheRecheckExecutionInputService.BuildInputs(storedEntries);
+        recheck = recheckInput.RecheckPaths;
+
         _logger.LogWarning("recheck: {count}", recheck.Count);
-        IReadOnlyList<MediaCacheRecheckProbeInput> probeInputs =
-            _mediaCacheRecheckObservationCompositionService.BuildProbeInputs(
-                recheck,
-                _cache.Values.Select(ToStoredEntry).ToList()
-            );
+        IReadOnlyList<MediaCacheRecheckProbeInput> probeInputs = recheckInput.ProbeInputs;
         IReadOnlyList<MediaCacheRecheckObservation> observations = BuildRecheckObservations(probeInputs);
         IReadOnlyList<MediaCacheRecheckEvaluation> evaluations = _mediaCacheRecheckEvaluationService.Evaluate(
             observations
