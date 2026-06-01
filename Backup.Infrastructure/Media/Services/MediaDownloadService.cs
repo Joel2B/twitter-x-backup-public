@@ -1,12 +1,12 @@
-using Backup.Infrastructure.Proxy.Abstractions.Core;
-using Backup.Infrastructure.Media.Abstractions.Services;
+using Backup.Application.IO;
 using Backup.Application.Media;
 using Backup.Application.Media.Models;
 using Backup.Application.Media.Ports;
-using Backup.Application.IO;
-using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Media.Models.Logging;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Services;
 using Microsoft.Extensions.Logging;
 
@@ -77,14 +77,20 @@ class MediaDownloadService(
         );
     }
 
-    public async Task<Stream> Download(MediaDownloadQueueItem item, CancellationToken cancellationToken)
+    public async Task<Stream> Download(
+        MediaDownloadQueueItem item,
+        CancellationToken cancellationToken
+    )
     {
         DataDownload data = new() { Url = item.Url, Path = item.Path };
         return await _downloader.Download(data, Data, cancellationToken);
     }
 
-    public Task Save(MediaDownloadQueueItem item, Stream stream, CancellationToken cancellationToken) =>
-        Data.Save(stream, item.Path, cancellationToken);
+    public Task Save(
+        MediaDownloadQueueItem item,
+        Stream stream,
+        CancellationToken cancellationToken
+    ) => Data.Save(stream, item.Path, cancellationToken);
 
     public void OnSuccess(MediaDownloadQueueItem item)
     {
@@ -102,14 +108,7 @@ class MediaDownloadService(
         Logs logs = new()
         {
             Id = item.DownloadId,
-            Messages =
-            [
-                new()
-                {
-                    Id = item.Url,
-                    Message = message,
-                },
-            ],
+            Messages = [new() { Id = item.Url, Message = message }],
         };
 
         _mediaLogger.Error(logs);

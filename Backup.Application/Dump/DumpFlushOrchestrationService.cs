@@ -10,7 +10,8 @@ public sealed class DumpFlushOrchestrationService(
 {
     private readonly IDumpFlushRequestFactoryService _dumpFlushRequestFactoryService =
         dumpFlushRequestFactoryService;
-    private readonly IDumpFlushExecutionService _dumpFlushExecutionService = dumpFlushExecutionService;
+    private readonly IDumpFlushExecutionService _dumpFlushExecutionService =
+        dumpFlushExecutionService;
     private readonly IDumpLifecycleService _dumpLifecycleService = dumpLifecycleService;
 
     public async Task<DumpFlushOrchestrationResult> ExecuteAsync(

@@ -26,11 +26,7 @@ public sealed class MediaBackupChunkMetadataRefreshPlanningService(
             );
 
             updates.Add(
-                new MediaBackupChunkMetadataRefreshUpdate
-                {
-                    Path = item.Path,
-                    Metadata = merged,
-                }
+                new MediaBackupChunkMetadataRefreshUpdate { Path = item.Path, Metadata = merged }
             );
         }
 

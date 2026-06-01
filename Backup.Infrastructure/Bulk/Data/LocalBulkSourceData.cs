@@ -1,10 +1,10 @@
-using Backup.Infrastructure.Core.Abstractions.Setup;
-using Backup.Infrastructure.Bulk.Abstractions.Data;
-using Backup.Application.Core;
 using Backup.Application.Bulk;
 using Backup.Application.Bulk.Models;
-using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Application.Core;
+using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Models;
+using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Bulk;
 using Microsoft.Extensions.Logging;
@@ -26,7 +26,8 @@ public class LocalBulkSourceData(
     private readonly IPartition _partition = _partition;
     private readonly ISecondaryStoreSelectionService _secondaryStoreSelectionService =
         secondaryStoreSelectionService;
-    private readonly IBulkSourceExtractionService _bulkSourceExtractionService = bulkSourceExtractionService;
+    private readonly IBulkSourceExtractionService _bulkSourceExtractionService =
+        bulkSourceExtractionService;
     private readonly IBulkSourceReplicationPolicyService _bulkSourceReplicationPolicyService =
         bulkSourceReplicationPolicyService;
 
@@ -61,8 +62,8 @@ public class LocalBulkSourceData(
         string[] files = Directory.GetFiles(path);
         List<string> lines = [];
         foreach (string file in files)
-            await foreach (string line in File.ReadLinesAsync(file))
-                lines.Add(line);
+        await foreach (string line in File.ReadLinesAsync(file))
+            lines.Add(line);
 
         IReadOnlyList<BulkSourceLinkItem> extracted = _bulkSourceExtractionService.Extract(lines);
         return [.. extracted.Select(ToSource)];
@@ -85,10 +86,8 @@ public class LocalBulkSourceData(
     private void Replicate()
     {
         PartitionConfig primary = _partition.GetPrimary();
-        IReadOnlyList<PartitionConfig> partitions = _secondaryStoreSelectionService.SelectSecondaries(
-            _partition.GetPartitions(),
-            primary
-        );
+        IReadOnlyList<PartitionConfig> partitions =
+            _secondaryStoreSelectionService.SelectSecondaries(_partition.GetPartitions(), primary);
 
         string mainPath = GetPathSources();
 

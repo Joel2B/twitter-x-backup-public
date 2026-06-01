@@ -7,7 +7,8 @@ namespace Backup.Application.Proxy;
 public sealed class ProxyHealthProbeService(IProxyHealthCheckPolicyService healthCheckPolicyService)
     : IProxyHealthProbeService
 {
-    private readonly IProxyHealthCheckPolicyService _healthCheckPolicyService = healthCheckPolicyService;
+    private readonly IProxyHealthCheckPolicyService _healthCheckPolicyService =
+        healthCheckPolicyService;
 
     public async Task<ProxyHealthProbeResult> Probe(
         ProxyCandidate candidate,

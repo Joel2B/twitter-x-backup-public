@@ -1,15 +1,15 @@
 using System.Net;
+using Backup.Application.Core;
 using Backup.Application.Proxy;
+using Backup.Application.Proxy.Models;
 using Backup.Application.Proxy.Ports;
 using Backup.Infrastructure.Core.Abstractions.Setup;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Proxy;
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Backup.Infrastructure.Proxy.Adapters;
-using Backup.Infrastructure.Models.Config;
-using Backup.Infrastructure.Models.Config.Proxy;
 using Backup.Infrastructure.Proxy.Models;
-using Backup.Application.Proxy.Models;
-using Backup.Application.Core;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Proxy.Services;
@@ -39,10 +39,7 @@ public class ProxyProvider(
     IProxyUseHandlingOrchestrationService proxyUseHandlingOrchestrationService,
     IProxyErrorHandlingOrchestrationService proxyErrorHandlingOrchestrationService,
     IDateTimeProvider dateTimeProvider
-)
-    : IProxyProvider,
-        ISetup,
-        IDisposable
+) : IProxyProvider, ISetup, IDisposable
 {
     private readonly ILogger<ProxyProvider> _logger = _logger;
     private readonly AppConfig _config = _config;
@@ -94,9 +91,7 @@ public class ProxyProvider(
             return;
         }
 
-        List<ProxyData> stored = (await _data.GetAllAsDictionary() ?? [])
-            .Values
-            .ToList();
+        List<ProxyData> stored = (await _data.GetAllAsDictionary() ?? []).Values.ToList();
         ProxySetupExecutionResult setup = _proxySetupExecutionService.Execute(
             stored.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
             await LoadCandidatesFromProviders()
@@ -123,12 +118,12 @@ public class ProxyProvider(
         HashSet<string> proxiesAdded = [.. _proxies.Select(o => GetProxyKey(o.Proxy))];
         List<ProxyData> proxiesStorage = await _data.GetAll() ?? [];
         ProxyHealthAcceptanceResult acceptance = await _proxyCheckExecutionService.ExecuteAsync(
-                proxiesStorage.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
-                await LoadCandidatesFromProviders(),
-                proxiesAdded,
-                _proxyHealthProbePort,
-                flushEvery: 10
-            );
+            proxiesStorage.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
+            await LoadCandidatesFromProviders(),
+            proxiesAdded,
+            _proxyHealthProbePort,
+            flushEvery: 10
+        );
 
         foreach (string error in acceptance.ProbeErrors)
             _logger.LogError("Error: {error}", error);
@@ -282,11 +277,7 @@ public class ProxyProvider(
             if (!outcome.ShouldApplyRuntimeRecord)
                 return;
 
-            _proxyRuntimeRecordMapper.ApplyRuntimeRecord(
-                proxy,
-                runtimeRecord,
-                outcome.DisabledAt
-            );
+            _proxyRuntimeRecordMapper.ApplyRuntimeRecord(proxy, runtimeRecord, outcome.DisabledAt);
 
             if (outcome.WasDisabled)
             {
@@ -302,8 +293,8 @@ public class ProxyProvider(
 
     private async Task<IReadOnlyList<ProxyCandidate>> LoadCandidatesFromProviders()
     {
-        IReadOnlyList<ProxyLoadProviderDefinition> providers = _config.Proxy.Providers
-            .Select(ToProviderDefinition)
+        IReadOnlyList<ProxyLoadProviderDefinition> providers = _config
+            .Proxy.Providers.Select(ToProviderDefinition)
             .ToList();
         IProxyResourceLoadPort port = new ProxyResourceLoadPortAdapter(
             _logger,
@@ -319,8 +310,8 @@ public class ProxyProvider(
         {
             ProviderType = provider.Type,
             ProviderFormat = provider.Format,
-            Resources = provider.Resources
-                .Select(resource => new ProxyLoadResourceDefinition
+            Resources = provider
+                .Resources.Select(resource => new ProxyLoadResourceDefinition
                 {
                     ResourceType = resource.Type,
                     ResourceValue = resource.Value,

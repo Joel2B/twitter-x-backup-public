@@ -126,15 +126,17 @@ public class PostRecoveryCommandServiceTests
 
         public bool CanDownloadTweetDetail => true;
 
-        public Task<IReadOnlyCollection<Backup.Application.Posts.Models.PostRecoveryLog>> GetRecoveryLogs()
-            => throw new NotImplementedException();
+        public Task<
+            IReadOnlyCollection<Backup.Application.Posts.Models.PostRecoveryLog>
+        > GetRecoveryLogs() => throw new NotImplementedException();
 
-        public Task<Post?> DownloadPost(string postId, CancellationToken cancellationToken)
-            => throw new NotImplementedException();
+        public Task<Post?> DownloadPost(string postId, CancellationToken cancellationToken) =>
+            throw new NotImplementedException();
 
         public Task MarkRecovered(string postId) => Task.CompletedTask;
 
-        public Task DelayBetweenDownloads(CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task DelayBetweenDownloads(CancellationToken cancellationToken) =>
+            Task.CompletedTask;
 
         public void OnRecoveryDisabled() { }
 

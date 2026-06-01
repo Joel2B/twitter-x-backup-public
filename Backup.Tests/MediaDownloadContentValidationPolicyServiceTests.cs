@@ -11,8 +11,8 @@ public class MediaDownloadContentValidationPolicyServiceTests
     [Fact]
     public void EnsureSuccessStatusCode_Throws_WhenNotOk()
     {
-        SystemException ex = Assert.Throws<SystemException>(() =>
-            _sut.EnsureSuccessStatusCode(HttpStatusCode.NotFound)
+        SystemException ex = Assert.Throws<SystemException>(
+            () => _sut.EnsureSuccessStatusCode(HttpStatusCode.NotFound)
         );
         Assert.Equal("NotFound", ex.Message);
     }
@@ -51,11 +51,20 @@ public class MediaDownloadContentValidationPolicyServiceTests
         public override bool CanSeek => false;
         public override bool CanWrite => false;
         public override long Length => 0;
-        public override long Position { get => 0; set { } }
+        public override long Position
+        {
+            get => 0;
+            set { }
+        }
+
         public override void Flush() { }
+
         public override int Read(byte[] buffer, int offset, int count) => 0;
+
         public override long Seek(long offset, SeekOrigin origin) => 0;
+
         public override void SetLength(long value) { }
+
         public override void Write(byte[] buffer, int offset, int count) { }
     }
 }

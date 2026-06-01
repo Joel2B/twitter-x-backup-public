@@ -12,10 +12,7 @@ public class PostRecoverySelectionServiceTests
     {
         PostRecoverySelection selection = _service.Select(
             recoveryEnabled: false,
-            logs:
-            [
-                new PostRecoveryLog { PostId = "1", Messages = ["NotFound"] },
-            ],
+            logs: [new PostRecoveryLog { PostId = "1", Messages = ["NotFound"] }],
             maxPosts: 10
         );
 

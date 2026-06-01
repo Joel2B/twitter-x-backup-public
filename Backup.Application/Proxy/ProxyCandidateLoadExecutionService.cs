@@ -7,7 +7,8 @@ public sealed class ProxyCandidateLoadExecutionService(
     IProxyCandidateLoadService proxyCandidateLoadService
 ) : IProxyCandidateLoadExecutionService
 {
-    private readonly IProxyCandidateLoadService _proxyCandidateLoadService = proxyCandidateLoadService;
+    private readonly IProxyCandidateLoadService _proxyCandidateLoadService =
+        proxyCandidateLoadService;
 
     public Task<IReadOnlyList<ProxyCandidate>> ExecuteAsync(
         IReadOnlyList<ProxyLoadProviderDefinition> providers,

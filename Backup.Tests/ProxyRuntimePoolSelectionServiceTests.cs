@@ -12,10 +12,30 @@ public class ProxyRuntimePoolSelectionServiceTests
         ProxyRuntimePoolSelectionService sut = new(policy);
         ProxyRuntimePoolCandidate[] candidates =
         [
-            new() { Key = "a", IsActive = true, ConnectionCount = 1 },
-            new() { Key = "b", IsActive = true, ConnectionCount = 0 },
-            new() { Key = "c", IsActive = false, ConnectionCount = 2 },
-            new() { Key = "d", IsActive = false, ConnectionCount = 0 },
+            new()
+            {
+                Key = "a",
+                IsActive = true,
+                ConnectionCount = 1,
+            },
+            new()
+            {
+                Key = "b",
+                IsActive = true,
+                ConnectionCount = 0,
+            },
+            new()
+            {
+                Key = "c",
+                IsActive = false,
+                ConnectionCount = 2,
+            },
+            new()
+            {
+                Key = "d",
+                IsActive = false,
+                ConnectionCount = 0,
+            },
         ];
 
         IReadOnlySet<string> keys = sut.SelectKeys(candidates);

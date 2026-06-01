@@ -1,13 +1,13 @@
 using System.Collections.Concurrent;
 using Backup.Application.Core;
-using Backup.Infrastructure.Core.Abstractions.Setup;
-using Backup.Infrastructure.Core.Abstractions.Partition;
-using Backup.Application.Media;
 using Backup.Application.IO;
+using Backup.Application.Media;
+using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Media.Abstractions.Services;
+using Backup.Infrastructure.Media.Models.Logging;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
-using Backup.Infrastructure.Media.Models.Logging;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -71,7 +71,10 @@ public class LocalMediaLogger(
         _mediaStoragePathService.BuildMediaLogPath(GetPath(), _config.Downloads.Media.Log.Paths);
 
     private string GetPathError() =>
-        _mediaStoragePathService.BuildMediaErrorPath(GetPath(), _config.Downloads.Media.Error.Paths);
+        _mediaStoragePathService.BuildMediaErrorPath(
+            GetPath(),
+            _config.Downloads.Media.Error.Paths
+        );
 
     private async Task SaveFile(List<Logs> logs, string path)
     {

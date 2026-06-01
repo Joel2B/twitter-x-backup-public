@@ -5,5 +5,11 @@ namespace Backup.Application.Posts;
 
 public interface IPostMergeService
 {
-    PostMergeOutcome Merge(string userId, string origin, Post current, Post incoming, MergeOptions options);
+    PostMergeOutcome Merge(
+        string userId,
+        string origin,
+        Post current,
+        Post incoming,
+        MergeOptions options
+    );
 }

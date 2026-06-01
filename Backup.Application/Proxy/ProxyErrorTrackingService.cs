@@ -2,11 +2,11 @@ using Backup.Application.Proxy.Models;
 
 namespace Backup.Application.Proxy;
 
-public sealed class ProxyErrorTrackingService(
-    IProxyErrorDecisionService proxyErrorDecisionService
-) : IProxyErrorTrackingService
+public sealed class ProxyErrorTrackingService(IProxyErrorDecisionService proxyErrorDecisionService)
+    : IProxyErrorTrackingService
 {
-    private readonly IProxyErrorDecisionService _proxyErrorDecisionService = proxyErrorDecisionService;
+    private readonly IProxyErrorDecisionService _proxyErrorDecisionService =
+        proxyErrorDecisionService;
 
     public ProxyErrorTrackingResult RegisterError(
         ProxyRuntimeRecord proxy,
@@ -22,7 +22,9 @@ public sealed class ProxyErrorTrackingService(
             errorsToInactiveThreshold
         );
 
-        ProxyRuntimeError? existing = proxy.Errors.LastOrDefault(item => item.Short == shortMessage);
+        ProxyRuntimeError? existing = proxy.Errors.LastOrDefault(item =>
+            item.Short == shortMessage
+        );
         if (decision.IsNewMessage)
             proxy.Errors.Add(
                 new ProxyRuntimeError

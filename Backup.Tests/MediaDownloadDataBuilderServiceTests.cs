@@ -25,7 +25,11 @@ public class MediaDownloadDataBuilderServiceTests
 
         Assert.Contains("format=jpg", data.Url, StringComparison.Ordinal);
         Assert.Contains("name=orig", data.Url, StringComparison.Ordinal);
-        Assert.EndsWith(Path.Combine("jpg", "size", "orig.jpg"), data.Path, StringComparison.Ordinal);
+        Assert.EndsWith(
+            Path.Combine("jpg", "size", "orig.jpg"),
+            data.Path,
+            StringComparison.Ordinal
+        );
     }
 
     [Fact]
@@ -51,19 +55,20 @@ public class MediaDownloadDataBuilderServiceTests
     [Fact]
     public void Build_Throws_WhenUrlInvalid()
     {
-        Exception ex = Assert.Throws<Exception>(() =>
-            _sut.Build(
-                new MediaDownloadDataBuildInput
-                {
-                    PostId = "p1",
-                    Url = "not-valid-url",
-                    MediaType = "photo",
-                    MidPath = [],
-                    FormatType = "jpg",
-                    ResolutionType = "size",
-                    Name = "orig",
-                }
-            )
+        Exception ex = Assert.Throws<Exception>(
+            () =>
+                _sut.Build(
+                    new MediaDownloadDataBuildInput
+                    {
+                        PostId = "p1",
+                        Url = "not-valid-url",
+                        MediaType = "photo",
+                        MidPath = [],
+                        FormatType = "jpg",
+                        ResolutionType = "size",
+                        Name = "orig",
+                    }
+                )
         );
 
         Assert.Contains("invalid absolute URL", ex.Message, StringComparison.Ordinal);

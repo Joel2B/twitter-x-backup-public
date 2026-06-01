@@ -49,8 +49,8 @@ public sealed class PostStoreCountsAggregationService(
             if (post.Changes.Count == 0)
                 continue;
 
-            IReadOnlyList<Models.PostComputedChange> computedChanges = _postChangeComputationService
-                .Compute(post);
+            IReadOnlyList<Models.PostComputedChange> computedChanges =
+                _postChangeComputationService.Compute(post);
 
             changes += computedChanges.Count;
             changeFields += computedChanges.Sum(change => change.Fields.Count);
@@ -59,7 +59,10 @@ public sealed class PostStoreCountsAggregationService(
         return new PostStoreCounts
         {
             Posts = posts.Count,
-            Profiles = posts.Select(post => post.Profile.Id).Distinct(StringComparer.Ordinal).Count(),
+            Profiles = posts
+                .Select(post => post.Profile.Id)
+                .Distinct(StringComparer.Ordinal)
+                .Count(),
             Hashtags = hashtags,
             Medias = medias,
             MediaVariants = mediaVariants,

@@ -11,13 +11,33 @@ public class ProxyCandidateMergeServiceTests
         ProxyCandidateMergeService sut = new();
         ProxyCandidate[] primary =
         [
-            new() { Ip = "1.1.1.1", Port = "80", Protocol = "http" },
-            new() { Ip = "2.2.2.2", Port = "80", Protocol = "http" },
+            new()
+            {
+                Ip = "1.1.1.1",
+                Port = "80",
+                Protocol = "http",
+            },
+            new()
+            {
+                Ip = "2.2.2.2",
+                Port = "80",
+                Protocol = "http",
+            },
         ];
         ProxyCandidate[] secondary =
         [
-            new() { Ip = "2.2.2.2", Port = "80", Protocol = "http" },
-            new() { Ip = "3.3.3.3", Port = "443", Protocol = "https" },
+            new()
+            {
+                Ip = "2.2.2.2",
+                Port = "80",
+                Protocol = "http",
+            },
+            new()
+            {
+                Ip = "3.3.3.3",
+                Port = "443",
+                Protocol = "https",
+            },
         ];
 
         IReadOnlyList<ProxyCandidate> result = sut.MergeDistinct(primary, secondary);

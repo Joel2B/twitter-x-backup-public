@@ -49,5 +49,10 @@ public class PostProjectionComposer : IPostProjectionComposer
         };
 
     private static PostVariant ComposeVariant(ParsedPostVariantProjection source) =>
-        new() { ContentType = source.ContentType, Bitrate = source.Bitrate, Url = source.Url };
+        new()
+        {
+            ContentType = source.ContentType,
+            Bitrate = source.Bitrate,
+            Url = source.Url,
+        };
 }

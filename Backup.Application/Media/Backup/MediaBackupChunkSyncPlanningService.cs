@@ -15,7 +15,9 @@ public sealed class MediaBackupChunkSyncPlanningService : IMediaBackupChunkSyncP
 
         foreach (MediaBackupChunkPathsState chunk in chunks)
         {
-            List<string> pathsToRemove = chunk.Paths.Where(path => intersection.Contains(path)).ToList();
+            List<string> pathsToRemove = chunk
+                .Paths.Where(path => intersection.Contains(path))
+                .ToList();
 
             if (pathsToRemove.Count == 0)
                 continue;

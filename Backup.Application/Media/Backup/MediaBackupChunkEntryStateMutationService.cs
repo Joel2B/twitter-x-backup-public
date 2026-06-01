@@ -8,7 +8,8 @@ public sealed class MediaBackupChunkEntryStateMutationService
     public IReadOnlyList<MediaBackupChunkEntryState> BuildStates(
         IEnumerable<MediaBackupChunkEntryMutationInput> items
     ) =>
-        items.Select(item => new MediaBackupChunkEntryState
+        items
+            .Select(item => new MediaBackupChunkEntryState
             {
                 Path = item.Path,
                 Hash = item.Hash,
@@ -27,7 +28,8 @@ public sealed class MediaBackupChunkEntryStateMutationService
             StringComparer.Ordinal
         );
 
-        return items.Select(item =>
+        return items
+            .Select(item =>
             {
                 if (!byPath.TryGetValue(item.Path, out MediaBackupChunkEntryState? state))
                     return item;

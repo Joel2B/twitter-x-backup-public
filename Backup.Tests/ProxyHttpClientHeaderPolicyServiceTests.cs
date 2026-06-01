@@ -4,7 +4,8 @@ namespace Backup.Tests;
 
 public class ProxyHttpClientHeaderPolicyServiceTests
 {
-    private readonly IProxyHttpClientHeaderPolicyService _sut = new ProxyHttpClientHeaderPolicyService();
+    private readonly IProxyHttpClientHeaderPolicyService _sut =
+        new ProxyHttpClientHeaderPolicyService();
 
     [Fact]
     public void Apply_SetsExpectedHeaders()

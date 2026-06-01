@@ -6,7 +6,8 @@ using Backup.Infrastructure.Models.Config.Request;
 
 namespace Backup.Infrastructure.Bulk.Adapters;
 
-public sealed class BulkRequestFactory(IApiRequestBuildService apiRequestBuildService) : IBulkRequestFactory
+public sealed class BulkRequestFactory(IApiRequestBuildService apiRequestBuildService)
+    : IBulkRequestFactory
 {
     private readonly IApiRequestBuildService _apiRequestBuildService = apiRequestBuildService;
 

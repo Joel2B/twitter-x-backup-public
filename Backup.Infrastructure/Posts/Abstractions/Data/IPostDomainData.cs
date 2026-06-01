@@ -15,7 +15,11 @@ public interface IPostDomainData
 
     Task AddPosts(string userId, string origin, List<Post> incoming, MergeOptions? options = null);
 
-    Task<int> MarkDeletedExcept(string userId, string origin, IReadOnlyCollection<string> keepPostIds);
+    Task<int> MarkDeletedExcept(
+        string userId,
+        string origin,
+        IReadOnlyCollection<string> keepPostIds
+    );
 
     Task Reset(List<Post> posts);
     Task UpsertPosts(List<Post> posts);

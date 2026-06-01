@@ -1,7 +1,7 @@
 using Backup.Application.Posts.Ports;
+using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Abstractions.Services;
-using Backup.Infrastructure.Models.Config.Api;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Adapters;
@@ -19,12 +19,21 @@ public sealed class PostDownloadCommandAdapter(
     public Task<int> GetLoadedCount() => postData.GetCount();
 
     public IPostDownloadSession CreateSession() =>
-        new PostDownloadSessionAdapter(logger, downloader, postLogger, parser, dump, postData, context);
+        new PostDownloadSessionAdapter(
+            logger,
+            downloader,
+            postLogger,
+            parser,
+            dump,
+            postData,
+            context
+        );
 
     public void OnLoadedCount(int count) =>
         logger.LogInformation("download loaded {count} posts", count);
 
-    public void OnError(Exception exception) => logger.LogError("Error: {error}", exception.Message);
+    public void OnError(Exception exception) =>
+        logger.LogError("Error: {error}", exception.Message);
 
     public Task PruneLogs() => postLogger.Prune();
 

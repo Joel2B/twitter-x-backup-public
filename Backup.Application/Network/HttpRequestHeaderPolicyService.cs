@@ -2,7 +2,10 @@ namespace Backup.Application.Network;
 
 public sealed class HttpRequestHeaderPolicyService : IHttpRequestHeaderPolicyService
 {
-    public void ApplyHeaders(HttpRequestMessage requestHttp, IReadOnlyDictionary<string, string> headers)
+    public void ApplyHeaders(
+        HttpRequestMessage requestHttp,
+        IReadOnlyDictionary<string, string> headers
+    )
     {
         foreach ((string rawKey, string rawValue) in headers)
         {

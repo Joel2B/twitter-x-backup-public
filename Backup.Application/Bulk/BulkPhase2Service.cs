@@ -15,8 +15,9 @@ public sealed class BulkPhase2Service : IBulkPhase2Service
     {
         IReadOnlyList<BulkItem> data = await command.GetBulks();
 
-        List<BulkItem> bulks = data
-            .Where(item => item.UserStatus == BulkUserStatus.Active && item.Phase2Order is not null)
+        List<BulkItem> bulks = data.Where(item =>
+                item.UserStatus == BulkUserStatus.Active && item.Phase2Order is not null
+            )
             .Take(options.UsersPerPhase2)
             .ToList();
 

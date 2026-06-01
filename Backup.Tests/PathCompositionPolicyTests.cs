@@ -9,7 +9,10 @@ public class PathCompositionPolicyTests
     {
         string baseDirectory = @"C:\base";
 
-        string result = PathCompositionPolicy.ComposePath(["#Abs", "config", "Data.json"], baseDirectory);
+        string result = PathCompositionPolicy.ComposePath(
+            ["#Abs", "config", "Data.json"],
+            baseDirectory
+        );
 
         Assert.Equal(Path.Combine(baseDirectory, "config", "Data.json"), result);
     }

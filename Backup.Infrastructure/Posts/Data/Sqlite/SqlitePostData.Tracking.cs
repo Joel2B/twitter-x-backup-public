@@ -5,7 +5,10 @@ namespace Backup.Infrastructure.Posts.Data.Sqlite;
 
 public partial class SqlitePostData
 {
-    private static void DetachTrackedPostGraphByIds(PostsDbContext db, IReadOnlyCollection<string> ids)
+    private static void DetachTrackedPostGraphByIds(
+        PostsDbContext db,
+        IReadOnlyCollection<string> ids
+    )
     {
         if (ids.Count == 0)
             return;
@@ -35,7 +38,10 @@ public partial class SqlitePostData
             .ToHashSet();
 
         if (changeIds.Count > 0)
-            DetachEntries<PostChangeFieldEntity>(db, entry => changeIds.Contains(entry.Entity.ChangeId));
+            DetachEntries<PostChangeFieldEntity>(
+                db,
+                entry => changeIds.Contains(entry.Entity.ChangeId)
+            );
 
         DetachEntries<PostHashtagEntity>(db, entry => idSet.Contains(entry.Entity.PostId));
         DetachEntries<PostMediaEntity>(db, entry => idSet.Contains(entry.Entity.PostId));
@@ -51,11 +57,19 @@ public partial class SqlitePostData
     )
         where TEntity : class
     {
-        foreach (EntityEntry<TEntity> entry in db.ChangeTracker.Entries<TEntity>().Where(predicate).ToList())
+        foreach (
+            EntityEntry<TEntity> entry in db
+                .ChangeTracker.Entries<TEntity>()
+                .Where(predicate)
+                .ToList()
+        )
             entry.State = EntityState.Detached;
     }
 
-    private static string BuildTrackedGraphSummary(PostsDbContext db, IReadOnlyCollection<string> ids)
+    private static string BuildTrackedGraphSummary(
+        PostsDbContext db,
+        IReadOnlyCollection<string> ids
+    )
     {
         HashSet<string> idSet = ids.Where(id => !string.IsNullOrWhiteSpace(id))
             .ToHashSet(StringComparer.Ordinal);
@@ -131,7 +145,8 @@ public partial class SqlitePostData
 
     private static string JoinSample(IEnumerable<string> values, int max = 20)
     {
-        List<string> list = values.Where(value => !string.IsNullOrWhiteSpace(value))
+        List<string> list = values
+            .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.Ordinal)
             .OrderBy(value => value, StringComparer.Ordinal)
             .Take(max)

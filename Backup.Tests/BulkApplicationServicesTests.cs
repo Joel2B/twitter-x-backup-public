@@ -101,18 +101,20 @@ public class BulkApplicationServicesTests
         FakeBulkImportCommand command = new();
 
         command.Sources.Add(new BulkSourceItem { UserName = "keep", Type = BulkSourceType.Media });
-        command.Sources.Add(new BulkSourceItem { UserName = "skip-status", Type = BulkSourceType.Status });
-        command.Sources.Add(new BulkSourceItem { UserName = "existing", Type = BulkSourceType.Media });
+        command.Sources.Add(
+            new BulkSourceItem { UserName = "skip-status", Type = BulkSourceType.Status }
+        );
+        command.Sources.Add(
+            new BulkSourceItem { UserName = "existing", Type = BulkSourceType.Media }
+        );
 
-        command.Bulks.Add(new BulkItem { UserName = "existing", UserStatus = BulkUserStatus.Active });
+        command.Bulks.Add(
+            new BulkItem { UserName = "existing", UserStatus = BulkUserStatus.Active }
+        );
         command.Verify.Enqueue(true);
         command.UsersByName["keep"] = new ParseUser(new PostUser { Id = "u-keep", MediaCount = 7 });
 
-        await sut.Run(
-            command,
-            new BulkImportOptions { UsersPerCycle = 0 },
-            CancellationToken.None
-        );
+        await sut.Run(command, new BulkImportOptions { UsersPerCycle = 0 }, CancellationToken.None);
 
         Assert.Equal(2, command.Bulks.Count);
         BulkItem added = Assert.Single(command.Bulks, item => item.UserName == "keep");
@@ -171,7 +173,12 @@ public class BulkApplicationServicesTests
         new()
         {
             Id = id,
-            Profile = new PostProfile { Id = "profile-1", UserName = "user1", Count = new PostCount { Media = mediaCount } },
+            Profile = new PostProfile
+            {
+                Id = "profile-1",
+                UserName = "user1",
+                Count = new PostCount { Media = mediaCount },
+            },
             Description = "desc",
             Retweeted = false,
             Favorited = false,
@@ -189,7 +196,10 @@ public class BulkApplicationServicesTests
         public int SaveBulksCalls { get; private set; }
 
         public Task<int> GetPostCount() => Task.FromResult(0);
-        public Task<IReadOnlyList<BulkItem>> GetBulks() => Task.FromResult<IReadOnlyList<BulkItem>>(Bulks);
+
+        public Task<IReadOnlyList<BulkItem>> GetBulks() =>
+            Task.FromResult<IReadOnlyList<BulkItem>>(Bulks);
+
         public Task SaveBulks(IReadOnlyList<BulkItem> bulks)
         {
             SaveBulksCalls++;
@@ -228,7 +238,8 @@ public class BulkApplicationServicesTests
         public int SavePostsCalls { get; private set; }
         public int SaveBulksCalls { get; private set; }
 
-        public Task<IReadOnlyList<BulkItem>> GetBulks() => Task.FromResult<IReadOnlyList<BulkItem>>(Bulks);
+        public Task<IReadOnlyList<BulkItem>> GetBulks() =>
+            Task.FromResult<IReadOnlyList<BulkItem>>(Bulks);
 
         public Task SaveBulks(IReadOnlyList<BulkItem> bulks)
         {
@@ -267,9 +278,11 @@ public class BulkApplicationServicesTests
         public Dictionary<string, ParseUser?> UsersByName { get; } = [];
         public int SaveBulksCalls { get; private set; }
 
-        public Task<IReadOnlyList<BulkSourceItem>> GetSources() => Task.FromResult<IReadOnlyList<BulkSourceItem>>(Sources);
+        public Task<IReadOnlyList<BulkSourceItem>> GetSources() =>
+            Task.FromResult<IReadOnlyList<BulkSourceItem>>(Sources);
 
-        public Task<IReadOnlyList<BulkItem>> GetBulks() => Task.FromResult<IReadOnlyList<BulkItem>>(Bulks);
+        public Task<IReadOnlyList<BulkItem>> GetBulks() =>
+            Task.FromResult<IReadOnlyList<BulkItem>>(Bulks);
 
         public Task SaveBulks(IReadOnlyList<BulkItem> bulks)
         {
@@ -282,8 +295,10 @@ public class BulkApplicationServicesTests
 
         public Task<bool> VerifyApi() => Task.FromResult(Verify.Count == 0 || Verify.Dequeue());
 
-        public Task<ParseUser?> GetUserByUser(string userName, CancellationToken cancellationToken) =>
-            Task.FromResult(UsersByName.TryGetValue(userName, out ParseUser? user) ? user : null);
+        public Task<ParseUser?> GetUserByUser(
+            string userName,
+            CancellationToken cancellationToken
+        ) => Task.FromResult(UsersByName.TryGetValue(userName, out ParseUser? user) ? user : null);
     }
 
     private sealed class FakeBulkVerifyCommand : IBulkVerifyCommand
@@ -291,10 +306,17 @@ public class BulkApplicationServicesTests
         public List<BulkItem> Bulks { get; } = [];
         public Dictionary<string, int> PostCounts { get; } = [];
 
-        public Task<IReadOnlyList<BulkItem>> GetBulks() => Task.FromResult<IReadOnlyList<BulkItem>>(Bulks);
+        public Task<IReadOnlyList<BulkItem>> GetBulks() =>
+            Task.FromResult<IReadOnlyList<BulkItem>>(Bulks);
 
-        public Task<Dictionary<string, int>> GetPostCountsByProfileIds(IReadOnlyCollection<string> profileIds) =>
-            Task.FromResult(PostCounts.Where(kvp => profileIds.Contains(kvp.Key)).ToDictionary(kvp => kvp.Key, kvp => kvp.Value));
+        public Task<Dictionary<string, int>> GetPostCountsByProfileIds(
+            IReadOnlyCollection<string> profileIds
+        ) =>
+            Task.FromResult(
+                PostCounts
+                    .Where(kvp => profileIds.Contains(kvp.Key))
+                    .ToDictionary(kvp => kvp.Key, kvp => kvp.Value)
+            );
     }
 
     private sealed class FakeBulkPhase2ResetCommand : IBulkPhase2ResetCommand
@@ -302,7 +324,8 @@ public class BulkApplicationServicesTests
         public List<BulkItem> Bulks { get; } = [];
         public int SaveBulksCalls { get; private set; }
 
-        public Task<IReadOnlyList<BulkItem>> GetBulks() => Task.FromResult<IReadOnlyList<BulkItem>>(Bulks);
+        public Task<IReadOnlyList<BulkItem>> GetBulks() =>
+            Task.FromResult<IReadOnlyList<BulkItem>>(Bulks);
 
         public Task SaveBulks(IReadOnlyList<BulkItem> bulks)
         {

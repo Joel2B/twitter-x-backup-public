@@ -8,7 +8,8 @@ public sealed class MediaBackupPipelineStepCompositionService
     public IReadOnlyList<MediaBackupPhaseStep> BuildPhaseSteps(
         IEnumerable<MediaBackupPipelineStepDescriptorInput> steps
     ) =>
-        steps.Select(step => new MediaBackupPhaseStep
+        steps
+            .Select(step => new MediaBackupPhaseStep
             {
                 StepId = step.StepId,
                 Order = step.Order,

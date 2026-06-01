@@ -1,5 +1,5 @@
-using Backup.Application.Posts;
 using Backup.Application.Network;
+using Backup.Application.Posts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection.Features.Posts;
@@ -37,9 +37,18 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostHistoryPrunePolicyService, PostHistoryPrunePolicyService>();
         services.AddScoped<IPostHistoryPrunePlanningService, PostHistoryPrunePlanningService>();
         services.AddScoped<IPostHistoryLatestSelectionService, PostHistoryLatestSelectionService>();
-        services.AddScoped<IPostSnapshotVerificationPlanningService, PostSnapshotVerificationPlanningService>();
-        services.AddScoped<IPostSnapshotVerificationExecutionService, PostSnapshotVerificationExecutionService>();
-        services.AddScoped<IPostDataReplicationPlanningService, PostDataReplicationPlanningService>();
+        services.AddScoped<
+            IPostSnapshotVerificationPlanningService,
+            PostSnapshotVerificationPlanningService
+        >();
+        services.AddScoped<
+            IPostSnapshotVerificationExecutionService,
+            PostSnapshotVerificationExecutionService
+        >();
+        services.AddScoped<
+            IPostDataReplicationPlanningService,
+            PostDataReplicationPlanningService
+        >();
         services.AddScoped<IPostSnapshotSizeGuardService, PostSnapshotSizeGuardService>();
         services.AddScoped<IPostProjectionComposer, PostProjectionComposer>();
         services.AddScoped<IPostIndexingService, PostIndexingService>();
@@ -59,8 +68,14 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostMetaReconciliationService, PostMetaReconciliationService>();
         services.AddScoped<IPostTableProjectionService, PostTableProjectionService>();
         services.AddScoped<IPostTableMaterializationService, PostTableMaterializationService>();
-        services.AddScoped<IPostProfileCountAggregationService, PostProfileCountAggregationService>();
-        services.AddScoped<IPostMetaConsistencyValidationService, PostMetaConsistencyValidationService>();
+        services.AddScoped<
+            IPostProfileCountAggregationService,
+            PostProfileCountAggregationService
+        >();
+        services.AddScoped<
+            IPostMetaConsistencyValidationService,
+            PostMetaConsistencyValidationService
+        >();
         services.AddScoped<IPostHistoryPathExtractionService, PostHistoryPathExtractionService>();
         return services;
     }

@@ -9,8 +9,8 @@ public sealed class MediaCacheEntryStateFactoryService : IMediaCacheEntryStateFa
         int partitionId,
         long? streamSizeBytes = null,
         long? fileSizeBytes = null
-    )
-        => new()
+    ) =>
+        new()
         {
             Path = normalizedPath,
             PartitionId = partitionId,

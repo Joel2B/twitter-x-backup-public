@@ -6,10 +6,12 @@ public sealed class MediaBackupDirectPathScanOrchestrationService(
     IMediaBackupDirectPathCandidateDecisionService mediaBackupDirectPathCandidateDecisionService
 ) : IMediaBackupDirectPathScanOrchestrationService
 {
-    private readonly IMediaBackupDirectPathCandidateDecisionService
-        _mediaBackupDirectPathCandidateDecisionService = mediaBackupDirectPathCandidateDecisionService;
+    private readonly IMediaBackupDirectPathCandidateDecisionService _mediaBackupDirectPathCandidateDecisionService =
+        mediaBackupDirectPathCandidateDecisionService;
 
-    public MediaBackupDirectPathScanResult Evaluate(MediaBackupDirectPathCandidateObservation observation)
+    public MediaBackupDirectPathScanResult Evaluate(
+        MediaBackupDirectPathCandidateObservation observation
+    )
     {
         MediaBackupDirectPathCandidateDecision decision =
             _mediaBackupDirectPathCandidateDecisionService.Decide(observation);

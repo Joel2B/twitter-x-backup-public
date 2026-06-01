@@ -11,7 +11,11 @@ internal sealed class MediaBackupDuplicatePhase : IMediaBackupDuplicatePhase
     {
         int storageCount = 0;
 
-        foreach (KeyValuePair<int, Backup.Infrastructure.Media.Models.Backup.Chunk> kvp in runtime.Context.Chunks)
+        foreach (
+            KeyValuePair<int, Backup.Infrastructure.Media.Models.Backup.Chunk> kvp in runtime
+                .Context
+                .Chunks
+        )
         {
             if (kvp.Value.Data.Count == 0)
                 continue;
@@ -92,7 +96,9 @@ internal sealed class MediaBackupDuplicatePhase : IMediaBackupDuplicatePhase
                 {
                     runtime.Logger.LogInfo("removing entries");
 
-                    foreach (MediaBackupDuplicateCleanupOperation operation in executionPlan.CleanupOperations)
+                    foreach (
+                        MediaBackupDuplicateCleanupOperation operation in executionPlan.CleanupOperations
+                    )
                         writeZip.RemoveEntry(operation.EntryPath, operation.RemoveDuplicateEntries);
                 }
                 finally

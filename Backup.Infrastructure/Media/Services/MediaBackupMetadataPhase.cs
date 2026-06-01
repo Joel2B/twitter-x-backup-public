@@ -13,7 +13,9 @@ internal sealed class MediaBackupMetadataPhase : IMediaBackupMetadataPhase
         runtime.Logger.LogInformation("setting file sizes");
 
         foreach (
-            KeyValuePair<int, Backup.Infrastructure.Media.Models.Backup.Chunk> kvp in runtime.Context.Chunks
+            KeyValuePair<int, Backup.Infrastructure.Media.Models.Backup.Chunk> kvp in runtime
+                .Context
+                .Chunks
         )
         {
             IReadOnlyList<MediaBackupChunkEntryState> entryStates = runtime.BuildChunkEntryStates(

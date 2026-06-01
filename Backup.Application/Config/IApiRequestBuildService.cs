@@ -4,5 +4,8 @@ namespace Backup.Application.Config;
 
 public interface IApiRequestBuildService
 {
-    ApiRequestBuildResult? Build(IReadOnlyDictionary<string, ApiRequestBuildSource> requests, string key);
+    ApiRequestBuildResult? Build(
+        IReadOnlyDictionary<string, ApiRequestBuildSource> requests,
+        string key
+    );
 }

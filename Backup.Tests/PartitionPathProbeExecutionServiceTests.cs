@@ -14,7 +14,9 @@ public sealed class PartitionPathProbeExecutionServiceTests
                 new PartitionPathProbeTarget { PartitionName = "p2", ProbePath = "/tmp/2" },
             ]
         );
-        FakeProbeService probe = new(new Dictionary<string, string?> { ["/tmp/1"] = null, ["/tmp/2"] = "error" });
+        FakeProbeService probe = new(
+            new Dictionary<string, string?> { ["/tmp/1"] = null, ["/tmp/2"] = "error" }
+        );
         PartitionPathProbeExecutionService sut = new(planning, probe);
 
         PartitionPathProbeExecutionResult result = sut.Execute(

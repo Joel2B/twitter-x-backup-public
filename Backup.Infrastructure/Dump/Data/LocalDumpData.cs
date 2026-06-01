@@ -1,16 +1,16 @@
+using Backup.Application.Core;
 using Backup.Application.Dump;
 using Backup.Application.Dump.Models;
-using Backup.Application.Core;
 using Backup.Application.IO;
-using Backup.Infrastructure.Posts.Abstractions.Data;
-using Backup.Infrastructure.Dump.Abstractions.Data;
 using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Dump.Abstractions.Data;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Bulk;
 using Backup.Infrastructure.Models.Config.Data.Dump;
 using Backup.Infrastructure.Models.Dump;
+using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
@@ -65,7 +65,11 @@ public class LocalDumpData(
     public Task Setup() => Task.CompletedTask;
 
     private string GetPath(PartitionConfig partition) =>
-        _dumpPathService.BuildDumpRootPath(partition.Paths, _config.Paths.Paths, _config.Paths.Dumps.Paths);
+        _dumpPathService.BuildDumpRootPath(
+            partition.Paths,
+            _config.Paths.Paths,
+            _config.Paths.Dumps.Paths
+        );
 
     private async Task<string> GetPathCurrent(ApiContext context)
     {
@@ -95,7 +99,9 @@ public class LocalDumpData(
     private async Task<string> GetPathData(ApiContext context)
     {
         string path = await GetPathCurrent(context);
-        string fileName = _dataStoreGuardService.RequireConfiguredFileName(_config.Paths.Dumps.Dump.File);
+        string fileName = _dataStoreGuardService.RequireConfiguredFileName(
+            _config.Paths.Dumps.Dump.File
+        );
 
         return _dumpPathService.BuildDataFilePath(path, fileName);
     }
@@ -126,11 +132,7 @@ public class LocalDumpData(
             context.Request.Query.Variables["count"]
         );
 
-        DumpData dump = new()
-        {
-            Count = initialized.Count,
-            QueryCount = initialized.QueryCount,
-        };
+        DumpData dump = new() { Count = initialized.Count, QueryCount = initialized.QueryCount };
 
         string content = JsonConvert.SerializeObject(dump);
         await File.WriteAllTextAsync(path, content);
@@ -244,13 +246,16 @@ public class LocalDumpData(
                 context.Id,
                 dumpsData.Current ?? string.Empty,
                 domainPosts,
-            async (sourceId, posts) =>
-                await postData.AddPosts(userId, sourceId, posts.ToList()),
-            async (sourceId, newPostIds) =>
-                await postData.MarkDeletedExcept(userId, sourceId, newPostIds.ToList())
-        );
+                async (sourceId, posts) =>
+                    await postData.AddPosts(userId, sourceId, posts.ToList()),
+                async (sourceId, newPostIds) =>
+                    await postData.MarkDeletedExcept(userId, sourceId, newPostIds.ToList())
+            );
 
-        _logger.LogInformation("{posts} posts loaded from dump", orchestration.FlushResult.LoadedCount);
+        _logger.LogInformation(
+            "{posts} posts loaded from dump",
+            orchestration.FlushResult.LoadedCount
+        );
         _logger.LogInformation("{posts} posts deleted", orchestration.FlushResult.DeletedCount);
 
         dumpsData.Current = orchestration.SessionCloseResolution.Current;
@@ -262,10 +267,8 @@ public class LocalDumpData(
     private async Task Replicate(ApiContext context)
     {
         PartitionConfig primary = _partition.GetPrimary();
-        IReadOnlyList<PartitionConfig> partitions = _secondaryStoreSelectionService.SelectSecondaries(
-            _partition.GetPartitions(),
-            primary
-        );
+        IReadOnlyList<PartitionConfig> partitions =
+            _secondaryStoreSelectionService.SelectSecondaries(_partition.GetPartitions(), primary);
 
         string mainPath = await GetPathCurrent(context);
         string primaryPath = GetPath(primary);

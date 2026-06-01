@@ -7,7 +7,9 @@ public sealed class BulkReplicationPathPlanningService : IBulkReplicationPathPla
         IEnumerable<string> replicaFilePaths
     ) =>
         replicaFilePaths
-            .Where(path => !string.Equals(path, primaryFilePath, StringComparison.OrdinalIgnoreCase))
+            .Where(path =>
+                !string.Equals(path, primaryFilePath, StringComparison.OrdinalIgnoreCase)
+            )
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 }

@@ -27,7 +27,8 @@ public sealed class PostHistoryPrunePolicyService : IPostHistoryPrunePolicyServi
 
         HashSet<DateTime> keepDates =
         [
-            .. dayGroups.OrderByDescending(group => group.Date)
+            .. dayGroups
+                .OrderByDescending(group => group.Date)
                 .Take(normalizedKeepDays)
                 .Select(group => group.Date),
         ];

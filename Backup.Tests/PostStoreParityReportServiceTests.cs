@@ -46,8 +46,16 @@ public sealed class PostStoreParityReportServiceTests
             PrimaryLabel = "primary",
             Snapshots =
             [
-                new PostStoreSnapshot { Label = "primary", Counts = new PostStoreCounts { Posts = 10 } },
-                new PostStoreSnapshot { Label = "secondary", Counts = new PostStoreCounts { Posts = 9 } },
+                new PostStoreSnapshot
+                {
+                    Label = "primary",
+                    Counts = new PostStoreCounts { Posts = 10 },
+                },
+                new PostStoreSnapshot
+                {
+                    Label = "secondary",
+                    Counts = new PostStoreCounts { Posts = 9 },
+                },
             ],
             Mismatches =
             [

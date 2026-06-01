@@ -9,7 +9,9 @@ public sealed class StorageRegistrationPolicyService : IStorageRegistrationPolic
         Func<T, bool> isDefault
     )
     {
-        List<T> enabled = storages.Where(storage => isEnabled(storage) && isSupportedType(storage)).ToList();
+        List<T> enabled = storages
+            .Where(storage => isEnabled(storage) && isSupportedType(storage))
+            .ToList();
 
         int defaultCount = enabled.Count(isDefault);
 

@@ -8,7 +8,8 @@ public sealed class MediaBackupPathObservationCompositionService
     public IReadOnlyList<MediaBackupPathCacheObservation> BuildPathCacheObservations(
         IEnumerable<MediaBackupPathCacheObservationInput> inputs
     ) =>
-        inputs.Select(input => new MediaBackupPathCacheObservation
+        inputs
+            .Select(input => new MediaBackupPathCacheObservation
             {
                 OriginalPath = input.OriginalPath,
                 CacheExists = input.CacheExists,

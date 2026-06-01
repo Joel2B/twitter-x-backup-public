@@ -1,5 +1,5 @@
-using Backup.Application.Media.Backup.Models;
 using Backup.Application.IO;
+using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Media.Abstractions.Data;
 using Backup.Infrastructure.Media.Abstractions.Services;
@@ -96,13 +96,15 @@ internal sealed class MediaBackup(
         IReadOnlyList<MediaBackupPhaseExecutionStep> plan =
             _runtime.Dependencies.PhaseOrchestrationService.BuildExecutionPlan(
                 _runtime.Dependencies.PipelineStepCompositionService.BuildPhaseSteps(
-                    _pipelineStepsById.Values.Select(step => new MediaBackupPipelineStepDescriptorInput
-                    {
-                        StepId = GetPipelineStepId(step),
-                        Order = step.Order,
-                        TimerName = step.TimerName,
-                        SkipWhenStopped = step.SkipWhenStopped,
-                    })
+                    _pipelineStepsById.Values.Select(
+                        step => new MediaBackupPipelineStepDescriptorInput
+                        {
+                            StepId = GetPipelineStepId(step),
+                            Order = step.Order,
+                            TimerName = step.TimerName,
+                            SkipWhenStopped = step.SkipWhenStopped,
+                        }
+                    )
                 ),
                 _runtime.Stop
             );
@@ -120,12 +122,23 @@ internal sealed class MediaBackup(
         step.GetType().FullName ?? step.GetType().Name;
 
     bool IMediaBackupPipelineActions.ShouldStop => _runtime.Stop;
+
     Task IMediaBackupPipelineActions.CalculateAsync() => _calculatePhase.Calculate(_runtime, Id);
-    Task IMediaBackupPipelineActions.CalculateDirectAsync() => _calculatePhase.CalculateDirect(_runtime);
+
+    Task IMediaBackupPipelineActions.CalculateDirectAsync() =>
+        _calculatePhase.CalculateDirect(_runtime);
+
     Task IMediaBackupPipelineActions.ApplyDirectAsync() => _applyPhase.ApplyDirect(_runtime);
+
     Task IMediaBackupPipelineActions.ApplyAsync() => _applyPhase.Apply(_runtime, Id);
-    Task IMediaBackupPipelineActions.CheckDuplicatesAsync() => _duplicatePhase.CheckDuplicates(_runtime);
+
+    Task IMediaBackupPipelineActions.CheckDuplicatesAsync() =>
+        _duplicatePhase.CheckDuplicates(_runtime);
+
     Task IMediaBackupPipelineActions.SetFileSizesAsync() => _metadataPhase.SetFileSizes(_runtime);
-    Task IMediaBackupPipelineActions.CheckIntegrityAsync() => _integrityPhase.CheckIntegrity(_runtime);
+
+    Task IMediaBackupPipelineActions.CheckIntegrityAsync() =>
+        _integrityPhase.CheckIntegrity(_runtime);
+
     Task IMediaBackupPipelineActions.FixIntegrityAsync() => _integrityPhase.FixIntegrity(_runtime);
 }

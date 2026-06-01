@@ -16,7 +16,10 @@ public partial class ConfigApiTests
             Variables = new Dictionary<string, object?> { ["focalTweetId"] = "1" },
             Features = new Dictionary<string, bool> { ["featureA"] = true },
             FieldToggles = new Dictionary<string, bool> { ["toggleA"] = false },
-            Headers = new Dictionary<string, string> { ["Referer"] = "https://x.com/test/status/1" },
+            Headers = new Dictionary<string, string>
+            {
+                ["Referer"] = "https://x.com/test/status/1",
+            },
         };
         IApiRequestBuildService service = new ApiRequestBuildService();
         Dictionary<string, ApiRequestBuildSource> api = new() { ["TweetDetail"] = source };
@@ -75,7 +78,8 @@ public partial class ConfigApiTests
         Dictionary<string, ApiRequestBuildSource> api = new() { ["UserByScreenName"] = source };
 
         ApiRequestBuildResult request =
-            service.Build(api, "UserByScreenName") ?? throw new Exception("request should not be null");
+            service.Build(api, "UserByScreenName")
+            ?? throw new Exception("request should not be null");
 
         Assert.True(request.Variables["withGrokTranslatedBio"] is bool);
         Assert.Equal(true, request.Variables["withGrokTranslatedBio"]);

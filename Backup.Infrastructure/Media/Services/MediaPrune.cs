@@ -9,7 +9,8 @@ public class MediaPrune(
     IMediaDownloadModelMapper mediaDownloadModelMapper
 ) : IMediaPrune
 {
-    private readonly IMediaPruneExecutionService _mediaPruneExecutionService = mediaPruneExecutionService;
+    private readonly IMediaPruneExecutionService _mediaPruneExecutionService =
+        mediaPruneExecutionService;
     private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper = mediaDownloadModelMapper;
 
     public Task Prune(List<Download> downloads)

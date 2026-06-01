@@ -51,38 +51,58 @@ public class PartitionPolicyServiceTests
     {
         PartitionPolicyService sut = new();
 
-        Assert.True(sut.IsCachePartition(new() { Id = 1, Type = "cache", Enabled = true }));
         Assert.True(
-            sut.IsCachePartition(new()
-            {
-                Id = 2,
-                Type = "extension",
-                Tags = ["cache"],
-                Enabled = true,
-            })
+            sut.IsCachePartition(
+                new()
+                {
+                    Id = 1,
+                    Type = "cache",
+                    Enabled = true,
+                }
+            )
         );
-        Assert.False(sut.IsCachePartition(new() { Id = 3, Type = "primary", Enabled = true }));
+        Assert.True(
+            sut.IsCachePartition(
+                new()
+                {
+                    Id = 2,
+                    Type = "extension",
+                    Tags = ["cache"],
+                    Enabled = true,
+                }
+            )
+        );
+        Assert.False(
+            sut.IsCachePartition(
+                new()
+                {
+                    Id = 3,
+                    Type = "primary",
+                    Enabled = true,
+                }
+            )
+        );
     }
 
     private static List<PartitionState> CreatePartitions() =>
-    [
-        new()
-        {
-            Id = 1,
-            Type = "primary",
-            Enabled = true,
-            Size = 2,
-            UsableSpace = 100,
-            CurrentSize = 0,
-        },
-        new()
-        {
-            Id = 2,
-            Type = "extension",
-            Enabled = true,
-            Size = 2,
-            UsableSpace = 100,
-            CurrentSize = 0,
-        },
-    ];
+        [
+            new()
+            {
+                Id = 1,
+                Type = "primary",
+                Enabled = true,
+                Size = 2,
+                UsableSpace = 100,
+                CurrentSize = 0,
+            },
+            new()
+            {
+                Id = 2,
+                Type = "extension",
+                Enabled = true,
+                Size = 2,
+                UsableSpace = 100,
+                CurrentSize = 0,
+            },
+        ];
 }

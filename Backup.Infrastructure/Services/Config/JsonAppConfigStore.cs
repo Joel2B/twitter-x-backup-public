@@ -38,7 +38,9 @@ public sealed class JsonAppConfigStore : IAppConfigStore
 
         foreach (string candidate in candidates.Select(Path.GetFullPath).Distinct())
         {
-            if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "Services.json")))
+            if (
+                Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "Services.json"))
+            )
                 return candidate;
         }
 

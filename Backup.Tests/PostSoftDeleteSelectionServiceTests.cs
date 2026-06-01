@@ -44,7 +44,12 @@ public class PostSoftDeleteSelectionServiceTests
         new()
         {
             Id = id,
-            Profile = new PostProfile { Id = "profile-1", UserName = "user", Name = "name" },
+            Profile = new PostProfile
+            {
+                Id = "profile-1",
+                UserName = "user",
+                Name = "name",
+            },
             Description = "desc",
             Retweeted = false,
             Favorited = false,

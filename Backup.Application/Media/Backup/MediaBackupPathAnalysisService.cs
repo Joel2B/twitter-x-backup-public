@@ -5,7 +5,8 @@ namespace Backup.Application.Media.Backup;
 public sealed class MediaBackupPathAnalysisService : IMediaBackupPathAnalysisService
 {
     public IReadOnlyList<MediaPathDuplicateGroup> FindDuplicates(IEnumerable<string> paths) =>
-        paths.GroupBy(path => path)
+        paths
+            .GroupBy(path => path)
             .Where(group => group.Count() > 1)
             .Select(group => new MediaPathDuplicateGroup
             {
@@ -15,7 +16,10 @@ public sealed class MediaBackupPathAnalysisService : IMediaBackupPathAnalysisSer
             })
             .ToList();
 
-    public MediaPathDiffResult Diff(IEnumerable<string> expectedPaths, IEnumerable<string> actualPaths)
+    public MediaPathDiffResult Diff(
+        IEnumerable<string> expectedPaths,
+        IEnumerable<string> actualPaths
+    )
     {
         List<string> expected = expectedPaths.ToList();
         List<string> actual = actualPaths.ToList();

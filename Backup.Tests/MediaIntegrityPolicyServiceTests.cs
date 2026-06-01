@@ -22,11 +22,7 @@ public class MediaIntegrityPolicyServiceTests
                     new() { Url = "https://x/a.mp4", Path = "a.mp4" },
                 ],
             },
-            new()
-            {
-                Id = "p2",
-                Data = [new() { Url = "https://x/b.webp", Path = "b.webp" }],
-            },
+            new() { Id = "p2", Data = [new() { Url = "https://x/b.webp", Path = "b.webp" }] },
         ];
 
         sut.KeepSupported(downloads);

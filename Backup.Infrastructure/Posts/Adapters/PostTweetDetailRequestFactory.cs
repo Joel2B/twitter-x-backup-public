@@ -1,8 +1,8 @@
 using Backup.Application.Config;
 using Backup.Infrastructure.Adapters;
-using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.Request;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 
 namespace Backup.Infrastructure.Posts.Adapters;
 

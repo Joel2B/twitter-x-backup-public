@@ -7,9 +7,8 @@ public sealed class MediaBackupIntegrityChunkRefreshService(
     IMediaBackupIntegrityChunkApplyService mediaBackupIntegrityChunkApplyService
 ) : IMediaBackupIntegrityChunkRefreshService
 {
-    private readonly IMediaBackupIntegrityChunkUpdateOrchestrationService
-        _mediaBackupIntegrityChunkUpdateOrchestrationService =
-            mediaBackupIntegrityChunkUpdateOrchestrationService;
+    private readonly IMediaBackupIntegrityChunkUpdateOrchestrationService _mediaBackupIntegrityChunkUpdateOrchestrationService =
+        mediaBackupIntegrityChunkUpdateOrchestrationService;
     private readonly IMediaBackupIntegrityChunkApplyService _mediaBackupIntegrityChunkApplyService =
         mediaBackupIntegrityChunkApplyService;
 

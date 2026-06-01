@@ -23,7 +23,15 @@ public class PostMediaInputsCompositionServiceTests
                     Bookmarked = false,
                     CreatedAt = "2025-01-01T00:00:00Z",
                     Hashtags = [],
-                    Medias = [new PostMedia { Id = "m-history", Url = "https://cdn/h.jpg", Type = "photo" }],
+                    Medias =
+                    [
+                        new PostMedia
+                        {
+                            Id = "m-history",
+                            Url = "https://cdn/h.jpg",
+                            Type = "photo",
+                        },
+                    ],
                     Deleted = true,
                 },
             }
@@ -59,7 +67,15 @@ public class PostMediaInputsCompositionServiceTests
             Bookmarked = false,
             CreatedAt = "2025-01-01T00:00:00Z",
             Hashtags = [],
-            Medias = [new PostMedia { Id = "m-current", Url = "https://cdn/c.jpg", Type = "photo" }],
+            Medias =
+            [
+                new PostMedia
+                {
+                    Id = "m-current",
+                    Url = "https://cdn/c.jpg",
+                    Type = "photo",
+                },
+            ],
             Deleted = deleted,
             Changes = [],
             Index = [],

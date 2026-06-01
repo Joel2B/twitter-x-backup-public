@@ -11,8 +11,18 @@ public class MediaBackupChunkAssignmentServiceTests
         MediaBackupChunkAssignmentService sut = new();
         MediaBackupChunkState[] chunks =
         [
-            new() { Id = 0, PathCount = 0, SizeBytes = 100 },
-            new() { Id = 1, PathCount = 0, SizeBytes = 50 },
+            new()
+            {
+                Id = 0,
+                PathCount = 0,
+                SizeBytes = 100,
+            },
+            new()
+            {
+                Id = 1,
+                PathCount = 0,
+                SizeBytes = 50,
+            },
         ];
         MediaBackupPathCandidate[] candidates =
         [

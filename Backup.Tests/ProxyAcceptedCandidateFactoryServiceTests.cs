@@ -9,7 +9,12 @@ public class ProxyAcceptedCandidateFactoryServiceTests
     public void Create_ReturnsCandidateWithDefaultInitialUses()
     {
         ProxyAcceptedCandidateFactoryService sut = new();
-        ProxyCandidate candidate = new() { Ip = "1.1.1.1", Port = "80", Protocol = "http" };
+        ProxyCandidate candidate = new()
+        {
+            Ip = "1.1.1.1",
+            Port = "80",
+            Protocol = "http",
+        };
 
         ProxyAcceptedCandidate result = sut.Create(candidate);
 

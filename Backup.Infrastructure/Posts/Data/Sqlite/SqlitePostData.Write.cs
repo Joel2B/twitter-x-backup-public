@@ -1,5 +1,5 @@
-using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Posts.Adapters;
+using Backup.Infrastructure.Posts.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -233,7 +233,10 @@ public partial class SqlitePostData
         }
 
         IReadOnlyList<Post> normalized = NormalizePosts(posts);
-        Dictionary<string, Post> normalizedPosts = normalized.ToDictionary(post => post.Id, StringComparer.Ordinal);
+        Dictionary<string, Post> normalizedPosts = normalized.ToDictionary(
+            post => post.Id,
+            StringComparer.Ordinal
+        );
 
         if (normalizedPosts.Count == 0)
             return;
@@ -288,5 +291,4 @@ public partial class SqlitePostData
     {
         return PostSnapshotNormalizationAdapter.Normalize(_postSnapshotNormalizationService, posts);
     }
-
 }

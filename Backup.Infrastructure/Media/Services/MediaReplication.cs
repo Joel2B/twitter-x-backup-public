@@ -1,6 +1,6 @@
-using Backup.Infrastructure.Logging;
 using Backup.Application.Media;
 using Backup.Application.Media.Models;
+using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
 using Microsoft.Extensions.Logging;
@@ -57,7 +57,9 @@ public class MediaReplication(
 
         try
         {
-            foreach (Backup.Application.Media.Models.MediaReplicationCopyAction action in copyActions)
+            foreach (
+                Backup.Application.Media.Models.MediaReplicationCopyAction action in copyActions
+            )
             {
                 using Stream read = await source.Read(action.Path);
                 using Stream write = await target.Write(action.Path);

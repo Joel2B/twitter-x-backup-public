@@ -1,12 +1,12 @@
-using Backup.Infrastructure.Media.Abstractions.Services;
+using Backup.Application.Media;
 using Backup.Application.Media.Maintenance;
 using Backup.Application.Media.Maintenance.Models;
 using Backup.Application.Media.Models;
-using Backup.Application.Media;
 using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Media.Abstractions.Services;
+using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
-using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Models.Utils;
 using Microsoft.Extensions.Logging;
 
@@ -58,7 +58,11 @@ public class LocalMediaDataMaintenance(
             .SelectMany(download => download.Data)
             .Select(item => item.Path)
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(path => path, path => _mediaCache.Get(path)?.Size?.File, StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(
+                path => path,
+                path => _mediaCache.Get(path)?.Size?.File,
+                StringComparer.OrdinalIgnoreCase
+            );
 
         IReadOnlyList<MediaMaintenanceCachedDownload> cachedDownloads =
             _mediaMaintenanceDownloadProjectionService.ToCachedDownloads(
@@ -66,9 +70,7 @@ public class LocalMediaDataMaintenance(
                 cacheSizesByPath
             );
         IReadOnlyList<MediaMaintenanceCachedDownload> filtered =
-            _mediaMaintenanceCachedDownloadFilterService.Filter(
-                cachedDownloads
-            );
+            _mediaMaintenanceCachedDownloadFilterService.Filter(cachedDownloads);
 
         downloads.Clear();
         downloads.AddRange(
@@ -87,7 +89,11 @@ public class LocalMediaDataMaintenance(
         Dictionary<string, long?> cacheSizesByPath = targets
             .Select(target => target.Path)
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(path => path, path => _mediaCache.Get(path)?.Size?.File, StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(
+                path => path,
+                path => _mediaCache.Get(path)?.Size?.File,
+                StringComparer.OrdinalIgnoreCase
+            );
         IReadOnlyList<MediaMaintenanceIntegrityProbeItem> probeItems =
             _mediaMaintenanceIntegrityObservationCompositionService.BuildProbeItems(
                 targets,
@@ -121,18 +127,15 @@ public class LocalMediaDataMaintenance(
         IReadOnlyList<MediaMaintenanceIntegrityObservation> observations =
             _mediaMaintenanceIntegrityObservationCompositionService.ToObservations(probeOutcomes);
 
-        MediaMaintenanceIntegrityBatchResult result = _mediaMaintenanceIntegrityBatchService.Evaluate(
-            observations
-        );
+        MediaMaintenanceIntegrityBatchResult result =
+            _mediaMaintenanceIntegrityBatchService.Evaluate(observations);
         HashSet<string> removeSet = result
             .Items.Where(item => item.Remove)
             .Select(item => item.CorrelationId)
             .ToHashSet(StringComparer.Ordinal);
 
-        IReadOnlyList<MediaDownload> filtered = _mediaMaintenanceIntegrityTargetService.RemoveByCorrelations(
-            appDownloads,
-            removeSet
-        );
+        IReadOnlyList<MediaDownload> filtered =
+            _mediaMaintenanceIntegrityTargetService.RemoveByCorrelations(appDownloads, removeSet);
 
         downloads.Clear();
         downloads.AddRange(_mediaDownloadModelMapper.ToInfrastructure(filtered));
@@ -207,5 +210,4 @@ public class LocalMediaDataMaintenance(
         Directory.Delete(path, recursive: true);
         Directory.CreateDirectory(path);
     }
-
 }

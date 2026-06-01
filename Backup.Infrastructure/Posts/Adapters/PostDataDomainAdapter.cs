@@ -23,7 +23,8 @@ public sealed class PostDataDomainAdapter(IPostData postData) : IPostDomainData
 
     public async Task<List<MediaInput>?> GetMediaInputs()
     {
-        List<Backup.Infrastructure.Posts.Models.MediaInput>? inputs = await _postData.GetMediaInputs();
+        List<Backup.Infrastructure.Posts.Models.MediaInput>? inputs =
+            await _postData.GetMediaInputs();
         return inputs?.Select(PostReplicationMapper.ToDomain).ToList();
     }
 
@@ -35,10 +36,16 @@ public sealed class PostDataDomainAdapter(IPostData postData) : IPostDomainData
         return posts.Select(PostReplicationMapper.ToDomain).ToList();
     }
 
-    public Task<Dictionary<string, int>> GetPostCountsByProfileIds(IReadOnlyCollection<string> profileIds) =>
-        _postData.GetPostCountsByProfileIds(profileIds);
+    public Task<Dictionary<string, int>> GetPostCountsByProfileIds(
+        IReadOnlyCollection<string> profileIds
+    ) => _postData.GetPostCountsByProfileIds(profileIds);
 
-    public Task AddPosts(string userId, string origin, List<Post> incoming, MergeOptions? options = null) =>
+    public Task AddPosts(
+        string userId,
+        string origin,
+        List<Post> incoming,
+        MergeOptions? options = null
+    ) =>
         _postData.AddPosts(
             userId,
             origin,
@@ -59,5 +66,6 @@ public sealed class PostDataDomainAdapter(IPostData postData) : IPostDomainData
         _postData.UpsertPosts(posts.Select(PostReplicationMapper.ToApp).ToList());
 
     public Task Save() => _postData.Save();
+
     public Task Prune() => _postData.Prune();
 }

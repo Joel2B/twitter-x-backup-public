@@ -76,7 +76,9 @@ public static class StructuredLoggingInfrastructureServiceCollectionExtensions
 
     private static AppConfig GetAppConfig(IServiceCollection services)
     {
-        ServiceDescriptor? descriptor = services.LastOrDefault(o => o.ServiceType == typeof(AppConfig));
+        ServiceDescriptor? descriptor = services.LastOrDefault(o =>
+            o.ServiceType == typeof(AppConfig)
+        );
 
         if (descriptor?.ImplementationInstance is AppConfig config)
         {

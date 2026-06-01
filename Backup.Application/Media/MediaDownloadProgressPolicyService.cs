@@ -8,5 +8,6 @@ public sealed class MediaDownloadProgressPolicyService : IMediaDownloadProgressP
     public bool ShouldEmitProgressLog(int percent, int nextPercentThreshold) =>
         percent >= nextPercentThreshold;
 
-    public int GetNextThreshold(int currentThreshold, int stepPercent) => currentThreshold + stepPercent;
+    public int GetNextThreshold(int currentThreshold, int stepPercent) =>
+        currentThreshold + stepPercent;
 }

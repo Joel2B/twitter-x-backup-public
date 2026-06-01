@@ -10,7 +10,10 @@ public sealed class MediaCacheWritePolicyServiceTests
 
     public MediaCacheWritePolicyServiceTests()
     {
-        _sut = new MediaCacheWritePolicyService(_pathPolicy, new MediaCacheEntryStateFactoryService());
+        _sut = new MediaCacheWritePolicyService(
+            _pathPolicy,
+            new MediaCacheEntryStateFactoryService()
+        );
     }
 
     [Fact]

@@ -7,11 +7,10 @@ public sealed class MediaBackupChunkMetadataRefreshExecutionService(
     IMediaBackupChunkMetadataOrchestrationService mediaBackupChunkMetadataOrchestrationService
 ) : IMediaBackupChunkMetadataRefreshExecutionService
 {
-    private readonly IMediaBackupChunkMetadataObservationCompositionService
-        _mediaBackupChunkMetadataObservationCompositionService =
-            mediaBackupChunkMetadataObservationCompositionService;
-    private readonly IMediaBackupChunkMetadataOrchestrationService
-        _mediaBackupChunkMetadataOrchestrationService = mediaBackupChunkMetadataOrchestrationService;
+    private readonly IMediaBackupChunkMetadataObservationCompositionService _mediaBackupChunkMetadataObservationCompositionService =
+        mediaBackupChunkMetadataObservationCompositionService;
+    private readonly IMediaBackupChunkMetadataOrchestrationService _mediaBackupChunkMetadataOrchestrationService =
+        mediaBackupChunkMetadataOrchestrationService;
 
     public bool RequiresRefresh(IEnumerable<MediaBackupChunkEntryState> entries) =>
         _mediaBackupChunkMetadataOrchestrationService.RequiresRefresh(
@@ -28,7 +27,10 @@ public sealed class MediaBackupChunkMetadataRefreshExecutionService(
         IReadOnlyList<MediaBackupChunkMetadataObservationInput> observationInputs = entryList
             .Select(entry =>
             {
-                archiveMetadataByPath.TryGetValue(entry.Path, out MediaBackupChunkDataMetadata? metadata);
+                archiveMetadataByPath.TryGetValue(
+                    entry.Path,
+                    out MediaBackupChunkDataMetadata? metadata
+                );
 
                 return new MediaBackupChunkMetadataObservationInput
                 {
@@ -59,8 +61,7 @@ public sealed class MediaBackupChunkMetadataRefreshExecutionService(
                     return entry;
 
                 bool hasChange =
-                    entry.FileSize != metadata.FileSize ||
-                    entry.Crc32 != metadata.Crc32;
+                    entry.FileSize != metadata.FileSize || entry.Crc32 != metadata.Crc32;
 
                 if (hasChange)
                     updatedCount++;

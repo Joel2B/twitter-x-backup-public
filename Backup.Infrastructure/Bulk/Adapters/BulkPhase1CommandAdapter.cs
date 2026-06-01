@@ -1,12 +1,12 @@
-using Backup.Application.Bulk.Ports;
-using Backup.Application.Bulk.Models;
 using Backup.Application.Bulk;
+using Backup.Application.Bulk.Models;
+using Backup.Application.Bulk.Ports;
+using Backup.Domain.Posts;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Abstractions.Services;
 using Backup.Infrastructure.Bulk.Models;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Posts.Abstractions.Data;
-using Backup.Domain.Posts;
 
 namespace Backup.Infrastructure.Bulk.Adapters;
 

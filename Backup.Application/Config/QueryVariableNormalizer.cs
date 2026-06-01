@@ -20,7 +20,9 @@ public static class QueryVariableNormalizer
         if (bool.TryParse(text, out bool boolValue))
             return boolValue;
 
-        if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int intValue))
+        if (
+            int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out int intValue)
+        )
             return intValue;
 
         if (

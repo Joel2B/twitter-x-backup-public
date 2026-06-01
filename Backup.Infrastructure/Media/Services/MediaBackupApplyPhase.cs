@@ -1,8 +1,8 @@
 using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Media.Models.Backup;
-using Backup.Infrastructure.Utils;
 using Backup.Infrastructure.Utility.Abstractions.Services;
+using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
@@ -63,12 +63,13 @@ internal sealed class MediaBackupApplyPhase : IMediaBackupApplyPhase
 
                 runtime.Logger.LogInfo("reading entries");
                 HashSet<string> storagePaths = [.. zip.GetEntries().Select(o => o.FullName)];
-                MediaBackupApplyChunkPlan chunkPlan = runtime.Dependencies.ApplyChunkPlanningService.Plan(
-                    chunkPaths,
-                    storagePaths,
-                    runtime.Context.Backup.Chunks.Ids,
-                    kvp.Key
-                );
+                MediaBackupApplyChunkPlan chunkPlan =
+                    runtime.Dependencies.ApplyChunkPlanningService.Plan(
+                        chunkPaths,
+                        storagePaths,
+                        runtime.Context.Backup.Chunks.Ids,
+                        kvp.Key
+                    );
 
                 if (!chunkPlan.ShouldProcessChunk || chunkPlan.FinalizePlan is null)
                     continue;
@@ -223,7 +224,10 @@ internal sealed class MediaBackupApplyPhase : IMediaBackupApplyPhase
                 {
                     if (zip is null)
                     {
-                        runtime.Logger.LogInformation("processing chunk {chunk}", chunkPlan.ChunkId);
+                        runtime.Logger.LogInformation(
+                            "processing chunk {chunk}",
+                            chunkPlan.ChunkId
+                        );
                         runtime.Logger.LogInfo("update zip");
                         zip = await runtime.OpenChunkZipWrite(
                             runtime.Context.Chunks[chunkPlan.ChunkId],
@@ -238,7 +242,9 @@ internal sealed class MediaBackupApplyPhase : IMediaBackupApplyPhase
                     zip.RemoveEntry(runtime.Dependencies.PathProjectionService.ToArchivePath(path));
                     runtime.Logger.LogInfo("entry removed");
 
-                    runtime.Context.Chunks[chunkPlan.ChunkId].Data.RemoveAll(data => data.Path == path);
+                    runtime
+                        .Context.Chunks[chunkPlan.ChunkId]
+                        .Data.RemoveAll(data => data.Path == path);
                 }
 
                 if (zip is null)
@@ -249,7 +255,11 @@ internal sealed class MediaBackupApplyPhase : IMediaBackupApplyPhase
             }
             catch (Exception ex)
             {
-                runtime.Logger.LogError(ex, "error syncing backup chunk {chunk}", chunkPlan.ChunkId);
+                runtime.Logger.LogError(
+                    ex,
+                    "error syncing backup chunk {chunk}",
+                    chunkPlan.ChunkId
+                );
                 break;
             }
             finally

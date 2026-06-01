@@ -19,8 +19,8 @@ public sealed class MediaPathSelectionServiceTests
     {
         MediaPathSelectionService sut = new();
 
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            sut.SelectRequiredRootPath(["", " "])
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => sut.SelectRequiredRootPath(["", " "])
         );
 
         Assert.Equal("No media root path is configured.", ex.Message);

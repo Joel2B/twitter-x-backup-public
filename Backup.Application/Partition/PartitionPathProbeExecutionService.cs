@@ -9,9 +9,12 @@ public sealed class PartitionPathProbeExecutionService(
 {
     private readonly IPartitionPathProbePlanningService _partitionPathProbePlanningService =
         partitionPathProbePlanningService;
-    private readonly IPartitionPathProbeService _partitionPathProbeService = partitionPathProbeService;
+    private readonly IPartitionPathProbeService _partitionPathProbeService =
+        partitionPathProbeService;
 
-    public PartitionPathProbeExecutionResult Execute(IEnumerable<PartitionPathProbeCandidate> partitions)
+    public PartitionPathProbeExecutionResult Execute(
+        IEnumerable<PartitionPathProbeCandidate> partitions
+    )
     {
         IReadOnlyList<PartitionPathProbeTarget> targets =
             _partitionPathProbePlanningService.BuildTargets(partitions);
@@ -21,7 +24,9 @@ public sealed class PartitionPathProbeExecutionService(
         foreach (PartitionPathProbeTarget target in targets)
         {
             string? error = _partitionPathProbeService.Probe(target.ProbePath);
-            results.Add(new PartitionPathProbeResult { PartitionName = target.PartitionName, Error = error });
+            results.Add(
+                new PartitionPathProbeResult { PartitionName = target.PartitionName, Error = error }
+            );
 
             if (error is not null)
                 hasErrors = true;

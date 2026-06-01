@@ -59,26 +59,10 @@ public sealed class MediaCacheJsonSnapshotServiceTests
         MediaCacheJsonSnapshotService sut = new();
         List<MediaCacheJsonSnapshot> input =
         [
-            new()
-            {
-                Path = "B",
-                StreamSizeBytes = 1,
-            },
-            new()
-            {
-                Path = "a",
-                StreamSizeBytes = 2,
-            },
-            new()
-            {
-                Path = "A",
-                StreamSizeBytes = 3,
-            },
-            new()
-            {
-                Path = "",
-                StreamSizeBytes = 4,
-            },
+            new() { Path = "B", StreamSizeBytes = 1 },
+            new() { Path = "a", StreamSizeBytes = 2 },
+            new() { Path = "A", StreamSizeBytes = 3 },
+            new() { Path = "", StreamSizeBytes = 4 },
         ];
 
         IReadOnlyList<MediaCacheJsonSnapshot> result = sut.PrepareForWrite(input);

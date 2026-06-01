@@ -12,7 +12,9 @@ public sealed class PartitionPolicyService : IPartitionPolicyService
         HashSet<int>? filter = allowedIds is null ? null : [.. allowedIds];
 
         return partitions
-            .Where(partition => partition.Enabled && (filter is null || filter.Contains(partition.Id)))
+            .Where(partition =>
+                partition.Enabled && (filter is null || filter.Contains(partition.Id))
+            )
             .ToList();
     }
 
@@ -28,7 +30,11 @@ public sealed class PartitionPolicyService : IPartitionPolicyService
         return match.Id;
     }
 
-    public int ResolvePartitionId(IReadOnlyList<PartitionState> partitions, int? requestedId, long size)
+    public int ResolvePartitionId(
+        IReadOnlyList<PartitionState> partitions,
+        int? requestedId,
+        long size
+    )
     {
         if (requestedId is not null)
             return requestedId.Value;

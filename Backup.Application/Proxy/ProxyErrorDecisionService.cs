@@ -20,6 +20,10 @@ public sealed class ProxyErrorDecisionService(IProxyRuntimePolicyService runtime
             errorsToInactiveThreshold
         );
 
-        return new ProxyErrorDecision { IsNewMessage = isNewMessage, ShouldDisable = shouldDisable };
+        return new ProxyErrorDecision
+        {
+            IsNewMessage = isNewMessage,
+            ShouldDisable = shouldDisable,
+        };
     }
 }

@@ -3,11 +3,11 @@ using Backup.Api.Models;
 
 namespace Backup.Api.Services;
 
-public class PostIngestionService(
-    Backup.Application.PostIngestion.IPostIngestionService appService
-) : IPostIngestionService
+public class PostIngestionService(Backup.Application.PostIngestion.IPostIngestionService appService)
+    : IPostIngestionService
 {
-    private readonly Backup.Application.PostIngestion.IPostIngestionService _appService = appService;
+    private readonly Backup.Application.PostIngestion.IPostIngestionService _appService =
+        appService;
 
     public async Task<PostIngestResult> IngestRaw(
         string userId,
@@ -43,10 +43,10 @@ public class PostIngestionService(
         {
             Backup.Application.PostIngestion.Models.PostIngestResult result =
                 await _appService.IngestProcessed(
-                userId,
-                origin,
-                ProcessedPostInputMapper.MapMany(posts)
-            );
+                    userId,
+                    origin,
+                    ProcessedPostInputMapper.MapMany(posts)
+                );
 
             return new PostIngestResult(
                 result.ReceivedPosts,

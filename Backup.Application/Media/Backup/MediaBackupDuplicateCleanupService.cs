@@ -26,7 +26,8 @@ public sealed class MediaBackupDuplicateCleanupService : IMediaBackupDuplicateCl
             );
         }
 
-        int removedPathCount = duplicateGroups.Sum(group => group.Entries.Count) - duplicateGroups.Count;
+        int removedPathCount =
+            duplicateGroups.Sum(group => group.Entries.Count) - duplicateGroups.Count;
 
         return new MediaBackupDuplicateCleanupPlan
         {

@@ -1,11 +1,11 @@
-using Backup.Domain.Posts;
-using Backup.Infrastructure.Bulk.Adapters;
-using Backup.Infrastructure.Bulk.Abstractions.Services;
 using Backup.Application.Bulk;
 using Backup.Application.Bulk.Models;
-using Backup.Infrastructure.Posts.Abstractions.Services;
+using Backup.Domain.Posts;
+using Backup.Infrastructure.Bulk.Abstractions.Services;
+using Backup.Infrastructure.Bulk.Adapters;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.Request;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using Microsoft.Extensions.Logging.Abstractions;
 using ParseResult = Backup.Domain.Posts.ParseResult;
 using ParseUser = Backup.Domain.Posts.ParseUser;
@@ -73,7 +73,10 @@ public class BulkApiClientTests
         FakeBulkApiResultPolicyService resultPolicy = new();
         Request request = CreateRequest("https://x.com/graphql/user");
         FakeBulkRequestFactory requestFactory = new() { UserByScreenNameRequest = request };
-        FakeBulkSourceRouteProvider routeProvider = new() { RefererValue = "https://x.com/notifications" };
+        FakeBulkSourceRouteProvider routeProvider = new()
+        {
+            RefererValue = "https://x.com/notifications",
+        };
         FakePostDownloader downloader = new() { DownloadResponse = "{\"ok\":true}" };
         FakePostDomainParser parser = new()
         {
@@ -111,7 +114,10 @@ public class BulkApiClientTests
         FakeBulkApiResultPolicyService resultPolicy = new();
         Request request = CreateRequest("https://x.com/graphql/media");
         FakeBulkRequestFactory requestFactory = new() { UserMediaRequest = request };
-        FakeBulkSourceRouteProvider routeProvider = new() { RefererValue = "https://x.com/notifications" };
+        FakeBulkSourceRouteProvider routeProvider = new()
+        {
+            RefererValue = "https://x.com/notifications",
+        };
         FakePostDownloader downloader = new() { DownloadResponse = "{\"media\":[]}" };
         ParseResult expected = new([], "CURSOR-1");
         FakePostDomainParser parser = new() { ParseResultValue = expected };
@@ -211,8 +217,7 @@ public class BulkApiClientTests
         public string GetReferer(
             BulkSourceType sourceType = BulkSourceType.Notifications,
             string? userName = null
-        ) =>
-            RefererValue;
+        ) => RefererValue;
     }
 
     private sealed class FakeBulkApiResultPolicyService : IBulkApiResultPolicyService

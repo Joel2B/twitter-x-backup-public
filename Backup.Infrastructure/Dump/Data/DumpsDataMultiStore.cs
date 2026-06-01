@@ -15,8 +15,8 @@ public class DumpsDataMultiStore(
     private readonly ISecondaryStoreSelectionService _secondaryStoreSelectionService =
         secondaryStoreSelectionService;
 
-    private IDumpsDataStore Primary
-        => _primarySelectionService.ResolvePrimary(
+    private IDumpsDataStore Primary =>
+        _primarySelectionService.ResolvePrimary(
             _stores,
             store => store.IsDefault,
             "No dumps data stores are configured.",
@@ -31,7 +31,10 @@ public class DumpsDataMultiStore(
         await primary.Save(dumps);
 
         foreach (
-            IDumpsDataStore store in _secondaryStoreSelectionService.SelectSecondaries(_stores, primary)
+            IDumpsDataStore store in _secondaryStoreSelectionService.SelectSecondaries(
+                _stores,
+                primary
+            )
         )
             await store.Save(dumps);
     }

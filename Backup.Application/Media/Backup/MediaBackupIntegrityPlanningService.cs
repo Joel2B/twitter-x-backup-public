@@ -14,7 +14,8 @@ public sealed class MediaBackupIntegrityPlanningService : IMediaBackupIntegrityP
     public IReadOnlyList<MediaBackupIntegrityChunkGroup> GroupByChunk(
         IEnumerable<MediaBackupIntegrityPathChange> changes
     ) =>
-        changes.GroupBy(change => change.ChunkId)
+        changes
+            .GroupBy(change => change.ChunkId)
             .Select(group => new MediaBackupIntegrityChunkGroup
             {
                 ChunkId = group.Key,

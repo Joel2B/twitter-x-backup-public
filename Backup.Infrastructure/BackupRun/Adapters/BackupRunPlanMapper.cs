@@ -11,7 +11,10 @@ internal static class BackupRunPlanMapper
             Url = request.Url,
             Variables = request.Query.Variables.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
             Features = request.Query.Features.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
-            FieldToggles = request.Query.FieldToggles.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
+            FieldToggles = request.Query.FieldToggles.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value
+            ),
             Headers = request.Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
         };
 
@@ -27,5 +30,4 @@ internal static class BackupRunPlanMapper
             },
             Headers = request.Headers.ToDictionary(kvp => kvp.Key, kvp => kvp.Value),
         };
-
 }

@@ -5,9 +5,14 @@ namespace Backup.Configuration;
 
 internal static class BackupConfigurationDirectoryResolver
 {
-    public static string Resolve(BackupConfigurationOptions options, IConfiguration? configuration = null)
+    public static string Resolve(
+        BackupConfigurationOptions options,
+        IConfiguration? configuration = null
+    )
     {
-        string? fromConfiguration = configuration?[BackupConfigurationOptions.ConfigDirectoryConfigurationKey];
+        string? fromConfiguration = configuration?[
+            BackupConfigurationOptions.ConfigDirectoryConfigurationKey
+        ];
         string? fromEnvironment = Environment.GetEnvironmentVariable(
             BackupConfigurationOptions.ConfigDirectoryEnvironmentVariable
         );
@@ -31,7 +36,9 @@ internal static class BackupConfigurationDirectoryResolver
 
         foreach (string candidate in candidates.Select(Path.GetFullPath).Distinct())
         {
-            if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "Services.json")))
+            if (
+                Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "Services.json"))
+            )
                 return candidate;
         }
 

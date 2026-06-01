@@ -3,7 +3,8 @@ using Backup.Infrastructure.Media.Abstractions.Services;
 
 namespace Backup.Infrastructure.BackupRun.Adapters;
 
-public sealed class MediaExecutionServiceAdapter(IMediaService mediaService) : IMediaExecutionService
+public sealed class MediaExecutionServiceAdapter(IMediaService mediaService)
+    : IMediaExecutionService
 {
     private readonly IMediaService _mediaService = mediaService;
 

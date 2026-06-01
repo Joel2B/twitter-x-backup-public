@@ -30,7 +30,10 @@ public sealed class BulkImportRunner(
     private readonly IBulkApiClient _bulkApiClient = bulkApiClient;
     private readonly IBulkImportService _bulkImportService = bulkImportService;
 
-    public async Task Run(IReadOnlyDictionary<string, ApiConfig> api, CancellationToken cancellationToken)
+    public async Task Run(
+        IReadOnlyDictionary<string, ApiConfig> api,
+        CancellationToken cancellationToken
+    )
     {
         _logger.LogInformation("running import");
 

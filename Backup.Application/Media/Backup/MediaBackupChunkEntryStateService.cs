@@ -7,7 +7,8 @@ public sealed class MediaBackupChunkEntryStateService : IMediaBackupChunkEntrySt
     public IReadOnlyList<MediaBackupApplyChunkPathState> BuildApplyChunkPathStates(
         IEnumerable<MediaBackupChunkEntryState> items
     ) =>
-        items.Select(item => new MediaBackupApplyChunkPathState
+        items
+            .Select(item => new MediaBackupApplyChunkPathState
             {
                 SourcePath = item.Path,
                 HasHash = item.Hash is not null,
@@ -17,7 +18,8 @@ public sealed class MediaBackupChunkEntryStateService : IMediaBackupChunkEntrySt
     public IReadOnlyList<MediaBackupChunkFailureState> BuildFailureStates(
         IEnumerable<MediaBackupChunkEntryState> items
     ) =>
-        items.Select(item => new MediaBackupChunkFailureState
+        items
+            .Select(item => new MediaBackupChunkFailureState
             {
                 Path = item.Path,
                 Hash = item.Hash,
@@ -30,7 +32,8 @@ public sealed class MediaBackupChunkEntryStateService : IMediaBackupChunkEntrySt
         IEnumerable<MediaBackupChunkEntryState> items,
         IReadOnlyDictionary<string, MediaBackupChunkFailureState> byPath
     ) =>
-        items.Select(item =>
+        items
+            .Select(item =>
             {
                 if (!byPath.TryGetValue(item.Path, out MediaBackupChunkFailureState? state))
                     return item;
@@ -48,7 +51,8 @@ public sealed class MediaBackupChunkEntryStateService : IMediaBackupChunkEntrySt
     public IReadOnlyList<MediaBackupSyncFinalizeInputChunk> BuildSyncFinalizeInputChunks(
         IEnumerable<MediaBackupChunkPathsState> chunks
     ) =>
-        chunks.Select(chunk => new MediaBackupSyncFinalizeInputChunk
+        chunks
+            .Select(chunk => new MediaBackupSyncFinalizeInputChunk
             {
                 ChunkId = chunk.Id,
                 Paths = chunk.Paths,

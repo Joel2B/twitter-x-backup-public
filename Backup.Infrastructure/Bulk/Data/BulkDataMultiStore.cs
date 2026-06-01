@@ -1,5 +1,5 @@
-using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Application.Core;
+using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Models;
 
 namespace Backup.Infrastructure.Bulk.Data;
@@ -15,8 +15,8 @@ public class BulkDataMultiStore(
     private readonly ISecondaryStoreSelectionService _secondaryStoreSelectionService =
         secondaryStoreSelectionService;
 
-    private IBulkDataStore Primary
-        => _primarySelectionService.ResolvePrimary(
+    private IBulkDataStore Primary =>
+        _primarySelectionService.ResolvePrimary(
             _stores,
             store => store.IsDefault,
             "No bulk data stores are configured.",
@@ -37,7 +37,10 @@ public class BulkDataMultiStore(
         await primary.Save(bulks);
 
         foreach (
-            IBulkDataStore store in _secondaryStoreSelectionService.SelectSecondaries(_stores, primary)
+            IBulkDataStore store in _secondaryStoreSelectionService.SelectSecondaries(
+                _stores,
+                primary
+            )
         )
             await store.Save(bulks);
     }

@@ -22,10 +22,6 @@ public sealed class ProxySetupExecutionService(
 
         ProxySetupPlan setupPlan = _proxySetupOrchestrationService.BuildPlan(runtimePool.Count);
 
-        return new ProxySetupExecutionResult
-        {
-            RuntimePool = runtimePool,
-            SetupPlan = setupPlan,
-        };
+        return new ProxySetupExecutionResult { RuntimePool = runtimePool, SetupPlan = setupPlan };
     }
 }

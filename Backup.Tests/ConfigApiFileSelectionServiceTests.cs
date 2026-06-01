@@ -43,8 +43,8 @@ public class ConfigApiFileSelectionServiceTests
     {
         ConfigApiFileSelectionService sut = new();
 
-        Exception ex = Assert.Throws<Exception>(() =>
-            sut.SelectRequiredFiles(["u1", "u2"], ["u1.json"])
+        Exception ex = Assert.Throws<Exception>(
+            () => sut.SelectRequiredFiles(["u1", "u2"], ["u1.json"])
         );
 
         Assert.Contains("file 'u2.json' not found for user 'u2'", ex.Message);

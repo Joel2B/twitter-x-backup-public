@@ -25,7 +25,11 @@ public class PostReplicationService : IPostReplicationService
         IPostReplicationStore source = defaults.FirstOrDefault() ?? storeList.First();
         Dictionary<string, string> sourceHashes = await source.GetHashesById();
 
-        foreach (IPostReplicationStore target in storeList.Where(store => !ReferenceEquals(store, source)))
+        foreach (
+            IPostReplicationStore target in storeList.Where(store =>
+                !ReferenceEquals(store, source)
+            )
+        )
         {
             Dictionary<string, string> targetHashes = await target.GetHashesById();
             bool hasExtraIds = targetHashes.Keys.Any(id => !sourceHashes.ContainsKey(id));

@@ -1,10 +1,10 @@
-using Backup.Infrastructure.Logging;
-using Backup.Application.Posts;
 using Backup.Application.Core;
+using Backup.Application.Posts;
+using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Abstractions.Services;
-using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Posts.Adapters;
+using Backup.Infrastructure.Posts.Models;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Data;
@@ -26,8 +26,8 @@ public partial class PostDataMultiStore(
     private readonly IPrimarySelectionService _primarySelectionService = primarySelectionService;
     private readonly ILogger<PostDataMultiStore> _logger = logger;
 
-    private IPostDataStore Primary
-        => _primarySelectionService.ResolvePrimary(
+    private IPostDataStore Primary =>
+        _primarySelectionService.ResolvePrimary(
             _stores,
             store => store.IsDefault,
             "No post data stores are configured.",

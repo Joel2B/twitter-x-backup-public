@@ -50,10 +50,7 @@ public sealed class MediaBackupChunkLoadExecutionService(
         catch (Exception ex)
         {
             MediaBackupChunkReadFailureAction action =
-                _mediaBackupChunkReadFailurePolicyService.Decide(
-                    ex,
-                    token.IsCancellationRequested
-                );
+                _mediaBackupChunkReadFailurePolicyService.Decide(ex, token.IsCancellationRequested);
 
             if (action == MediaBackupChunkReadFailureAction.Throw)
                 throw;

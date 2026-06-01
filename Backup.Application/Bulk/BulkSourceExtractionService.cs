@@ -20,7 +20,11 @@ public sealed partial class BulkSourceExtractionService : IBulkSourceExtractionS
                 string user = match.Groups["user"].Value;
                 string type = match.Groups["type"].Value;
 
-                if (string.IsNullOrEmpty(link) || string.IsNullOrEmpty(user) || string.IsNullOrEmpty(type))
+                if (
+                    string.IsNullOrEmpty(link)
+                    || string.IsNullOrEmpty(user)
+                    || string.IsNullOrEmpty(type)
+                )
                     continue;
 
                 BulkSourceLinkItem source = new()
@@ -47,7 +51,10 @@ public sealed partial class BulkSourceExtractionService : IBulkSourceExtractionS
 
     [GeneratedRegex(
         @"(?<link>https?:\/\/(?:www\.)?x\.com\/(?<user>[^\/\s?#""'\\<>]+)(?:\/(?<type>[^\/\s?#""'\\<>]+))?(?:\/[^\s""'<>\\]*)?(?:\?[^\s""'<>\\#]*)?(?:\#[^\s""'<>\\]*)?)(?=[\s""'<>),;]|$)",
-        RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Multiline | RegexOptions.ECMAScript
+        RegexOptions.IgnoreCase
+            | RegexOptions.Compiled
+            | RegexOptions.Multiline
+            | RegexOptions.ECMAScript
     )]
     private static partial Regex SourceRegex();
 }

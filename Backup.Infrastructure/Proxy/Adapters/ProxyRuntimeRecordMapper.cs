@@ -17,15 +17,15 @@ public sealed class ProxyRuntimeRecordMapper(
         {
             Candidate = ToCandidate(data.Proxy),
             IsActive = data.Status.Current == StatusEnum.Active,
-            Connections = data.Connections
-                .Select(item => new ProxyRuntimeConnection
+            Connections = data
+                .Connections.Select(item => new ProxyRuntimeConnection
                 {
                     Date = item.Date,
                     TotalUses = item.TotalUses,
                 })
                 .ToList(),
-            Errors = data.Errors
-                .Select(item => new ProxyRuntimeError
+            Errors = data
+                .Errors.Select(item => new ProxyRuntimeError
                 {
                     Short = item.Message.Short,
                     Extended = item.Message.Extended,
@@ -39,21 +39,17 @@ public sealed class ProxyRuntimeRecordMapper(
         new()
         {
             Proxy = ToProxyDataConfig(record.Candidate),
-            Connections = record.Connections
-                .Select(item => new Connection
+            Connections = record
+                .Connections.Select(item => new Connection
                 {
                     Date = item.Date,
                     TotalUses = item.TotalUses,
                 })
                 .ToList(),
-            Errors = record.Errors
-                .Select(item => new Error
+            Errors = record
+                .Errors.Select(item => new Error
                 {
-                    Message = new ErrorMessage
-                    {
-                        Short = item.Short,
-                        Extended = item.Extended,
-                    },
+                    Message = new ErrorMessage { Short = item.Short, Extended = item.Extended },
                     TotalDuplicates = item.TotalDuplicates,
                     Date = item.Date,
                 })
@@ -66,31 +62,28 @@ public sealed class ProxyRuntimeRecordMapper(
 
     public void ApplyRuntimeRecord(ProxyData proxy, ProxyRuntimeRecord source, DateTime? disabledAt)
     {
-        proxy.Connections = source.Connections
-            .Select(item => new Connection
+        proxy.Connections = source
+            .Connections.Select(item => new Connection
             {
                 Date = item.Date,
                 TotalUses = item.TotalUses,
             })
             .ToList();
-        proxy.Errors = source.Errors
-            .Select(item => new Error
+        proxy.Errors = source
+            .Errors.Select(item => new Error
             {
-                Message = new ErrorMessage
-                {
-                    Short = item.Short,
-                    Extended = item.Extended,
-                },
+                Message = new ErrorMessage { Short = item.Short, Extended = item.Extended },
                 TotalDuplicates = item.TotalDuplicates,
                 Date = item.Date,
             })
             .ToList();
 
-        ProxyRuntimeStatusTransitionResult status = _proxyRuntimeStatusTransitionService.ResolveStatus(
-            source.IsActive,
-            proxy.Status.Date,
-            disabledAt
-        );
+        ProxyRuntimeStatusTransitionResult status =
+            _proxyRuntimeStatusTransitionService.ResolveStatus(
+                source.IsActive,
+                proxy.Status.Date,
+                disabledAt
+            );
         proxy.Status.Current = status.IsActive ? StatusEnum.Active : StatusEnum.Inactive;
 
         if (status.StatusDate.HasValue)
@@ -98,8 +91,18 @@ public sealed class ProxyRuntimeRecordMapper(
     }
 
     private static ProxyCandidate ToCandidate(ProxyDataConfig proxy) =>
-        new() { Ip = proxy.Ip, Port = proxy.Port, Protocol = proxy.Protocol };
+        new()
+        {
+            Ip = proxy.Ip,
+            Port = proxy.Port,
+            Protocol = proxy.Protocol,
+        };
 
     private static ProxyDataConfig ToProxyDataConfig(ProxyCandidate candidate) =>
-        new() { Ip = candidate.Ip, Port = candidate.Port, Protocol = candidate.Protocol };
+        new()
+        {
+            Ip = candidate.Ip,
+            Port = candidate.Port,
+            Protocol = candidate.Protocol,
+        };
 }

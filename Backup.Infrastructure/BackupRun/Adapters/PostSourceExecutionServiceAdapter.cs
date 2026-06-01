@@ -7,8 +7,7 @@ namespace Backup.Infrastructure.BackupRun.Adapters;
 public sealed class PostSourceExecutionServiceAdapter(
     IPostService postService,
     IBackupRunExecutionContextMapper contextMapper
-)
-    : IPostSourceExecutionService
+) : IPostSourceExecutionService
 {
     private readonly IPostService _postService = postService;
     private readonly IBackupRunExecutionContextMapper _contextMapper = contextMapper;

@@ -1,7 +1,7 @@
 using Backup.Application.Proxy;
 using Backup.Application.Proxy.Models;
-using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Models.Config.Proxy;
+using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Models;
 
 namespace Backup.Infrastructure.Proxy.Services.Downloader;

@@ -9,8 +9,8 @@ public sealed class MediaBackupChunkMetadataOrchestrationService(
 {
     private readonly IMediaBackupChunkMetadataPolicyService _mediaBackupChunkMetadataPolicyService =
         mediaBackupChunkMetadataPolicyService;
-    private readonly IMediaBackupChunkMetadataRefreshPlanningService
-        _mediaBackupChunkMetadataRefreshPlanningService = mediaBackupChunkMetadataRefreshPlanningService;
+    private readonly IMediaBackupChunkMetadataRefreshPlanningService _mediaBackupChunkMetadataRefreshPlanningService =
+        mediaBackupChunkMetadataRefreshPlanningService;
 
     public bool RequiresRefresh(IEnumerable<MediaBackupChunkPathMetadataState> items) =>
         _mediaBackupChunkMetadataPolicyService.RequiresRefresh(
@@ -54,12 +54,11 @@ public sealed class MediaBackupChunkMetadataOrchestrationService(
     ) =>
         items.ToDictionary(
             item => item.Path,
-            item =>
-                new MediaBackupChunkDataMetadata
-                {
-                    FileSize = item.FileSize,
-                    Crc32 = item.Crc32,
-                },
+            item => new MediaBackupChunkDataMetadata
+            {
+                FileSize = item.FileSize,
+                Crc32 = item.Crc32,
+            },
             StringComparer.Ordinal
         );
 }

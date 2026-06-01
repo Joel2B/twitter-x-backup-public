@@ -1,12 +1,12 @@
-using Backup.Infrastructure.Core.Abstractions.Setup;
+using Backup.Application.IO;
 using Backup.Application.Media.Backup;
 using Backup.Application.Media.Backup.Models;
-using Backup.Application.IO;
-using Backup.Infrastructure.Media.Abstractions.Data;
 using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Core.Abstractions.Setup;
+using Backup.Infrastructure.Media.Abstractions.Data;
+using Backup.Infrastructure.Media.Models.Backup;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Backup;
-using Backup.Infrastructure.Media.Models.Backup;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -50,11 +50,13 @@ public class LocalMediaBackup(
     private string GetPath()
     {
         string backupRootPath = _mediaBackupPartitionPathService.GetRequiredBackupRootPath(
-            _partition.GetPartitions().Select(partition => new MediaBackupPartitionPathCandidate
-            {
-                Type = partition.Type,
-                RootPath = Path.Combine([.. partition.Paths]),
-            })
+            _partition
+                .GetPartitions()
+                .Select(partition => new MediaBackupPartitionPathCandidate
+                {
+                    Type = partition.Type,
+                    RootPath = Path.Combine([.. partition.Paths]),
+                })
         );
 
         return Path.Combine([backupRootPath, .. _config.Paths.Paths]);

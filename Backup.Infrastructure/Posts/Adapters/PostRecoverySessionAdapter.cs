@@ -1,11 +1,11 @@
 using Backup.Application.Posts.Models;
 using Backup.Application.Posts.Ports;
 using Backup.Infrastructure.Media.Abstractions.Services;
-using Backup.Infrastructure.Posts.Abstractions.Services;
+using Backup.Infrastructure.Media.Models.Logging;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.Request;
-using Backup.Infrastructure.Media.Models.Logging;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using Microsoft.Extensions.Logging;
 using ParseResult = Backup.Domain.Posts.ParseResult;
 
@@ -92,7 +92,8 @@ public sealed class PostRecoverySessionAdapter(
 
     public void OnRecoveryDisabled() => _logger.LogInformation("post recovery disabled");
 
-    public void OnSelectedPosts(int count) => _logger.LogInformation("{count} posts with errors", count);
+    public void OnSelectedPosts(int count) =>
+        _logger.LogInformation("{count} posts with errors", count);
 
     public void OnTweetDetailUnavailable() =>
         _logger.LogWarning("api 'TweetDetail' is disabled or not configured");

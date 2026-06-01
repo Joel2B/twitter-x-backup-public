@@ -37,10 +37,16 @@ internal sealed class PostDataDomainStoreAdapter(IPostDataStore store) : IPostDo
         return posts.Select(PostReplicationMapper.ToDomain).ToList();
     }
 
-    public Task<Dictionary<string, int>> GetPostCountsByProfileIds(IReadOnlyCollection<string> profileIds) =>
-        _store.GetPostCountsByProfileIds(profileIds);
+    public Task<Dictionary<string, int>> GetPostCountsByProfileIds(
+        IReadOnlyCollection<string> profileIds
+    ) => _store.GetPostCountsByProfileIds(profileIds);
 
-    public Task AddPosts(string userId, string origin, List<Post> incoming, MergeOptions? options = null) =>
+    public Task AddPosts(
+        string userId,
+        string origin,
+        List<Post> incoming,
+        MergeOptions? options = null
+    ) =>
         _store.AddPosts(
             userId,
             origin,
@@ -61,6 +67,7 @@ internal sealed class PostDataDomainStoreAdapter(IPostDataStore store) : IPostDo
         _store.UpsertPosts(posts.Select(PostReplicationMapper.ToApp).ToList());
 
     public Task Save() => _store.Save();
+
     public Task Prune() => _store.Prune();
 
     public async Task<PostStoreCounts> GetStoreCounts()

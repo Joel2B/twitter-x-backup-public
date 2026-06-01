@@ -8,7 +8,8 @@ public sealed class PostRecoveryOrchestrationService(
     IPostRecoverySelectionService recoverySelectionService
 ) : IPostRecoveryOrchestrationService
 {
-    private readonly IPostRecoverySelectionService _recoverySelectionService = recoverySelectionService;
+    private readonly IPostRecoverySelectionService _recoverySelectionService =
+        recoverySelectionService;
 
     public async Task<IReadOnlyCollection<Post>> Recover(
         IPostRecoverySession session,

@@ -9,8 +9,8 @@ public class PrimarySelectionServiceTests
     [Fact]
     public void ResolvePrimary_Throws_WhenItemsEmpty()
     {
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            _sut.ResolvePrimary<int>([], _ => false, "no-items", "multi-default")
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => _sut.ResolvePrimary<int>([], _ => false, "no-items", "multi-default")
         );
 
         Assert.Equal("no-items", ex.Message);
@@ -19,8 +19,8 @@ public class PrimarySelectionServiceTests
     [Fact]
     public void ResolvePrimary_Throws_WhenMultipleDefaults()
     {
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            _sut.ResolvePrimary([1, 2, 3], value => value > 1, "no-items", "multi-default")
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => _sut.ResolvePrimary([1, 2, 3], value => value > 1, "no-items", "multi-default")
         );
 
         Assert.Equal("multi-default", ex.Message);
@@ -29,7 +29,12 @@ public class PrimarySelectionServiceTests
     [Fact]
     public void ResolvePrimary_ReturnsDefault_WhenExists()
     {
-        int selected = _sut.ResolvePrimary([1, 2, 3], value => value == 2, "no-items", "multi-default");
+        int selected = _sut.ResolvePrimary(
+            [1, 2, 3],
+            value => value == 2,
+            "no-items",
+            "multi-default"
+        );
 
         Assert.Equal(2, selected);
     }

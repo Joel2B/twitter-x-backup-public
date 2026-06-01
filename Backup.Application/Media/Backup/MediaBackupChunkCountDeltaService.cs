@@ -9,8 +9,14 @@ public sealed class MediaBackupChunkCountDeltaService : IMediaBackupChunkCountDe
         IEnumerable<MediaBackupChunkCountState> after
     )
     {
-        Dictionary<int, int> beforeByChunk = before.ToDictionary(item => item.ChunkId, item => item.PathCount);
-        Dictionary<int, int> afterByChunk = after.ToDictionary(item => item.ChunkId, item => item.PathCount);
+        Dictionary<int, int> beforeByChunk = before.ToDictionary(
+            item => item.ChunkId,
+            item => item.PathCount
+        );
+        Dictionary<int, int> afterByChunk = after.ToDictionary(
+            item => item.ChunkId,
+            item => item.PathCount
+        );
 
         HashSet<int> chunkIds = [.. beforeByChunk.Keys, .. afterByChunk.Keys];
         List<MediaBackupChunkCountDeltaItem> items = [];

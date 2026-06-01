@@ -50,7 +50,8 @@ public sealed class MediaBackupDependencies(
         mediaBackupChunkAssignmentApplyService;
     public IMediaBackupDirectPathFinalizeService DirectPathFinalizeService { get; } =
         mediaBackupDirectPathFinalizeService;
-    public IMediaBackupSyncFinalizeService SyncFinalizeService { get; } = mediaBackupSyncFinalizeService;
+    public IMediaBackupSyncFinalizeService SyncFinalizeService { get; } =
+        mediaBackupSyncFinalizeService;
     public IMediaBackupDirectApplyPathService DirectApplyPathService { get; } =
         mediaBackupDirectApplyPathService;
     public IMediaBackupPathObservationCompositionService PathObservationCompositionService { get; } =
@@ -63,8 +64,10 @@ public sealed class MediaBackupDependencies(
         mediaBackupIntegrityObservationCompositionService;
     public IMediaBackupDirectPathScanOrchestrationService DirectPathScanOrchestrationService { get; } =
         mediaBackupDirectPathScanOrchestrationService;
-    public IMediaBackupProgressPolicyService ProgressPolicyService { get; } = mediaBackupProgressPolicyService;
-    public IMediaBackupPathProjectionService PathProjectionService { get; } = mediaBackupPathProjectionService;
+    public IMediaBackupProgressPolicyService ProgressPolicyService { get; } =
+        mediaBackupProgressPolicyService;
+    public IMediaBackupPathProjectionService PathProjectionService { get; } =
+        mediaBackupPathProjectionService;
     public IMediaBackupArchiveMetadataMapService ArchiveMetadataMapService { get; } =
         mediaBackupArchiveMetadataMapService;
     public IMediaBackupPathArchiveMetadataProjectionService PathArchiveMetadataProjectionService { get; } =
@@ -75,7 +78,8 @@ public sealed class MediaBackupDependencies(
         mediaBackupChunkFailureApplyService;
     public IMediaBackupApplyChunkPlanningService ApplyChunkPlanningService { get; } =
         mediaBackupApplyChunkPlanningService;
-    public IMediaBackupChunkPlanningService ChunkPlanningService { get; } = mediaBackupChunkPlanningService;
+    public IMediaBackupChunkPlanningService ChunkPlanningService { get; } =
+        mediaBackupChunkPlanningService;
     public IMediaBackupChunkSnapshotCompositionService ChunkSnapshotCompositionService { get; } =
         mediaBackupChunkSnapshotCompositionService;
     public IMediaBackupChunkRuntimeCompositionService ChunkRuntimeCompositionService { get; } =
@@ -98,7 +102,8 @@ public sealed class MediaBackupDependencies(
         mediaBackupChunkMetadataRefreshExecutionService;
     public IMediaBackupChunkReportObservationAggregationService ChunkReportObservationAggregationService { get; } =
         mediaBackupChunkReportObservationAggregationService;
-    public IMediaBackupChunkReportService ChunkReportService { get; } = mediaBackupChunkReportService;
+    public IMediaBackupChunkReportService ChunkReportService { get; } =
+        mediaBackupChunkReportService;
     public IMediaBackupChunkMetadataOrchestrationService ChunkMetadataOrchestrationService { get; } =
         mediaBackupChunkMetadataOrchestrationService;
     public IMediaBackupIntegrityChunkRefreshService IntegrityChunkRefreshService { get; } =
@@ -107,7 +112,8 @@ public sealed class MediaBackupDependencies(
         mediaBackupDuplicateChunkExecutionService;
     public IMediaBackupZipEntryReaderIOService ZipEntryReaderIoService { get; } =
         mediaBackupZipEntryReaderIoService;
-    public IMediaBackupZipMutationIOService ZipMutationIoService { get; } = mediaBackupZipMutationIoService;
+    public IMediaBackupZipMutationIOService ZipMutationIoService { get; } =
+        mediaBackupZipMutationIoService;
     public IMediaBackupChunkPersistenceIOService ChunkPersistenceIoService { get; } =
         mediaBackupChunkPersistenceIoService;
     public IMediaBackupPhaseOrchestrationService PhaseOrchestrationService { get; } =

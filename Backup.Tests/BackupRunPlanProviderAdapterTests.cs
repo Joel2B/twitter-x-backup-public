@@ -2,7 +2,6 @@ using Backup.Application.BackupRun;
 using Backup.Infrastructure.BackupRun.Adapters;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
-using Backup.Infrastructure.Models.Config.Request;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Backup;
 using Backup.Infrastructure.Models.Config.Data.Bulk;
@@ -12,6 +11,7 @@ using Backup.Infrastructure.Models.Config.Data.Posts;
 using Backup.Infrastructure.Models.Config.Downloads;
 using Backup.Infrastructure.Models.Config.Medias;
 using Backup.Infrastructure.Models.Config.Proxy;
+using Backup.Infrastructure.Models.Config.Request;
 using Backup.Infrastructure.Models.Config.Tasks;
 
 namespace Backup.Tests;
@@ -151,7 +151,12 @@ public class BackupRunPlanProviderAdapterTests
                 {
                     Enabled = true,
                     ThresholdRemaining = 1,
-                    Wait = new RateLimitWait { Min = 1, Max = 2, Reset = false },
+                    Wait = new RateLimitWait
+                    {
+                        Min = 1,
+                        Max = 2,
+                        Reset = false,
+                    },
                 },
             },
         };
@@ -295,7 +300,12 @@ public class BackupRunPlanProviderAdapterTests
         new()
         {
             Enabled = true,
-            Threads = new Threads { Start = 1, Min = 1, Max = 2 },
+            Threads = new Threads
+            {
+                Start = 1,
+                Min = 1,
+                Max = 2,
+            },
             Count = 1,
             MaxBytesPerSecond = 1,
             Prune = new Filter { Filters = [] },

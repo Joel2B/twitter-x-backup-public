@@ -4,7 +4,11 @@ namespace Backup.Application.Proxy;
 
 public sealed class ProxyEndpointParserService : IProxyEndpointParserService
 {
-    public IReadOnlyList<ProxyEndpoint> Parse(string format, IEnumerable<string> lines, string protocol) =>
+    public IReadOnlyList<ProxyEndpoint> Parse(
+        string format,
+        IEnumerable<string> lines,
+        string protocol
+    ) =>
         format.ToLowerInvariant() switch
         {
             "ipport" => ParseIpPort(lines, protocol),

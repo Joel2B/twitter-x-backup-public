@@ -1,8 +1,8 @@
 using System.Net;
 using Backup.Application.Proxy;
 using Backup.Application.Proxy.Models;
-using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Models.Config.Proxy;
+using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Models;
 using Microsoft.Extensions.Logging;
 
@@ -15,7 +15,8 @@ public class ProxyDownloaderHttp(
 ) : IProxyDownloader
 {
     private readonly ILogger _logger = _logger;
-    private readonly IProxyEndpointParserService _proxyEndpointParserService = proxyEndpointParserService;
+    private readonly IProxyEndpointParserService _proxyEndpointParserService =
+        proxyEndpointParserService;
     private readonly string _format = format;
 
     private readonly HttpClient _client = new();

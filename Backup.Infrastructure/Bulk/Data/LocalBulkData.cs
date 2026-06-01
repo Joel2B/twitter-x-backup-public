@@ -1,11 +1,11 @@
-using Backup.Infrastructure.Core.Abstractions.Setup;
-using Backup.Infrastructure.Bulk.Abstractions.Data;
-using Backup.Application.Core;
 using Backup.Application.Bulk;
 using Backup.Application.Bulk.Models;
+using Backup.Application.Core;
 using Backup.Application.IO;
-using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Models;
+using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Bulk;
@@ -40,7 +40,8 @@ public class LocalBulkData(
         secondaryStoreSelectionService;
     private readonly IBulkDatedPathExtractionService _bulkDatedPathExtractionService =
         bulkDatedPathExtractionService;
-    private readonly IBulkPruneExecutionService _bulkPruneExecutionService = bulkPruneExecutionService;
+    private readonly IBulkPruneExecutionService _bulkPruneExecutionService =
+        bulkPruneExecutionService;
     private readonly IBulkReplicationPathPlanningService _bulkReplicationPathPlanningService =
         bulkReplicationPathPlanningService;
     private readonly IBulkArchiveFilePolicyService _bulkArchiveFilePolicyService =
@@ -112,7 +113,10 @@ public class LocalBulkData(
         if (!File.Exists(path))
             return;
 
-        string newPath = _bulkArchiveFilePolicyService.BuildArchivePath(path, _dateTimeProvider.Now);
+        string newPath = _bulkArchiveFilePolicyService.BuildArchivePath(
+            path,
+            _dateTimeProvider.Now
+        );
 
         await Task.Delay(1000);
         File.Move(path, newPath);
@@ -124,13 +128,19 @@ public class LocalBulkData(
         _logger.LogInformation("prune: {value}", _config.Tasks.Prune);
 
         List<PartitionConfig> partitions = _partition.GetPartitions();
-        Dictionary<int, PartitionConfig> partitionsById = partitions.ToDictionary(partition => partition.Id);
+        Dictionary<int, PartitionConfig> partitionsById = partitions.ToDictionary(partition =>
+            partition.Id
+        );
         List<BulkPrunePartitionExecutionInput> inputs = [];
 
         foreach (PartitionConfig partition in partitions)
         {
             string basePath = GetPath(partition);
-            string[] pathsFiles = Directory.GetFiles(basePath, "*.json", SearchOption.TopDirectoryOnly);
+            string[] pathsFiles = Directory.GetFiles(
+                basePath,
+                "*.json",
+                SearchOption.TopDirectoryOnly
+            );
             List<DatedPath> datedPaths = _bulkDatedPathExtractionService
                 .Extract(pathsFiles)
                 .OrderBy(entry => entry.Date)
@@ -145,11 +155,12 @@ public class LocalBulkData(
             );
         }
 
-        IReadOnlyList<BulkPrunePartitionExecutionPlan> plans = _bulkPruneExecutionService.PlanPartitions(
-            inputs,
-            _config.Tasks.Prune,
-            _appConfig.Tasks.Prune.Data.Post.KeepDays
-        );
+        IReadOnlyList<BulkPrunePartitionExecutionPlan> plans =
+            _bulkPruneExecutionService.PlanPartitions(
+                inputs,
+                _config.Tasks.Prune,
+                _appConfig.Tasks.Prune.Data.Post.KeepDays
+            );
 
         foreach (BulkPrunePartitionExecutionPlan plan in plans)
         {
@@ -179,10 +190,8 @@ public class LocalBulkData(
     public void Replicate()
     {
         PartitionConfig primary = _partition.GetPrimary();
-        IReadOnlyList<PartitionConfig> partitions = _secondaryStoreSelectionService.SelectSecondaries(
-            _partition.GetPartitions(),
-            primary
-        );
+        IReadOnlyList<PartitionConfig> partitions =
+            _secondaryStoreSelectionService.SelectSecondaries(_partition.GetPartitions(), primary);
 
         string mainPath = GetFileBulk();
         IReadOnlyList<string> replicaPaths = _bulkReplicationPathPlanningService.GetReplicaPaths(

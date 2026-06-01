@@ -1,9 +1,9 @@
-using Backup.Infrastructure.Media.Data;
+using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.DependencyInjection.Base;
-using Backup.Infrastructure.Core.Abstractions.Setup;
-using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Media.Abstractions.Services;
+using Backup.Infrastructure.Media.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,7 +23,9 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
                 keyOffset: 200
             );
 
-        foreach (DataInfrastructureHelpers.DataRegistration<StorageMedia> registration in registrations)
+        foreach (
+            DataInfrastructureHelpers.DataRegistration<StorageMedia> registration in registrations
+        )
         {
             StorageMedia storage = registration.Storage;
             string key = registration.Key;
@@ -33,7 +35,8 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
             services.AddKeyedScoped(
                 key,
                 (sp, _) =>
-                    (IPartition)ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
+                    (IPartition)
+                        ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
             );
 
             services.AddKeyedScoped(

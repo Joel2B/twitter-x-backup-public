@@ -3,9 +3,8 @@ using Backup.Application.Proxy.Ports;
 
 namespace Backup.Application.Proxy;
 
-public sealed class ProxyCandidateLoadService(
-    IProxySourceLoadService proxySourceLoadService
-) : IProxyCandidateLoadService
+public sealed class ProxyCandidateLoadService(IProxySourceLoadService proxySourceLoadService)
+    : IProxyCandidateLoadService
 {
     private readonly IProxySourceLoadService _proxySourceLoadService = proxySourceLoadService;
 

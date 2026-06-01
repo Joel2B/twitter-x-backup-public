@@ -8,7 +8,5 @@ public sealed class MediaBackupApplyEntrySelectionService : IMediaBackupApplyEnt
         IEnumerable<MediaBackupApplyEntryCandidate> candidates,
         ISet<string> storagePaths
     ) =>
-        candidates
-            .Where(item => item.HasHash && !storagePaths.Contains(item.ArchivePath))
-            .ToList();
+        candidates.Where(item => item.HasHash && !storagePaths.Contains(item.ArchivePath)).ToList();
 }

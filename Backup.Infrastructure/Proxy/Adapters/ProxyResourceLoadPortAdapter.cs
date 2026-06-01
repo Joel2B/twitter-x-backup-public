@@ -15,7 +15,8 @@ public sealed class ProxyResourceLoadPortAdapter(
 ) : IProxyResourceLoadPort
 {
     private readonly ILogger _logger = logger;
-    private readonly IProxyEndpointParserService _proxyEndpointParserService = proxyEndpointParserService;
+    private readonly IProxyEndpointParserService _proxyEndpointParserService =
+        proxyEndpointParserService;
     private readonly IProxyProviderTypeResolverService _proxyProviderTypeResolverService =
         proxyProviderTypeResolverService;
 
@@ -29,7 +30,9 @@ public sealed class ProxyResourceLoadPortAdapter(
         ).Create(request.ProviderType);
 
         Resource resource = new() { Type = request.ResourceType, Value = request.ResourceValue };
-        List<Backup.Infrastructure.Proxy.Models.ProxyDataConfig>? loaded = await downloader.Load(resource);
+        List<Backup.Infrastructure.Proxy.Models.ProxyDataConfig>? loaded = await downloader.Load(
+            resource
+        );
 
         if (loaded is null || loaded.Count == 0)
             return [];

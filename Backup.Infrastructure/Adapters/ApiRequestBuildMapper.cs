@@ -30,7 +30,10 @@ internal static class ApiRequestBuildMapper
                         entry => entry.Key,
                         entry => entry.Value
                     ),
-                    Headers = api.Request.Headers.ToDictionary(entry => entry.Key, entry => entry.Value),
+                    Headers = api.Request.Headers.ToDictionary(
+                        entry => entry.Key,
+                        entry => entry.Value
+                    ),
                 };
             }
         );
@@ -43,7 +46,10 @@ internal static class ApiRequestBuildMapper
             {
                 Variables = built.Variables.ToDictionary(entry => entry.Key, entry => entry.Value),
                 Features = built.Features.ToDictionary(entry => entry.Key, entry => entry.Value),
-                FieldToggles = built.FieldToggles.ToDictionary(entry => entry.Key, entry => entry.Value),
+                FieldToggles = built.FieldToggles.ToDictionary(
+                    entry => entry.Key,
+                    entry => entry.Value
+                ),
             },
             Headers = built.Headers.ToDictionary(entry => entry.Key, entry => entry.Value),
         };

@@ -16,44 +16,47 @@ public sealed class PostTableMaterializationService : IPostTableMaterializationS
                 BannerUrl = row.BannerUrl,
                 ImageUrl = row.ImageUrl,
                 Following = row.Following,
-                Count =
-                    row.CountMedia.HasValue
-                        ? new Backup.Domain.Posts.PostCount { Media = row.CountMedia }
-                        : null,
+                Count = row.CountMedia.HasValue
+                    ? new Backup.Domain.Posts.PostCount { Media = row.CountMedia }
+                    : null,
             },
             StringComparer.Ordinal
         );
 
-        Dictionary<string, List<string>> hashtagsByPost = input.Hashtags
-            .GroupBy(row => row.PostId, StringComparer.Ordinal)
+        Dictionary<string, List<string>> hashtagsByPost = input
+            .Hashtags.GroupBy(row => row.PostId, StringComparer.Ordinal)
             .ToDictionary(
                 group => group.Key,
                 group => group.OrderBy(row => row.Ordinal).Select(row => row.Value).ToList(),
                 StringComparer.Ordinal
             );
 
-        Dictionary<(string PostId, int MediaOrdinal), List<Backup.Domain.Posts.PostVariant>> variantsByMedia =
-            input.MediaVariants
-                .GroupBy(row => (row.PostId, row.MediaOrdinal))
-                .ToDictionary(
-                    group => group.Key,
-                    group =>
-                        group.OrderBy(row => row.Ordinal)
-                            .Select(row => new Backup.Domain.Posts.PostVariant
-                            {
-                                ContentType = row.ContentType,
-                                Bitrate = row.Bitrate,
-                                Url = row.Url,
-                            })
-                            .ToList()
-                );
-
-        Dictionary<string, List<Backup.Domain.Posts.PostMedia>> mediasByPost = input.Medias
-            .GroupBy(row => row.PostId, StringComparer.Ordinal)
+        Dictionary<
+            (string PostId, int MediaOrdinal),
+            List<Backup.Domain.Posts.PostVariant>
+        > variantsByMedia = input
+            .MediaVariants.GroupBy(row => (row.PostId, row.MediaOrdinal))
             .ToDictionary(
                 group => group.Key,
                 group =>
-                    group.OrderBy(row => row.Ordinal)
+                    group
+                        .OrderBy(row => row.Ordinal)
+                        .Select(row => new Backup.Domain.Posts.PostVariant
+                        {
+                            ContentType = row.ContentType,
+                            Bitrate = row.Bitrate,
+                            Url = row.Url,
+                        })
+                        .ToList()
+            );
+
+        Dictionary<string, List<Backup.Domain.Posts.PostMedia>> mediasByPost = input
+            .Medias.GroupBy(row => row.PostId, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group =>
+                    group
+                        .OrderBy(row => row.Ordinal)
                         .Select(row =>
                         {
                             variantsByMedia.TryGetValue(
@@ -81,30 +84,32 @@ public sealed class PostTableMaterializationService : IPostTableMaterializationS
                 StringComparer.Ordinal
             );
 
-        Dictionary<string, Dictionary<string, Dictionary<string, Backup.Domain.Posts.IndexData>>> indexByPost =
-            input.IndexEntries
-                .GroupBy(row => row.PostId, StringComparer.Ordinal)
-                .ToDictionary(
-                    group => group.Key,
-                    group =>
-                        group.GroupBy(row => row.UserId, StringComparer.Ordinal)
-                            .ToDictionary(
-                                userGroup => userGroup.Key,
-                                userGroup =>
-                                    userGroup.ToDictionary(
-                                        row => row.Origin,
-                                        row =>
-                                            new Backup.Domain.Posts.IndexData
-                                            {
-                                                Previous = row.Previous,
-                                                Next = row.Next,
-                                            },
-                                        StringComparer.Ordinal
-                                    ),
-                                StringComparer.Ordinal
-                            ),
-                    StringComparer.Ordinal
-                );
+        Dictionary<
+            string,
+            Dictionary<string, Dictionary<string, Backup.Domain.Posts.IndexData>>
+        > indexByPost = input
+            .IndexEntries.GroupBy(row => row.PostId, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group =>
+                    group
+                        .GroupBy(row => row.UserId, StringComparer.Ordinal)
+                        .ToDictionary(
+                            userGroup => userGroup.Key,
+                            userGroup =>
+                                userGroup.ToDictionary(
+                                    row => row.Origin,
+                                    row => new Backup.Domain.Posts.IndexData
+                                    {
+                                        Previous = row.Previous,
+                                        Next = row.Next,
+                                    },
+                                    StringComparer.Ordinal
+                                ),
+                            StringComparer.Ordinal
+                        ),
+                StringComparer.Ordinal
+            );
 
         Dictionary<string, PostTableMetaRow> metaById = input.PostMeta.ToDictionary(
             row => row.Id,

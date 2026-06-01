@@ -1,8 +1,8 @@
-using Backup.Infrastructure.Posts.Data.Json;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Abstractions.Services;
-using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Posts.Adapters;
+using Backup.Infrastructure.Posts.Data.Json;
+using Backup.Infrastructure.Posts.Models;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection.Features.Posts;

@@ -19,9 +19,11 @@ public class PostRecoveryRunnerAdapter(
 
     public Task Run(BackupRunRecoveryExecution execution) =>
         _stepExecutor.Run(
-            _postRecoveryExecutionServices.Select(service =>
-                new PostRecoveryStep(_logger, service, execution)
-            )
+            _postRecoveryExecutionServices.Select(service => new PostRecoveryStep(
+                _logger,
+                service,
+                execution
+            ))
         );
 
     private sealed class PostRecoveryStep(

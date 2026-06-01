@@ -15,7 +15,10 @@ public sealed class DumpIndexPostsReadPortAdapter(IDataStoreGuardService dataSto
     {
         string content = await File.ReadAllTextAsync(path);
         List<Post>? deserialized = JsonConvert.DeserializeObject<List<Post>>(content);
-        List<Post> posts = _dataStoreGuardService.RequireDeserialized(deserialized, "Error in deserialize");
+        List<Post> posts = _dataStoreGuardService.RequireDeserialized(
+            deserialized,
+            "Error in deserialize"
+        );
 
         return posts.Select(PostReplicationMapper.ToDomain).ToList();
     }

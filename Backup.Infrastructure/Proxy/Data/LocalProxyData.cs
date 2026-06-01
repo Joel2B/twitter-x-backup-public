@@ -1,16 +1,20 @@
-using Backup.Infrastructure.Core.Abstractions.Setup;
-using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Backup.Application.IO;
 using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
+using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Backup.Infrastructure.Proxy.Models;
 using Backup.Infrastructure.Utils;
 using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Proxy.Data;
 
-public class LocalProxyData(AppConfig _config, IPartition _partition, IDataStoreGuardService dataStoreGuardService) : IProxyData, ISetup
+public class LocalProxyData(
+    AppConfig _config,
+    IPartition _partition,
+    IDataStoreGuardService dataStoreGuardService
+) : IProxyData, ISetup
 {
     private readonly AppConfig _config = _config;
     private readonly IPartition _partition = _partition;

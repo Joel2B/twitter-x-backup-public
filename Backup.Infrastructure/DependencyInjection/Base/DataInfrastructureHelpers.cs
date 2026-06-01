@@ -1,5 +1,5 @@
-using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Application.Core;
+using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,7 +59,9 @@ internal static class DataInfrastructureHelpers
 
     internal static AppConfig GetAppConfig(IServiceCollection services)
     {
-        ServiceDescriptor? descriptor = services.LastOrDefault(o => o.ServiceType == typeof(AppConfig));
+        ServiceDescriptor? descriptor = services.LastOrDefault(o =>
+            o.ServiceType == typeof(AppConfig)
+        );
 
         if (descriptor?.ImplementationInstance is AppConfig config)
         {

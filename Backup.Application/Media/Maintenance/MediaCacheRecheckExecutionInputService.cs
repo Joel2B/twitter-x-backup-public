@@ -12,9 +12,7 @@ public sealed class MediaCacheRecheckExecutionInputService(
     private readonly IMediaCacheRecheckObservationCompositionService _mediaCacheRecheckObservationCompositionService =
         mediaCacheRecheckObservationCompositionService;
 
-    public MediaCacheRecheckExecutionInput BuildInputs(
-        IReadOnlyList<MediaCacheStoredEntry> entries
-    )
+    public MediaCacheRecheckExecutionInput BuildInputs(IReadOnlyList<MediaCacheStoredEntry> entries)
     {
         IReadOnlyCollection<string> recheckPaths =
             _mediaCacheRecheckPlanningService.SelectPathsToRecheck(entries);

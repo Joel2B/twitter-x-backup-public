@@ -4,5 +4,9 @@ namespace Backup.Application.Media;
 
 public interface IMediaParallelDownloadPolicyService
 {
-    MediaParallelDownloadSettings Create(int minDegreeOfParallelism, int maxDegreeOfParallelism, int startDegreeOfParallelism);
+    MediaParallelDownloadSettings Create(
+        int minDegreeOfParallelism,
+        int maxDegreeOfParallelism,
+        int startDegreeOfParallelism
+    );
 }

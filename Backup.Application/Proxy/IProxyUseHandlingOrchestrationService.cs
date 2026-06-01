@@ -4,5 +4,9 @@ namespace Backup.Application.Proxy;
 
 public interface IProxyUseHandlingOrchestrationService
 {
-    ProxyUseHandlingOutcome HandleUse(ProxyRuntimeRecord runtimeRecord, DateTime now, int stopCount);
+    ProxyUseHandlingOutcome HandleUse(
+        ProxyRuntimeRecord runtimeRecord,
+        DateTime now,
+        int stopCount
+    );
 }

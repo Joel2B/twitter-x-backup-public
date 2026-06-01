@@ -11,7 +11,8 @@ public sealed class DumpLifecycleService(
     private readonly IDumpSessionNamingPolicyService _dumpSessionNamingPolicyService =
         dumpSessionNamingPolicyService;
     private readonly IDumpContextGuardService _dumpContextGuardService = dumpContextGuardService;
-    private readonly IDumpProgressPolicyService _dumpProgressPolicyService = dumpProgressPolicyService;
+    private readonly IDumpProgressPolicyService _dumpProgressPolicyService =
+        dumpProgressPolicyService;
 
     public DumpCurrentSessionResolution ResolveCurrentSession(string? current, DateTime now)
     {
@@ -25,21 +26,13 @@ public sealed class DumpLifecycleService(
     }
 
     public DumpSessionCloseResolution ResolveSessionClose(string? current) =>
-        new()
-        {
-            Current = null,
-            ShouldPersist = !string.IsNullOrWhiteSpace(current),
-        };
+        new() { Current = null, ShouldPersist = !string.IsNullOrWhiteSpace(current) };
 
     public DumpDataInitialization CreateInitialData(int count, object? queryCountRaw)
     {
         int queryCount = ToInt(queryCountRaw);
 
-        return new()
-        {
-            Count = count,
-            QueryCount = queryCount,
-        };
+        return new() { Count = count, QueryCount = queryCount };
     }
 
     public string ResolveType(string? current, string contextId, string? existingType) =>
@@ -75,7 +68,8 @@ public sealed class DumpLifecycleService(
         return value switch
         {
             int intValue => intValue,
-            long longValue when longValue >= int.MinValue && longValue <= int.MaxValue => (int)longValue,
+            long longValue when longValue >= int.MinValue && longValue <= int.MaxValue =>
+                (int)longValue,
             _ => int.TryParse(value.ToString(), out int parsed) ? parsed : 0,
         };
     }

@@ -4,7 +4,9 @@ namespace Backup.Application.Media.Backup;
 
 public sealed class MediaBackupChunkAssignmentApplyService : IMediaBackupChunkAssignmentApplyService
 {
-    public MediaBackupChunkAssignmentApplyResult Apply(IEnumerable<MediaBackupPathAssignment> assignments)
+    public MediaBackupChunkAssignmentApplyResult Apply(
+        IEnumerable<MediaBackupPathAssignment> assignments
+    )
     {
         Dictionary<int, List<string>> addedByChunk = [];
         List<string> addedOriginalPaths = [];

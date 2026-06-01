@@ -12,13 +12,11 @@ public static class PostIngestionAdaptersServiceCollectionExtensions
 {
     public static IServiceCollection AddPostIngestionAdapters(this IServiceCollection services)
     {
-        services.TryAddScoped<IPostDomainParser>(sp =>
-            new PostDomainParserAdapter(
-                sp.GetRequiredService<IPostParser>(),
-                sp.GetRequiredService<IPostProjectionComposer>(),
-                sp.GetRequiredService<IPostIndexingService>()
-            )
-        );
+        services.TryAddScoped<IPostDomainParser>(sp => new PostDomainParserAdapter(
+            sp.GetRequiredService<IPostParser>(),
+            sp.GetRequiredService<IPostProjectionComposer>(),
+            sp.GetRequiredService<IPostIndexingService>()
+        ));
         services.TryAddScoped<IPostProjectionComposer, PostProjectionComposer>();
         services.TryAddScoped<IPostIndexingService, PostIndexingService>();
         services.TryAddScoped<IPostDomainData>(sp =>

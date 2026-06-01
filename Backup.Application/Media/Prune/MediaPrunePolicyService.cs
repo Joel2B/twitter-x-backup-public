@@ -35,13 +35,11 @@ public sealed class MediaPrunePolicyService(List<string>? rawFilters) : IMediaPr
         return filters
             .Select(item => item.Split(':', StringSplitOptions.RemoveEmptyEntries))
             .Where(parts => parts.Length == 3)
-            .Select(parts =>
-                new PruneFilter(
-                    parts[0].ToLowerInvariant(),
-                    parts[1].ToLowerInvariant(),
-                    parts[2].ToLowerInvariant()
-                )
-            )
+            .Select(parts => new PruneFilter(
+                parts[0].ToLowerInvariant(),
+                parts[1].ToLowerInvariant(),
+                parts[2].ToLowerInvariant()
+            ))
             .ToHashSet();
     }
 

@@ -7,26 +7,26 @@ public sealed class MediaBackupChunkFailurePolicyService : IMediaBackupChunkFail
     public IReadOnlyList<MediaBackupChunkFailureState> ResetForCorruptChunk(
         IEnumerable<MediaBackupChunkFailureState> items
     ) =>
-        items.Select(item =>
-            new MediaBackupChunkFailureState
+        items
+            .Select(item => new MediaBackupChunkFailureState
             {
                 Path = item.Path,
                 Hash = null,
                 FileSize = null,
                 Crc32 = null,
-            }
-        ).ToList();
+            })
+            .ToList();
 
     public IReadOnlyList<MediaBackupChunkFailureState> ResetForApplyFailure(
         IEnumerable<MediaBackupChunkFailureState> items
     ) =>
-        items.Select(item =>
-            new MediaBackupChunkFailureState
+        items
+            .Select(item => new MediaBackupChunkFailureState
             {
                 Path = item.Path,
                 Hash = null,
                 FileSize = item.FileSize,
                 Crc32 = item.Crc32,
-            }
-        ).ToList();
+            })
+            .ToList();
 }

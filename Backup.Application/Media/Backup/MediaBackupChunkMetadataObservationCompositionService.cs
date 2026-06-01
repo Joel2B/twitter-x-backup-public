@@ -8,7 +8,8 @@ public sealed class MediaBackupChunkMetadataObservationCompositionService
     public IReadOnlyList<MediaBackupChunkPathMetadataState> BuildPathMetadataStates(
         IEnumerable<MediaBackupChunkEntryState> entries
     ) =>
-        entries.Select(entry => new MediaBackupChunkPathMetadataState
+        entries
+            .Select(entry => new MediaBackupChunkPathMetadataState
             {
                 Path = entry.Path,
                 FileSize = entry.FileSize,
@@ -19,7 +20,8 @@ public sealed class MediaBackupChunkMetadataObservationCompositionService
     public IReadOnlyList<MediaBackupChunkMetadataObservation> BuildObservations(
         IEnumerable<MediaBackupChunkMetadataObservationInput> inputs
     ) =>
-        inputs.Select(input => new MediaBackupChunkMetadataObservation
+        inputs
+            .Select(input => new MediaBackupChunkMetadataObservation
             {
                 Path = input.Path,
                 HasEntry = input.HasEntry,

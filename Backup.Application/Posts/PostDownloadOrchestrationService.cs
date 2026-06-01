@@ -3,9 +3,8 @@ using Backup.Application.Posts.Ports;
 
 namespace Backup.Application.Posts;
 
-public class PostDownloadOrchestrationService(
-    IPostDownloadFlowService postDownloadFlowService
-) : IPostDownloadOrchestrationService
+public class PostDownloadOrchestrationService(IPostDownloadFlowService postDownloadFlowService)
+    : IPostDownloadOrchestrationService
 {
     private readonly IPostDownloadFlowService _postDownloadFlowService = postDownloadFlowService;
 
@@ -31,7 +30,12 @@ public class PostDownloadOrchestrationService(
 
             const int maxAttempts = 3;
             int attemptCount = 0;
-            PostDownloadPageResult pageResult = new() { Posts = [], RawResponse = "", NextCursor = null };
+            PostDownloadPageResult pageResult = new()
+            {
+                Posts = [],
+                RawResponse = "",
+                NextCursor = null,
+            };
 
             while (true)
             {

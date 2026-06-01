@@ -1,6 +1,6 @@
 using Backup.Application.Posts.Models;
-using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Posts.Adapters.ProjectionMapping;
+using Backup.Infrastructure.Posts.Models;
 
 namespace Backup.Tests;
 
@@ -36,11 +36,7 @@ public class PostProjectionMappingTests
     public void PostMapper_UsesRetweetedStatusResult_WhenPresent()
     {
         Result retweetedResult = CreateResult(
-            CreateLegacy(
-                id: "retweeted-post",
-                userId: "u-retweet",
-                fullText: "from retweet source"
-            )
+            CreateLegacy(id: "retweeted-post", userId: "u-retweet", fullText: "from retweet source")
         );
 
         Legacy baseLegacy = CreateLegacy(id: "base-post", userId: "u-base", fullText: "base");
@@ -97,8 +93,7 @@ public class PostProjectionMappingTests
                         Value = new BindingValue
                         {
                             Type = "STRING",
-                            StringValue =
-                                """
+                            StringValue = """
                                 {
                                   "component_objects": {
                                     "media_1": { "data": { "id": "m1" } }
@@ -216,11 +211,7 @@ public class PostProjectionMappingTests
     ) =>
         new()
         {
-            Entities = new Entities
-            {
-                Hashtags = hashtags ?? [],
-                Media = null,
-            },
+            Entities = new Entities { Hashtags = hashtags ?? [], Media = null },
             Name = $"name-{userId}",
             ProfileImageUrlHttps = $"https://img.local/{userId}.jpg",
             ScreenName = $"screen-{userId}",

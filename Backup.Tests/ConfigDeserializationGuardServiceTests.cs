@@ -25,9 +25,7 @@ public class ConfigDeserializationGuardServiceTests
     {
         ConfigDeserializationGuardService sut = new();
 
-        Exception ex = Assert.Throws<Exception>(() =>
-            sut.RequireConfig<Dummy>(null, "Data.json")
-        );
+        Exception ex = Assert.Throws<Exception>(() => sut.RequireConfig<Dummy>(null, "Data.json"));
 
         Assert.Contains("error deserializing config file 'Data.json'", ex.Message);
     }

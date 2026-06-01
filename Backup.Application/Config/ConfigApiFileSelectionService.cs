@@ -5,7 +5,9 @@ public sealed class ConfigApiFileSelectionService
     public void ValidateApiDirectoryExists(bool exists)
     {
         if (!exists)
-            throw new Exception("error deserializing config folder 'Api': directory does not exist");
+            throw new Exception(
+                "error deserializing config folder 'Api': directory does not exist"
+            );
     }
 
     public IReadOnlyDictionary<string, string> SelectRequiredFiles(

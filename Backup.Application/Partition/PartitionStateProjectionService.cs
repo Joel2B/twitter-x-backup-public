@@ -4,8 +4,8 @@ namespace Backup.Application.Partition;
 
 public sealed class PartitionStateProjectionService : IPartitionStateProjectionService
 {
-    public PartitionState ToState(PartitionStateSource source)
-        => new()
+    public PartitionState ToState(PartitionStateSource source) =>
+        new()
         {
             Id = source.Id,
             Type = source.Type,

@@ -1,9 +1,9 @@
+using Backup.Application.Core;
+using Backup.Application.Network;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.Request;
 using Backup.Infrastructure.Posts.Adapters;
-using Backup.Application.Core;
-using Backup.Application.Network;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Backup.IntegrationTests;

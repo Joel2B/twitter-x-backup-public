@@ -5,7 +5,9 @@ namespace Backup.Infrastructure.DependencyInjection.Runtime;
 
 public static class RuntimeInfrastructureServiceCollectionExtensions
 {
-    public static IServiceCollection AddRuntimeServicesInfrastructure(this IServiceCollection services)
+    public static IServiceCollection AddRuntimeServicesInfrastructure(
+        this IServiceCollection services
+    )
     {
         services.AddUtilityRuntimeInfrastructure();
         services.AddBulkRuntimeInfrastructure();

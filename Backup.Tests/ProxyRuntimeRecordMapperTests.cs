@@ -27,7 +27,12 @@ public sealed class ProxyRuntimeRecordMapperTests
         ProxyRuntimeRecordMapper sut = new(new ProxyRuntimeStatusTransitionService());
         ProxyRuntimeRecord runtime = new()
         {
-            Candidate = new ProxyCandidate { Ip = "10.0.0.1", Port = "8080", Protocol = "http" },
+            Candidate = new ProxyCandidate
+            {
+                Ip = "10.0.0.1",
+                Port = "8080",
+                Protocol = "http",
+            },
             IsActive = false,
             Connections = [new ProxyRuntimeConnection { Date = DateTime.Now, TotalUses = 3 }],
             Errors =
@@ -58,7 +63,12 @@ public sealed class ProxyRuntimeRecordMapperTests
         DateTime disabledAt = new(2026, 5, 30, 20, 0, 0, DateTimeKind.Utc);
         ProxyRuntimeRecord source = new()
         {
-            Candidate = new ProxyCandidate { Ip = "1.1.1.1", Port = "80", Protocol = "http" },
+            Candidate = new ProxyCandidate
+            {
+                Ip = "1.1.1.1",
+                Port = "80",
+                Protocol = "http",
+            },
             IsActive = false,
             Connections = [],
             Errors = [],
@@ -73,7 +83,12 @@ public sealed class ProxyRuntimeRecordMapperTests
     private static ProxyData CreateProxyData(StatusEnum status) =>
         new()
         {
-            Proxy = new ProxyDataConfig { Ip = "127.0.0.1", Port = "8080", Protocol = "http" },
+            Proxy = new ProxyDataConfig
+            {
+                Ip = "127.0.0.1",
+                Port = "8080",
+                Protocol = "http",
+            },
             Status = new Status { Current = status, Date = DateTime.UtcNow },
             Connections = [new Connection { Date = DateTime.UtcNow, TotalUses = 1 }],
             Errors =

@@ -1,5 +1,5 @@
-using Backup.Infrastructure.Posts.Models;
 using Backup.Infrastructure.Posts.Adapters;
+using Backup.Infrastructure.Posts.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backup.Infrastructure.Posts.Data.Sqlite;
@@ -78,9 +78,8 @@ public partial class SqlitePostData
             .Select(PostReplicationMapper.ToDomain)
             .ToList();
 
-        IReadOnlyList<Backup.Domain.Posts.MediaInput> composed = _postMediaInputsCompositionService.Compose(
-            domainPosts
-        );
+        IReadOnlyList<Backup.Domain.Posts.MediaInput> composed =
+            _postMediaInputsCompositionService.Compose(domainPosts);
 
         return composed.Select(PostReplicationMapper.ToApp).ToList();
     }

@@ -1,6 +1,6 @@
 using Backup.Application.PostIngestion.Ports;
-using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Domain.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Data;
 
 namespace Backup.Infrastructure.PostIngestion.Adapters;
 

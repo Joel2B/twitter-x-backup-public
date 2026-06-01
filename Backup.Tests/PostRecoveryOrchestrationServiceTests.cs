@@ -16,10 +16,7 @@ public class PostRecoveryOrchestrationServiceTests
         FakeRecoverySession session = new()
         {
             RecoveryEnabledValue = false,
-            Logs =
-            [
-                new PostRecoveryLog { PostId = "1", Messages = ["NotFound"] },
-            ],
+            Logs = [new PostRecoveryLog { PostId = "1", Messages = ["NotFound"] }],
         };
 
         IReadOnlyCollection<Post> posts = await _service.Recover(session, CancellationToken.None);
@@ -36,10 +33,7 @@ public class PostRecoveryOrchestrationServiceTests
         {
             RecoveryEnabledValue = true,
             CanDownloadTweetDetailValue = false,
-            Logs =
-            [
-                new PostRecoveryLog { PostId = "1", Messages = ["NotFound"] },
-            ],
+            Logs = [new PostRecoveryLog { PostId = "1", Messages = ["NotFound"] }],
         };
 
         IReadOnlyCollection<Post> posts = await _service.Recover(session, CancellationToken.None);
@@ -113,7 +107,8 @@ public class PostRecoveryOrchestrationServiceTests
         public bool RecoveryEnabled => RecoveryEnabledValue;
         public bool CanDownloadTweetDetail => CanDownloadTweetDetailValue;
 
-        public Task<IReadOnlyCollection<PostRecoveryLog>> GetRecoveryLogs() => Task.FromResult(Logs);
+        public Task<IReadOnlyCollection<PostRecoveryLog>> GetRecoveryLogs() =>
+            Task.FromResult(Logs);
 
         public Task<Post?> DownloadPost(string postId, CancellationToken cancellationToken)
         {

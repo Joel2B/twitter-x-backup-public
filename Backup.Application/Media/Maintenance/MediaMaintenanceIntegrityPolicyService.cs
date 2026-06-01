@@ -1,7 +1,6 @@
 namespace Backup.Application.Media.Maintenance;
 
-public sealed class MediaMaintenanceIntegrityPolicyService
-    : IMediaMaintenanceIntegrityPolicyService
+public sealed class MediaMaintenanceIntegrityPolicyService : IMediaMaintenanceIntegrityPolicyService
 {
     public bool ShouldRemoveFromIntegrity(
         long? cacheFileSize,

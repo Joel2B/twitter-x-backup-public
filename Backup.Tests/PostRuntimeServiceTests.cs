@@ -5,7 +5,9 @@ namespace Backup.Tests;
 
 public class PostRuntimeServiceTests
 {
-    private readonly IPostRuntimeService _service = new PostRuntimeService(new PostExecutionService());
+    private readonly IPostRuntimeService _service = new PostRuntimeService(
+        new PostExecutionService()
+    );
 
     [Fact]
     public async Task Download_CallsStartThenDownloadThenPrune()
@@ -29,7 +31,8 @@ public class PostRuntimeServiceTests
         Assert.Equal(["start", "recover"], calls);
     }
 
-    private sealed class FakeDownloadRuntimeCommand(List<string> calls) : IPostDownloadRuntimeCommand
+    private sealed class FakeDownloadRuntimeCommand(List<string> calls)
+        : IPostDownloadRuntimeCommand
     {
         public void OnDownloadStarting() => calls.Add("start");
 

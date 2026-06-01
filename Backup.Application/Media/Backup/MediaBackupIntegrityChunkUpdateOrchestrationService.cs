@@ -6,8 +6,8 @@ public sealed class MediaBackupIntegrityChunkUpdateOrchestrationService(
     IMediaBackupIntegrityChunkDataSelectionService mediaBackupIntegrityChunkDataSelectionService
 ) : IMediaBackupIntegrityChunkUpdateOrchestrationService
 {
-    private readonly IMediaBackupIntegrityChunkDataSelectionService
-        _mediaBackupIntegrityChunkDataSelectionService = mediaBackupIntegrityChunkDataSelectionService;
+    private readonly IMediaBackupIntegrityChunkDataSelectionService _mediaBackupIntegrityChunkDataSelectionService =
+        mediaBackupIntegrityChunkDataSelectionService;
 
     public MediaBackupIntegrityUpdateSelectionPlan SelectAndValidate(
         IEnumerable<string> changedPaths,

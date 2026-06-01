@@ -1,9 +1,9 @@
 using Backup.Application.Posts;
-using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Media.Abstractions.Services;
-using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
+using Backup.Infrastructure.Posts.Abstractions.Data;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Adapters;
@@ -22,7 +22,8 @@ public class PostRecovery(
 
     private readonly ILogger<PostRecovery> _logger = _logger;
     private readonly AppConfig _config = _config;
-    private readonly IPostRecoveryCommandService _postRecoveryCommandService = postRecoveryCommandService;
+    private readonly IPostRecoveryCommandService _postRecoveryCommandService =
+        postRecoveryCommandService;
     private readonly IPostTweetDetailRequestFactory _tweetDetailRequestFactory =
         tweetDetailRequestFactory;
     private readonly IMediaLogger _mediaLogger = _mediaLogger;

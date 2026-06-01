@@ -1,9 +1,9 @@
 using Backup.Application.Posts.Ports;
-using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Media.Abstractions.Services;
-using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
+using Backup.Infrastructure.Posts.Abstractions.Data;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -35,7 +35,12 @@ public sealed class PostRecoveryCommandAdapter(
 
     public async Task MergeRecoveredPosts(IReadOnlyCollection<Backup.Domain.Posts.Post> posts)
     {
-        await postData.AddPosts(context.UserId, recoveryOrigin, [.. posts], new() { Index = false });
+        await postData.AddPosts(
+            context.UserId,
+            recoveryOrigin,
+            [.. posts],
+            new() { Index = false }
+        );
     }
 
     public async Task SavePosts()

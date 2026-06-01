@@ -1,15 +1,15 @@
-using Backup.Infrastructure.Models.Config.Api;
-using Backup.Infrastructure.Models.Config.Request;
-using ApiRequest = Backup.Infrastructure.Models.Config.Request.Request;
 using Backup.Application.Config;
 using Backup.Application.Config.Models;
+using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Downloads;
 using Backup.Infrastructure.Models.Config.Medias;
 using Backup.Infrastructure.Models.Config.Proxy;
+using Backup.Infrastructure.Models.Config.Request;
 using Backup.Infrastructure.Models.Config.Tasks;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using ApiRequest = Backup.Infrastructure.Models.Config.Request.Request;
 
 namespace Backup.Infrastructure.Models.Config;
 
@@ -18,7 +18,8 @@ public static class ConfigLoader
     private static readonly ConfigNormalizationService _normalization = new();
     private static readonly ConfigApiFileSelectionService _apiFileSelection = new();
     private static readonly ConfigDeserializationGuardService _deserializationGuard = new();
-    private static readonly IConfigApiProjectionService _apiProjection = new ConfigApiProjectionService();
+    private static readonly IConfigApiProjectionService _apiProjection =
+        new ConfigApiProjectionService();
     private static readonly IConfigApiCompositionService _apiComposition =
         new ConfigApiCompositionService(_normalization, _apiProjection);
 
@@ -28,7 +29,11 @@ public static class ConfigLoader
         LoadSplit(configDirectory ?? GetConfigDirectory());
 
     public static DataConfig LoadData(string? configDirectory = null) =>
-        LoadFile<DataConfig>(configDirectory ?? GetConfigDirectory(), "Data.json", prefix: "BACKUP__");
+        LoadFile<DataConfig>(
+            configDirectory ?? GetConfigDirectory(),
+            "Data.json",
+            prefix: "BACKUP__"
+        );
 
     public static void SaveData(DataConfig data, string? configDirectory = null)
     {
@@ -257,5 +262,4 @@ public static class ConfigLoader
         T? value = config.Get<T>();
         return _deserializationGuard.RequireConfig(value, fileName);
     }
-
 }

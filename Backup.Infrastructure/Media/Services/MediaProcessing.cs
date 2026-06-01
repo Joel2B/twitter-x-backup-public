@@ -49,11 +49,7 @@ public class MediaProcessing(
     public List<Download> GetFilteredMedia() => _filtered.Select(Clone).ToList();
 
     private static Download Clone(Download source) =>
-        new()
-        {
-            Id = source.Id,
-            Data = source.Data.Select(data => data.Clone()).ToList(),
-        };
+        new() { Id = source.Id, Data = source.Data.Select(data => data.Clone()).ToList() };
 
     private static MediaDownloadProjectionConfig ToProjectionConfig(MediasConfig config) =>
         new()
@@ -75,8 +71,16 @@ public class MediaProcessing(
         };
 
     private static MediaDownloadProjectionVariantConfig ToVariant(VideoConfig config) =>
-        new() { Thumb = ToRule(config.Thumb), Types = config.Types is null ? null : [.. config.Types] };
+        new()
+        {
+            Thumb = ToRule(config.Thumb),
+            Types = config.Types is null ? null : [.. config.Types],
+        };
 
     private static MediaDownloadProjectionVariantConfig ToVariant(GifConfig config) =>
-        new() { Thumb = ToRule(config.Thumb), Types = config.Types is null ? null : [.. config.Types] };
+        new()
+        {
+            Thumb = ToRule(config.Thumb),
+            Types = config.Types is null ? null : [.. config.Types],
+        };
 }

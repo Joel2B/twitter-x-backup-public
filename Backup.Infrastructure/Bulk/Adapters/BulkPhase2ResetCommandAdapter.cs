@@ -1,6 +1,6 @@
-using Backup.Application.Bulk.Ports;
-using Backup.Application.Bulk.Models;
 using Backup.Application.Bulk;
+using Backup.Application.Bulk.Models;
+using Backup.Application.Bulk.Ports;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Models;
 

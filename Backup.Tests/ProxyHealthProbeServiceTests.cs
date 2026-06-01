@@ -12,7 +12,12 @@ public class ProxyHealthProbeServiceTests
     {
         ProxyHealthProbeService sut = new(new ProxyHealthCheckPolicyService());
         FakeProbePort port = new() { StatusToReturn = HttpStatusCode.OK };
-        ProxyCandidate candidate = new() { Ip = "1.1.1.1", Port = "80", Protocol = "https" };
+        ProxyCandidate candidate = new()
+        {
+            Ip = "1.1.1.1",
+            Port = "80",
+            Protocol = "https",
+        };
 
         ProxyHealthProbeResult result = await sut.Probe(candidate, port);
 
@@ -33,7 +38,12 @@ public class ProxyHealthProbeServiceTests
             ),
             StatusToReturn = HttpStatusCode.OK,
         };
-        ProxyCandidate candidate = new() { Ip = "2.2.2.2", Port = "443", Protocol = "https" };
+        ProxyCandidate candidate = new()
+        {
+            Ip = "2.2.2.2",
+            Port = "443",
+            Protocol = "https",
+        };
 
         ProxyHealthProbeResult result = await sut.Probe(candidate, port);
 
@@ -47,7 +57,12 @@ public class ProxyHealthProbeServiceTests
     {
         ProxyHealthProbeService sut = new(new ProxyHealthCheckPolicyService());
         FakeProbePort port = new() { ThrowOnFirst = new Exception("boom") };
-        ProxyCandidate candidate = new() { Ip = "3.3.3.3", Port = "8080", Protocol = "http" };
+        ProxyCandidate candidate = new()
+        {
+            Ip = "3.3.3.3",
+            Port = "8080",
+            Protocol = "http",
+        };
 
         ProxyHealthProbeResult result = await sut.Probe(candidate, port);
 

@@ -32,11 +32,7 @@ public sealed class MediaStoragePathServiceTests
     [Fact]
     public void BuildDownloaderTempPath_ComposesTempAndDownloaderSegments()
     {
-        string path = _sut.BuildDownloaderTempPath(
-            [@"E:\heavy-root"],
-            ["tmp"],
-            ["downloader"]
-        );
+        string path = _sut.BuildDownloaderTempPath([@"E:\heavy-root"], ["tmp"], ["downloader"]);
 
         Assert.Equal(Path.Combine(@"E:\heavy-root", "tmp", "downloader"), path);
     }

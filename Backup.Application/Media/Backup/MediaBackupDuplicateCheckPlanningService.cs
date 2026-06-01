@@ -19,15 +19,15 @@ public sealed class MediaBackupDuplicateCheckPlanningService(
         IReadOnlyList<string> storagePaths
     )
     {
-        IReadOnlyList<MediaPathDuplicateGroup> memoryDuplicates = _pathAnalysisService.FindDuplicates(
-            memoryPaths
-        );
-        IReadOnlyList<MediaPathDuplicateGroup> storageDuplicates = _pathAnalysisService.FindDuplicates(
-            storagePaths
-        );
+        IReadOnlyList<MediaPathDuplicateGroup> memoryDuplicates =
+            _pathAnalysisService.FindDuplicates(memoryPaths);
+        IReadOnlyList<MediaPathDuplicateGroup> storageDuplicates =
+            _pathAnalysisService.FindDuplicates(storagePaths);
 
         MediaBackupDuplicateCleanupPlan? cleanupPlan =
-            storageDuplicates.Count == 0 ? null : _duplicateCleanupService.BuildPlan(storageDuplicates);
+            storageDuplicates.Count == 0
+                ? null
+                : _duplicateCleanupService.BuildPlan(storageDuplicates);
 
         MediaBackupStorageConsistencyDecision consistencyDecision =
             _storageConsistencyDecisionService.DecideForDuplicateCheck(memoryPaths, storagePaths);

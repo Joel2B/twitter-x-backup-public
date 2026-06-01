@@ -9,11 +9,7 @@ public interface IPartitionResolutionService
         IReadOnlyCollection<int>? selectedIds
     );
 
-    int ResolvePartitionId(
-        IEnumerable<PartitionStateSource> sources,
-        int? requestedId,
-        long size
-    );
+    int ResolvePartitionId(IEnumerable<PartitionStateSource> sources, int? requestedId, long size);
 
     IReadOnlyCollection<int> SelectCacheIds(IEnumerable<PartitionStateSource> sources);
 

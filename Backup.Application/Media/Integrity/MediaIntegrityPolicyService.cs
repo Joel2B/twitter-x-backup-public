@@ -4,8 +4,14 @@ namespace Backup.Application.Media.Integrity;
 
 public sealed class MediaIntegrityPolicyService : IMediaIntegrityPolicyService
 {
-    private static readonly HashSet<string> SupportedExtensions =
-        new(StringComparer.OrdinalIgnoreCase) { ".jpg", ".png", ".mp4" };
+    private static readonly HashSet<string> SupportedExtensions = new(
+        StringComparer.OrdinalIgnoreCase
+    )
+    {
+        ".jpg",
+        ".png",
+        ".mp4",
+    };
 
     public void KeepSupported(List<MediaDownload> downloads)
     {

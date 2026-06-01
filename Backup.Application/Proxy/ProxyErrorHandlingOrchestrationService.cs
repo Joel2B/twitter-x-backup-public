@@ -9,7 +9,8 @@ public sealed class ProxyErrorHandlingOrchestrationService(
 {
     private readonly IProxyRuntimeStatusTransitionService _proxyRuntimeStatusTransitionService =
         proxyRuntimeStatusTransitionService;
-    private readonly IProxyErrorTrackingService _proxyErrorTrackingService = proxyErrorTrackingService;
+    private readonly IProxyErrorTrackingService _proxyErrorTrackingService =
+        proxyErrorTrackingService;
 
     public ProxyErrorHandlingOutcome Handle(
         ProxyRuntimeRecord runtimeRecord,

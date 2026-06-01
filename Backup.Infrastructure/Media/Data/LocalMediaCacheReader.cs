@@ -8,7 +8,10 @@ namespace Backup.Infrastructure.Media.Data;
 
 public class LocalMediaCacheReader
 {
-    private static long? ReadNullableLong(JsonTextReader jr, IMediaCacheJsonSnapshotService snapshotService)
+    private static long? ReadNullableLong(
+        JsonTextReader jr,
+        IMediaCacheJsonSnapshotService snapshotService
+    )
     {
         if (jr.TokenType == JsonToken.Null)
             return null;
@@ -123,7 +126,8 @@ public class LocalMediaCacheReader
                             if (jr.TokenType == JsonToken.Null)
                                 size = null;
                             else if (jr.TokenType == JsonToken.StartObject)
-                                size = await ReadSizeAsync(jr, snapshotService).ConfigureAwait(false);
+                                size = await ReadSizeAsync(jr, snapshotService)
+                                    .ConfigureAwait(false);
                             else
                                 jr.Skip();
                         }
@@ -213,15 +217,13 @@ public class LocalMediaCacheReader
 
         List<MediaCacheJsonSnapshot> snapshots = snapshotService
             .PrepareForWrite(
-                lstCache.Select(cache =>
-                    new MediaCacheJsonSnapshot
-                    {
-                        Path = cache.Path,
-                        StreamSizeBytes = cache.Size?.Stream,
-                        FileSizeBytes = cache.Size?.File,
-                        PartitionId = cache.PartitionId,
-                    }
-                )
+                lstCache.Select(cache => new MediaCacheJsonSnapshot
+                {
+                    Path = cache.Path,
+                    StreamSizeBytes = cache.Size?.Stream,
+                    FileSizeBytes = cache.Size?.File,
+                    PartitionId = cache.PartitionId,
+                })
             )
             .ToList();
 

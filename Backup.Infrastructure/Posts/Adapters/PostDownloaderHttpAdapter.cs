@@ -3,9 +3,9 @@ using System.Net.Http.Headers;
 using Backup.Application.Core;
 using Backup.Application.Network;
 using Backup.Application.Network.Models;
-using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Request;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 
@@ -20,8 +20,7 @@ public class PostDownloaderHttp(
     IRetryDelayPolicyService retryDelayPolicyService,
     IRequestQueryStringPolicyService requestQueryStringPolicyService,
     IDateTimeProvider dateTimeProvider
-)
-    : IPostDownloader
+) : IPostDownloader
 {
     private readonly ILogger<PostDownloaderHttp> _logger = _logger;
 

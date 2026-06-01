@@ -4,7 +4,8 @@ namespace Backup.Tests;
 
 public class ProxyHttpClientFactoryPolicyServiceTests
 {
-    private readonly IProxyHttpClientFactoryPolicyService _sut = new ProxyHttpClientFactoryPolicyService();
+    private readonly IProxyHttpClientFactoryPolicyService _sut =
+        new ProxyHttpClientFactoryPolicyService();
 
     [Fact]
     public void CreateHandler_ConfiguresProxy_WhenUriProvided()

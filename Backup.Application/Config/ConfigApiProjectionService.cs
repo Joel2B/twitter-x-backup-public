@@ -29,16 +29,15 @@ public sealed class ConfigApiProjectionService : IConfigApiProjectionService
     ) =>
         entries.ToDictionary(
             entry => entry.Key,
-            entry =>
-                new ConfigApiProjection
-                {
-                    Key = entry.Key,
-                    Id = entry.Id,
-                    Url = entry.Url,
-                    Variables = entry.Variables,
-                    Features = entry.Features,
-                    FieldToggles = entry.FieldToggles,
-                    Headers = entry.Headers,
-                }
+            entry => new ConfigApiProjection
+            {
+                Key = entry.Key,
+                Id = entry.Id,
+                Url = entry.Url,
+                Variables = entry.Variables,
+                Features = entry.Features,
+                FieldToggles = entry.FieldToggles,
+                Headers = entry.Headers,
+            }
         );
 }

@@ -75,7 +75,9 @@ public sealed class MediaBackupCalculateExecutionService(
             applyAssignments.AddedCachePathsByChunk
         );
         IReadOnlyList<MediaBackupChunkCountState> beforeCountStates =
-            _mediaBackupChunkSnapshotCompositionService.BuildChunkCountStates(input.BeforeChunkPaths);
+            _mediaBackupChunkSnapshotCompositionService.BuildChunkCountStates(
+                input.BeforeChunkPaths
+            );
         IReadOnlyList<MediaBackupChunkCountState> afterCountStates =
             _mediaBackupChunkSnapshotCompositionService.BuildChunkCountStates(afterChunkPaths);
 
@@ -135,11 +137,7 @@ public sealed class MediaBackupCalculateExecutionService(
 
         return after
             .OrderBy(item => item.Key)
-            .Select(item => new MediaBackupChunkPathsState
-            {
-                Id = item.Key,
-                Paths = item.Value,
-            })
+            .Select(item => new MediaBackupChunkPathsState { Id = item.Key, Paths = item.Value })
             .ToList();
     }
 }

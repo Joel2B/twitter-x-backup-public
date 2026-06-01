@@ -8,8 +8,7 @@ public sealed class PostDomainParserAdapter(
     IPostParser parser,
     IPostProjectionComposer projectionComposer,
     IPostIndexingService postIndexingService
-)
-    : IPostDomainParser
+) : IPostDomainParser
 {
     private readonly IPostParser _parser = parser;
     private readonly IPostProjectionComposer _projectionComposer = projectionComposer;
@@ -27,6 +26,5 @@ public sealed class PostDomainParserAdapter(
         return new ParseResult(posts, parsed.NextCursor);
     }
 
-    public ParseUser ParseUser(string response)
-        => _parser.ParseUser(response);
+    public ParseUser ParseUser(string response) => _parser.ParseUser(response);
 }

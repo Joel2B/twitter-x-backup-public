@@ -11,8 +11,18 @@ public class MediaDownloadQueueBuilderServiceTests
         MediaDownloadQueueBuilderService sut = new(new MediaDownloadPathPriorityPolicyService());
         MediaDownloadQueueItem[] input =
         [
-            new() { DownloadId = "1", Url = "u1", Path = "video.mp4" },
-            new() { DownloadId = "1", Url = "u2", Path = "photo.jpg" },
+            new()
+            {
+                DownloadId = "1",
+                Url = "u1",
+                Path = "video.mp4",
+            },
+            new()
+            {
+                DownloadId = "1",
+                Url = "u2",
+                Path = "photo.jpg",
+            },
         ];
 
         IReadOnlyList<MediaDownloadQueueItem> result = sut.Build(input, -1);
@@ -28,8 +38,18 @@ public class MediaDownloadQueueBuilderServiceTests
         MediaDownloadQueueBuilderService sut = new(new MediaDownloadPathPriorityPolicyService());
         MediaDownloadQueueItem[] input =
         [
-            new() { DownloadId = "1", Url = "u1", Path = "photo1.jpg" },
-            new() { DownloadId = "1", Url = "u2", Path = "photo2.jpg" },
+            new()
+            {
+                DownloadId = "1",
+                Url = "u1",
+                Path = "photo1.jpg",
+            },
+            new()
+            {
+                DownloadId = "1",
+                Url = "u2",
+                Path = "photo2.jpg",
+            },
         ];
 
         IReadOnlyList<MediaDownloadQueueItem> result = sut.Build(input, 1);

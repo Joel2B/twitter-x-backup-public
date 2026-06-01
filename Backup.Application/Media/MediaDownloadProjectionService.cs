@@ -48,11 +48,7 @@ public sealed class MediaDownloadProjectionService(
         ApplyDedup(all);
         ApplyDedup(filtered);
 
-        return new MediaProcessingResult
-        {
-            All = [.. all.Values],
-            Filtered = [.. filtered.Values],
-        };
+        return new MediaProcessingResult { All = [.. all.Values], Filtered = [.. filtered.Values] };
     }
 
     private void ProcessPhoto(
@@ -65,12 +61,15 @@ public sealed class MediaDownloadProjectionService(
         if (config.Types is null || config.Dimensions is null || config.Sizes is null)
             return;
 
-        IReadOnlyList<MediaExclusionRule> filters = _downloadFilterPolicyService.Parse(config.Filters);
+        IReadOnlyList<MediaExclusionRule> filters = _downloadFilterPolicyService.Parse(
+            config.Filters
+        );
         List<Resolution> resolutions = BuildResolutions(config.Dimensions, config.Sizes);
 
         foreach (MediaInput post in posts)
         {
-            IEnumerable<PostMedia> medias = post.Medias?.Where(media => media.Type == "photo") ?? [];
+            IEnumerable<PostMedia> medias =
+                post.Medias?.Where(media => media.Type == "photo") ?? [];
 
             foreach (PostMedia media in medias)
             {
@@ -126,7 +125,10 @@ public sealed class MediaDownloadProjectionService(
         IReadOnlyList<MediaExclusionRule> filters = _downloadFilterPolicyService.Parse(
             config.Thumb.Filters
         );
-        List<Resolution> resolutions = BuildResolutions(config.Thumb.Dimensions, config.Thumb.Sizes);
+        List<Resolution> resolutions = BuildResolutions(
+            config.Thumb.Dimensions,
+            config.Thumb.Sizes
+        );
 
         IEnumerable<MediaInput> gifPosts = posts.Where(post =>
             post.Medias is not null && post.Medias.Any(media => media.Type == "animated_gif")
@@ -222,7 +224,10 @@ public sealed class MediaDownloadProjectionService(
         IReadOnlyList<MediaExclusionRule> filters = _downloadFilterPolicyService.Parse(
             config.Thumb.Filters
         );
-        List<Resolution> resolutions = BuildResolutions(config.Thumb.Dimensions, config.Thumb.Sizes);
+        List<Resolution> resolutions = BuildResolutions(
+            config.Thumb.Dimensions,
+            config.Thumb.Sizes
+        );
 
         IEnumerable<MediaInput> videoPosts = posts.Where(post =>
             post.Medias is not null && post.Medias.Any(media => media.Type == "video")
@@ -283,7 +288,10 @@ public sealed class MediaDownloadProjectionService(
                     string url = variant.Url.Split('?')[0];
                     string videoFileName = Path.GetFileName(url);
                     string videoId = Path.GetFileNameWithoutExtension(videoFileName);
-                    string? resolution = _mediaVideoVariantPolicyService.GetResolution(formatType, url);
+                    string? resolution = _mediaVideoVariantPolicyService.GetResolution(
+                        formatType,
+                        url
+                    );
 
                     if (resolution is null)
                         throw new Exception();
@@ -402,7 +410,9 @@ public sealed class MediaDownloadProjectionService(
 
     private void ApplyDedup(Dictionary<string, MediaDownload> downloads)
     {
-        IReadOnlyList<MediaDownload> deduped = _mediaDuplicateFilterService.Filter([.. downloads.Values]);
+        IReadOnlyList<MediaDownload> deduped = _mediaDuplicateFilterService.Filter(
+            [.. downloads.Values]
+        );
 
         downloads.Clear();
         foreach (MediaDownload download in deduped)
@@ -413,10 +423,10 @@ public sealed class MediaDownloadProjectionService(
         IReadOnlyList<string> dimensions,
         IReadOnlyList<string> sizes
     ) =>
-    [
-        .. dimensions.Select(value => new Resolution(value, "dimension")),
-        .. sizes.Select(value => new Resolution(value, "size")),
-    ];
+        [
+            .. dimensions.Select(value => new Resolution(value, "dimension")),
+            .. sizes.Select(value => new Resolution(value, "size")),
+        ];
 
     private static void AddDataDownload(
         string id,

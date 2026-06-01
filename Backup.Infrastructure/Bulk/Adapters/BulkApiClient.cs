@@ -1,10 +1,10 @@
-using Backup.Infrastructure.Bulk.Abstractions.Services;
 using Backup.Application.Bulk;
 using Backup.Application.Bulk.Models;
-using Backup.Infrastructure.Posts.Abstractions.Services;
+using Backup.Infrastructure.Bulk.Abstractions.Services;
 using Backup.Infrastructure.Bulk.Models;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.Request;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using Microsoft.Extensions.Logging;
 using ParseResult = Backup.Domain.Posts.ParseResult;
 using ParseUser = Backup.Domain.Posts.ParseUser;
@@ -45,7 +45,9 @@ public sealed class BulkApiClient(
         }
 
         request.Query.Variables["screen_name"] = userName;
-        request.Headers["Referer"] = _bulkSourceRouteService.GetReferer(BulkSourceType.Notifications);
+        request.Headers["Referer"] = _bulkSourceRouteService.GetReferer(
+            BulkSourceType.Notifications
+        );
 
         string response = "";
 
@@ -82,7 +84,9 @@ public sealed class BulkApiClient(
         request.Query.Variables["userId"] = id;
         request.Query.Variables["count"] = count;
         request.Query.Variables["cursor"] = cursor;
-        request.Headers["Referer"] = _bulkSourceRouteService.GetReferer(BulkSourceType.Notifications);
+        request.Headers["Referer"] = _bulkSourceRouteService.GetReferer(
+            BulkSourceType.Notifications
+        );
 
         string response = "";
 

@@ -22,7 +22,10 @@ public sealed class MediaBackupDirectPathCandidateDecisionService(
             };
         }
 
-        if (observation.FileSizeBytes is null || observation.FileSizeBytes <= observation.MaxPathSizeBytes)
+        if (
+            observation.FileSizeBytes is null
+            || observation.FileSizeBytes <= observation.MaxPathSizeBytes
+        )
         {
             return new MediaBackupDirectPathCandidateDecision
             {

@@ -13,7 +13,8 @@ public class ProxyDownloader(
 )
 {
     private readonly ILogger _logger = _logger;
-    private readonly IProxyEndpointParserService _proxyEndpointParserService = proxyEndpointParserService;
+    private readonly IProxyEndpointParserService _proxyEndpointParserService =
+        proxyEndpointParserService;
     private readonly IProxyProviderTypeResolverService _proxyProviderTypeResolverService =
         proxyProviderTypeResolverService;
     private readonly string _format = format;
@@ -33,7 +34,9 @@ public class ProxyDownloader(
                 _proxyEndpointParserService,
                 _format
             ),
-            _ => throw new NotSupportedException($"Proxy provider type not supported: {providerType}"),
+            _ => throw new NotSupportedException(
+                $"Proxy provider type not supported: {providerType}"
+            ),
         };
     }
 }

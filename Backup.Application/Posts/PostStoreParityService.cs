@@ -14,14 +14,16 @@ public class PostStoreParityService : IPostStoreParityService
             return new PostStoreParityResult
             {
                 PrimaryLabel = storeList.FirstOrDefault()?.Label ?? "",
-                Snapshots = []
+                Snapshots = [],
             };
         }
 
         List<IPostStoreCountSource> defaults = storeList.Where(store => store.IsDefault).ToList();
 
         if (defaults.Count > 1)
-            throw new InvalidOperationException("Only one post data store can be marked as default.");
+            throw new InvalidOperationException(
+                "Only one post data store can be marked as default."
+            );
 
         IPostStoreCountSource primary = defaults.FirstOrDefault() ?? storeList.First();
         Dictionary<IPostStoreCountSource, PostStoreCounts> countsByStore = [];
@@ -32,7 +34,11 @@ public class PostStoreParityService : IPostStoreParityService
         PostStoreCounts primaryCounts = countsByStore[primary];
         List<PostStoreMismatch> mismatches = [];
 
-        foreach (IPostStoreCountSource secondary in storeList.Where(store => !ReferenceEquals(store, primary)))
+        foreach (
+            IPostStoreCountSource secondary in storeList.Where(store =>
+                !ReferenceEquals(store, primary)
+            )
+        )
         {
             PostStoreCounts secondaryCounts = countsByStore[secondary];
             List<string> diffs = GetCountDiffs(primaryCounts, secondaryCounts);
@@ -45,7 +51,7 @@ public class PostStoreParityService : IPostStoreParityService
                 {
                     PrimaryLabel = primary.Label,
                     SecondaryLabel = secondary.Label,
-                    Diffs = diffs
+                    Diffs = diffs,
                 }
             );
         }
@@ -57,10 +63,10 @@ public class PostStoreParityService : IPostStoreParityService
                 .Select(store => new PostStoreSnapshot
                 {
                     Label = store.Label,
-                    Counts = countsByStore[store]
+                    Counts = countsByStore[store],
                 })
                 .ToList(),
-            Mismatches = mismatches
+            Mismatches = mismatches,
         };
     }
 

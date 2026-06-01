@@ -25,7 +25,11 @@ public class MediaFilter(
 
         IReadOnlySet<string> ids = _mediaErrorExclusionService.GetExcludedIds(
             logs.SelectMany(log => log.Messages)
-                .Select(message => new MediaErrorMessage { Id = message.Id, Message = message.Message })
+                .Select(message => new MediaErrorMessage
+                {
+                    Id = message.Id,
+                    Message = message.Message,
+                })
         );
 
         IReadOnlyList<Backup.Application.Media.Models.MediaDownload> appDownloads =

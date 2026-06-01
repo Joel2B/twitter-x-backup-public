@@ -6,7 +6,8 @@ public sealed class ProxyUseHandlingOrchestrationService(
     IProxyUsageTrackingService proxyUsageTrackingService
 ) : IProxyUseHandlingOrchestrationService
 {
-    private readonly IProxyUsageTrackingService _proxyUsageTrackingService = proxyUsageTrackingService;
+    private readonly IProxyUsageTrackingService _proxyUsageTrackingService =
+        proxyUsageTrackingService;
 
     public ProxyUseHandlingOutcome HandleUse(
         ProxyRuntimeRecord runtimeRecord,
@@ -16,9 +17,6 @@ public sealed class ProxyUseHandlingOrchestrationService(
     {
         _proxyUsageTrackingService.RegisterUse(runtimeRecord, now);
 
-        return new ProxyUseHandlingOutcome
-        {
-            ShouldLogResetStopCount = stopCount > 0,
-        };
+        return new ProxyUseHandlingOutcome { ShouldLogResetStopCount = stopCount > 0 };
     }
 }

@@ -7,7 +7,8 @@ public sealed class MediaOrchestrationService : IMediaOrchestrationService
 {
     public async Task Run(IMediaOrchestrationCommand command)
     {
-        IReadOnlyList<global::Backup.Domain.Posts.MediaInput> posts = await command.GetMediaInputs();
+        IReadOnlyList<global::Backup.Domain.Posts.MediaInput> posts =
+            await command.GetMediaInputs();
 
         if (posts.Count == 0)
             return;
@@ -15,7 +16,9 @@ public sealed class MediaOrchestrationService : IMediaOrchestrationService
         MediaProcessingResult result = await command.Process(posts);
 
         List<MediaDownload> all = result.All.Select(download => download.Clone()).ToList();
-        List<MediaDownload> filtered = result.Filtered.Select(download => download.Clone()).ToList();
+        List<MediaDownload> filtered = result
+            .Filtered.Select(download => download.Clone())
+            .ToList();
 
         await command.Prune(all);
         await command.Filter(filtered);
@@ -25,7 +28,9 @@ public sealed class MediaOrchestrationService : IMediaOrchestrationService
             if (!command.HasMaintenance(storageId))
                 continue;
 
-            List<MediaDownload> filteredCloned = filtered.Select(download => download.Clone()).ToList();
+            List<MediaDownload> filteredCloned = filtered
+                .Select(download => download.Clone())
+                .ToList();
             List<MediaDownload> filteredIntegrity = filtered
                 .Select(download => download.Clone())
                 .ToList();

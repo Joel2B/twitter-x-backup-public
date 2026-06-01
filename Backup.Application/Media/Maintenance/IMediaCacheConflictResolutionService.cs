@@ -4,5 +4,8 @@ namespace Backup.Application.Media.Maintenance;
 
 public interface IMediaCacheConflictResolutionService
 {
-    MediaCacheConflictResolution Resolve(long? existingStreamSizeBytes, MediaCacheWritePlan writePlan);
+    MediaCacheConflictResolution Resolve(
+        long? existingStreamSizeBytes,
+        MediaCacheWritePlan writePlan
+    );
 }

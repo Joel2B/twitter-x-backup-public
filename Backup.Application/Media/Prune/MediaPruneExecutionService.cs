@@ -2,10 +2,12 @@ using Backup.Application.Media.Models;
 
 namespace Backup.Application.Media.Prune;
 
-public sealed class MediaPruneExecutionService(IMediaPruneSelectionService mediaPruneSelectionService)
-    : IMediaPruneExecutionService
+public sealed class MediaPruneExecutionService(
+    IMediaPruneSelectionService mediaPruneSelectionService
+) : IMediaPruneExecutionService
 {
-    private readonly IMediaPruneSelectionService _mediaPruneSelectionService = mediaPruneSelectionService;
+    private readonly IMediaPruneSelectionService _mediaPruneSelectionService =
+        mediaPruneSelectionService;
 
     public IReadOnlyList<MediaDownload> Execute(IReadOnlyList<MediaDownload> downloads) =>
         downloads

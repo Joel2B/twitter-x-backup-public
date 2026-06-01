@@ -50,16 +50,20 @@ public class MediaOrchestrationServiceTests
         {
             Id = id,
             Profile = new PostProfile { Id = "u1", UserName = "user1" },
-            Medias = [new PostMedia { Id = "m1", Url = "https://a/1.jpg", Type = "photo" }],
+            Medias =
+            [
+                new PostMedia
+                {
+                    Id = "m1",
+                    Url = "https://a/1.jpg",
+                    Type = "photo",
+                },
+            ],
             Deleted = false,
         };
 
     private static MediaDownload CreateDownload(string id, string url, string path) =>
-        new()
-        {
-            Id = id,
-            Data = [new MediaDownloadData { Url = url, Path = path }],
-        };
+        new() { Id = id, Data = [new MediaDownloadData { Url = url, Path = path }] };
 
     private sealed class FakeMediaCommand : IMediaOrchestrationCommand
     {
@@ -76,7 +80,8 @@ public class MediaOrchestrationServiceTests
         public int ReplicationCalls { get; private set; }
         public int BackupCalls { get; private set; }
 
-        public Task<IReadOnlyList<MediaInput>> GetMediaInputs() => Task.FromResult<IReadOnlyList<MediaInput>>(MediaInputs);
+        public Task<IReadOnlyList<MediaInput>> GetMediaInputs() =>
+            Task.FromResult<IReadOnlyList<MediaInput>>(MediaInputs);
 
         public Task<MediaProcessingResult> Process(IReadOnlyList<MediaInput> posts)
         {
@@ -101,11 +106,14 @@ public class MediaOrchestrationServiceTests
         public bool HasMaintenance(string storageId) =>
             MaintenanceByStorage.TryGetValue(storageId, out bool enabled) && enabled;
 
-        public Task PruneStorage(string storageId, List<MediaDownload> downloads) => Task.CompletedTask;
+        public Task PruneStorage(string storageId, List<MediaDownload> downloads) =>
+            Task.CompletedTask;
 
-        public Task CheckStorageData(string storageId, List<MediaDownload> downloads) => Task.CompletedTask;
+        public Task CheckStorageData(string storageId, List<MediaDownload> downloads) =>
+            Task.CompletedTask;
 
-        public Task CheckStorageIntegrity(string storageId, List<MediaDownload> downloads) => Task.CompletedTask;
+        public Task CheckStorageIntegrity(string storageId, List<MediaDownload> downloads) =>
+            Task.CompletedTask;
 
         public Task DownloadToStorage(string storageId, List<MediaDownload> downloads)
         {

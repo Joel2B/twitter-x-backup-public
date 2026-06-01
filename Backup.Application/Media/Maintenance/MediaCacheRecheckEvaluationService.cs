@@ -17,7 +17,9 @@ public sealed class MediaCacheRecheckEvaluationService(
 
         foreach (MediaCacheRecheckObservation observation in observations)
         {
-            MediaCacheRecheckApplyResult result = _mediaCacheRecheckDecisionService.Decide(observation);
+            MediaCacheRecheckApplyResult result = _mediaCacheRecheckDecisionService.Decide(
+                observation
+            );
 
             evaluations.Add(
                 new MediaCacheRecheckEvaluation

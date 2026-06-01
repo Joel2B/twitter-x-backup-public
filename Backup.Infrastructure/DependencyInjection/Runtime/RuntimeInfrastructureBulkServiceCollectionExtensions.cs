@@ -1,6 +1,6 @@
 using Backup.Application.Bulk;
-using Backup.Infrastructure.Bulk.Adapters;
 using Backup.Infrastructure.Bulk.Abstractions.Services;
+using Backup.Infrastructure.Bulk.Adapters;
 using Backup.Infrastructure.Bulk.Services;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -15,9 +15,15 @@ public static class RuntimeInfrastructureBulkServiceCollectionExtensions
         services.AddScoped<IBulkDatedPathExtractionService, BulkDatedPathExtractionService>();
         services.AddScoped<IBulkPrunePolicyService, BulkPrunePolicyService>();
         services.AddScoped<IBulkPrunePartitionPlanningService, BulkPrunePartitionPlanningService>();
-        services.AddScoped<IBulkReplicationPathPlanningService, BulkReplicationPathPlanningService>();
+        services.AddScoped<
+            IBulkReplicationPathPlanningService,
+            BulkReplicationPathPlanningService
+        >();
         services.AddScoped<IBulkSourceExtractionService, BulkSourceExtractionService>();
-        services.AddScoped<IBulkSourceReplicationPolicyService, BulkSourceReplicationPolicyService>();
+        services.AddScoped<
+            IBulkSourceReplicationPolicyService,
+            BulkSourceReplicationPolicyService
+        >();
         services.AddScoped<IBulkApiResultPolicyService, BulkApiResultPolicyService>();
         services.AddScoped<IBulkItemIdentityService, BulkItemIdentityService>();
         services.AddScoped<IBulkRequestFactory, BulkRequestFactory>();

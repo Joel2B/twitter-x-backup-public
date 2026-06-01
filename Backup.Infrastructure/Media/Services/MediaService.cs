@@ -8,7 +8,8 @@ public class MediaService(
     MediaOrchestrationCommandAdapter mediaOrchestrationCommand
 ) : IMediaService
 {
-    private readonly IMediaOrchestrationService _mediaOrchestrationService = mediaOrchestrationService;
+    private readonly IMediaOrchestrationService _mediaOrchestrationService =
+        mediaOrchestrationService;
     private readonly MediaOrchestrationCommandAdapter _mediaOrchestrationCommand =
         mediaOrchestrationCommand;
 

@@ -6,11 +6,11 @@ namespace Backup.Application.Media.Maintenance;
 
 public sealed class MediaCacheEntryPathPolicyService : IMediaCacheEntryPathPolicyService
 {
-    public string NormalizeForCacheKey(string path)
-        => PathFormattingPolicy.NormalizePathForCurrentOs(path, save: true);
+    public string NormalizeForCacheKey(string path) =>
+        PathFormattingPolicy.NormalizePathForCurrentOs(path, save: true);
 
-    public string NormalizeForStoragePath(string path)
-        => PathFormattingPolicy.NormalizePathForCurrentOs(path, save: false);
+    public string NormalizeForStoragePath(string path) =>
+        PathFormattingPolicy.NormalizePathForCurrentOs(path, save: false);
 
     public string BuildCacheSnapshotFileName(string normalizedPath, int? partitionId)
     {

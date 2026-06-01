@@ -98,8 +98,8 @@ public class ConfigNormalizationServiceTests
             },
         };
 
-        Exception ex = Assert.Throws<Exception>(() =>
-            sut.ValidateApiFileEntries("1122205668801257472.json", api)
+        Exception ex = Assert.Throws<Exception>(
+            () => sut.ValidateApiFileEntries("1122205668801257472.json", api)
         );
 
         Assert.Contains("missing required field 'Id'", ex.Message);
@@ -119,8 +119,8 @@ public class ConfigNormalizationServiceTests
             },
         };
 
-        Exception ex = Assert.Throws<Exception>(() =>
-            sut.ValidateApiFileEntries("1122205668801257472.json", api)
+        Exception ex = Assert.Throws<Exception>(
+            () => sut.ValidateApiFileEntries("1122205668801257472.json", api)
         );
 
         Assert.Contains("missing required field 'Request'", ex.Message);

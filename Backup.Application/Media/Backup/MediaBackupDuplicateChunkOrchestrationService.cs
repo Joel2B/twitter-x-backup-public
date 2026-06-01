@@ -33,6 +33,9 @@ public sealed class MediaBackupDuplicateChunkOrchestrationService
         };
     }
 
-    public int UpdateStorageCount(int currentStorageCount, int storageEntriesRead, int removedExtrasCount)
-        => currentStorageCount + storageEntriesRead - removedExtrasCount;
+    public int UpdateStorageCount(
+        int currentStorageCount,
+        int storageEntriesRead,
+        int removedExtrasCount
+    ) => currentStorageCount + storageEntriesRead - removedExtrasCount;
 }

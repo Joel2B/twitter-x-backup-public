@@ -1,9 +1,9 @@
-using Backup.Infrastructure.Posts.Data.Sqlite;
 using Backup.Application.Posts;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Posts;
 using Backup.Infrastructure.Models.Config.Downloads;
+using Backup.Infrastructure.Posts.Data.Sqlite;
 using Backup.Infrastructure.Posts.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -163,10 +163,11 @@ public class SqlitePostDataTests
             await sut.Setup();
 
             await sut.UpsertPosts(
-            [
-                CreatePost("p1", "profile-1", "first", "user-1", "posts"),
-                CreatePost("p1", "profile-1", "second", "user-1", "posts"),
-            ]);
+                [
+                    CreatePost("p1", "profile-1", "first", "user-1", "posts"),
+                    CreatePost("p1", "profile-1", "second", "user-1", "posts"),
+                ]
+            );
             await sut.Save();
 
             Assert.Equal(1, await sut.GetCount());
@@ -191,10 +192,11 @@ public class SqlitePostDataTests
             await sut.Setup();
 
             await sut.UpsertPosts(
-            [
-                CreatePost("p1", "profile-1", "one", "user-1", "posts"),
-                CreatePost("p2", "profile-1", "two", "user-1", "posts"),
-            ]);
+                [
+                    CreatePost("p1", "profile-1", "one", "user-1", "posts"),
+                    CreatePost("p2", "profile-1", "two", "user-1", "posts"),
+                ]
+            );
             await sut.Save();
 
             int firstMarked = await sut.MarkDeletedExcept("user-1", "posts", ["p1"]);

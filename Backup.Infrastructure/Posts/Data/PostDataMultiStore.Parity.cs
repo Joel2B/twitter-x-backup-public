@@ -1,7 +1,7 @@
-using Backup.Infrastructure.Posts.Abstractions.Data;
-using Backup.Infrastructure.Logging;
-using Backup.Infrastructure.Posts.Adapters;
 using Backup.Application.Posts.Models;
+using Backup.Infrastructure.Logging;
+using Backup.Infrastructure.Posts.Abstractions.Data;
+using Backup.Infrastructure.Posts.Adapters;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Data;
@@ -11,11 +11,9 @@ public partial class PostDataMultiStore
     private async Task<Backup.Domain.Posts.PostStoreParityResult> VerifyStoreCountsInternal()
     {
         List<PostStoreCountSourceAdapter> adapters = _stores
-            .Select(store =>
-                new PostStoreCountSourceAdapter(
-                    store as IPostDomainDataStore ?? new PostDataDomainStoreAdapter(store)
-                )
-            )
+            .Select(store => new PostStoreCountSourceAdapter(
+                store as IPostDomainDataStore ?? new PostDataDomainStoreAdapter(store)
+            ))
             .ToList();
 
         return await _postStoreParityService.Verify(adapters);

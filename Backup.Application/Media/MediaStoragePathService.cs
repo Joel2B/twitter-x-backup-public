@@ -5,7 +5,8 @@ public sealed class MediaStoragePathService(
     IMediaTempPathPolicyService mediaTempPathPolicyService
 ) : IMediaStoragePathService
 {
-    private readonly IMediaPathSelectionService _mediaPathSelectionService = mediaPathSelectionService;
+    private readonly IMediaPathSelectionService _mediaPathSelectionService =
+        mediaPathSelectionService;
     private readonly IMediaTempPathPolicyService _mediaTempPathPolicyService =
         mediaTempPathPolicyService;
 

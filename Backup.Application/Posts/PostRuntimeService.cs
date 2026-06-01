@@ -2,7 +2,8 @@ using Backup.Application.Posts.Ports;
 
 namespace Backup.Application.Posts;
 
-public sealed class PostRuntimeService(IPostExecutionService postExecutionService) : IPostRuntimeService
+public sealed class PostRuntimeService(IPostExecutionService postExecutionService)
+    : IPostRuntimeService
 {
     private readonly IPostExecutionService _postExecutionService = postExecutionService;
 
@@ -22,7 +23,8 @@ public sealed class PostRuntimeService(IPostExecutionService postExecutionServic
         await _postExecutionService.Recover(new RecoveryExecution(command));
     }
 
-    private sealed class DownloadExecution(IPostDownloadRuntimeCommand command) : IPostDownloadExecution
+    private sealed class DownloadExecution(IPostDownloadRuntimeCommand command)
+        : IPostDownloadExecution
     {
         public Task Download() => command.RunDownload();
 

@@ -1,8 +1,8 @@
 using System.Collections.Concurrent;
 using Backup.Application.Partition;
 using Backup.Application.Partition.Models;
-using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Partition;
@@ -138,7 +138,10 @@ public class LocalPartition(
             BuildPartitionStateSources(_appConfig.Data.Partitions),
             selectedIds
         );
-        return [.. _appConfig.Data.Partitions.Where(partition => filteredIds.Contains(partition.Id))];
+        return
+        [
+            .. _appConfig.Data.Partitions.Where(partition => filteredIds.Contains(partition.Id)),
+        ];
     }
 
     public PartitionConfig GetPath(int? id = null, long size = 0)

@@ -46,22 +46,8 @@ public class MediaDuplicateFilterServiceTests
     {
         List<MediaDownload> downloads =
         [
-            new()
-            {
-                Id = "a",
-                Data =
-                [
-                    new() { Url = "https://x.com/1.jpg", Path = "a/1.jpg" },
-                ],
-            },
-            new()
-            {
-                Id = "b",
-                Data =
-                [
-                    new() { Url = "https://x.com/1.jpg", Path = "b/1.jpg" },
-                ],
-            },
+            new() { Id = "a", Data = [new() { Url = "https://x.com/1.jpg", Path = "a/1.jpg" }] },
+            new() { Id = "b", Data = [new() { Url = "https://x.com/1.jpg", Path = "b/1.jpg" }] },
         ];
 
         IReadOnlyList<MediaDownload> filtered = _sut.Filter(downloads);

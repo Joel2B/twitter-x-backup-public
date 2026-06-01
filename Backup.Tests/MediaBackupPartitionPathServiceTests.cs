@@ -29,8 +29,8 @@ public sealed class MediaBackupPartitionPathServiceTests
             new() { Type = "primary", RootPath = "/primary" },
         ];
 
-        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            sut.GetRequiredBackupRootPath(partitions)
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => sut.GetRequiredBackupRootPath(partitions)
         );
 
         Assert.Equal("Backup partition not configured.", ex.Message);

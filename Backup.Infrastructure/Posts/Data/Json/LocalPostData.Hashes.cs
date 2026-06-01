@@ -1,7 +1,7 @@
-using Backup.Infrastructure.Models.Data.Json;
-using Backup.Infrastructure.Posts.Models;
-using Backup.Infrastructure.Posts.Adapters;
 using Backup.Application.Posts.Models;
+using Backup.Infrastructure.Models.Data.Json;
+using Backup.Infrastructure.Posts.Adapters;
+using Backup.Infrastructure.Posts.Models;
 using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Posts.Data.Json;
@@ -29,20 +29,18 @@ public partial class LocalPostData
                             Id = row.Id,
                             Hash = row.Hash,
                             Deleted = row.Deleted,
-                        }
-                    )
-                    .ToList()
+                        })
+                        .ToList()
                 );
 
             _postMetaCache = normalized.ToDictionary(
                 entry => entry.Key,
-                entry =>
-                    new PostMetaRow
-                    {
-                        Id = entry.Value.Id,
-                        Hash = entry.Value.Hash,
-                        Deleted = entry.Value.Deleted,
-                    },
+                entry => new PostMetaRow
+                {
+                    Id = entry.Value.Id,
+                    Hash = entry.Value.Hash,
+                    Deleted = entry.Value.Deleted,
+                },
                 StringComparer.Ordinal
             );
 
@@ -58,13 +56,12 @@ public partial class LocalPostData
         Dictionary<string, PostMetaRow> meta = await GetPostMetaCache();
         IReadOnlyDictionary<string, PostMetaRecord> existing = meta.ToDictionary(
             entry => entry.Key,
-            entry =>
-                new PostMetaRecord
-                {
-                    Id = entry.Value.Id,
-                    Hash = entry.Value.Hash,
-                    Deleted = entry.Value.Deleted,
-                },
+            entry => new PostMetaRecord
+            {
+                Id = entry.Value.Id,
+                Hash = entry.Value.Hash,
+                Deleted = entry.Value.Deleted,
+            },
             StringComparer.Ordinal
         );
 
@@ -82,13 +79,12 @@ public partial class LocalPostData
 
         return reconciled.ToDictionary(
             entry => entry.Key,
-            entry =>
-                new PostMetaRow
-                {
-                    Id = entry.Value.Id,
-                    Hash = entry.Value.Hash,
-                    Deleted = entry.Value.Deleted,
-                },
+            entry => new PostMetaRow
+            {
+                Id = entry.Value.Id,
+                Hash = entry.Value.Hash,
+                Deleted = entry.Value.Deleted,
+            },
             StringComparer.Ordinal
         );
     }

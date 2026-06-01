@@ -62,5 +62,4 @@ public class BackupRunPlanMapperTests
         Assert.NotSame(plan.FieldToggles, request.Query.FieldToggles);
         Assert.NotSame(plan.Headers, request.Headers);
     }
-
 }

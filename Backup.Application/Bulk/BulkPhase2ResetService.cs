@@ -9,9 +9,10 @@ public sealed class BulkPhase2ResetService : IBulkPhase2ResetService
     {
         IReadOnlyList<BulkItem> data = await command.GetBulks();
 
-        if (data
-            .Where(item => item.UserStatus == BulkUserStatus.Active)
-            .Any(item => item.Phase2Order is not null))
+        if (
+            data.Where(item => item.UserStatus == BulkUserStatus.Active)
+                .Any(item => item.Phase2Order is not null)
+        )
             return;
 
         foreach (BulkItem bulk in data)

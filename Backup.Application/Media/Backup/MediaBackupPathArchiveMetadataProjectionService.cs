@@ -19,7 +19,12 @@ public sealed class MediaBackupPathArchiveMetadataProjectionService(
             {
                 string archivePath = _mediaBackupPathProjectionService.ToArchivePath(path);
 
-                if (!metadataByArchivePath.TryGetValue(archivePath, out MediaBackupChunkDataMetadata? metadata))
+                if (
+                    !metadataByArchivePath.TryGetValue(
+                        archivePath,
+                        out MediaBackupChunkDataMetadata? metadata
+                    )
+                )
                     return new MediaBackupChunkDataMetadata();
 
                 return new MediaBackupChunkDataMetadata

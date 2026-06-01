@@ -18,7 +18,12 @@ public sealed class MediaBackupIntegrityChunkApplyService : IMediaBackupIntegrit
                 if (!selectedPaths.Contains(entry.Path))
                     return entry;
 
-                if (!selection.PathMetadata.TryGetValue(entry.Path, out MediaBackupChunkDataMetadata? metadata))
+                if (
+                    !selection.PathMetadata.TryGetValue(
+                        entry.Path,
+                        out MediaBackupChunkDataMetadata? metadata
+                    )
+                )
                     return entry;
 
                 updatedPaths.Add(entry.Path);

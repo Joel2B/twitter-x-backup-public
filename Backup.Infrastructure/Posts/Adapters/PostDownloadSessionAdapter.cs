@@ -1,10 +1,10 @@
 using Backup.Application.Posts.Models;
 using Backup.Application.Posts.Ports;
 using Backup.Infrastructure.Dump.Abstractions.Data;
-using Backup.Infrastructure.Posts.Abstractions.Data;
-using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Dump;
+using Backup.Infrastructure.Posts.Abstractions.Data;
+using Backup.Infrastructure.Posts.Abstractions.Services;
 using Microsoft.Extensions.Logging;
 using ParseResult = Backup.Domain.Posts.ParseResult;
 
@@ -73,7 +73,8 @@ public sealed class PostDownloadSessionAdapter(
         );
     }
 
-    public void OnAttempt(int attemptNumber) => _logger.LogWarning("Attempt #{attempt}", attemptNumber);
+    public void OnAttempt(int attemptNumber) =>
+        _logger.LogWarning("Attempt #{attempt}", attemptNumber);
 
     public async Task<PostDownloadPageResult> FetchPage(CancellationToken cancellationToken)
     {

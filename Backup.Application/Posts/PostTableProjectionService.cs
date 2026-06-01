@@ -94,7 +94,12 @@ public sealed class PostTableProjectionService : IPostTableProjectionService
                 }
             }
 
-            foreach ((string userId, Dictionary<string, Backup.Domain.Posts.IndexData> userIndex) in post.Index)
+            foreach (
+                (
+                    string userId,
+                    Dictionary<string, Backup.Domain.Posts.IndexData> userIndex
+                ) in post.Index
+            )
             {
                 foreach ((string origin, Backup.Domain.Posts.IndexData indexData) in userIndex)
                 {

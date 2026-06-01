@@ -21,8 +21,8 @@ public class MediaDownloadPolicyServiceTests
     [Fact]
     public void EnsureAllowedContentLength_Throws_WhenEqualOrAboveLimit()
     {
-        SystemException ex = Assert.Throws<SystemException>(() =>
-            _sut.EnsureAllowedContentLength(1024, 1024, bytes => $"{bytes} B")
+        SystemException ex = Assert.Throws<SystemException>(
+            () => _sut.EnsureAllowedContentLength(1024, 1024, bytes => $"{bytes} B")
         );
 
         Assert.Equal(">= 1024 B", ex.Message);

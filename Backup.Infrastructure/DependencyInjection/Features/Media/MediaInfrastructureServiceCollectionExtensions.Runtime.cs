@@ -1,12 +1,12 @@
-using Backup.Infrastructure.Media.Data;
-using Backup.Infrastructure.Media.Abstractions.Services;
-using Backup.Infrastructure.Media.Services;
 using Backup.Application.Media;
-using Backup.Application.Media.Ports;
 using Backup.Application.Media.Filter;
 using Backup.Application.Media.Integrity;
 using Backup.Application.Media.Maintenance;
+using Backup.Application.Media.Ports;
 using Backup.Application.Media.Prune;
+using Backup.Infrastructure.Media.Abstractions.Services;
+using Backup.Infrastructure.Media.Data;
+using Backup.Infrastructure.Media.Services;
 using Backup.Infrastructure.Models.Config;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -33,14 +33,32 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaDownloadProjectionService, MediaDownloadProjectionService>();
         services.AddScoped<IMediaDuplicateFilterService, MediaDuplicateFilterService>();
         services.AddScoped<IMediaReplicationPlanningService, MediaReplicationPlanningService>();
-        services.AddScoped<IMediaParallelDownloadPolicyService, MediaParallelDownloadPolicyService>();
-        services.AddScoped<IMediaDownloadPathPriorityPolicyService, MediaDownloadPathPriorityPolicyService>();
+        services.AddScoped<
+            IMediaParallelDownloadPolicyService,
+            MediaParallelDownloadPolicyService
+        >();
+        services.AddScoped<
+            IMediaDownloadPathPriorityPolicyService,
+            MediaDownloadPathPriorityPolicyService
+        >();
         services.AddScoped<IMediaDownloadQueueBuilderService, MediaDownloadQueueBuilderService>();
-        services.AddScoped<IMediaDownloadExceptionPolicyService, MediaDownloadExceptionPolicyService>();
+        services.AddScoped<
+            IMediaDownloadExceptionPolicyService,
+            MediaDownloadExceptionPolicyService
+        >();
         services.AddScoped<IMediaDownloadPolicyService, MediaDownloadPolicyService>();
-        services.AddScoped<IMediaDownloadContentValidationPolicyService, MediaDownloadContentValidationPolicyService>();
-        services.AddScoped<IMediaDownloadStreamingPolicyService, MediaDownloadStreamingPolicyService>();
-        services.AddScoped<IMediaDownloadProgressPolicyService, MediaDownloadProgressPolicyService>();
+        services.AddScoped<
+            IMediaDownloadContentValidationPolicyService,
+            MediaDownloadContentValidationPolicyService
+        >();
+        services.AddScoped<
+            IMediaDownloadStreamingPolicyService,
+            MediaDownloadStreamingPolicyService
+        >();
+        services.AddScoped<
+            IMediaDownloadProgressPolicyService,
+            MediaDownloadProgressPolicyService
+        >();
         services.AddScoped<IMediaDownloadExecutionService, MediaDownloadExecutionService>();
         services.AddScoped<IMediaLogFilePolicyService, MediaLogFilePolicyService>();
         services.AddScoped<IMediaPathSelectionService, MediaPathSelectionService>();
@@ -51,39 +69,117 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaPruneSelectionService, MediaPruneSelectionService>();
         services.AddScoped<IMediaPruneExecutionService, MediaPruneExecutionService>();
         services.AddScoped<IMediaMaintenanceDataPolicyService, MediaMaintenanceDataPolicyService>();
-        services.AddScoped<IMediaMaintenanceDownloadProjectionService, MediaMaintenanceDownloadProjectionService>();
-        services.AddScoped<IMediaMaintenanceCachedDownloadFilterService, MediaMaintenanceCachedDownloadFilterService>();
-        services.AddScoped<IMediaMaintenanceFileProbePolicyService, MediaMaintenanceFileProbePolicyService>();
-        services.AddScoped<IMediaMaintenanceIntegrityPolicyService, MediaMaintenanceIntegrityPolicyService>();
-        services.AddScoped<IMediaMaintenanceIntegrityEvaluationService, MediaMaintenanceIntegrityEvaluationService>();
-        services.AddScoped<IMediaMaintenanceIntegrityDecisionService, MediaMaintenanceIntegrityDecisionService>();
-        services.AddScoped<IMediaMaintenanceIntegrityObservationCompositionService, MediaMaintenanceIntegrityObservationCompositionService>();
-        services.AddScoped<IMediaMaintenanceIntegritySummaryService, MediaMaintenanceIntegritySummaryService>();
-        services.AddScoped<IMediaMaintenanceIntegrityBatchService, MediaMaintenanceIntegrityBatchService>();
-        services.AddScoped<IMediaMaintenanceIntegrityTargetService, MediaMaintenanceIntegrityTargetService>();
-        services.AddScoped<IMediaMaintenancePrunePathSelectionService, MediaMaintenancePrunePathSelectionService>();
+        services.AddScoped<
+            IMediaMaintenanceDownloadProjectionService,
+            MediaMaintenanceDownloadProjectionService
+        >();
+        services.AddScoped<
+            IMediaMaintenanceCachedDownloadFilterService,
+            MediaMaintenanceCachedDownloadFilterService
+        >();
+        services.AddScoped<
+            IMediaMaintenanceFileProbePolicyService,
+            MediaMaintenanceFileProbePolicyService
+        >();
+        services.AddScoped<
+            IMediaMaintenanceIntegrityPolicyService,
+            MediaMaintenanceIntegrityPolicyService
+        >();
+        services.AddScoped<
+            IMediaMaintenanceIntegrityEvaluationService,
+            MediaMaintenanceIntegrityEvaluationService
+        >();
+        services.AddScoped<
+            IMediaMaintenanceIntegrityDecisionService,
+            MediaMaintenanceIntegrityDecisionService
+        >();
+        services.AddScoped<
+            IMediaMaintenanceIntegrityObservationCompositionService,
+            MediaMaintenanceIntegrityObservationCompositionService
+        >();
+        services.AddScoped<
+            IMediaMaintenanceIntegritySummaryService,
+            MediaMaintenanceIntegritySummaryService
+        >();
+        services.AddScoped<
+            IMediaMaintenanceIntegrityBatchService,
+            MediaMaintenanceIntegrityBatchService
+        >();
+        services.AddScoped<
+            IMediaMaintenanceIntegrityTargetService,
+            MediaMaintenanceIntegrityTargetService
+        >();
+        services.AddScoped<
+            IMediaMaintenancePrunePathSelectionService,
+            MediaMaintenancePrunePathSelectionService
+        >();
         services.AddScoped<IMediaCacheDirectoryPolicyService, MediaCacheDirectoryPolicyService>();
         services.AddScoped<IMediaCacheRecheckPolicyService, MediaCacheRecheckPolicyService>();
-        services.AddScoped<IMediaCacheRecheckOrchestrationService, MediaCacheRecheckOrchestrationService>();
+        services.AddScoped<
+            IMediaCacheRecheckOrchestrationService,
+            MediaCacheRecheckOrchestrationService
+        >();
         services.AddScoped<IMediaCacheRecheckDecisionService, MediaCacheRecheckDecisionService>();
-        services.AddScoped<IMediaCacheRecheckEvaluationService, MediaCacheRecheckEvaluationService>();
+        services.AddScoped<
+            IMediaCacheRecheckEvaluationService,
+            MediaCacheRecheckEvaluationService
+        >();
         services.AddScoped<IMediaCacheRecheckPlanningService, MediaCacheRecheckPlanningService>();
-        services.AddScoped<IMediaCacheRecheckObservationCompositionService, MediaCacheRecheckObservationCompositionService>();
-        services.AddScoped<IMediaCacheRecheckProbeExecutionService, MediaCacheRecheckProbeExecutionService>();
-        services.AddScoped<IMediaCacheRecheckExecutionInputService, MediaCacheRecheckExecutionInputService>();
-        services.AddScoped<IMediaCacheRecheckMutationPlanningService, MediaCacheRecheckMutationPlanningService>();
-        services.AddScoped<IMediaCacheRecheckMutationApplyPlanService, MediaCacheRecheckMutationApplyPlanService>();
-        services.AddScoped<IMediaCacheRecheckMutationApplySelectionService, MediaCacheRecheckMutationApplySelectionService>();
-        services.AddScoped<IMediaCacheRecheckMutationExecutionService, MediaCacheRecheckMutationExecutionService>();
-        services.AddScoped<IMediaCacheRecheckApplyPolicyService, MediaCacheRecheckApplyPolicyService>();
+        services.AddScoped<
+            IMediaCacheRecheckObservationCompositionService,
+            MediaCacheRecheckObservationCompositionService
+        >();
+        services.AddScoped<
+            IMediaCacheRecheckProbeExecutionService,
+            MediaCacheRecheckProbeExecutionService
+        >();
+        services.AddScoped<
+            IMediaCacheRecheckExecutionInputService,
+            MediaCacheRecheckExecutionInputService
+        >();
+        services.AddScoped<
+            IMediaCacheRecheckMutationPlanningService,
+            MediaCacheRecheckMutationPlanningService
+        >();
+        services.AddScoped<
+            IMediaCacheRecheckMutationApplyPlanService,
+            MediaCacheRecheckMutationApplyPlanService
+        >();
+        services.AddScoped<
+            IMediaCacheRecheckMutationApplySelectionService,
+            MediaCacheRecheckMutationApplySelectionService
+        >();
+        services.AddScoped<
+            IMediaCacheRecheckMutationExecutionService,
+            MediaCacheRecheckMutationExecutionService
+        >();
+        services.AddScoped<
+            IMediaCacheRecheckApplyPolicyService,
+            MediaCacheRecheckApplyPolicyService
+        >();
         services.AddScoped<IMediaCacheJsonSnapshotService, MediaCacheJsonSnapshotService>();
         services.AddScoped<IMediaCacheEntryPathPolicyService, MediaCacheEntryPathPolicyService>();
-        services.AddScoped<IMediaCacheEntryStateFactoryService, MediaCacheEntryStateFactoryService>();
+        services.AddScoped<
+            IMediaCacheEntryStateFactoryService,
+            MediaCacheEntryStateFactoryService
+        >();
         services.AddScoped<IMediaCacheWritePolicyService, MediaCacheWritePolicyService>();
-        services.AddScoped<IMediaCacheConflictResolutionService, MediaCacheConflictResolutionService>();
-        services.AddScoped<IMediaCachePartitionSelectionService, MediaCachePartitionSelectionService>();
-        services.AddScoped<IMediaCacheStoredEntryProjectionService, MediaCacheStoredEntryProjectionService>();
-        services.AddScoped<IMediaCachePartitionSizeAggregationService, MediaCachePartitionSizeAggregationService>();
+        services.AddScoped<
+            IMediaCacheConflictResolutionService,
+            MediaCacheConflictResolutionService
+        >();
+        services.AddScoped<
+            IMediaCachePartitionSelectionService,
+            MediaCachePartitionSelectionService
+        >();
+        services.AddScoped<
+            IMediaCacheStoredEntryProjectionService,
+            MediaCacheStoredEntryProjectionService
+        >();
+        services.AddScoped<
+            IMediaCachePartitionSizeAggregationService,
+            MediaCachePartitionSizeAggregationService
+        >();
         services.AddScoped<IMediaCacheReplicationPathService, MediaCacheReplicationPathService>();
         services.AddScoped<IMediaIntegrity, MediaIntegrity>();
         services.AddScoped<IMediaFilter, MediaFilter>();

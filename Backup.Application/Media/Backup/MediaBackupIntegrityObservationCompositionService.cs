@@ -11,7 +11,8 @@ public sealed class MediaBackupIntegrityObservationCompositionService
         IReadOnlyDictionary<string, long?> actualFileSizeByPath,
         IReadOnlyDictionary<string, uint?> actualCrc32ByPath
     ) =>
-        entries.Select(entry =>
+        entries
+            .Select(entry =>
             {
                 actualFileSizeByPath.TryGetValue(entry.Path, out long? actualFileSize);
                 actualCrc32ByPath.TryGetValue(entry.Path, out uint? actualCrc32);
@@ -31,7 +32,8 @@ public sealed class MediaBackupIntegrityObservationCompositionService
     public IReadOnlyList<MediaBackupIntegrityObservation> BuildObservations(
         IEnumerable<MediaBackupIntegrityObservationInput> inputs
     ) =>
-        inputs.Select(input => new MediaBackupIntegrityObservation
+        inputs
+            .Select(input => new MediaBackupIntegrityObservation
             {
                 ChunkId = input.ChunkId,
                 Path = input.Path,
@@ -45,7 +47,8 @@ public sealed class MediaBackupIntegrityObservationCompositionService
     public IReadOnlyList<MediaBackupChunkPathMetadataState> BuildPathMetadataStates(
         IEnumerable<MediaBackupChunkPathMetadataInput> inputs
     ) =>
-        inputs.Select(input => new MediaBackupChunkPathMetadataState
+        inputs
+            .Select(input => new MediaBackupChunkPathMetadataState
             {
                 Path = input.Path,
                 FileSize = input.FileSize,
@@ -56,7 +59,8 @@ public sealed class MediaBackupIntegrityObservationCompositionService
     public IReadOnlyList<MediaBackupIntegrityPathChange> BuildPathChanges(
         IEnumerable<MediaBackupIntegrityChange> changes
     ) =>
-        changes.Select(change => new MediaBackupIntegrityPathChange
+        changes
+            .Select(change => new MediaBackupIntegrityPathChange
             {
                 ChunkId = change.ChunkId,
                 Path = change.Path,

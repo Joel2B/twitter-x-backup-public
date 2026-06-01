@@ -38,7 +38,10 @@ public sealed class ProxyFailureStateService(
 
     public ProxyFailureOutcome RegisterFailure(ProxyFailureSettings settings)
     {
-        ProxyFailureOutcome outcome = _proxyFailureOrchestrationService.EvaluateFailure(_state, settings);
+        ProxyFailureOutcome outcome = _proxyFailureOrchestrationService.EvaluateFailure(
+            _state,
+            settings
+        );
         _state = Clone(outcome.State);
         return outcome;
     }

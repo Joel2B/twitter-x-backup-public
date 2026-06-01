@@ -10,10 +10,12 @@ public sealed class ProxyRuntimePoolSelectionService(
 
     public IReadOnlySet<string> SelectKeys(IEnumerable<ProxyRuntimePoolCandidate> candidates) =>
         candidates
-            .Where(candidate => _runtimePolicyService.ShouldIncludeInRuntimePool(
-                candidate.IsActive,
-                candidate.ConnectionCount
-            ))
+            .Where(candidate =>
+                _runtimePolicyService.ShouldIncludeInRuntimePool(
+                    candidate.IsActive,
+                    candidate.ConnectionCount
+                )
+            )
             .Select(candidate => candidate.Key)
             .ToHashSet();
 }

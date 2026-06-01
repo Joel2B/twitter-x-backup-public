@@ -1,7 +1,7 @@
-using Backup.Infrastructure.Core.Abstractions.Setup;
-using Backup.Infrastructure.Dump.Abstractions.Data;
 using Backup.Application.IO;
 using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Core.Abstractions.Setup;
+using Backup.Infrastructure.Dump.Abstractions.Data;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Dump;
 using Backup.Infrastructure.Models.Dump;
@@ -9,7 +9,11 @@ using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Dump.Data;
 
-public class LocalDumpsData(StorageDump _config, IPartition _partition, IDataStoreGuardService dataStoreGuardService) : IDumpsDataStore, ISetup
+public class LocalDumpsData(
+    StorageDump _config,
+    IPartition _partition,
+    IDataStoreGuardService dataStoreGuardService
+) : IDumpsDataStore, ISetup
 {
     public bool IsDefault { get; set; }
     private readonly StorageDump _config = _config;
@@ -42,7 +46,9 @@ public class LocalDumpsData(StorageDump _config, IPartition _partition, IDataSto
 
     private string GetPathFile(PartitionConfig? partition = null)
     {
-        string fileName = _dataStoreGuardService.RequireConfiguredFileName(_config.Paths.Dumps.File);
+        string fileName = _dataStoreGuardService.RequireConfiguredFileName(
+            _config.Paths.Dumps.File
+        );
 
         PartitionConfig primary = partition ?? _partition.GetPrimary();
         string path = Path.Combine(GetPath(primary), fileName);
@@ -58,7 +64,10 @@ public class LocalDumpsData(StorageDump _config, IPartition _partition, IDataSto
 
         string content = await File.ReadAllTextAsync(path);
         DumpsData? deserialized = JsonConvert.DeserializeObject<DumpsData>(content);
-        DumpsData data = _dataStoreGuardService.RequireDeserialized(deserialized, "Error in deserialize");
+        DumpsData data = _dataStoreGuardService.RequireDeserialized(
+            deserialized,
+            "Error in deserialize"
+        );
 
         return data;
     }

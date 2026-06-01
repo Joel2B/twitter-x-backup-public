@@ -18,8 +18,12 @@ public class PathAliasResolutionPolicyTests
     [Fact]
     public void ResolveAliases_Throws_WhenAliasIsMissing()
     {
-        Exception ex = Assert.Throws<Exception>(() =>
-            PathAliasResolutionPolicy.ResolveAliases(["@missing"], new Dictionary<string, string>())
+        Exception ex = Assert.Throws<Exception>(
+            () =>
+                PathAliasResolutionPolicy.ResolveAliases(
+                    ["@missing"],
+                    new Dictionary<string, string>()
+                )
         );
 
         Assert.Equal("alias '@missing' is not set", ex.Message);

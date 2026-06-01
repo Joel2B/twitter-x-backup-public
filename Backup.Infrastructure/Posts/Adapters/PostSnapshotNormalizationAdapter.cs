@@ -10,10 +10,11 @@ internal static class PostSnapshotNormalizationAdapter
         IReadOnlyCollection<Post> posts
     )
     {
-        List<Backup.Domain.Posts.Post> domainPosts = posts.Select(PostReplicationMapper.ToDomain).ToList();
-        IReadOnlyList<Backup.Domain.Posts.Post> normalized = postSnapshotNormalizationService.Normalize(
-            domainPosts
-        );
+        List<Backup.Domain.Posts.Post> domainPosts = posts
+            .Select(PostReplicationMapper.ToDomain)
+            .ToList();
+        IReadOnlyList<Backup.Domain.Posts.Post> normalized =
+            postSnapshotNormalizationService.Normalize(domainPosts);
         return normalized.Select(PostReplicationMapper.ToApp).ToList();
     }
 }

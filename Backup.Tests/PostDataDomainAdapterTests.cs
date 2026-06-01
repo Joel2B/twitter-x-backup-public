@@ -122,6 +122,7 @@ public class PostDataDomainAdapterTests
         public Task UpsertPosts(List<AppPosts.Post> posts) => Task.CompletedTask;
 
         public Task Save() => Task.CompletedTask;
+
         public Task Prune() => Task.CompletedTask;
     }
 }

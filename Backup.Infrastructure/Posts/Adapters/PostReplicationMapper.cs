@@ -104,7 +104,9 @@ internal static class PostReplicationMapper
             BannerUrl = source.BannerUrl,
             ImageUrl = source.ImageUrl,
             Following = source.Following,
-            Count = source.Count is null ? null : new AppPosts.PostCount { Media = source.Count.Media },
+            Count = source.Count is null
+                ? null
+                : new AppPosts.PostCount { Media = source.Count.Media },
         };
 
     private static PostMedia ToDomain(AppPosts.PostMedia source) =>
@@ -138,10 +140,20 @@ internal static class PostReplicationMapper
         };
 
     private static PostVariant ToDomain(AppPosts.PostVariant source) =>
-        new() { ContentType = source.ContentType, Bitrate = source.Bitrate, Url = source.Url };
+        new()
+        {
+            ContentType = source.ContentType,
+            Bitrate = source.Bitrate,
+            Url = source.Url,
+        };
 
     private static AppPosts.PostVariant ToApp(PostVariant source) =>
-        new() { ContentType = source.ContentType, Bitrate = source.Bitrate, Url = source.Url };
+        new()
+        {
+            ContentType = source.ContentType,
+            Bitrate = source.Bitrate,
+            Url = source.Url,
+        };
 
     private static Change ToDomain(AppPosts.Change source) =>
         new()

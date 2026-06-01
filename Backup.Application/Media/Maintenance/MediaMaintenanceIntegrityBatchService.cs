@@ -36,9 +36,10 @@ public sealed class MediaMaintenanceIntegrityBatchService(
             );
         }
 
-        MediaMaintenanceIntegritySummary summary = _mediaMaintenanceIntegritySummaryService.Summarize(
-            items.Select(item => item.Evaluation)
-        );
+        MediaMaintenanceIntegritySummary summary =
+            _mediaMaintenanceIntegritySummaryService.Summarize(
+                items.Select(item => item.Evaluation)
+            );
 
         return new MediaMaintenanceIntegrityBatchResult { Items = items, Summary = summary };
     }

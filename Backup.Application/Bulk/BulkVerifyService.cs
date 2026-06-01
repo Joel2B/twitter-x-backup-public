@@ -27,10 +27,11 @@ public sealed class BulkVerifyService : IBulkVerifyService
                 UserId = item.UserId,
                 UserName = item.UserName,
                 TotalBulk = item.Total,
-                TotalPost = !string.IsNullOrWhiteSpace(item.UserId)
+                TotalPost =
+                    !string.IsNullOrWhiteSpace(item.UserId)
                     && postCounts.TryGetValue(item.UserId, out int totalPost)
-                    ? totalPost
-                    : 0,
+                        ? totalPost
+                        : 0,
             })
             .ToList();
     }

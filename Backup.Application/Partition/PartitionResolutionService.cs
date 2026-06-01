@@ -24,7 +24,11 @@ public sealed class PartitionResolutionService(
         return filtered.Select(state => state.Id).ToList();
     }
 
-    public int ResolvePartitionId(IEnumerable<PartitionStateSource> sources, int? requestedId, long size)
+    public int ResolvePartitionId(
+        IEnumerable<PartitionStateSource> sources,
+        int? requestedId,
+        long size
+    )
     {
         IReadOnlyList<PartitionState> states = _partitionStateProjectionService.ToStates(sources);
         return _partitionPolicyService.ResolvePartitionId(states, requestedId, size);

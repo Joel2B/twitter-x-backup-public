@@ -4,7 +4,8 @@ namespace Backup.Tests;
 
 public class ProxyConnectionWindowPolicyServiceTests
 {
-    private readonly IProxyConnectionWindowPolicyService _sut = new ProxyConnectionWindowPolicyService();
+    private readonly IProxyConnectionWindowPolicyService _sut =
+        new ProxyConnectionWindowPolicyService();
 
     [Fact]
     public void GetWindowKey_FormatsAtHourPrecision()

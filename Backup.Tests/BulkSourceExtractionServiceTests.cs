@@ -23,8 +23,14 @@ public class BulkSourceExtractionServiceTests
         );
 
         Assert.Equal(2, result.Count);
-        Assert.Contains(result, item => item.UserName == "alice" && item.Type == BulkSourceType.Media);
-        Assert.Contains(result, item => item.UserName == "bob" && item.Type == BulkSourceType.Status);
+        Assert.Contains(
+            result,
+            item => item.UserName == "alice" && item.Type == BulkSourceType.Media
+        );
+        Assert.Contains(
+            result,
+            item => item.UserName == "bob" && item.Type == BulkSourceType.Status
+        );
     }
 
     [Fact]

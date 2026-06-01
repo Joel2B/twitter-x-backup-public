@@ -9,11 +9,11 @@ public class UtilsPath
         return PathCompositionPolicy.ComposePath(paths, AppDomain.CurrentDomain.BaseDirectory);
     }
 
-    public static DateTime? ToDate(string path, bool isDir = false)
-        => PathFormattingPolicy.ParseTimestampFromPath(path, isDir);
+    public static DateTime? ToDate(string path, bool isDir = false) =>
+        PathFormattingPolicy.ParseTimestampFromPath(path, isDir);
 
-    public static string GetPathFormatted(string path)
-        => PathFormattingPolicy.GetFormattedPath(path);
+    public static string GetPathFormatted(string path) =>
+        PathFormattingPolicy.GetFormattedPath(path);
 
     public static void CopyDirectory(string sourceDir, string destDir, bool overwrite = true)
     {
@@ -35,7 +35,6 @@ public class UtilsPath
         }
     }
 
-    public static string NormalizePath(string path, bool save = false)
-        => PathFormattingPolicy.NormalizePathForCurrentOs(path, save);
-
+    public static string NormalizePath(string path, bool save = false) =>
+        PathFormattingPolicy.NormalizePathForCurrentOs(path, save);
 }

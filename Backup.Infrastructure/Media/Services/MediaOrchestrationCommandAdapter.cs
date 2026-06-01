@@ -1,6 +1,6 @@
+using Backup.Application.Media;
 using Backup.Application.Media.Models;
 using Backup.Application.Media.Ports;
-using Backup.Application.Media;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Posts.Abstractions.Data;
@@ -47,7 +47,9 @@ public sealed class MediaOrchestrationCommandAdapter(
     public async Task<IReadOnlyList<Backup.Domain.Posts.MediaInput>> GetMediaInputs() =>
         await _postData.GetMediaInputs() ?? [];
 
-    public async Task<MediaProcessingResult> Process(IReadOnlyList<Backup.Domain.Posts.MediaInput> posts)
+    public async Task<MediaProcessingResult> Process(
+        IReadOnlyList<Backup.Domain.Posts.MediaInput> posts
+    )
     {
         List<Backup.Infrastructure.Posts.Models.MediaInput> appPosts = posts
             .Select(PostReplicationMapper.ToApp)
@@ -83,7 +85,10 @@ public sealed class MediaOrchestrationCommandAdapter(
         );
 
         if (!has)
-            _logger.LogWarning("no media maintenance configured for media data {storageId}", storageId);
+            _logger.LogWarning(
+                "no media maintenance configured for media data {storageId}",
+                storageId
+            );
 
         return has;
     }
@@ -115,10 +120,13 @@ public sealed class MediaOrchestrationCommandAdapter(
         if (maintenance is null)
             return;
 
-        await ExecuteOnInfrastructureDownloads(downloads, async infra =>
-        {
-            await _mediaIntegrity.Check(infra, maintenance);
-        });
+        await ExecuteOnInfrastructureDownloads(
+            downloads,
+            async infra =>
+            {
+                await _mediaIntegrity.Check(infra, maintenance);
+            }
+        );
     }
 
     public async Task DownloadToStorage(string storageId, List<MediaDownload> downloads)
@@ -128,10 +136,13 @@ public sealed class MediaOrchestrationCommandAdapter(
         if (storage is null)
             return;
 
-        await ExecuteOnInfrastructureDownloads(downloads, async infra =>
-        {
-            await _mediaDownload.Download(infra, storage);
-        });
+        await ExecuteOnInfrastructureDownloads(
+            downloads,
+            async infra =>
+            {
+                await _mediaDownload.Download(infra, storage);
+            }
+        );
     }
 
     public async Task ReplicateFromStorage(string storageId, List<MediaDownload> downloads)
@@ -141,10 +152,13 @@ public sealed class MediaOrchestrationCommandAdapter(
         if (storage is null)
             return;
 
-        await ExecuteOnInfrastructureDownloads(downloads, async infra =>
-        {
-            await _mediaReplication.Replicate(infra, _mediaData.Values, storage);
-        });
+        await ExecuteOnInfrastructureDownloads(
+            downloads,
+            async infra =>
+            {
+                await _mediaReplication.Replicate(infra, _mediaData.Values, storage);
+            }
+        );
     }
 
     public async Task RunBackups(List<MediaDownload> downloads)
@@ -157,7 +171,10 @@ public sealed class MediaOrchestrationCommandAdapter(
         if (backupSource is null)
         {
             foreach (IMediaBackupStrategy backup in _mediaBackups)
-                _logger.LogWarning("no media data configured for backup source for backup {backupId}", backup.Id);
+                _logger.LogWarning(
+                    "no media data configured for backup source for backup {backupId}",
+                    backup.Id
+                );
 
             return;
         }

@@ -38,11 +38,7 @@ public sealed class MediaReplicationPlanningService : IMediaReplicationPlanningS
                     .Select(item => item.Clone())
                     .ToList();
 
-                return new MediaDownload
-                {
-                    Id = download.Id,
-                    Data = remaining,
-                };
+                return new MediaDownload { Id = download.Id, Data = remaining };
             })
             .Where(download => download.Data.Count > 0)
             .ToList();

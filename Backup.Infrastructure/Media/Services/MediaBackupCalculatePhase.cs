@@ -45,8 +45,8 @@ internal sealed class MediaBackupCalculatePhase : IMediaBackupCalculatePhase
                     Paths = chunk.Data.Select(data => data.Path).ToList(),
                 })
             );
-        IReadOnlyList<MediaBackupChunkStateInput> chunkStateInputs = runtime.Context.Chunks
-            .Values.Select(chunk => new MediaBackupChunkStateInput
+        IReadOnlyList<MediaBackupChunkStateInput> chunkStateInputs = runtime
+            .Context.Chunks.Values.Select(chunk => new MediaBackupChunkStateInput
             {
                 Id = chunk.Id,
                 PathCount = chunk.Data.Count,
@@ -63,8 +63,8 @@ internal sealed class MediaBackupCalculatePhase : IMediaBackupCalculatePhase
             .GroupBy(input => input.CachePath!, StringComparer.Ordinal)
             .ToDictionary(
                 group => group.Key,
-                group => group.FirstOrDefault(entry => entry.FileSizeBytes.HasValue)?.FileSizeBytes
-                    ?? 0,
+                group =>
+                    group.FirstOrDefault(entry => entry.FileSizeBytes.HasValue)?.FileSizeBytes ?? 0,
                 StringComparer.Ordinal
             );
 
@@ -115,10 +115,9 @@ internal sealed class MediaBackupCalculatePhase : IMediaBackupCalculatePhase
         runtime.Logger.LogInfo("current chunk: {chunk}", calculation.Assignment.InitialChunkId);
 
         foreach (
-            (
-                int chunkId,
-                IReadOnlyList<string> addedPaths
-            ) in calculation.ApplyAssignments.AddedCachePathsByChunk
+            (int chunkId, IReadOnlyList<string> addedPaths) in calculation
+                .ApplyAssignments
+                .AddedCachePathsByChunk
         )
         {
             if (!runtime.Context.Chunks.TryGetValue(chunkId, out Chunk? chunk))
@@ -230,7 +229,11 @@ internal sealed class MediaBackupCalculatePhase : IMediaBackupCalculatePhase
                         int current = Interlocked.Increment(ref done);
                         int prev = Volatile.Read(ref lastPercent);
                         MediaBackupProgressDecision progress =
-                            runtime.Dependencies.ProgressPolicyService.Evaluate(current, total, prev);
+                            runtime.Dependencies.ProgressPolicyService.Evaluate(
+                                current,
+                                total,
+                                prev
+                            );
 
                         if (progress.ShouldLog)
                         {
@@ -254,15 +257,16 @@ internal sealed class MediaBackupCalculatePhase : IMediaBackupCalculatePhase
         }
         catch (OperationCanceledException) { }
 
-        List<string> pathsInChunks = runtime.Context.Chunks
-            .Values.SelectMany(o => o.Data)
+        List<string> pathsInChunks = runtime
+            .Context.Chunks.Values.SelectMany(o => o.Data)
             .Select(o => o.Path)
             .ToList();
 
-        MediaBackupDirectPathFinalizeResult finalize = runtime.Dependencies.DirectPathFinalizeService.Finalize(
-            pathsInChunks,
-            runtime.Context.PathsDirect
-        );
+        MediaBackupDirectPathFinalizeResult finalize =
+            runtime.Dependencies.DirectPathFinalizeService.Finalize(
+                pathsInChunks,
+                runtime.Context.PathsDirect
+            );
 
         runtime.Context.PathsInBoth = finalize.PathsInBoth.ToList();
 

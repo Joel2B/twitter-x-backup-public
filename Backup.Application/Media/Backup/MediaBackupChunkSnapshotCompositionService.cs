@@ -8,7 +8,8 @@ public sealed class MediaBackupChunkSnapshotCompositionService
     public IReadOnlyList<MediaBackupChunkCountState> BuildChunkCountStates(
         IEnumerable<MediaBackupChunkPathsState> chunks
     ) =>
-        chunks.Select(chunk => new MediaBackupChunkCountState
+        chunks
+            .Select(chunk => new MediaBackupChunkCountState
             {
                 ChunkId = chunk.Id,
                 PathCount = chunk.Paths.Count,

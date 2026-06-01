@@ -1,12 +1,12 @@
-using Backup.Application.Posts.Models;
 using Backup.Application.Posts;
+using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Posts.Abstractions.Services;
-using PostMapper = Backup.Infrastructure.Posts.Adapters.ProjectionMapping.PostMapper;
 using Backup.Infrastructure.Posts.Models;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using ParseResult = Backup.Application.Posts.Models.ParsedPostBatch;
 using ParseUser = Backup.Domain.Posts.ParseUser;
+using PostMapper = Backup.Infrastructure.Posts.Adapters.ProjectionMapping.PostMapper;
 using PostUser = Backup.Domain.Posts.PostUser;
 
 namespace Backup.Infrastructure.Posts.Adapters;

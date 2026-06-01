@@ -14,7 +14,8 @@ public sealed class ProxyHealthAcceptanceService(
     private readonly IProxyAcceptedCandidateFactoryService _acceptedCandidateFactoryService =
         acceptedCandidateFactoryService;
     private readonly IProxyKeyPolicyService _keyPolicyService = keyPolicyService;
-    private readonly IProxyBatchFlushPolicyService _batchFlushPolicyService = batchFlushPolicyService;
+    private readonly IProxyBatchFlushPolicyService _batchFlushPolicyService =
+        batchFlushPolicyService;
 
     public async Task<ProxyHealthAcceptanceResult> AcceptAsync(
         IEnumerable<ProxyRuntimeRecord> merged,
@@ -43,16 +44,15 @@ public sealed class ProxyHealthAcceptanceService(
             if (!probe.Success)
                 continue;
 
-            ProxyAcceptedCandidate accepted = _acceptedCandidateFactoryService.Create(probe.Candidate);
+            ProxyAcceptedCandidate accepted = _acceptedCandidateFactoryService.Create(
+                probe.Candidate
+            );
             ProxyRuntimeRecord acceptedRecord = new()
             {
                 Candidate = accepted.Candidate,
                 Connections =
                 [
-                    new ProxyRuntimeConnection
-                    {
-                        TotalUses = accepted.InitialConnectionUses,
-                    },
+                    new ProxyRuntimeConnection { TotalUses = accepted.InitialConnectionUses },
                 ],
             };
 

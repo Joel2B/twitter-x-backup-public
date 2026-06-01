@@ -3,8 +3,7 @@ using Backup.Application.Media.Models;
 
 namespace Backup.Application.Media.Maintenance;
 
-public sealed class MediaMaintenanceIntegrityTargetService
-    : IMediaMaintenanceIntegrityTargetService
+public sealed class MediaMaintenanceIntegrityTargetService : IMediaMaintenanceIntegrityTargetService
 {
     public IReadOnlyList<MediaMaintenanceIntegrityTarget> BuildTargets(
         IReadOnlyList<MediaDownload> downloads

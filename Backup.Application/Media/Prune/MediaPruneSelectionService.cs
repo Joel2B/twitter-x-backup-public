@@ -20,7 +20,11 @@ public sealed class MediaPruneSelectionService(IMediaPrunePolicyService prunePol
         query.TryGetValue("format", out string? format);
         query.TryGetValue("name", out string? name);
 
-        return !_prunePolicyService.ShouldKeep(extension, format ?? string.Empty, name ?? string.Empty);
+        return !_prunePolicyService.ShouldKeep(
+            extension,
+            format ?? string.Empty,
+            name ?? string.Empty
+        );
     }
 
     private static Dictionary<string, string> ParseQuery(string query)

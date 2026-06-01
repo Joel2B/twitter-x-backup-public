@@ -16,8 +16,7 @@ public class PostRecoverySelectionService : IPostRecoverySelectionService
         if (logs.Count == 0 || maxPosts <= 0)
             return new PostRecoverySelection();
 
-        List<string> ids = logs
-            .Where(log =>
+        List<string> ids = logs.Where(log =>
                 log.Messages.Any(message =>
                     string.Equals(message, "NotFound", StringComparison.OrdinalIgnoreCase)
                     || string.Equals(message, "Forbidden", StringComparison.OrdinalIgnoreCase)

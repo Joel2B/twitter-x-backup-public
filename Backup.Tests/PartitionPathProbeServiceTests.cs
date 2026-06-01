@@ -8,7 +8,11 @@ public sealed class PartitionPathProbeServiceTests
     public void Probe_WhenPathIsWritable_ReturnsNullAndDeletesProbeFile()
     {
         PartitionPathProbeService sut = new();
-        string tempRoot = Path.Combine(Path.GetTempPath(), "backup-tests", Guid.NewGuid().ToString("N"));
+        string tempRoot = Path.Combine(
+            Path.GetTempPath(),
+            "backup-tests",
+            Guid.NewGuid().ToString("N")
+        );
         Directory.CreateDirectory(tempRoot);
         string probePath = Path.Combine(tempRoot, "probe.tmp");
 

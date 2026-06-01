@@ -1,9 +1,9 @@
+using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Data;
+using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.DependencyInjection.Base;
-using Backup.Infrastructure.Core.Abstractions.Setup;
-using Backup.Infrastructure.Bulk.Abstractions.Data;
-using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data.Bulk;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,7 +23,9 @@ public static partial class BulkDataInfrastructureServiceCollectionExtensions
                 keyOffset: 100
             );
 
-        foreach (DataInfrastructureHelpers.DataRegistration<StorageBulk> registration in registrations)
+        foreach (
+            DataInfrastructureHelpers.DataRegistration<StorageBulk> registration in registrations
+        )
         {
             StorageBulk storage = registration.Storage;
             string key = registration.Key;
@@ -32,7 +34,8 @@ public static partial class BulkDataInfrastructureServiceCollectionExtensions
             services.AddKeyedScoped(
                 key,
                 (sp, _) =>
-                    (IPartition)ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
+                    (IPartition)
+                        ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
             );
 
             services.AddKeyedScoped(
@@ -74,8 +77,8 @@ public static partial class BulkDataInfrastructureServiceCollectionExtensions
 
             if (typeof(ISetup).IsAssignableFrom(typeof(LocalBulkSourceData)))
             {
-                services.AddScoped(
-                    sp => (ISetup)sp.GetRequiredKeyedService<IBulkSourceDataStore>(key)
+                services.AddScoped(sp =>
+                    (ISetup)sp.GetRequiredKeyedService<IBulkSourceDataStore>(key)
                 );
             }
 

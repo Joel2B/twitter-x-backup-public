@@ -14,8 +14,18 @@ public class MediaDownloadExecutionServiceTests
         FakeRunner runner = new();
         MediaDownloadQueueItem[] queue =
         [
-            new() { DownloadId = "1", Url = "u1", Path = "p1" },
-            new() { DownloadId = "2", Url = "u2", Path = "p2" },
+            new()
+            {
+                DownloadId = "1",
+                Url = "u1",
+                Path = "p1",
+            },
+            new()
+            {
+                DownloadId = "2",
+                Url = "u2",
+                Path = "p2",
+            },
         ];
         MediaParallelDownloadSettings settings = CreateSettings();
 
@@ -36,8 +46,18 @@ public class MediaDownloadExecutionServiceTests
         FakeRunner runner = new();
         MediaDownloadQueueItem[] queue =
         [
-            new() { DownloadId = "1", Url = "u1", Path = "p1" },
-            new() { DownloadId = "2", Url = "u2", Path = "p2" },
+            new()
+            {
+                DownloadId = "1",
+                Url = "u1",
+                Path = "p1",
+            },
+            new()
+            {
+                DownloadId = "2",
+                Url = "u2",
+                Path = "p2",
+            },
         ];
         MediaParallelDownloadSettings settings = CreateSettings();
 
@@ -99,7 +119,10 @@ public class MediaDownloadExecutionServiceTests
 
         private int _downloadCount;
 
-        public Task<Stream> Download(MediaDownloadQueueItem item, CancellationToken cancellationToken)
+        public Task<Stream> Download(
+            MediaDownloadQueueItem item,
+            CancellationToken cancellationToken
+        )
         {
             _downloadCount++;
 

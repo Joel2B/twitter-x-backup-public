@@ -17,7 +17,9 @@ public sealed class MediaBackupDirectPathFinalizeService(
         IEnumerable<string> directPaths
     )
     {
-        IReadOnlyList<string> normalizedDirectPaths = _directPathQueueService.Normalize(directPaths);
+        IReadOnlyList<string> normalizedDirectPaths = _directPathQueueService.Normalize(
+            directPaths
+        );
 
         MediaBackupDirectPathSelectionResult selection = _directPathSelectionService.Select(
             pathsInChunks,

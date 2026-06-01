@@ -143,11 +143,31 @@ public sealed class PostChangeComputationService : IPostChangeComputationService
         AddFieldIfDifferent(fields, PostCreatedAt, oldData.CreatedAt, newData.CreatedAt);
         AddFieldIfDifferent(fields, PostDeleted, oldData.Deleted, newData.Deleted);
         AddFieldIfDifferent(fields, ProfileId, oldData.Profile.Id, newData.Profile.Id);
-        AddFieldIfDifferent(fields, ProfileUserName, oldData.Profile.UserName, newData.Profile.UserName);
+        AddFieldIfDifferent(
+            fields,
+            ProfileUserName,
+            oldData.Profile.UserName,
+            newData.Profile.UserName
+        );
         AddFieldIfDifferent(fields, ProfileName, oldData.Profile.Name, newData.Profile.Name);
-        AddFieldIfDifferent(fields, ProfileBannerUrl, oldData.Profile.BannerUrl, newData.Profile.BannerUrl);
-        AddFieldIfDifferent(fields, ProfileImageUrl, oldData.Profile.ImageUrl, newData.Profile.ImageUrl);
-        AddFieldIfDifferent(fields, ProfileFollowing, oldData.Profile.Following, newData.Profile.Following);
+        AddFieldIfDifferent(
+            fields,
+            ProfileBannerUrl,
+            oldData.Profile.BannerUrl,
+            newData.Profile.BannerUrl
+        );
+        AddFieldIfDifferent(
+            fields,
+            ProfileImageUrl,
+            oldData.Profile.ImageUrl,
+            newData.Profile.ImageUrl
+        );
+        AddFieldIfDifferent(
+            fields,
+            ProfileFollowing,
+            oldData.Profile.Following,
+            newData.Profile.Following
+        );
         AddFieldIfDifferent(
             fields,
             ProfileCountMedia,

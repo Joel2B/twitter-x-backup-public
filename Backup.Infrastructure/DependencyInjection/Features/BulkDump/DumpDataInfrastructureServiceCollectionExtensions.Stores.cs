@@ -1,9 +1,9 @@
-using Backup.Infrastructure.Data.Partition;
-using Backup.Infrastructure.Dump.Data;
-using Backup.Infrastructure.DependencyInjection.Base;
-using Backup.Infrastructure.Core.Abstractions.Setup;
-using Backup.Infrastructure.Dump.Abstractions.Data;
 using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Core.Abstractions.Setup;
+using Backup.Infrastructure.Data.Partition;
+using Backup.Infrastructure.DependencyInjection.Base;
+using Backup.Infrastructure.Dump.Abstractions.Data;
+using Backup.Infrastructure.Dump.Data;
 using Backup.Infrastructure.Models.Config.Data.Dump;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -23,7 +23,9 @@ public static partial class DumpDataInfrastructureServiceCollectionExtensions
                 keyOffset: 300
             );
 
-        foreach (DataInfrastructureHelpers.DataRegistration<StorageDump> registration in registrations)
+        foreach (
+            DataInfrastructureHelpers.DataRegistration<StorageDump> registration in registrations
+        )
         {
             StorageDump storage = registration.Storage;
             string key = registration.Key;
@@ -32,7 +34,8 @@ public static partial class DumpDataInfrastructureServiceCollectionExtensions
             services.AddKeyedScoped(
                 key,
                 (sp, _) =>
-                    (IPartition)ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
+                    (IPartition)
+                        ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
             );
 
             services.AddKeyedScoped(

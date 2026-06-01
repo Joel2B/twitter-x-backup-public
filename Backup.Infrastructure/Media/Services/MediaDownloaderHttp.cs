@@ -1,11 +1,11 @@
 using System.Diagnostics;
 using System.Net;
 using Backup.Application.Media;
-using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Media.Abstractions.Services;
-using Backup.Infrastructure.Utility.Abstractions.Services;
-using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Media.Models;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Proxy.Abstractions.Core;
+using Backup.Infrastructure.Utility.Abstractions.Services;
 using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 
@@ -202,9 +202,8 @@ public class MediaDownloaderHttp(
 
                 return stream;
             }
-            catch (Exception ex) when (
-                _mediaDownloadExceptionPolicyService.ShouldRetryWithNextProxy(ex)
-            )
+            catch (Exception ex)
+                when (_mediaDownloadExceptionPolicyService.ShouldRetryWithNextProxy(ex))
             {
                 stream?.Dispose();
 

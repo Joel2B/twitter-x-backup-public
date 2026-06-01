@@ -2,22 +2,18 @@ using Backup.Application.Media.Backup.Models;
 
 namespace Backup.Application.Media.Backup;
 
-public sealed class MediaBackupChunkHashPreparationService
-    : IMediaBackupChunkHashPreparationService
+public sealed class MediaBackupChunkHashPreparationService : IMediaBackupChunkHashPreparationService
 {
     public IReadOnlyList<string> SelectPathsNeedingHash(
         IEnumerable<MediaBackupChunkEntryState> entries
-    ) =>
-        entries
-            .Where(entry => entry.Hash is null)
-            .Select(entry => entry.Path)
-            .ToList();
+    ) => entries.Where(entry => entry.Hash is null).Select(entry => entry.Path).ToList();
 
     public IReadOnlyList<MediaBackupChunkEntryState> ApplyHashes(
         IEnumerable<MediaBackupChunkEntryState> entries,
         IReadOnlyDictionary<string, string?> hashByPath
     ) =>
-        entries.Select(entry =>
+        entries
+            .Select(entry =>
             {
                 if (!hashByPath.TryGetValue(entry.Path, out string? hash))
                     return entry;

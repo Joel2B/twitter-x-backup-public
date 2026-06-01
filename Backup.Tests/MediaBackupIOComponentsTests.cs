@@ -63,19 +63,27 @@ public sealed class MediaBackupIOComponentsTests
         public List<Chunk>? LastSaved { get; private set; }
 
         public Task<BackupChunks?> GetBackup() => Task.FromResult<BackupChunks?>(null);
+
         public Task<List<Chunk>?> GetChunks(CancellationToken token = default) =>
             Task.FromResult<List<Chunk>?>(null);
+
         public Task<Stream?> GetChunk(Chunk chunk) => Task.FromResult<Stream?>(null);
+
         public Task<string?> GetHash(string path) => Task.FromResult<string?>(null);
+
         public Task Save(List<Chunk> chunks)
         {
             SaveCalls++;
             LastSaved = chunks;
             return Task.CompletedTask;
         }
+
         public Task SaveBackup(BackupChunks backup) => Task.CompletedTask;
+
         public Task DeleteChunk(Chunk chunk) => Task.CompletedTask;
+
         public Task<bool> Exists(string path) => Task.FromResult(false);
+
         public Task<Stream> Write(string path) => Task.FromResult<Stream>(new MemoryStream());
     }
 }

@@ -7,7 +7,8 @@ public sealed class DumpIndexLoadService(
     IDumpIndexPostsReadPort dumpIndexPostsReadPort
 ) : IDumpIndexLoadService
 {
-    private readonly IDumpIndexFilePolicyService _dumpIndexFilePolicyService = dumpIndexFilePolicyService;
+    private readonly IDumpIndexFilePolicyService _dumpIndexFilePolicyService =
+        dumpIndexFilePolicyService;
     private readonly IDumpIndexPostsReadPort _dumpIndexPostsReadPort = dumpIndexPostsReadPort;
 
     public async Task<IReadOnlyList<Backup.Domain.Posts.Post>> LoadPosts(
@@ -24,9 +25,8 @@ public sealed class DumpIndexLoadService(
 
         foreach (string path in indexPaths)
         {
-            IReadOnlyList<Backup.Domain.Posts.Post> readPosts = await _dumpIndexPostsReadPort.ReadPosts(
-                path
-            );
+            IReadOnlyList<Backup.Domain.Posts.Post> readPosts =
+                await _dumpIndexPostsReadPort.ReadPosts(path);
             posts.AddRange(readPosts);
         }
 

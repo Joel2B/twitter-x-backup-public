@@ -25,9 +25,7 @@ public sealed class PostSoftDeleteExecutionService(
             .SelectIds(userId, origin, keep, posts)
             .ToHashSet(StringComparer.Ordinal);
 
-        selected.RemoveWhere(id =>
-            deletedById.TryGetValue(id, out bool isDeleted) && isDeleted
-        );
+        selected.RemoveWhere(id => deletedById.TryGetValue(id, out bool isDeleted) && isDeleted);
 
         return selected;
     }

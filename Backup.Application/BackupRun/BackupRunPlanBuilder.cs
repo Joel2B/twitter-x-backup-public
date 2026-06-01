@@ -7,8 +7,8 @@ public sealed class BackupRunPlanBuilder : IBackupRunPlanBuilder
 {
     public BackupRunPlan Build(BackupRunPlanInput input)
     {
-        List<BackupRunUserPlan> users = input.Users
-            .Select(
+        List<BackupRunUserPlan> users = input
+            .Users.Select(
                 (user, index) =>
                     new BackupRunUserPlan
                     {
@@ -59,7 +59,12 @@ public sealed class BackupRunPlanBuilder : IBackupRunPlanBuilder
     }
 
     private static BackupRunApiPlan CloneApi(BackupRunApiPlan api) =>
-        new() { Id = api.Id, Enabled = api.Enabled, Request = CloneRequest(api.Request) };
+        new()
+        {
+            Id = api.Id,
+            Enabled = api.Enabled,
+            Request = CloneRequest(api.Request),
+        };
 
     private static BackupRunRequestPlan CloneRequest(BackupRunRequestPlan request) =>
         new()

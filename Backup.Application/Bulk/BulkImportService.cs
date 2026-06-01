@@ -30,11 +30,7 @@ public sealed class BulkImportService : IBulkImportService
 
         foreach (BulkSourceItem source in filtered)
         {
-            BulkItem bulk = new()
-            {
-                UserName = source.UserName,
-                UserStatus = BulkUserStatus.None,
-            };
+            BulkItem bulk = new() { UserName = source.UserName, UserStatus = BulkUserStatus.None };
 
             bool valid = await command.VerifyApi();
 

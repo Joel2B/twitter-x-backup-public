@@ -43,7 +43,13 @@ public partial class PostDataMultiStore : IPostDomainData
         string origin,
         List<Post> incoming,
         MergeOptions? options
-    ) => AddPosts(userId, origin, incoming.Select(PostReplicationMapper.ToApp).ToList(), PostReplicationMapper.ToApp(options));
+    ) =>
+        AddPosts(
+            userId,
+            origin,
+            incoming.Select(PostReplicationMapper.ToApp).ToList(),
+            PostReplicationMapper.ToApp(options)
+        );
 
     Task<int> IPostDomainData.MarkDeletedExcept(
         string userId,

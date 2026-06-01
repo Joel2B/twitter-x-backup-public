@@ -1,14 +1,14 @@
-using Backup.Infrastructure.Data.Partition;
-using Backup.Application.Partition;
-using Backup.Application.Core;
+using Backup.Application.Bulk;
 using Backup.Application.Config;
+using Backup.Application.Core;
 using Backup.Application.Dump;
 using Backup.Application.Dump.Ports;
-using Backup.Application.Bulk;
 using Backup.Application.IO;
-using Backup.Infrastructure.Core.Abstractions.Setup;
+using Backup.Application.Partition;
 using Backup.Infrastructure.Core.Abstractions.Config;
 using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Core.Abstractions.Setup;
+using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.Dump.Adapters;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Services.Config;
@@ -25,7 +25,10 @@ public static class CoreInfrastructureServiceCollectionExtensions
         services.AddPartitionInfrastructure();
         services.AddSingleton<IPrimarySelectionService, PrimarySelectionService>();
         services.AddSingleton<ISecondaryStoreSelectionService, SecondaryStoreSelectionService>();
-        services.AddSingleton<IStorageRegistrationPolicyService, StorageRegistrationPolicyService>();
+        services.AddSingleton<
+            IStorageRegistrationPolicyService,
+            StorageRegistrationPolicyService
+        >();
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
         services.AddSingleton<IDumpProgressPolicyService, DumpProgressPolicyService>();
         services.AddSingleton<IDumpIndexFilePolicyService, DumpIndexFilePolicyService>();
@@ -88,8 +91,14 @@ public static class CoreInfrastructureServiceCollectionExtensions
         services.AddSingleton<IPartitionResolutionService, PartitionResolutionService>();
         services.AddSingleton<IPartitionPathResolutionService, PartitionPathResolutionService>();
         services.AddSingleton<IPartitionPathProbeService, PartitionPathProbeService>();
-        services.AddSingleton<IPartitionPathProbePlanningService, PartitionPathProbePlanningService>();
-        services.AddSingleton<IPartitionPathProbeExecutionService, PartitionPathProbeExecutionService>();
+        services.AddSingleton<
+            IPartitionPathProbePlanningService,
+            PartitionPathProbePlanningService
+        >();
+        services.AddSingleton<
+            IPartitionPathProbeExecutionService,
+            PartitionPathProbeExecutionService
+        >();
         services.AddSingleton<LocalPartition>();
         services.AddSingleton<IPartition>(sp => sp.GetRequiredService<LocalPartition>());
         services.AddSingleton<ISetup>(sp => sp.GetRequiredService<LocalPartition>());

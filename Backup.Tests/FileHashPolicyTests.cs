@@ -21,10 +21,7 @@ public class FileHashPolicyTests
             await File.WriteAllTextAsync(filePath, "abc");
             string? hash = await FileHashPolicy.GetFileHash(filePath, "SHA256");
 
-            Assert.Equal(
-                "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD",
-                hash
-            );
+            Assert.Equal("BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD", hash);
         }
         finally
         {

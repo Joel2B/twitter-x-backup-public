@@ -1,5 +1,5 @@
-using Backup.Infrastructure.Media.Data;
 using Backup.Infrastructure.DependencyInjection.Features.Media;
+using Backup.Infrastructure.Media.Data;
 
 namespace Backup.Tests;
 

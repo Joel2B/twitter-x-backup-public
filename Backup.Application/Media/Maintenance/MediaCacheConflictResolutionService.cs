@@ -9,7 +9,10 @@ public sealed class MediaCacheConflictResolutionService(
     private readonly IMediaCacheWritePolicyService _mediaCacheWritePolicyService =
         mediaCacheWritePolicyService;
 
-    public MediaCacheConflictResolution Resolve(long? existingStreamSizeBytes, MediaCacheWritePlan writePlan) =>
+    public MediaCacheConflictResolution Resolve(
+        long? existingStreamSizeBytes,
+        MediaCacheWritePlan writePlan
+    ) =>
         _mediaCacheWritePolicyService.HasConflict(existingStreamSizeBytes, writePlan)
             ? new MediaCacheConflictResolution { Action = MediaCacheConflictAction.ThrowConflict }
             : new MediaCacheConflictResolution { Action = MediaCacheConflictAction.KeepExisting };

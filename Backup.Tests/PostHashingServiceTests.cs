@@ -14,11 +14,7 @@ public class PostHashingServiceTests
         Post postB = BuildSamplePost();
 
         postB.Hashtags = ["zeta", "alpha"];
-        postB.Medias =
-        [
-            postB.Medias![1],
-            postB.Medias[0],
-        ];
+        postB.Medias = [postB.Medias![1], postB.Medias[0]];
         postB.Medias[0].VideoInfo!.Variants =
         [
             postB.Medias[0].VideoInfo!.Variants![1],

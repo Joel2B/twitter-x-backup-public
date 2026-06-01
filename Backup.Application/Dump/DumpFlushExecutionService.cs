@@ -2,9 +2,8 @@ using Backup.Application.Dump.Models;
 
 namespace Backup.Application.Dump;
 
-public sealed class DumpFlushExecutionService(
-    IDumpFlushPlanningService dumpFlushPlanningService
-) : IDumpFlushExecutionService
+public sealed class DumpFlushExecutionService(IDumpFlushPlanningService dumpFlushPlanningService)
+    : IDumpFlushExecutionService
 {
     private readonly IDumpFlushPlanningService _dumpFlushPlanningService = dumpFlushPlanningService;
 

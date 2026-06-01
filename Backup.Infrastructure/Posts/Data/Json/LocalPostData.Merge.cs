@@ -73,7 +73,11 @@ public partial class LocalPostData
     {
         IReadOnlyList<Post> normalized = NormalizePosts(posts);
 
-        _postsCache = normalized.ToDictionary(post => post.Id, post => post.Clone(), StringComparer.Ordinal);
+        _postsCache = normalized.ToDictionary(
+            post => post.Id,
+            post => post.Clone(),
+            StringComparer.Ordinal
+        );
 
         _postMetaCache = _postsCache.ToDictionary(
             entry => entry.Key,

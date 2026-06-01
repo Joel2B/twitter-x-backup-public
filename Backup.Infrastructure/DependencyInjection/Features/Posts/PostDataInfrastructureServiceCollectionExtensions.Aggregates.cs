@@ -1,6 +1,6 @@
-using Backup.Infrastructure.Posts.Data;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Adapters;
+using Backup.Infrastructure.Posts.Data;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection.Features.Posts;

@@ -22,9 +22,11 @@ public class PostSourceRunnerAdapter(
         _logger.LogInfo("source: {source}", execution.ApiId);
 
         await _stepExecutor.Run(
-            _postSourceExecutionServices.Select(service =>
-                new PostSourceStep(_logger, service, execution)
-            )
+            _postSourceExecutionServices.Select(service => new PostSourceStep(
+                _logger,
+                service,
+                execution
+            ))
         );
     }
 

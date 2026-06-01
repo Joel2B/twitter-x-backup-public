@@ -23,11 +23,7 @@ public sealed class MediaBackupChunkLoadDecisionService : IMediaBackupChunkLoadD
         for (int i = 0; i < backupChunkIds.Count; i++)
         {
             descriptors.Add(
-                new MediaBackupChunkReadDescriptor
-                {
-                    Index = i,
-                    ChunkId = backupChunkIds[i],
-                }
+                new MediaBackupChunkReadDescriptor { Index = i, ChunkId = backupChunkIds[i] }
             );
         }
 

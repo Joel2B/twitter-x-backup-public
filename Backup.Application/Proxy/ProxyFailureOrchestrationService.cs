@@ -8,7 +8,10 @@ public sealed class ProxyFailureOrchestrationService(
 {
     private readonly IProxyRuntimePolicyService _runtimePolicyService = runtimePolicyService;
 
-    public ProxyFailureOutcome EvaluateFailure(ProxyFailureState state, ProxyFailureSettings settings)
+    public ProxyFailureOutcome EvaluateFailure(
+        ProxyFailureState state,
+        ProxyFailureSettings settings
+    )
     {
         int failureCount = state.FailureCount + 1;
         bool shouldAttemptSwitch = _runtimePolicyService.ShouldAttemptProxySwitch(

@@ -1,11 +1,11 @@
+using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.DependencyInjection.Base;
+using Backup.Infrastructure.Models.Config.Data.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Data.Json;
 using Backup.Infrastructure.Posts.Data.Sqlite;
-using Backup.Infrastructure.Core.Abstractions.Setup;
-using Backup.Infrastructure.Posts.Abstractions.Data;
-using Backup.Infrastructure.Core.Abstractions.Partition;
-using Backup.Infrastructure.Models.Config.Data.Posts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection.Features.Posts;
@@ -28,7 +28,9 @@ public static partial class PostDataInfrastructureServiceCollectionExtensions
                 keyOffset: 0
             );
 
-        foreach (DataInfrastructureHelpers.DataRegistration<StoragePost> registration in registrations)
+        foreach (
+            DataInfrastructureHelpers.DataRegistration<StoragePost> registration in registrations
+        )
         {
             StoragePost storage = registration.Storage;
             string key = registration.Key;

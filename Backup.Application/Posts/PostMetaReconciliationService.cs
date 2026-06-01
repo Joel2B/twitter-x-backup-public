@@ -11,13 +11,12 @@ public sealed class PostMetaReconciliationService : IPostMetaReconciliationServi
     {
         Dictionary<string, PostMetaRecord> reconciled = existing.ToDictionary(
             entry => entry.Key,
-            entry =>
-                new PostMetaRecord
-                {
-                    Id = entry.Value.Id,
-                    Hash = entry.Value.Hash,
-                    Deleted = entry.Value.Deleted,
-                },
+            entry => new PostMetaRecord
+            {
+                Id = entry.Value.Id,
+                Hash = entry.Value.Hash,
+                Deleted = entry.Value.Deleted,
+            },
             StringComparer.Ordinal
         );
 

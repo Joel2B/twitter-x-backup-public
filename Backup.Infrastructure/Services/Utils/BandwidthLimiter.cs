@@ -1,10 +1,11 @@
-using Backup.Infrastructure.Utility.Abstractions.Services;
-using Backup.Infrastructure.Models.Config;
 using Backup.Application.Core;
+using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Utility.Abstractions.Services;
 
 namespace Backup.Infrastructure.Services.Utils;
 
-public class BandwidthLimiter(AppConfig config, IDateTimeProvider dateTimeProvider) : IBandwidthLimiter
+public class BandwidthLimiter(AppConfig config, IDateTimeProvider dateTimeProvider)
+    : IBandwidthLimiter
 {
     private readonly long _maxBytesPerSecond = Math.Max(0, config.Downloads.MaxBytesPerSecond);
     private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;

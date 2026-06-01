@@ -1,9 +1,9 @@
+using Backup.Application.Proxy;
+using Backup.Application.Proxy.Ports;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Adapters;
 using Backup.Infrastructure.Proxy.Services;
-using Backup.Application.Proxy;
-using Backup.Application.Proxy.Ports;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Backup.Infrastructure.DependencyInjection.Runtime;
@@ -18,12 +18,24 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
         services.AddScoped<IProxyHealthCheckPolicyService, ProxyHealthCheckPolicyService>();
         services.AddScoped<IProxyHealthProbeService, ProxyHealthProbeService>();
         services.AddScoped<IProxyHealthAcceptanceService, ProxyHealthAcceptanceService>();
-        services.AddScoped<IProxyHttpClientHeaderPolicyService, ProxyHttpClientHeaderPolicyService>();
-        services.AddScoped<IProxyHttpClientFactoryPolicyService, ProxyHttpClientFactoryPolicyService>();
-        services.AddScoped<IProxyConnectionWindowPolicyService, ProxyConnectionWindowPolicyService>();
+        services.AddScoped<
+            IProxyHttpClientHeaderPolicyService,
+            ProxyHttpClientHeaderPolicyService
+        >();
+        services.AddScoped<
+            IProxyHttpClientFactoryPolicyService,
+            ProxyHttpClientFactoryPolicyService
+        >();
+        services.AddScoped<
+            IProxyConnectionWindowPolicyService,
+            ProxyConnectionWindowPolicyService
+        >();
         services.AddScoped<IProxyKeyPolicyService, ProxyKeyPolicyService>();
         services.AddScoped<IProxyErrorDecisionService, ProxyErrorDecisionService>();
-        services.AddScoped<IProxyAcceptedCandidateFactoryService, ProxyAcceptedCandidateFactoryService>();
+        services.AddScoped<
+            IProxyAcceptedCandidateFactoryService,
+            ProxyAcceptedCandidateFactoryService
+        >();
         services.AddScoped<IProxyBatchFlushPolicyService, ProxyBatchFlushPolicyService>();
         services.AddScoped<IProxyCandidateMergeService, ProxyCandidateMergeService>();
         services.AddScoped<IProxyEndpointParserService, ProxyEndpointParserService>();
@@ -31,22 +43,40 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
         services.AddScoped<IProxyRuntimePoolSelectionService, ProxyRuntimePoolSelectionService>();
         services.AddScoped<IProxyRuntimePoolProjectionService, ProxyRuntimePoolProjectionService>();
         services.AddScoped<IProxyRuntimePoolBuilderService, ProxyRuntimePoolBuilderService>();
-        services.AddScoped<IProxyProviderRuntimeOrchestrationService, ProxyProviderRuntimeOrchestrationService>();
+        services.AddScoped<
+            IProxyProviderRuntimeOrchestrationService,
+            ProxyProviderRuntimeOrchestrationService
+        >();
         services.AddScoped<IProxySetupOrchestrationService, ProxySetupOrchestrationService>();
-        services.AddScoped<IProxyAcceptanceApplyOrchestrationService, ProxyAcceptanceApplyOrchestrationService>();
+        services.AddScoped<
+            IProxyAcceptanceApplyOrchestrationService,
+            ProxyAcceptanceApplyOrchestrationService
+        >();
         services.AddScoped<IProxyRuntimeRecordMergeService, ProxyRuntimeRecordMergeService>();
-        services.AddScoped<IProxyRuntimeStatusTransitionService, ProxyRuntimeStatusTransitionService>();
+        services.AddScoped<
+            IProxyRuntimeStatusTransitionService,
+            ProxyRuntimeStatusTransitionService
+        >();
         services.AddScoped<IProxyFailureOrchestrationService, ProxyFailureOrchestrationService>();
         services.AddScoped<IProxyFailureStateService, ProxyFailureStateService>();
         services.AddScoped<IProxyFailureExecutionPlanService, ProxyFailureExecutionPlanService>();
-        services.AddScoped<IProxyErrorHandlingOrchestrationService, ProxyErrorHandlingOrchestrationService>();
+        services.AddScoped<
+            IProxyErrorHandlingOrchestrationService,
+            ProxyErrorHandlingOrchestrationService
+        >();
         services.AddScoped<IProxyFailureSettingsPolicyService, ProxyFailureSettingsPolicyService>();
-        services.AddScoped<IProxyUseHandlingOrchestrationService, ProxyUseHandlingOrchestrationService>();
+        services.AddScoped<
+            IProxyUseHandlingOrchestrationService,
+            ProxyUseHandlingOrchestrationService
+        >();
         services.AddScoped<IProxyUsageTrackingService, ProxyUsageTrackingService>();
         services.AddScoped<IProxyErrorTrackingService, ProxyErrorTrackingService>();
         services.AddScoped<IProxySourceLoadService, ProxySourceLoadService>();
         services.AddScoped<IProxyCandidateLoadService, ProxyCandidateLoadService>();
-        services.AddScoped<IProxyCandidateLoadExecutionService, ProxyCandidateLoadExecutionService>();
+        services.AddScoped<
+            IProxyCandidateLoadExecutionService,
+            ProxyCandidateLoadExecutionService
+        >();
         services.AddScoped<IProxySetupExecutionService, ProxySetupExecutionService>();
         services.AddScoped<IProxyCheckExecutionService, ProxyCheckExecutionService>();
         services.AddScoped<IProxyHealthProbePort, ProxyHealthProbePortAdapter>();

@@ -4,9 +4,7 @@ namespace Backup.Application.Media.Backup;
 
 public interface IMediaBackupChunkHashPreparationService
 {
-    IReadOnlyList<string> SelectPathsNeedingHash(
-        IEnumerable<MediaBackupChunkEntryState> entries
-    );
+    IReadOnlyList<string> SelectPathsNeedingHash(IEnumerable<MediaBackupChunkEntryState> entries);
 
     IReadOnlyList<MediaBackupChunkEntryState> ApplyHashes(
         IEnumerable<MediaBackupChunkEntryState> entries,

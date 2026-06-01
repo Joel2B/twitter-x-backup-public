@@ -1,15 +1,15 @@
-using Backup.Infrastructure.Core.Abstractions.Setup;
-using Backup.Infrastructure.Posts.Abstractions.Data;
+using Backup.Application.Core;
+using Backup.Application.IO;
+using Backup.Application.Posts;
 using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Posts;
 using Backup.Infrastructure.Models.Data.Json;
+using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Posts.Models;
-using Backup.Application.Posts;
-using Backup.Application.Core;
-using Backup.Application.IO;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Data.Json;
@@ -116,11 +116,7 @@ public partial class LocalPostData(
         int postCount = posts?.Count ?? 0;
         int metaCount = postMeta.Count;
 
-        _postHashMetaParityService.EnsureMatch(
-            postCount,
-            metaCount,
-            Id ?? _config.Id ?? "unknown"
-        );
+        _postHashMetaParityService.EnsureMatch(postCount, metaCount, Id ?? _config.Id ?? "unknown");
 
         return postMeta.ToDictionary(
             entry => entry.Key,
@@ -238,9 +234,8 @@ public partial class LocalPostData(
             .Values.Select(PostReplicationMapper.ToDomain)
             .ToList();
 
-        IReadOnlyList<Backup.Domain.Posts.MediaInput> composed = _postMediaInputsCompositionService.Compose(
-            domainPosts
-        );
+        IReadOnlyList<Backup.Domain.Posts.MediaInput> composed =
+            _postMediaInputsCompositionService.Compose(domainPosts);
 
         return composed.Select(PostReplicationMapper.ToApp).ToList();
     }
@@ -264,7 +259,11 @@ public partial class LocalPostData(
                 filter
             );
 
-        return counts.ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
+        return counts.ToDictionary(
+            entry => entry.Key,
+            entry => entry.Value,
+            StringComparer.Ordinal
+        );
     }
 
     public async Task Save()
