@@ -22,6 +22,7 @@ public class LocalMediaDataMaintenance(
     IMediaMaintenanceCachedDownloadFilterService mediaMaintenanceCachedDownloadFilterService,
     IMediaMaintenanceIntegrityDecisionService mediaMaintenanceIntegrityDecisionService,
     IMediaMaintenanceIntegrityBatchService mediaMaintenanceIntegrityBatchService,
+    IMediaMaintenanceIntegrityTargetService mediaMaintenanceIntegrityTargetService,
     IMediaMaintenancePrunePathSelectionService mediaMaintenancePrunePathSelectionService
 ) : IMediaDataMaintenance
 {
@@ -40,6 +41,8 @@ public class LocalMediaDataMaintenance(
         mediaMaintenanceIntegrityDecisionService;
     private readonly IMediaMaintenanceIntegrityBatchService _mediaMaintenanceIntegrityBatchService =
         mediaMaintenanceIntegrityBatchService;
+    private readonly IMediaMaintenanceIntegrityTargetService _mediaMaintenanceIntegrityTargetService =
+        mediaMaintenanceIntegrityTargetService;
     private readonly IMediaMaintenancePrunePathSelectionService _mediaMaintenancePrunePathSelectionService =
         mediaMaintenancePrunePathSelectionService;
 
@@ -72,38 +75,34 @@ public class LocalMediaDataMaintenance(
 
     public async Task CheckIntegrity(List<Download> downloads)
     {
+        List<MediaDownload> appDownloads = ToApplication(downloads);
+        IReadOnlyList<MediaMaintenanceIntegrityTarget> targets =
+            _mediaMaintenanceIntegrityTargetService.BuildTargets(appDownloads);
         List<MediaMaintenanceIntegrityObservation> observations = [];
 
-        for (int d = 0; d < downloads.Count; d++)
+        foreach (MediaMaintenanceIntegrityTarget target in targets)
         {
-            Download download = downloads[d];
+            long? size = _mediaCache.Get(target.Path)?.Size?.File;
+            string fullPath = string.Empty;
+            bool isValid = false;
 
-            for (int i = 0; i < download.Data.Count; i++)
+            if (_mediaMaintenanceIntegrityDecisionService.ShouldProbe(size))
             {
-                DataDownload data = download.Data[i];
-
-                long? size = _mediaCache.Get(data.Path)?.Size?.File;
-                string fullPath = string.Empty;
-                bool isValid = false;
-
-                if (_mediaMaintenanceIntegrityDecisionService.ShouldProbe(size))
-                {
-                    fullPath = await _mediaCache.GetPath(data.Path);
-                    isValid = MediaValidator.IsValid(
-                        fullPath,
-                        () => _logger.LogWarning("path {path} not exist", fullPath)
-                    );
-                }
-
-                observations.Add(
-                    new MediaMaintenanceIntegrityObservation
-                    {
-                        CorrelationId = $"{d}:{i}",
-                        CacheFileSize = size,
-                        IsValidMediaFile = isValid,
-                    }
+                fullPath = await _mediaCache.GetPath(target.Path);
+                isValid = MediaValidator.IsValid(
+                    fullPath,
+                    () => _logger.LogWarning("path {path} not exist", fullPath)
                 );
             }
+
+            observations.Add(
+                new MediaMaintenanceIntegrityObservation
+                {
+                    CorrelationId = target.CorrelationId,
+                    CacheFileSize = size,
+                    IsValidMediaFile = isValid,
+                }
+            );
         }
 
         MediaMaintenanceIntegrityBatchResult result = _mediaMaintenanceIntegrityBatchService.Evaluate(
@@ -114,18 +113,13 @@ public class LocalMediaDataMaintenance(
             .Select(item => item.CorrelationId)
             .ToHashSet(StringComparer.Ordinal);
 
-        for (int d = downloads.Count - 1; d >= 0; d--)
-        {
-            Download download = downloads[d];
+        IReadOnlyList<MediaDownload> filtered = _mediaMaintenanceIntegrityTargetService.RemoveByCorrelations(
+            appDownloads,
+            removeSet
+        );
 
-            for (int i = download.Data.Count - 1; i >= 0; i--)
-            {
-                if (removeSet.Contains($"{d}:{i}"))
-                    download.Data.RemoveAt(i);
-            }
-        }
-
-        downloads.RemoveAll(dl => dl.Data.Count == 0);
+        downloads.Clear();
+        downloads.AddRange(ToInfrastructure(filtered));
         MediaMaintenanceIntegritySummary summary = result.Summary;
 
         _logger.LogInformation(

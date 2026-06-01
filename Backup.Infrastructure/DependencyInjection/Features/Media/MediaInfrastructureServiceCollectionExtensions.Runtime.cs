@@ -57,6 +57,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaMaintenanceIntegrityDecisionService, MediaMaintenanceIntegrityDecisionService>();
         services.AddScoped<IMediaMaintenanceIntegritySummaryService, MediaMaintenanceIntegritySummaryService>();
         services.AddScoped<IMediaMaintenanceIntegrityBatchService, MediaMaintenanceIntegrityBatchService>();
+        services.AddScoped<IMediaMaintenanceIntegrityTargetService, MediaMaintenanceIntegrityTargetService>();
         services.AddScoped<IMediaMaintenancePrunePathSelectionService, MediaMaintenancePrunePathSelectionService>();
         services.AddScoped<IMediaCacheDirectoryPolicyService, MediaCacheDirectoryPolicyService>();
         services.AddScoped<IMediaCacheRecheckPolicyService, MediaCacheRecheckPolicyService>();
