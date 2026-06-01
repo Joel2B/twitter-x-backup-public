@@ -6,11 +6,11 @@ namespace Backup.Infrastructure.BackupRun.Adapters;
 
 public sealed class PostRecoveryExecutionServiceAdapter(
     IPostService postService,
-    IBackupRunExecutionContextMapper contextMapper
+    BackupRunExecutionContextMapper contextMapper
 ) : IPostRecoveryExecutionService
 {
     private readonly IPostService _postService = postService;
-    private readonly IBackupRunExecutionContextMapper _contextMapper = contextMapper;
+    private readonly BackupRunExecutionContextMapper _contextMapper = contextMapper;
 
     public Task Recover(
         BackupRunRecoveryExecution execution,

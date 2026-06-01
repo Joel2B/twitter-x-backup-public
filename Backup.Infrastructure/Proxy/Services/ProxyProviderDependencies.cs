@@ -1,7 +1,7 @@
 using Backup.Application.Core;
 using Backup.Application.Proxy;
 using Backup.Application.Proxy.Ports;
-using Backup.Infrastructure.Proxy.Abstractions.Core;
+using Backup.Infrastructure.Proxy.Adapters;
 using Backup.Infrastructure.Proxy.Abstractions.Data;
 
 namespace Backup.Infrastructure.Proxy.Services;
@@ -16,7 +16,7 @@ public sealed class ProxyProviderDependencies(
     IProxyProviderCandidateLoadOrchestrationService proxyProviderCandidateLoadOrchestrationService,
     IProxySetupExecutionService proxySetupExecutionService,
     IProxyCheckExecutionService proxyCheckExecutionService,
-    IProxyRuntimeRecordMapper proxyRuntimeRecordMapper,
+    ProxyRuntimeRecordMapper proxyRuntimeRecordMapper,
     IProxyAcceptanceApplyOrchestrationService proxyAcceptanceApplyOrchestrationService,
     IProxyFailureStateService proxyFailureStateService,
     IProxyFailureExecutionPlanService proxyFailureExecutionPlanService,
@@ -38,7 +38,7 @@ public sealed class ProxyProviderDependencies(
         proxyProviderCandidateLoadOrchestrationService;
     public IProxySetupExecutionService ProxySetupExecutionService { get; } = proxySetupExecutionService;
     public IProxyCheckExecutionService ProxyCheckExecutionService { get; } = proxyCheckExecutionService;
-    public IProxyRuntimeRecordMapper ProxyRuntimeRecordMapper { get; } = proxyRuntimeRecordMapper;
+    public ProxyRuntimeRecordMapper ProxyRuntimeRecordMapper { get; } = proxyRuntimeRecordMapper;
     public IProxyAcceptanceApplyOrchestrationService ProxyAcceptanceApplyOrchestrationService { get; } =
         proxyAcceptanceApplyOrchestrationService;
     public IProxyFailureStateService ProxyFailureStateService { get; } = proxyFailureStateService;

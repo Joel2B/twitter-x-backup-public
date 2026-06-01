@@ -1,13 +1,12 @@
 using Backup.Application.Proxy;
 using Backup.Application.Proxy.Models;
-using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Models;
 
 namespace Backup.Infrastructure.Proxy.Adapters;
 
 public sealed class ProxyRuntimeRecordMapper(
     IProxyRuntimeStatusTransitionService proxyRuntimeStatusTransitionService
-) : IProxyRuntimeRecordMapper
+)
 {
     private readonly IProxyRuntimeStatusTransitionService _proxyRuntimeStatusTransitionService =
         proxyRuntimeStatusTransitionService;

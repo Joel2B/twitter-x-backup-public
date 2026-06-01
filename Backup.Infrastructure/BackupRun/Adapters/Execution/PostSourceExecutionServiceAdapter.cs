@@ -6,11 +6,11 @@ namespace Backup.Infrastructure.BackupRun.Adapters;
 
 public sealed class PostSourceExecutionServiceAdapter(
     IPostService postService,
-    IBackupRunExecutionContextMapper contextMapper
+    BackupRunExecutionContextMapper contextMapper
 ) : IPostSourceExecutionService
 {
     private readonly IPostService _postService = postService;
-    private readonly IBackupRunExecutionContextMapper _contextMapper = contextMapper;
+    private readonly BackupRunExecutionContextMapper _contextMapper = contextMapper;
 
     public Task Download(
         BackupRunSourceExecution execution,

@@ -6,6 +6,7 @@ using Backup.Application.Proxy.Ports;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Proxy;
+using Backup.Infrastructure.Proxy.Adapters;
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Backup.Infrastructure.Proxy.Models;
@@ -44,7 +45,7 @@ public class ProxyProvider(
         dependencies.ProxySetupExecutionService;
     private readonly IProxyCheckExecutionService _proxyCheckExecutionService =
         dependencies.ProxyCheckExecutionService;
-    private readonly IProxyRuntimeRecordMapper _proxyRuntimeRecordMapper =
+    private readonly ProxyRuntimeRecordMapper _proxyRuntimeRecordMapper =
         dependencies.ProxyRuntimeRecordMapper;
     private readonly IProxyAcceptanceApplyOrchestrationService _proxyAcceptanceApplyOrchestrationService =
         dependencies.ProxyAcceptanceApplyOrchestrationService;

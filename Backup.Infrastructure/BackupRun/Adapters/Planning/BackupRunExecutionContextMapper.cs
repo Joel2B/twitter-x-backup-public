@@ -4,7 +4,7 @@ using Backup.Infrastructure.Models.Config.Request;
 
 namespace Backup.Infrastructure.BackupRun.Adapters;
 
-public sealed class BackupRunExecutionContextMapper : IBackupRunExecutionContextMapper
+public sealed class BackupRunExecutionContextMapper
 {
     public ApiContext ToApiContext(BackupRunSourceExecution execution) =>
         new()
