@@ -287,13 +287,19 @@ public class SqlitePostDataTests
             },
         };
 
+        PostHashingService postHashingService = new();
+        PostMergeExecutionService postMergeExecutionService = new(
+            new PostMergeResolutionService(new PostMergeService()),
+            new PostMergeApplyPlanningService()
+        );
+
         SqlitePostData sut = new(
             NullLogger<SqlitePostData>.Instance,
             storage,
             partition,
-            new PostMergeExecutionService(
-                new PostMergeResolutionService(new PostMergeService()),
-                new PostMergeApplyPlanningService()
+            new PostStoreMergeMutationService(
+                postMergeExecutionService,
+                postHashingService
             ),
             new PostSoftDeleteExecutionService(
                 new PostIdentifierFilterService(),
@@ -301,7 +307,7 @@ public class SqlitePostDataTests
             ),
             new PostSnapshotNormalizationService(),
             new PostMediaInputsCompositionService(),
-            new PostHashingService(),
+            postHashingService,
             new PostChangeComputationService(),
             new PostIdentifierFilterService(),
             new TestDateTimeProvider()

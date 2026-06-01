@@ -35,36 +35,46 @@ public partial class SqlitePostData
             StringComparer.Ordinal
         );
 
-        IReadOnlyList<PostMergePlanDecision> decisions = PostMergePlanAdapter.BuildDecisions(
-            _postMergeExecutionService,
-            userId,
-            origin,
-            posts,
-            existingPosts,
-            options
-        );
+        IReadOnlyDictionary<string, Backup.Domain.Posts.Post> existingDomain = existingPosts
+            .ToDictionary(
+                entry => entry.Key,
+                entry => PostReplicationMapper.ToDomain(entry.Value),
+                StringComparer.Ordinal
+            );
+        List<Backup.Domain.Posts.Post> incomingDomain = posts
+            .Select(PostReplicationMapper.ToDomain)
+            .ToList();
+        Backup.Domain.Posts.MergeOptions domainOptions = PostReplicationMapper.ToDomain(options);
+
+        IReadOnlyList<Backup.Application.Posts.Models.PostStoreMergeMutation> mutations =
+            _postStoreMergeMutationService.BuildMergeMutations(
+                userId,
+                origin,
+                incomingDomain,
+                existingDomain,
+                domainOptions
+            );
 
         List<Post> resolved = [];
 
-        foreach (PostMergePlanDecision item in decisions)
+        foreach (Backup.Application.Posts.Models.PostStoreMergeMutation mutation in mutations)
         {
-            Post merged = item.Merged;
+            Post merged = PostReplicationMapper.ToApp(mutation.MergedPost);
+            existingPosts.TryGetValue(mutation.Id, out Post? current);
 
-            if (!item.ShouldPersist)
+            if (!mutation.ShouldPersist)
                 continue;
 
-            if (item.Current is null || item.IsNew)
+            if (current is null || mutation.IsNew)
             {
                 resolved.Add(merged);
                 continue;
             }
 
-            Post current = item.Current;
-
-            if (item.ShouldLogDataChange)
+            if (mutation.ShouldLogDataChange)
                 LogDataChange(current, merged, userId);
 
-            if (item.ShouldLogIndexChange)
+            if (mutation.ShouldLogIndexChange)
                 LogIndexChange(current, merged, userId);
 
             resolved.Add(merged);
