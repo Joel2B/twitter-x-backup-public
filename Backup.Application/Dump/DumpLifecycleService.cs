@@ -52,6 +52,14 @@ public sealed class DumpLifecycleService(
         return state;
     }
 
+    public DumpSaveProgressState AdvanceSave(int indexFile, string cursor, DateTime now) =>
+        new()
+        {
+            IndexFile = indexFile + 1,
+            Cursor = cursor,
+            LastUpdate = now,
+        };
+
     private static int ToInt(object? value)
     {
         if (value is null)

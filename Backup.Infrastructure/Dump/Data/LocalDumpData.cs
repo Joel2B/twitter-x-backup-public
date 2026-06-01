@@ -181,8 +181,12 @@ public class LocalDumpData(
     public async Task Save(string response, List<Post> posts, string cursor, ApiContext context)
     {
         await SetupDirectory(context);
-
-        Data.IndexFile++;
+        DumpSaveProgressState saveState = _dumpLifecycleService.AdvanceSave(
+            Data.IndexFile,
+            cursor,
+            _dateTimeProvider.Now
+        );
+        Data.IndexFile = saveState.IndexFile;
 
         string indexPath = await GetPathIndex(context);
         string apiPath = await GetPathApi(context);
@@ -197,8 +201,8 @@ public class LocalDumpData(
         await File.WriteAllTextAsync(indexFullPath, indexJson);
         await File.WriteAllTextAsync(apiFullPath, response);
 
-        Data.Cursor = cursor;
-        Data.LastUpdate = _dateTimeProvider.Now;
+        Data.Cursor = saveState.Cursor;
+        Data.LastUpdate = saveState.LastUpdate;
 
         await SaveData(context);
         await Replicate(context);
