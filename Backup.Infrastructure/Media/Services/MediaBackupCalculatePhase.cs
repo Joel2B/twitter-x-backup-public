@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Backup.Application.Media.Backup;
 using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Media.Models;
@@ -7,8 +8,28 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
 
-internal sealed class MediaBackupCalculatePhase : IMediaBackupCalculatePhase
+internal sealed class MediaBackupCalculatePhase(
+    IMediaBackupChunkRuntimeCompositionService chunkRuntimeCompositionService,
+    IMediaBackupCalculateExecutionService calculateExecutionService,
+    IMediaBackupDirectPathScanOrchestrationService directPathScanOrchestrationService,
+    IMediaBackupPathObservationCompositionService pathObservationCompositionService,
+    IMediaBackupProgressPolicyService progressPolicyService,
+    IMediaBackupDirectPathFinalizeService directPathFinalizeService
+) : IMediaBackupCalculatePhase
 {
+    private readonly IMediaBackupChunkRuntimeCompositionService _chunkRuntimeCompositionService =
+        chunkRuntimeCompositionService;
+    private readonly IMediaBackupCalculateExecutionService _calculateExecutionService =
+        calculateExecutionService;
+    private readonly IMediaBackupDirectPathScanOrchestrationService _directPathScanOrchestrationService =
+        directPathScanOrchestrationService;
+    private readonly IMediaBackupPathObservationCompositionService _pathObservationCompositionService =
+        pathObservationCompositionService;
+    private readonly IMediaBackupProgressPolicyService _progressPolicyService =
+        progressPolicyService;
+    private readonly IMediaBackupDirectPathFinalizeService _directPathFinalizeService =
+        directPathFinalizeService;
+
     public async Task Calculate(MediaBackupRuntime runtime, string? backupId)
     {
         await runtime.ShowInfoChunks(backupId);
@@ -38,7 +59,7 @@ internal sealed class MediaBackupCalculatePhase : IMediaBackupCalculatePhase
         }
 
         IReadOnlyList<MediaBackupChunkPathsState> beforeChunkPaths =
-            runtime.Dependencies.ChunkRuntimeCompositionService.BuildChunkPathStates(
+            _chunkRuntimeCompositionService.BuildChunkPathStates(
                 chunksClone.Values.Select(chunk => new MediaBackupChunkPathsInput
                 {
                     Id = chunk.Id,
@@ -68,23 +89,22 @@ internal sealed class MediaBackupCalculatePhase : IMediaBackupCalculatePhase
                 StringComparer.Ordinal
             );
 
-        MediaBackupCalculateExecutionResult calculation =
-            runtime.Dependencies.CalculateExecutionService.Execute(
-                new MediaBackupCalculateExecutionInput
-                {
-                    TotalPathCount = runtime.Context.Paths.Count,
-                    ChunkCount = runtime.Context.Backup.Chunks.Total,
-                    BackupIncreaseCount = runtime.Context.Backup.Chunks.Path.Increase,
-                    ConfigIncreaseCount = runtime.Config.Chunk.Path.Increase,
-                    ExistingChunkIds = runtime.Context.Chunks.Keys.ToList(),
-                    ChunkStateInputs = chunkStateInputs,
-                    AssignedCachePaths = assignedCachePaths.ToList(),
-                    CacheObservationInputs = cacheObservationInputs,
-                    BeforeChunkPaths = beforeChunkPaths,
-                    SizeByPath = sizeByPath,
-                    MaxPathSizeBytes = runtime.Config.Chunk.Path.Size,
-                }
-            );
+        MediaBackupCalculateExecutionResult calculation = _calculateExecutionService.Execute(
+            new MediaBackupCalculateExecutionInput
+            {
+                TotalPathCount = runtime.Context.Paths.Count,
+                ChunkCount = runtime.Context.Backup.Chunks.Total,
+                BackupIncreaseCount = runtime.Context.Backup.Chunks.Path.Increase,
+                ConfigIncreaseCount = runtime.Config.Chunk.Path.Increase,
+                ExistingChunkIds = runtime.Context.Chunks.Keys.ToList(),
+                ChunkStateInputs = chunkStateInputs,
+                AssignedCachePaths = assignedCachePaths.ToList(),
+                CacheObservationInputs = cacheObservationInputs,
+                BeforeChunkPaths = beforeChunkPaths,
+                SizeByPath = sizeByPath,
+                MaxPathSizeBytes = runtime.Config.Chunk.Path.Size,
+            }
+        );
 
         MediaBackupChunkPlanningResult plan = calculation.Planning;
 
@@ -191,8 +211,8 @@ internal sealed class MediaBackupCalculatePhase : IMediaBackupCalculatePhase
                         bool existsTarget = await runtime.MediaBackupData.Exists(path);
 
                         MediaBackupDirectPathScanResult result =
-                            runtime.Dependencies.DirectPathScanOrchestrationService.Evaluate(
-                                runtime.Dependencies.PathObservationCompositionService.BuildDirectPathObservation(
+                            _directPathScanOrchestrationService.Evaluate(
+                                _pathObservationCompositionService.BuildDirectPathObservation(
                                     new MediaBackupDirectPathObservationInput
                                     {
                                         Path = path,
@@ -228,12 +248,11 @@ internal sealed class MediaBackupCalculatePhase : IMediaBackupCalculatePhase
                     {
                         int current = Interlocked.Increment(ref done);
                         int prev = Volatile.Read(ref lastPercent);
-                        MediaBackupProgressDecision progress =
-                            runtime.Dependencies.ProgressPolicyService.Evaluate(
-                                current,
-                                total,
-                                prev
-                            );
+                        MediaBackupProgressDecision progress = _progressPolicyService.Evaluate(
+                            current,
+                            total,
+                            prev
+                        );
 
                         if (progress.ShouldLog)
                         {
@@ -262,11 +281,10 @@ internal sealed class MediaBackupCalculatePhase : IMediaBackupCalculatePhase
             .Select(o => o.Path)
             .ToList();
 
-        MediaBackupDirectPathFinalizeResult finalize =
-            runtime.Dependencies.DirectPathFinalizeService.Finalize(
-                pathsInChunks,
-                runtime.Context.PathsDirect
-            );
+        MediaBackupDirectPathFinalizeResult finalize = _directPathFinalizeService.Finalize(
+            pathsInChunks,
+            runtime.Context.PathsDirect
+        );
 
         runtime.Context.PathsInBoth = finalize.PathsInBoth.ToList();
 

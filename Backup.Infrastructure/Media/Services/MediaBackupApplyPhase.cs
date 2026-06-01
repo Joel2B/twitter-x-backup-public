@@ -1,3 +1,4 @@
+using Backup.Application.Media.Backup;
 using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Media.Models.Backup;
@@ -7,8 +8,33 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
 
-internal sealed class MediaBackupApplyPhase : IMediaBackupApplyPhase
+internal sealed class MediaBackupApplyPhase(
+    IMediaBackupChunkHashPreparationService chunkHashPreparationService,
+    IMediaBackupChunkEntryStateService chunkEntryStateService,
+    IMediaBackupApplyChunkPlanningService applyChunkPlanningService,
+    IMediaBackupChunkFailureApplyService chunkFailureApplyService,
+    IMediaBackupDirectApplyPathService directApplyPathService,
+    IMediaBackupChunkRuntimeCompositionService chunkRuntimeCompositionService,
+    IMediaBackupSyncFinalizeService syncFinalizeService,
+    IMediaBackupPathProjectionService pathProjectionService
+) : IMediaBackupApplyPhase
 {
+    private readonly IMediaBackupChunkHashPreparationService _chunkHashPreparationService =
+        chunkHashPreparationService;
+    private readonly IMediaBackupChunkEntryStateService _chunkEntryStateService =
+        chunkEntryStateService;
+    private readonly IMediaBackupApplyChunkPlanningService _applyChunkPlanningService =
+        applyChunkPlanningService;
+    private readonly IMediaBackupChunkFailureApplyService _chunkFailureApplyService =
+        chunkFailureApplyService;
+    private readonly IMediaBackupDirectApplyPathService _directApplyPathService =
+        directApplyPathService;
+    private readonly IMediaBackupChunkRuntimeCompositionService _chunkRuntimeCompositionService =
+        chunkRuntimeCompositionService;
+    private readonly IMediaBackupSyncFinalizeService _syncFinalizeService = syncFinalizeService;
+    private readonly IMediaBackupPathProjectionService _pathProjectionService =
+        pathProjectionService;
+
     public async Task Apply(MediaBackupRuntime runtime, string? backupId)
     {
         foreach (KeyValuePair<int, Chunk> kvp in runtime.Context.Chunks)
@@ -23,9 +49,7 @@ internal sealed class MediaBackupApplyPhase : IMediaBackupApplyPhase
                 IReadOnlyList<MediaBackupChunkEntryState> initialEntryStates =
                     runtime.BuildChunkEntryStates(kvp.Value.Data);
                 IReadOnlyList<string> pathsNeedingHash =
-                    runtime.Dependencies.ChunkHashPreparationService.SelectPathsNeedingHash(
-                        initialEntryStates
-                    );
+                    _chunkHashPreparationService.SelectPathsNeedingHash(initialEntryStates);
                 Dictionary<string, string?> hashByPath = new(StringComparer.Ordinal);
 
                 foreach (string path in pathsNeedingHash)
@@ -34,22 +58,15 @@ internal sealed class MediaBackupApplyPhase : IMediaBackupApplyPhase
                     hashByPath[path] = hash;
 
                     if (hash is null)
-                    {
                         runtime.Logger.LogInfo("error in hash: {path}", path);
-                    }
                 }
 
                 IReadOnlyList<MediaBackupChunkEntryState> hashedEntryStates =
-                    runtime.Dependencies.ChunkHashPreparationService.ApplyHashes(
-                        initialEntryStates,
-                        hashByPath
-                    );
+                    _chunkHashPreparationService.ApplyHashes(initialEntryStates, hashByPath);
                 runtime.ApplyChunkEntryStates(kvp.Value, hashedEntryStates);
 
                 IReadOnlyList<MediaBackupApplyChunkPathState> chunkPaths =
-                    runtime.Dependencies.ChunkEntryStateService.BuildApplyChunkPathStates(
-                        hashedEntryStates
-                    );
+                    _chunkEntryStateService.BuildApplyChunkPathStates(hashedEntryStates);
 
                 if (!chunkPaths.Any(item => item.HasHash))
                     continue;
@@ -63,13 +80,12 @@ internal sealed class MediaBackupApplyPhase : IMediaBackupApplyPhase
 
                 runtime.Logger.LogInfo("reading entries");
                 HashSet<string> storagePaths = [.. zip.GetEntries().Select(o => o.FullName)];
-                MediaBackupApplyChunkPlan chunkPlan =
-                    runtime.Dependencies.ApplyChunkPlanningService.Plan(
-                        chunkPaths,
-                        storagePaths,
-                        runtime.Context.Backup.Chunks.Ids,
-                        kvp.Key
-                    );
+                MediaBackupApplyChunkPlan chunkPlan = _applyChunkPlanningService.Plan(
+                    chunkPaths,
+                    storagePaths,
+                    runtime.Context.Backup.Chunks.Ids,
+                    kvp.Key
+                );
 
                 if (!chunkPlan.ShouldProcessChunk || chunkPlan.FinalizePlan is null)
                     continue;
@@ -124,7 +140,7 @@ internal sealed class MediaBackupApplyPhase : IMediaBackupApplyPhase
                 await runtime.MediaBackupData.DeleteChunk(kvp.Value);
 
                 IReadOnlyList<MediaBackupChunkEntryState> resetStates =
-                    runtime.Dependencies.ChunkFailureApplyService.ApplyForApplyFailure(
+                    _chunkFailureApplyService.ApplyForApplyFailure(
                         runtime.BuildChunkEntryStates(kvp.Value.Data)
                     );
                 runtime.ApplyChunkEntryStates(kvp.Value, resetStates);
@@ -145,7 +161,7 @@ internal sealed class MediaBackupApplyPhase : IMediaBackupApplyPhase
     public async Task ApplyDirect(MediaBackupRuntime runtime)
     {
         await SyncChunks(runtime);
-        IReadOnlyList<string> directPaths = runtime.Dependencies.DirectApplyPathService.GetPaths(
+        IReadOnlyList<string> directPaths = _directApplyPathService.GetPaths(
             runtime.Context.PathsDirect
         );
 
@@ -169,7 +185,6 @@ internal sealed class MediaBackupApplyPhase : IMediaBackupApplyPhase
                         await using Stream read = await runtime.MediaData.Read(
                             UtilsPath.NormalizePath(path)
                         );
-
                         await using Stream write = await runtime.MediaBackupData.Write(
                             UtilsPath.NormalizePath(path)
                         );
@@ -191,11 +206,11 @@ internal sealed class MediaBackupApplyPhase : IMediaBackupApplyPhase
         catch (OperationCanceledException) { }
     }
 
-    private static async Task SyncChunks(MediaBackupRuntime runtime)
+    private async Task SyncChunks(MediaBackupRuntime runtime)
     {
         IReadOnlyList<MediaBackupSyncFinalizeInputChunk> chunkStates =
-            runtime.Dependencies.ChunkEntryStateService.BuildSyncFinalizeInputChunks(
-                runtime.Dependencies.ChunkRuntimeCompositionService.BuildChunkPathStates(
+            _chunkEntryStateService.BuildSyncFinalizeInputChunks(
+                _chunkRuntimeCompositionService.BuildChunkPathStates(
                     runtime.Context.Chunks.Values.Select(chunk => new MediaBackupChunkPathsInput
                     {
                         Id = chunk.Id,
@@ -204,7 +219,7 @@ internal sealed class MediaBackupApplyPhase : IMediaBackupApplyPhase
                 )
             );
 
-        MediaBackupSyncFinalizeResult finalize = runtime.Dependencies.SyncFinalizeService.Finalize(
+        MediaBackupSyncFinalizeResult finalize = _syncFinalizeService.Finalize(
             chunkStates,
             runtime.Context.PathsInBoth,
             runtime.Context.PathsDirect
@@ -239,7 +254,7 @@ internal sealed class MediaBackupApplyPhase : IMediaBackupApplyPhase
                     }
 
                     runtime.Logger.LogInfo("removing entry", path);
-                    zip.RemoveEntry(runtime.Dependencies.PathProjectionService.ToArchivePath(path));
+                    zip.RemoveEntry(_pathProjectionService.ToArchivePath(path));
                     runtime.Logger.LogInfo("entry removed");
 
                     runtime

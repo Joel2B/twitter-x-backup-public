@@ -1,13 +1,33 @@
+using Backup.Application.Media.Backup;
 using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Logging;
+using Backup.Infrastructure.Media.Abstractions.Services;
+using Backup.Infrastructure.Media.IO;
 using Backup.Infrastructure.Models.Utils;
 using Backup.Infrastructure.Utility.Abstractions.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
 
-internal sealed class MediaBackupMetadataPhase : IMediaBackupMetadataPhase
+internal sealed class MediaBackupMetadataPhase(
+    IMediaBackupChunkMetadataRefreshExecutionService chunkMetadataRefreshExecutionService,
+    IMediaBackupZipEntryReaderIOService zipEntryReaderIoService,
+    IMediaBackupArchiveMetadataMapService archiveMetadataMapService,
+    IMediaBackupPathArchiveMetadataProjectionService pathArchiveMetadataProjectionService,
+    IMediaBackupChunkPersistenceIOService chunkPersistenceIoService
+) : IMediaBackupMetadataPhase
 {
+    private readonly IMediaBackupChunkMetadataRefreshExecutionService _chunkMetadataRefreshExecutionService =
+        chunkMetadataRefreshExecutionService;
+    private readonly IMediaBackupZipEntryReaderIOService _zipEntryReaderIoService =
+        zipEntryReaderIoService;
+    private readonly IMediaBackupArchiveMetadataMapService _archiveMetadataMapService =
+        archiveMetadataMapService;
+    private readonly IMediaBackupPathArchiveMetadataProjectionService _pathArchiveMetadataProjectionService =
+        pathArchiveMetadataProjectionService;
+    private readonly IMediaBackupChunkPersistenceIOService _chunkPersistenceIoService =
+        chunkPersistenceIoService;
+
     public async Task SetFileSizes(MediaBackupRuntime runtime)
     {
         runtime.Logger.LogInformation("setting file sizes");
@@ -21,9 +41,7 @@ internal sealed class MediaBackupMetadataPhase : IMediaBackupMetadataPhase
             IReadOnlyList<MediaBackupChunkEntryState> entryStates = runtime.BuildChunkEntryStates(
                 kvp.Value.Data
             );
-            bool isNull = runtime.Dependencies.ChunkMetadataRefreshExecutionService.RequiresRefresh(
-                entryStates
-            );
+            bool isNull = _chunkMetadataRefreshExecutionService.RequiresRefresh(entryStates);
 
             if (!isNull)
                 continue;
@@ -40,7 +58,7 @@ internal sealed class MediaBackupMetadataPhase : IMediaBackupMetadataPhase
             {
                 runtime.Logger.LogInfo("read zip");
                 runtime.Logger.LogInfo("reading entries");
-                entries = runtime.Dependencies.ZipEntryReaderIoService.ReadEntriesByFullName(zip);
+                entries = _zipEntryReaderIoService.ReadEntriesByFullName(zip);
             }
             finally
             {
@@ -50,7 +68,7 @@ internal sealed class MediaBackupMetadataPhase : IMediaBackupMetadataPhase
 
             runtime.Logger.LogInfo("updating data");
             IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByArchivePath =
-                runtime.Dependencies.ArchiveMetadataMapService.BuildByArchivePath(
+                _archiveMetadataMapService.BuildByArchivePath(
                     entries.Select(item => new MediaBackupArchiveMetadataInput
                     {
                         ArchivePath = item.Key,
@@ -60,24 +78,18 @@ internal sealed class MediaBackupMetadataPhase : IMediaBackupMetadataPhase
                 );
 
             IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> archiveMetadataByPath =
-                runtime.Dependencies.PathArchiveMetadataProjectionService.BuildPathMetadataByPath(
+                _pathArchiveMetadataProjectionService.BuildPathMetadataByPath(
                     kvp.Value.Data.Select(item => item.Path),
                     metadataByArchivePath
                 );
 
             MediaBackupChunkMetadataRefreshExecutionResult refreshResult =
-                runtime.Dependencies.ChunkMetadataRefreshExecutionService.Refresh(
-                    entryStates,
-                    archiveMetadataByPath
-                );
+                _chunkMetadataRefreshExecutionService.Refresh(entryStates, archiveMetadataByPath);
 
             runtime.ApplyChunkEntryStates(kvp.Value, refreshResult.Entries);
 
             runtime.Logger.LogInfo("saving chunk");
-            await runtime.Dependencies.ChunkPersistenceIoService.SaveChunk(
-                runtime.MediaBackupData,
-                kvp.Value
-            );
+            await _chunkPersistenceIoService.SaveChunk(runtime.MediaBackupData, kvp.Value);
 
             runtime.Logger.LogInformation("chunk {chunk} processed", kvp.Key);
         }

@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Backup.Application.IO;
+using Backup.Application.Media.Backup;
 using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Media.Abstractions.Data;
@@ -19,17 +20,29 @@ internal sealed class MediaBackupRuntime(
     IZipWriterFactory zipWriterFactory,
     IMediaBackupData mediaBackupData,
     IDataStoreGuardService dataStoreGuardService,
-    MediaBackupDependencies dependencies,
+    IMediaBackupChunkEntryStateOrchestrationService chunkEntryStateOrchestrationService,
+    IMediaBackupChunkFailureApplyService chunkFailureApplyService,
+    IMediaBackupChunkReportObservationAggregationService chunkReportObservationAggregationService,
+    IMediaBackupChunkRuntimeCompositionService chunkRuntimeCompositionService,
+    IMediaBackupChunkReportService chunkReportService,
     MediaBackupExecutionContext context
 )
 {
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
+    private readonly IMediaBackupChunkEntryStateOrchestrationService _chunkEntryStateOrchestrationService =
+        chunkEntryStateOrchestrationService;
+    private readonly IMediaBackupChunkFailureApplyService _chunkFailureApplyService =
+        chunkFailureApplyService;
+    private readonly IMediaBackupChunkReportObservationAggregationService _chunkReportObservationAggregationService =
+        chunkReportObservationAggregationService;
+    private readonly IMediaBackupChunkRuntimeCompositionService _chunkRuntimeCompositionService =
+        chunkRuntimeCompositionService;
+    private readonly IMediaBackupChunkReportService _chunkReportService = chunkReportService;
 
     public ILogger<MediaBackup> Logger { get; } = logger;
     public StorageBackup Config { get; } = config;
     public IZipWriterFactory ZipWriterFactory { get; } = zipWriterFactory;
     public IMediaBackupData MediaBackupData { get; } = mediaBackupData;
-    public MediaBackupDependencies Dependencies { get; } = dependencies;
     public MediaBackupExecutionContext Context { get; } = context;
     public bool Stop { get; } = false;
 
@@ -43,12 +56,12 @@ internal sealed class MediaBackupRuntime(
 
     public IReadOnlyList<MediaBackupChunkEntryState> BuildChunkEntryStates(
         IEnumerable<ChunkData> items
-    ) => Dependencies.ChunkEntryStateOrchestrationService.BuildStates(items.Select(ToEntryRecord));
+    ) => _chunkEntryStateOrchestrationService.BuildStates(items.Select(ToEntryRecord));
 
     public void ApplyChunkEntryStates(Chunk chunk, IEnumerable<MediaBackupChunkEntryState> states)
     {
         IReadOnlyList<MediaBackupChunkEntryRecord> updated =
-            Dependencies.ChunkEntryStateOrchestrationService.ApplyStates(
+            _chunkEntryStateOrchestrationService.ApplyStates(
                 chunk.Data.Select(ToEntryRecord),
                 states
             );
@@ -137,9 +150,7 @@ internal sealed class MediaBackupRuntime(
         await MediaBackupData.DeleteChunk(chunk);
 
         IReadOnlyList<MediaBackupChunkEntryState> resetStates =
-            Dependencies.ChunkFailureApplyService.ApplyForCorruptChunk(
-                BuildChunkEntryStates(chunk.Data)
-            );
+            _chunkFailureApplyService.ApplyForCorruptChunk(BuildChunkEntryStates(chunk.Data));
         ApplyChunkEntryStates(chunk, resetStates);
 
         await MediaBackupData.Save([chunk]);
@@ -171,16 +182,12 @@ internal sealed class MediaBackupRuntime(
         }
 
         IReadOnlyList<MediaBackupChunkReportObservationInput> observationInputs =
-            Dependencies.ChunkReportObservationAggregationService.Aggregate(reportEntries);
+            _chunkReportObservationAggregationService.Aggregate(reportEntries);
 
         IReadOnlyList<MediaBackupChunkReportObservation> observations =
-            Dependencies.ChunkRuntimeCompositionService.BuildChunkReportObservations(
-                observationInputs
-            );
+            _chunkRuntimeCompositionService.BuildChunkReportObservations(observationInputs);
 
-        IReadOnlyList<MediaBackupChunkReportRow> rows = Dependencies.ChunkReportService.Build(
-            observations
-        );
+        IReadOnlyList<MediaBackupChunkReportRow> rows = _chunkReportService.Build(observations);
 
         foreach (MediaBackupChunkReportRow row in rows)
         {

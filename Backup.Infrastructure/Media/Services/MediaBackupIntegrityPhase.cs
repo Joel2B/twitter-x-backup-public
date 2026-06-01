@@ -1,5 +1,8 @@
+using Backup.Application.Media.Backup;
 using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Logging;
+using Backup.Infrastructure.Media.Abstractions.Services;
+using Backup.Infrastructure.Media.IO;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Models.Utils;
 using Backup.Infrastructure.Utility.Abstractions.Services;
@@ -7,8 +10,39 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
 
-internal sealed class MediaBackupIntegrityPhase : IMediaBackupIntegrityPhase
+internal sealed class MediaBackupIntegrityPhase(
+    IMediaBackupZipEntryReaderIOService zipEntryReaderIoService,
+    IMediaBackupPathProjectionService pathProjectionService,
+    IMediaBackupIntegrityObservationCompositionService integrityObservationCompositionService,
+    IMediaBackupIntegrityChangeDetectionService integrityChangeDetectionService,
+    IMediaBackupIntegrityPlanningService integrityPlanningService,
+    IMediaBackupZipMutationIOService zipMutationIoService,
+    IMediaBackupArchiveMetadataMapService archiveMetadataMapService,
+    IMediaBackupPathArchiveMetadataProjectionService pathArchiveMetadataProjectionService,
+    IMediaBackupIntegrityChunkRefreshService integrityChunkRefreshService,
+    IMediaBackupChunkPersistenceIOService chunkPersistenceIoService
+) : IMediaBackupIntegrityPhase
 {
+    private readonly IMediaBackupZipEntryReaderIOService _zipEntryReaderIoService =
+        zipEntryReaderIoService;
+    private readonly IMediaBackupPathProjectionService _pathProjectionService =
+        pathProjectionService;
+    private readonly IMediaBackupIntegrityObservationCompositionService _integrityObservationCompositionService =
+        integrityObservationCompositionService;
+    private readonly IMediaBackupIntegrityChangeDetectionService _integrityChangeDetectionService =
+        integrityChangeDetectionService;
+    private readonly IMediaBackupIntegrityPlanningService _integrityPlanningService =
+        integrityPlanningService;
+    private readonly IMediaBackupZipMutationIOService _zipMutationIoService = zipMutationIoService;
+    private readonly IMediaBackupArchiveMetadataMapService _archiveMetadataMapService =
+        archiveMetadataMapService;
+    private readonly IMediaBackupPathArchiveMetadataProjectionService _pathArchiveMetadataProjectionService =
+        pathArchiveMetadataProjectionService;
+    private readonly IMediaBackupIntegrityChunkRefreshService _integrityChunkRefreshService =
+        integrityChunkRefreshService;
+    private readonly IMediaBackupChunkPersistenceIOService _chunkPersistenceIoService =
+        chunkPersistenceIoService;
+
     public async Task CheckIntegrity(MediaBackupRuntime runtime)
     {
         runtime.Logger.LogInformation("checking integrity backup");
@@ -40,7 +74,7 @@ internal sealed class MediaBackupIntegrityPhase : IMediaBackupIntegrityPhase
             {
                 runtime.Logger.LogInfo("read zip");
                 runtime.Logger.LogInfo("reading entries");
-                entries = runtime.Dependencies.ZipEntryReaderIoService.ReadEntriesByFullName(zip);
+                entries = _zipEntryReaderIoService.ReadEntriesByFullName(zip);
             }
             finally
             {
@@ -59,7 +93,7 @@ internal sealed class MediaBackupIntegrityPhase : IMediaBackupIntegrityPhase
             {
                 MediaCacheEntry? cache = await runtime.MediaData.GetCache(item.Path);
                 entries.TryGetValue(
-                    runtime.Dependencies.PathProjectionService.ToArchivePath(item.Path),
+                    _pathProjectionService.ToArchivePath(item.Path),
                     out ZipEntry? value2
                 );
 
@@ -68,7 +102,7 @@ internal sealed class MediaBackupIntegrityPhase : IMediaBackupIntegrityPhase
             }
 
             observations.AddRange(
-                runtime.Dependencies.IntegrityObservationCompositionService.BuildChunkObservations(
+                _integrityObservationCompositionService.BuildChunkObservations(
                     kvp.Key,
                     entryStates,
                     actualFileSizeByPath,
@@ -79,9 +113,7 @@ internal sealed class MediaBackupIntegrityPhase : IMediaBackupIntegrityPhase
             runtime.Logger.LogInformation("chunk {chunk} processed", kvp.Key);
         }
 
-        runtime.Context.Changes.AddRange(
-            runtime.Dependencies.IntegrityChangeDetectionService.Detect(observations)
-        );
+        runtime.Context.Changes.AddRange(_integrityChangeDetectionService.Detect(observations));
 
         if (runtime.Context.Changes.Count > 0)
             runtime.Logger.LogInfo(
@@ -109,10 +141,8 @@ internal sealed class MediaBackupIntegrityPhase : IMediaBackupIntegrityPhase
     public async Task FixIntegrity(MediaBackupRuntime runtime)
     {
         IReadOnlyList<MediaBackupIntegrityChunkGroup> changes =
-            runtime.Dependencies.IntegrityPlanningService.GroupByChunk(
-                runtime.Dependencies.IntegrityObservationCompositionService.BuildPathChanges(
-                    runtime.Context.Changes
-                )
+            _integrityPlanningService.GroupByChunk(
+                _integrityObservationCompositionService.BuildPathChanges(runtime.Context.Changes)
             );
 
         runtime.Logger.LogInformation("processing changes");
@@ -134,10 +164,8 @@ internal sealed class MediaBackupIntegrityPhase : IMediaBackupIntegrityPhase
 
                 foreach (string path in change.Paths)
                 {
-                    string relativePath = runtime.Dependencies.PathProjectionService.ToArchivePath(
-                        path
-                    );
-                    await runtime.Dependencies.ZipMutationIoService.ReplaceEntryFromMediaStorage(
+                    string relativePath = _pathProjectionService.ToArchivePath(path);
+                    await _zipMutationIoService.ReplaceEntryFromMediaStorage(
                         runtime.MediaData,
                         zip,
                         path,
@@ -173,7 +201,7 @@ internal sealed class MediaBackupIntegrityPhase : IMediaBackupIntegrityPhase
             try
             {
                 runtime.Logger.LogInfo("reading entries");
-                entries = runtime.Dependencies.ZipEntryReaderIoService.ReadEntriesByFullName(zip);
+                entries = _zipEntryReaderIoService.ReadEntriesByFullName(zip);
             }
             finally
             {
@@ -183,7 +211,7 @@ internal sealed class MediaBackupIntegrityPhase : IMediaBackupIntegrityPhase
 
             runtime.Logger.LogInfo("expanding chunk");
             IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByArchivePath =
-                runtime.Dependencies.ArchiveMetadataMapService.BuildByArchivePath(
+                _archiveMetadataMapService.BuildByArchivePath(
                     entries.Select(item => new MediaBackupArchiveMetadataInput
                     {
                         ArchivePath = item.Key,
@@ -193,13 +221,13 @@ internal sealed class MediaBackupIntegrityPhase : IMediaBackupIntegrityPhase
                 );
 
             IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByPath =
-                runtime.Dependencies.PathArchiveMetadataProjectionService.BuildPathMetadataByPath(
+                _pathArchiveMetadataProjectionService.BuildPathMetadataByPath(
                     change.Paths,
                     metadataByArchivePath
                 );
 
             MediaBackupIntegrityChunkApplyResult applyResult =
-                runtime.Dependencies.IntegrityChunkRefreshService.Refresh(
+                _integrityChunkRefreshService.Refresh(
                     change.Paths,
                     runtime.Context.Chunks[change.ChunkId].Data.Select(chunkData => chunkData.Path),
                     metadataByPath,
@@ -215,7 +243,7 @@ internal sealed class MediaBackupIntegrityPhase : IMediaBackupIntegrityPhase
                 runtime.Logger.LogInfo("{path} updated", path);
 
             runtime.Logger.LogInfo("saving chunk");
-            await runtime.Dependencies.ChunkPersistenceIoService.SaveChunk(
+            await _chunkPersistenceIoService.SaveChunk(
                 runtime.MediaBackupData,
                 runtime.Context.Chunks[change.ChunkId]
             );

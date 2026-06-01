@@ -1,4 +1,5 @@
 using Backup.Application.IO;
+using Backup.Application.Media.Backup;
 using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Media.Abstractions.Data;
@@ -16,9 +17,15 @@ internal sealed class MediaBackup(
     StorageBackup config,
     IZipWriterFactory zipWriterFactory,
     IMediaBackupData mediaBackupData,
-    MediaBackupDependencies dependencies,
     IEnumerable<IMediaBackupPipelineStep> pipelineSteps,
     IDataStoreGuardService dataStoreGuardService,
+    IMediaBackupChunkEntryStateOrchestrationService chunkEntryStateOrchestrationService,
+    IMediaBackupChunkFailureApplyService chunkFailureApplyService,
+    IMediaBackupChunkReportObservationAggregationService chunkReportObservationAggregationService,
+    IMediaBackupChunkRuntimeCompositionService chunkRuntimeCompositionService,
+    IMediaBackupChunkReportService chunkReportService,
+    IMediaBackupPhaseOrchestrationService phaseOrchestrationService,
+    IMediaBackupPipelineStepCompositionService pipelineStepCompositionService,
     IMediaBackupCalculatePhase calculatePhase,
     IMediaBackupApplyPhase applyPhase,
     IMediaBackupDuplicatePhase duplicatePhase,
@@ -30,6 +37,11 @@ internal sealed class MediaBackup(
 
     private readonly IReadOnlyDictionary<string, IMediaBackupPipelineStep> _pipelineStepsById =
         pipelineSteps.ToDictionary(GetPipelineStepId, StringComparer.Ordinal);
+
+    private readonly IMediaBackupPhaseOrchestrationService _phaseOrchestrationService =
+        phaseOrchestrationService;
+    private readonly IMediaBackupPipelineStepCompositionService _pipelineStepCompositionService =
+        pipelineStepCompositionService;
 
     private readonly IMediaBackupCalculatePhase _calculatePhase = calculatePhase;
     private readonly IMediaBackupApplyPhase _applyPhase = applyPhase;
@@ -43,7 +55,11 @@ internal sealed class MediaBackup(
         zipWriterFactory,
         mediaBackupData,
         dataStoreGuardService,
-        dependencies,
+        chunkEntryStateOrchestrationService,
+        chunkFailureApplyService,
+        chunkReportObservationAggregationService,
+        chunkRuntimeCompositionService,
+        chunkReportService,
         new MediaBackupExecutionContext(
             new BackupChunks
             {
@@ -94,8 +110,8 @@ internal sealed class MediaBackup(
     private async Task RunPipeline()
     {
         IReadOnlyList<MediaBackupPhaseExecutionStep> plan =
-            _runtime.Dependencies.PhaseOrchestrationService.BuildExecutionPlan(
-                _runtime.Dependencies.PipelineStepCompositionService.BuildPhaseSteps(
+            _phaseOrchestrationService.BuildExecutionPlan(
+                _pipelineStepCompositionService.BuildPhaseSteps(
                     _pipelineStepsById.Values.Select(
                         step => new MediaBackupPipelineStepDescriptorInput
                         {

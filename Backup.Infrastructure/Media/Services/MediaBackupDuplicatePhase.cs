@@ -1,3 +1,4 @@
+using Backup.Application.Media.Backup;
 using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Utility.Abstractions.Services;
@@ -5,8 +6,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
 
-internal sealed class MediaBackupDuplicatePhase : IMediaBackupDuplicatePhase
+internal sealed class MediaBackupDuplicatePhase(
+    IMediaBackupDuplicateChunkExecutionService duplicateChunkExecutionService
+) : IMediaBackupDuplicatePhase
 {
+    private readonly IMediaBackupDuplicateChunkExecutionService _duplicateChunkExecutionService =
+        duplicateChunkExecutionService;
+
     public async Task CheckDuplicates(MediaBackupRuntime runtime)
     {
         int storageCount = 0;
@@ -53,7 +59,7 @@ internal sealed class MediaBackupDuplicatePhase : IMediaBackupDuplicatePhase
                 continue;
 
             MediaBackupDuplicateChunkExecutionResult executionResult =
-                runtime.Dependencies.DuplicateChunkExecutionService.Execute(
+                _duplicateChunkExecutionService.Execute(
                     kvp.Value.Data.Select(item => item.Path),
                     storage,
                     runtime.GetDuplicateCleanupPreviewLimit()
@@ -173,7 +179,7 @@ internal sealed class MediaBackupDuplicatePhase : IMediaBackupDuplicatePhase
                 }
             }
 
-            storageCount = runtime.Dependencies.DuplicateChunkExecutionService.UpdateStorageCount(
+            storageCount = _duplicateChunkExecutionService.UpdateStorageCount(
                 storageCount,
                 executionResult
             );
