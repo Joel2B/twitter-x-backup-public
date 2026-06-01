@@ -6,11 +6,14 @@ namespace Backup.Infrastructure.Bulk.Data;
 
 public class BulkDataMultiStore(
     IEnumerable<IBulkDataStore> stores,
-    IPrimarySelectionService primarySelectionService
+    IPrimarySelectionService primarySelectionService,
+    ISecondaryStoreSelectionService secondaryStoreSelectionService
 ) : IBulkData
 {
     private readonly List<IBulkDataStore> _stores = [.. stores];
     private readonly IPrimarySelectionService _primarySelectionService = primarySelectionService;
+    private readonly ISecondaryStoreSelectionService _secondaryStoreSelectionService =
+        secondaryStoreSelectionService;
 
     private IBulkDataStore Primary
         => _primarySelectionService.ResolvePrimary(
@@ -30,9 +33,12 @@ public class BulkDataMultiStore(
 
     public async Task Save(List<BulkData> bulks)
     {
-        await Primary.Save(bulks);
+        IBulkDataStore primary = Primary;
+        await primary.Save(bulks);
 
-        foreach (IBulkDataStore store in _stores.Except([Primary]))
+        foreach (
+            IBulkDataStore store in _secondaryStoreSelectionService.SelectSecondaries(_stores, primary)
+        )
             await store.Save(bulks);
     }
 

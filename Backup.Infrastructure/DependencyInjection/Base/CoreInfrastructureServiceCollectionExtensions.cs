@@ -24,6 +24,7 @@ public static class CoreInfrastructureServiceCollectionExtensions
         services.AddCoreLoggingInfrastructure();
         services.AddPartitionInfrastructure();
         services.AddSingleton<IPrimarySelectionService, PrimarySelectionService>();
+        services.AddSingleton<ISecondaryStoreSelectionService, SecondaryStoreSelectionService>();
         services.AddSingleton<IStorageRegistrationPolicyService, StorageRegistrationPolicyService>();
         services.AddSingleton<IDumpProgressPolicyService, DumpProgressPolicyService>();
         services.AddSingleton<IDumpIndexFilePolicyService, DumpIndexFilePolicyService>();

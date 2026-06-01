@@ -9,11 +9,14 @@ namespace Backup.Infrastructure.Dump.Data;
 
 public class DumpDataMultiStore(
     IEnumerable<IDumpDataStore> stores,
-    IPrimarySelectionService primarySelectionService
+    IPrimarySelectionService primarySelectionService,
+    ISecondaryStoreSelectionService secondaryStoreSelectionService
 ) : IDumpData
 {
     private readonly List<IDumpDataStore> _stores = [.. stores];
     private readonly IPrimarySelectionService _primarySelectionService = primarySelectionService;
+    private readonly ISecondaryStoreSelectionService _secondaryStoreSelectionService =
+        secondaryStoreSelectionService;
 
     private IDumpDataStore Primary
         => _primarySelectionService.ResolvePrimary(
@@ -33,9 +36,12 @@ public class DumpDataMultiStore(
 
     public async Task Save(string response, List<Post> posts, string cursor, ApiContext context)
     {
-        await Primary.Save(response, posts, cursor, context);
+        IDumpDataStore primary = Primary;
+        await primary.Save(response, posts, cursor, context);
 
-        foreach (IDumpDataStore store in _stores.Except([Primary]))
+        foreach (
+            IDumpDataStore store in _secondaryStoreSelectionService.SelectSecondaries(_stores, primary)
+        )
             await store.Save(response, posts, cursor, context);
     }
 
