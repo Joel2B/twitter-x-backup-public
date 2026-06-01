@@ -2,6 +2,8 @@ using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.Request;
 using Backup.Infrastructure.Posts.Adapters;
+using Backup.Application.Core;
+using Backup.Application.Network;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Backup.IntegrationTests;
@@ -57,7 +59,16 @@ public partial class LiveApiTests
 
         request.Query.Variables["userId"] = userId;
 
-        PostDownloaderHttp downloader = new(NullLogger<PostDownloaderHttp>.Instance, config);
+        PostDownloaderHttp downloader = new(
+            NullLogger<PostDownloaderHttp>.Instance,
+            config,
+            new HttpRequestHeaderPolicyService(),
+            new RateLimitHeaderParserService(),
+            new RateLimitDecisionService(),
+            new RetryDelayPolicyService(),
+            new RequestQueryStringPolicyService(),
+            new DateTimeProvider()
+        );
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(60));
         string response = await downloader.Download(request, cts.Token);

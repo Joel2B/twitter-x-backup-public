@@ -2,6 +2,8 @@ using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.Request;
 using Backup.Infrastructure.Posts.Adapters;
+using Backup.Application.Core;
+using Backup.Application.Network;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 
@@ -112,15 +114,25 @@ internal static class LiveApiTestSupport
     {
         IReadOnlyDictionary<string, ApiConfig> primaryApi = config.UsersContext[0].Api;
 
-        Request postsRequest =
-            RequestMerge.Build(primaryApi, "posts")
-            ?? throw new Exception("Api 'posts' not found or disabled");
+        if (!primaryApi.TryGetValue("posts", out ApiConfig? postsApi) || !postsApi.Enabled)
+            throw new Exception("Api 'posts' not found or disabled");
+
+        Request postsRequest = postsApi.Request.Clone();
 
         postsRequest.Query.Variables["count"] = 5;
         postsRequest.Query.Variables["cursor"] = null;
         postsRequest.Query.Variables["userId"] = userId;
 
-        PostDownloaderHttp downloader = new(NullLogger<PostDownloaderHttp>.Instance, config);
+        PostDownloaderHttp downloader = new(
+            NullLogger<PostDownloaderHttp>.Instance,
+            config,
+            new HttpRequestHeaderPolicyService(),
+            new RateLimitHeaderParserService(),
+            new RateLimitDecisionService(),
+            new RetryDelayPolicyService(),
+            new RequestQueryStringPolicyService(),
+            new DateTimeProvider()
+        );
 
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(60));
         string response = await downloader.Download(postsRequest, cts.Token);

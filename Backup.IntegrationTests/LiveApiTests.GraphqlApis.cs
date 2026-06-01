@@ -2,6 +2,8 @@ using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.Request;
 using Backup.Infrastructure.Posts.Adapters;
+using Backup.Application.Core;
+using Backup.Application.Network;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Backup.IntegrationTests;
@@ -40,14 +42,27 @@ public partial class LiveApiTests
     {
         AppConfig config = LiveApiTestSupport.LoadAppConfig();
         IReadOnlyDictionary<string, ApiConfig> primaryApi = config.UsersContext[0].Api;
-        Request? request = RequestMerge.Build(primaryApi, apiName);
 
-        if (request is null)
+        if (!primaryApi.TryGetValue(apiName, out ApiConfig? apiEntry))
+            throw new Exception($"Api '{apiName}' not found in configured api map");
+
+        if (!apiEntry.Enabled)
             return;
+
+        Request request = apiEntry.Request.Clone();
 
         await LiveApiTestSupport.PrepareVariables(config, request);
 
-        PostDownloaderHttp downloader = new(NullLogger<PostDownloaderHttp>.Instance, config);
+        PostDownloaderHttp downloader = new(
+            NullLogger<PostDownloaderHttp>.Instance,
+            config,
+            new HttpRequestHeaderPolicyService(),
+            new RateLimitHeaderParserService(),
+            new RateLimitDecisionService(),
+            new RetryDelayPolicyService(),
+            new RequestQueryStringPolicyService(),
+            new DateTimeProvider()
+        );
         using CancellationTokenSource cts = new(TimeSpan.FromSeconds(60));
         string response = await downloader.Download(request, cts.Token);
 
