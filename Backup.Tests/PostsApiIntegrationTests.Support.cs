@@ -1,4 +1,5 @@
 using Backup.Api.Controllers;
+using Backup.Api.Security;
 using Backup.Api.Services;
 using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Posts.Abstractions.Data;
@@ -6,6 +7,7 @@ using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Posts.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ParseUser = Backup.Domain.Posts.ParseUser;
 
@@ -29,17 +31,25 @@ public partial class PostsApiIntegrationTests
     {
         public HttpClient Client { get; } = client;
 
-        public static async Task<TestApiHost> StartAsync(IPostData postData, IPostParser postParser)
+        public static async Task<TestApiHost> StartAsync(
+            IPostData postData,
+            IPostParser postParser,
+            IReadOnlyDictionary<string, string?>? inMemoryConfiguration = null
+        )
         {
             WebApplicationBuilder builder = WebApplication.CreateBuilder();
             builder.WebHost.UseTestServer();
+            if (inMemoryConfiguration is not null)
+                builder.Configuration.AddInMemoryCollection(inMemoryConfiguration);
             builder.Services.AddControllers().AddApplicationPart(typeof(PostsController).Assembly);
             builder.Services.AddSingleton(postData);
             builder.Services.AddSingleton(postParser);
             builder.Services.AddPostIngestionApi();
+            builder.Services.AddApiKeyAuthentication(builder.Configuration);
             builder.Services.AddLogging();
 
             WebApplication app = builder.Build();
+            app.UseApiKeyAuthentication();
             app.MapControllers();
             await app.StartAsync();
 

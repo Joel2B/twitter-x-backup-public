@@ -1,4 +1,5 @@
 using Backup.Api.Errors;
+using Backup.Api.Security;
 using Backup.Api.Services;
 using Backup.Api.Swagger;
 using Backup.Infrastructure.DependencyInjection.Composition;
@@ -18,6 +19,7 @@ builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddPostIngestionApi();
 builder.Services.AddApiSwagger();
+builder.Services.AddApiKeyAuthentication(builder.Configuration);
 
 Console.Error.WriteLine("[startup] building web application");
 WebApplication app = builder.Build();
@@ -30,6 +32,7 @@ await scope.ServiceProvider.RunBackupInfrastructureSetup();
 
 Console.Error.WriteLine("[startup] configuring middleware and routes");
 app.UseExceptionHandler();
+app.UseApiKeyAuthentication();
 app.UseApiSwagger();
 app.MapControllers();
 

@@ -9,6 +9,88 @@ namespace Backup.Tests;
 public partial class PostsApiIntegrationTests
 {
     [Fact]
+    public async Task SaveProcessed_ApiKeyEnabled_MissingHeader_ReturnsUnauthorized()
+    {
+        FakePostData fakePostData = new();
+        IReadOnlyDictionary<string, string?> config = new Dictionary<string, string?>
+        {
+            ["Backup:Api:Auth:Enabled"] = "true",
+            ["Backup:Api:Auth:ApiKey"] = "secret-key",
+        };
+        await using TestApiHost host = await TestApiHost.StartAsync(
+            fakePostData,
+            new FakePostParser(),
+            config
+        );
+
+        var payload = new[]
+        {
+            new
+            {
+                id = "p1",
+                profile = new { id = "u1", userName = "user1" },
+                description = "hello world",
+                retweeted = false,
+                favorited = false,
+                bookmarked = false,
+                createdAt = "Sun May 24 04:00:00 +0000 2026",
+            },
+        };
+
+        HttpResponseMessage response = await host.Client.PostAsJsonAsync(
+            "/api/posts/processed?userId=123&origin=extension-search-timeline",
+            payload
+        );
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.Empty(fakePostData.AddCalls);
+    }
+
+    [Fact]
+    public async Task SaveProcessed_ApiKeyEnabled_ValidHeader_ReturnsOk()
+    {
+        FakePostData fakePostData = new();
+        IReadOnlyDictionary<string, string?> config = new Dictionary<string, string?>
+        {
+            ["Backup:Api:Auth:Enabled"] = "true",
+            ["Backup:Api:Auth:ApiKey"] = "secret-key",
+        };
+        await using TestApiHost host = await TestApiHost.StartAsync(
+            fakePostData,
+            new FakePostParser(),
+            config
+        );
+
+        var payload = new[]
+        {
+            new
+            {
+                id = "p1",
+                profile = new { id = "u1", userName = "user1" },
+                description = "hello world",
+                retweeted = false,
+                favorited = false,
+                bookmarked = false,
+                createdAt = "Sun May 24 04:00:00 +0000 2026",
+            },
+        };
+
+        HttpRequestMessage request = new(
+            HttpMethod.Post,
+            "/api/posts/processed?userId=123&origin=extension-search-timeline"
+        )
+        {
+            Content = JsonContent.Create(payload),
+        };
+        request.Headers.Add("X-Api-Key", "secret-key");
+
+        HttpResponseMessage response = await host.Client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Single(fakePostData.AddCalls);
+    }
+
+    [Fact]
     public async Task SaveProcessed_ValidPayload_ReturnsOk_AndStoresInFake()
     {
         FakePostData fakePostData = new();
