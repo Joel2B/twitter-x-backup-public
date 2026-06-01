@@ -34,6 +34,7 @@ public class ProxyProvider(
     IProxyProviderRuntimeOrchestrationService proxyProviderRuntimeOrchestrationService,
     IProxyRuntimeStatusTransitionService proxyRuntimeStatusTransitionService,
     IProxyFailureStateService proxyFailureStateService,
+    IProxyFailureExecutionPlanService proxyFailureExecutionPlanService,
     IProxyFailureSettingsPolicyService proxyFailureSettingsPolicyService,
     IProxyUsageTrackingService proxyUsageTrackingService,
     IProxyErrorTrackingService proxyErrorTrackingService,
@@ -63,6 +64,8 @@ public class ProxyProvider(
     private readonly IProxyRuntimeStatusTransitionService _proxyRuntimeStatusTransitionService =
         proxyRuntimeStatusTransitionService;
     private readonly IProxyFailureStateService _proxyFailureStateService = proxyFailureStateService;
+    private readonly IProxyFailureExecutionPlanService _proxyFailureExecutionPlanService =
+        proxyFailureExecutionPlanService;
     private readonly IProxyFailureSettingsPolicyService _proxyFailureSettingsPolicyService =
         proxyFailureSettingsPolicyService;
     private readonly IProxyUsageTrackingService _proxyUsageTrackingService = proxyUsageTrackingService;
@@ -157,24 +160,29 @@ public class ProxyProvider(
             ProxyFailureOutcome outcome = _proxyFailureStateService.RegisterFailure(
                 BuildFailureSettings()
             );
+            ProxyFailureExecutionPlan plan = _proxyFailureExecutionPlanService.BuildPlan(outcome);
 
             _logger.LogInformation("failure count: {value}", outcome.State.FailureCount);
 
-            if (!outcome.ShouldAttemptSwitch)
-                return;
+            if (plan.ShouldLogAttempt)
+                _logger.LogInformation("attempt {attempt}", outcome.State.AttemptCount);
 
-            _logger.LogInformation("attempt {attempt}", outcome.State.AttemptCount);
-
-            if (!outcome.ShouldRotateProxy)
-                return;
-
-            if (outcome.IsPoolExhausted)
-                throw new ProxyEmptyException();
-
-            if (outcome.ShouldStopProcess)
-                throw new ProxyException();
-
-            NewClient();
+            switch (plan.Action)
+            {
+                case ProxyFailureExecutionAction.None:
+                    return;
+                case ProxyFailureExecutionAction.ThrowPoolExhausted:
+                    throw new ProxyEmptyException();
+                case ProxyFailureExecutionAction.ThrowStopProcess:
+                    throw new ProxyException();
+                case ProxyFailureExecutionAction.RotateProxy:
+                    NewClient();
+                    return;
+                default:
+                    throw new InvalidOperationException(
+                        $"Unsupported proxy failure execution action: {plan.Action}"
+                    );
+            }
         }
         finally
         {
