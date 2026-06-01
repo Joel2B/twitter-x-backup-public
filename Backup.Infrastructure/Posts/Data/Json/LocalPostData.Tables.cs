@@ -58,7 +58,12 @@ public partial class LocalPostData
             return;
 
         string basePath = GetPath(target);
-        string historyPath = GetUniqueHistoryDirectoryPath(basePath);
+        string historyPath = _postHistoryArchivePathService.ResolveUniqueHistoryDirectoryPath(
+            basePath,
+            _dateTimeProvider.Now,
+            LegacyDateFormat,
+            path => Directory.Exists(path) || File.Exists(path)
+        );
 
         Directory.Move(currentOldPath, historyPath);
     }

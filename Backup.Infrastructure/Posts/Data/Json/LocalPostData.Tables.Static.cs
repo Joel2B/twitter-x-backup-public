@@ -21,21 +21,6 @@ public partial class LocalPostData
         new(PostChangeFieldsFileName, tables => tables.PostChangeFields),
     ];
 
-    private static string GetUniqueHistoryDirectoryPath(string basePath)
-    {
-        DateTime candidate = DateTime.Now;
-
-        while (true)
-        {
-            string path = Path.Combine(basePath, candidate.ToString(LegacyDateFormat));
-
-            if (!Directory.Exists(path) && !File.Exists(path))
-                return path;
-
-            candidate = candidate.AddSeconds(1);
-        }
-    }
-
     private LocalPostTables BuildTables(List<Post> posts)
     {
         LocalPostTables tables = new();

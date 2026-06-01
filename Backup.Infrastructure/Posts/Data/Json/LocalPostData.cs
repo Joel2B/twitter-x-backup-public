@@ -8,6 +8,7 @@ using Backup.Infrastructure.Models.Data.Json;
 using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Posts.Models;
 using Backup.Application.Posts;
+using Backup.Application.Core;
 using Backup.Application.IO;
 using Microsoft.Extensions.Logging;
 
@@ -38,7 +39,9 @@ public partial class LocalPostData(
     IPostTableProjectionService postTableProjectionService,
     IPostTableMaterializationService postTableMaterializationService,
     IPostIdentifierFilterService postIdentifierFilterService,
-    IDataStoreGuardService dataStoreGuardService
+    IDataStoreGuardService dataStoreGuardService,
+    IPostHistoryArchivePathService postHistoryArchivePathService,
+    IDateTimeProvider dateTimeProvider
 ) : IPostDataStore, ISetup
 {
     public string? Id { get; set; }
@@ -88,6 +91,9 @@ public partial class LocalPostData(
     private readonly IPostIdentifierFilterService _postIdentifierFilterService =
         postIdentifierFilterService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
+    private readonly IPostHistoryArchivePathService _postHistoryArchivePathService =
+        postHistoryArchivePathService;
+    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
 
     private Dictionary<string, Post>? _postsCache = null;
     private Dictionary<string, PostMetaRow>? _postMetaCache = null;

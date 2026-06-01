@@ -49,6 +49,7 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostTokenMaterializationService, PostTokenMaterializationService>();
         services.AddScoped<IPostIdentifierFilterService, PostIdentifierFilterService>();
         services.AddScoped<IPostMergeResolutionService, PostMergeResolutionService>();
+        services.AddScoped<IPostHistoryArchivePathService, PostHistoryArchivePathService>();
         services.AddScoped<IPostHashMetaParityService, PostHashMetaParityService>();
         services.AddScoped<IPostMetaNormalizationService, PostMetaNormalizationService>();
         services.AddScoped<IPostMetaReconciliationService, PostMetaReconciliationService>();
