@@ -61,6 +61,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaCacheRecheckPolicyService, MediaCacheRecheckPolicyService>();
         services.AddScoped<IMediaCacheRecheckOrchestrationService, MediaCacheRecheckOrchestrationService>();
         services.AddScoped<IMediaCacheRecheckDecisionService, MediaCacheRecheckDecisionService>();
+        services.AddScoped<IMediaCacheRecheckEvaluationService, MediaCacheRecheckEvaluationService>();
         services.AddScoped<IMediaCacheRecheckPlanningService, MediaCacheRecheckPlanningService>();
         services.AddScoped<IMediaCacheRecheckApplyPolicyService, MediaCacheRecheckApplyPolicyService>();
         services.AddScoped<IMediaCacheJsonSnapshotService, MediaCacheJsonSnapshotService>();

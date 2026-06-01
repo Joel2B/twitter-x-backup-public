@@ -4,7 +4,9 @@ using Backup.Application.Proxy.Ports;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Abstractions.Data;
+using Backup.Infrastructure.Proxy.Adapters;
 using Backup.Infrastructure.Models.Config;
+using Backup.Infrastructure.Models.Config.Proxy;
 using Backup.Infrastructure.Proxy.Models;
 using Backup.Application.Proxy.Models;
 using Microsoft.Extensions.Logging;
@@ -26,11 +28,12 @@ public class ProxyProvider(
     IProxyKeyPolicyService proxyKeyPolicyService,
     IProxyEndpointParserService proxyEndpointParserService,
     IProxyProviderTypeResolverService proxyProviderTypeResolverService,
-    IProxySourceLoadService proxySourceLoadService,
+    IProxyCandidateLoadService proxyCandidateLoadService,
     IProxyRuntimeRecordMapper proxyRuntimeRecordMapper,
     IProxyProviderRuntimeOrchestrationService proxyProviderRuntimeOrchestrationService,
     IProxyRuntimeStatusTransitionService proxyRuntimeStatusTransitionService,
     IProxyFailureStateService proxyFailureStateService,
+    IProxyFailureSettingsPolicyService proxyFailureSettingsPolicyService,
     IProxyUsageTrackingService proxyUsageTrackingService,
     IProxyErrorTrackingService proxyErrorTrackingService
 )
@@ -51,13 +54,15 @@ public class ProxyProvider(
         proxyEndpointParserService;
     private readonly IProxyProviderTypeResolverService _proxyProviderTypeResolverService =
         proxyProviderTypeResolverService;
-    private readonly IProxySourceLoadService _proxySourceLoadService = proxySourceLoadService;
+    private readonly IProxyCandidateLoadService _proxyCandidateLoadService = proxyCandidateLoadService;
     private readonly IProxyRuntimeRecordMapper _proxyRuntimeRecordMapper = proxyRuntimeRecordMapper;
     private readonly IProxyProviderRuntimeOrchestrationService _proxyProviderRuntimeOrchestrationService =
         proxyProviderRuntimeOrchestrationService;
     private readonly IProxyRuntimeStatusTransitionService _proxyRuntimeStatusTransitionService =
         proxyRuntimeStatusTransitionService;
     private readonly IProxyFailureStateService _proxyFailureStateService = proxyFailureStateService;
+    private readonly IProxyFailureSettingsPolicyService _proxyFailureSettingsPolicyService =
+        proxyFailureSettingsPolicyService;
     private readonly IProxyUsageTrackingService _proxyUsageTrackingService = proxyUsageTrackingService;
     private readonly IProxyErrorTrackingService _proxyErrorTrackingService = proxyErrorTrackingService;
 
@@ -283,27 +288,37 @@ public class ProxyProvider(
 
     private async Task<IReadOnlyList<ProxyCandidate>> LoadCandidatesFromProviders()
     {
-        ProxyLoader loader = new(
+        IReadOnlyList<ProxyLoadProviderDefinition> providers = _config.Proxy.Providers
+            .Select(ToProviderDefinition)
+            .ToList();
+        IProxyResourceLoadPort port = new ProxyResourceLoadPortAdapter(
             _logger,
-            _config,
             _proxyEndpointParserService,
-            _proxyProviderTypeResolverService,
-            _proxySourceLoadService
+            _proxyProviderTypeResolverService
         );
-        List<ProxyDataConfig> loaded = await loader.Load();
-        return loaded.Select(ToCandidate).ToList();
+
+        return await _proxyCandidateLoadService.Load(providers, port);
     }
 
-    private static ProxyCandidate ToCandidate(ProxyDataConfig proxy) =>
-        new() { Ip = proxy.Ip, Port = proxy.Port, Protocol = proxy.Protocol };
-
-    private ProxyFailureSettings BuildFailureSettings() =>
+    private static ProxyLoadProviderDefinition ToProviderDefinition(Provider provider) =>
         new()
         {
-            DownloadThreadStart = _config.Downloads.Threads.Start,
-            AttemptsPerProxy = 3,
-            ErrorsToStop = _config.Proxy.Threshold.ErrorsToStop,
+            ProviderType = provider.Type,
+            ProviderFormat = provider.Format,
+            Resources = provider.Resources
+                .Select(resource => new ProxyLoadResourceDefinition
+                {
+                    ResourceType = resource.Type,
+                    ResourceValue = resource.Value,
+                })
+                .ToList(),
         };
+
+    private ProxyFailureSettings BuildFailureSettings() =>
+        _proxyFailureSettingsPolicyService.Create(
+            _config.Downloads.Threads.Start,
+            _config.Proxy.Threshold.ErrorsToStop
+        );
 
     public void Dispose()
     {

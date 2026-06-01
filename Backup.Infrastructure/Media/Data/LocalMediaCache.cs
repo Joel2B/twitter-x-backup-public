@@ -19,8 +19,8 @@ public class LocalMediaCache(
     IPartition _partition,
     IDataStoreGuardService dataStoreGuardService,
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
-    IMediaCacheRecheckDecisionService mediaCacheRecheckDecisionService,
     IMediaCacheRecheckPlanningService mediaCacheRecheckPlanningService,
+    IMediaCacheRecheckEvaluationService mediaCacheRecheckEvaluationService,
     IMediaCacheJsonSnapshotService mediaCacheJsonSnapshotService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
@@ -37,10 +37,10 @@ public class LocalMediaCache(
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
     private readonly IMediaCacheDirectoryPolicyService _mediaCacheDirectoryPolicyService =
         mediaCacheDirectoryPolicyService;
-    private readonly IMediaCacheRecheckDecisionService _mediaCacheRecheckDecisionService =
-        mediaCacheRecheckDecisionService;
     private readonly IMediaCacheRecheckPlanningService _mediaCacheRecheckPlanningService =
         mediaCacheRecheckPlanningService;
+    private readonly IMediaCacheRecheckEvaluationService _mediaCacheRecheckEvaluationService =
+        mediaCacheRecheckEvaluationService;
     private readonly IMediaCacheJsonSnapshotService _mediaCacheJsonSnapshotService =
         mediaCacheJsonSnapshotService;
     private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
@@ -139,80 +139,11 @@ public class LocalMediaCache(
             _logger.LogWarning("cache file not exist, {path}", file);
 
         _logger.LogWarning("recheck: {count}", recheck.Count);
-
-        ParallelOptions options = new() { MaxDegreeOfParallelism = 1 };
-
-        Parallel.ForEach(
-            recheck,
-            options,
-            path =>
-                {
-                    try
-                    {
-                        MediaCacheEntry? cache = Get(path);
-
-                        if (cache is null)
-                            throw new Exception();
-
-                        int? partitionId = cache.PartitionId;
-                        long? streamSize = cache.Size?.Stream;
-                        bool fileExists = false;
-                        long? fileSize = null;
-
-                        if (partitionId is not null)
-                        {
-                            PartitionConfig partition = _partition.GetPath(partitionId);
-                            string fullPath = Path.Combine(
-                                [
-                                    GetPathMedia(partition),
-                                    _mediaCacheEntryPathPolicyService.NormalizeForStoragePath(path),
-                                ]
-                            );
-                            FileInfo fi = new(fullPath);
-                            fileExists = fi.Exists;
-                            fileSize = fileExists ? fi.Length : null;
-                        }
-
-                        MediaCacheRecheckApplyResult applyDecision =
-                            _mediaCacheRecheckDecisionService.Decide(
-                            new MediaCacheRecheckObservation
-                            {
-                                Path = path,
-                                PartitionId = partitionId,
-                                StreamSizeBytes = streamSize,
-                                FileExists = fileExists,
-                                FileSizeBytes = fileSize,
-                            }
-                        );
-
-                        if (applyDecision.IsInvalid)
-                            throw new Exception();
-
-                        if (applyDecision.ShouldRemove)
-                        {
-                            bool removed = _cache.TryRemove(path, out _);
-
-                            if (removed)
-                                _logger.LogWarning("{path} path removed from cache", path);
-                            else
-                                _logger.LogError("error removing path {path}", path);
-
-                            return;
-                        }
-
-                        if (applyDecision.UpdatedEntryState is null)
-                            return;
-
-                        MediaCacheEntry newCache = ToCacheEntry(applyDecision.UpdatedEntryState);
-
-                        _cache.TryUpdate(path, newCache, cache);
-                    }
-                catch (Exception ex)
-                {
-                    _logger.LogError("Error in {path}: {error}", path, ex.Message);
-                }
-            }
+        IReadOnlyList<MediaCacheRecheckObservation> observations = BuildRecheckObservations(recheck);
+        IReadOnlyList<MediaCacheRecheckEvaluation> evaluations = _mediaCacheRecheckEvaluationService.Evaluate(
+            observations
         );
+        ApplyRecheckEvaluations(evaluations);
 
         IReadOnlyDictionary<int, long> sizes = _mediaCachePartitionSizeAggregationService.Aggregate(
             _mediaCacheStoredEntryProjectionService.ToPartitionFileSizes(
@@ -366,6 +297,96 @@ public class LocalMediaCache(
         _cache.TryGetValue(path, out MediaCacheEntry? cache);
 
         return cache;
+    }
+
+    private IReadOnlyList<MediaCacheRecheckObservation> BuildRecheckObservations(
+        IReadOnlyCollection<string> paths
+    )
+    {
+        List<MediaCacheRecheckObservation> observations = [];
+
+        foreach (string path in paths)
+        {
+            try
+            {
+                MediaCacheEntry? cache = Get(path);
+
+                if (cache is null)
+                    continue;
+
+                int? partitionId = cache.PartitionId;
+                long? streamSize = cache.Size?.Stream;
+                bool fileExists = false;
+                long? fileSize = null;
+
+                if (partitionId is not null)
+                {
+                    PartitionConfig partition = _partition.GetPath(partitionId);
+                    string fullPath = Path.Combine(
+                        [
+                            GetPathMedia(partition),
+                            _mediaCacheEntryPathPolicyService.NormalizeForStoragePath(path),
+                        ]
+                    );
+                    FileInfo fi = new(fullPath);
+                    fileExists = fi.Exists;
+                    fileSize = fileExists ? fi.Length : null;
+                }
+
+                observations.Add(
+                    new MediaCacheRecheckObservation
+                    {
+                        Path = path,
+                        PartitionId = partitionId,
+                        StreamSizeBytes = streamSize,
+                        FileExists = fileExists,
+                        FileSizeBytes = fileSize,
+                    }
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Error in {path}: {error}", path, ex.Message);
+            }
+        }
+
+        return observations;
+    }
+
+    private void ApplyRecheckEvaluations(IReadOnlyList<MediaCacheRecheckEvaluation> evaluations)
+    {
+        foreach (MediaCacheRecheckEvaluation evaluation in evaluations)
+        {
+            string path = evaluation.Path;
+            MediaCacheEntry? old = Get(path);
+
+            if (old is null)
+                continue;
+
+            if (evaluation.IsInvalid)
+            {
+                _logger.LogError("invalid recheck evaluation for path {path}", path);
+                continue;
+            }
+
+            if (evaluation.ShouldRemove)
+            {
+                bool removed = _cache.TryRemove(path, out _);
+
+                if (removed)
+                    _logger.LogWarning("{path} path removed from cache", path);
+                else
+                    _logger.LogError("error removing path {path}", path);
+
+                continue;
+            }
+
+            if (evaluation.UpdatedEntryState is null)
+                continue;
+
+            MediaCacheEntry updated = ToCacheEntry(evaluation.UpdatedEntryState);
+            _cache.TryUpdate(path, updated, old);
+        }
     }
 
     private static MediaCacheEntry ToCacheEntry(MediaCacheEntryState state)
