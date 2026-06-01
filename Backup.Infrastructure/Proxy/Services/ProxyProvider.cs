@@ -17,6 +17,8 @@ public class ProxyException(string? message = null) : Exception(message) { }
 
 public class ProxyEmptyException(string? message = null) : ProxyException(message) { }
 
+// Facade for proxy runtime lifecycle (setup, selection, failure handling, and persistence).
+// Keep this public behavior stable while internal collaborators evolve.
 public class ProxyProvider(
     ILogger<ProxyProvider> _logger,
     AppConfig _config,

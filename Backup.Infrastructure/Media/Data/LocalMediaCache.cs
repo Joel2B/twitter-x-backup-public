@@ -13,6 +13,8 @@ using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Media.Data;
 
+// Facade for media cache IO and reconciliation flows. It coordinates cache
+// collaborators but preserves the existing cache file and path behavior.
 public class LocalMediaCache(
     ILogger<LocalMediaCache> _logger,
     StorageMedia _config,

@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Data.Sqlite;
 
+// Facade for SQLite-backed post storage. Keep external semantics stable while
+// delegating reading/writing/merge details to internal partial components.
 public partial class SqlitePostData(
     ILogger<SqlitePostData> logger,
     StoragePost config,

@@ -14,6 +14,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Data.Json;
 
+// Facade for JSON-backed post storage. Public behavior should remain stable;
+// internal responsibilities are intentionally delegated to collaborators.
 public partial class LocalPostData(
     ILogger<LocalPostData> _logger,
     AppConfig _appConfig,
