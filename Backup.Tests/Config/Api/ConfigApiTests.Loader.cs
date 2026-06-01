@@ -38,10 +38,7 @@ public partial class ConfigApiTests
             validatedConfigs++;
         }
 
-        Assert.True(
-            validatedConfigs > 0,
-            "No Fetch.json found in config directories."
-        );
+        Assert.True(validatedConfigs > 0, "No Fetch.json found in config directories.");
     }
 
     [Fact]
@@ -229,8 +226,5 @@ public partial class ConfigApiTests
     }
 
     private static string[] GetConfigDirectories(string root) =>
-    [
-        Path.Combine(root, "config"),
-        Path.Combine(root, "config.example"),
-    ];
+        [Path.Combine(root, "config"), Path.Combine(root, "config.example")];
 }

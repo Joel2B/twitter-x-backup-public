@@ -22,7 +22,9 @@ public static class BackupConfigurationServiceCollectionExtensions
         BackupConfigurationOptions? options
     )
     {
-        if (services.Any(descriptor => descriptor.ServiceType == typeof(BackupConfigurationRuntime)))
+        if (
+            services.Any(descriptor => descriptor.ServiceType == typeof(BackupConfigurationRuntime))
+        )
             return services;
 
         BackupConfigurationOptions resolvedOptions = options ?? new BackupConfigurationOptions();
@@ -31,9 +33,7 @@ public static class BackupConfigurationServiceCollectionExtensions
             configuration
         );
 
-        services.AddSingleton(
-            new BackupConfigurationRuntime { ConfigDirectory = configDirectory }
-        );
+        services.AddSingleton(new BackupConfigurationRuntime { ConfigDirectory = configDirectory });
 
         return services;
     }

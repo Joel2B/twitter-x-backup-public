@@ -295,10 +295,7 @@ public class LocalDumpData(
             await _dumps.Save(dumpsData, cancellationToken);
     }
 
-    private async Task Replicate(
-        ApiContext context,
-        CancellationToken cancellationToken = default
-    )
+    private async Task Replicate(ApiContext context, CancellationToken cancellationToken = default)
     {
         PartitionConfig primary = _partition.GetPrimary();
         IReadOnlyList<PartitionConfig> partitions =

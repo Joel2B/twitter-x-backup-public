@@ -297,10 +297,7 @@ public class SqlitePostDataTests
             NullLogger<SqlitePostData>.Instance,
             storage,
             partition,
-            new PostStoreMergeMutationService(
-                postMergeExecutionService,
-                postHashingService
-            ),
+            new PostStoreMergeMutationService(postMergeExecutionService, postHashingService),
             new PostSoftDeleteExecutionService(
                 new PostIdentifierFilterService(),
                 new PostSoftDeleteSelectionService()

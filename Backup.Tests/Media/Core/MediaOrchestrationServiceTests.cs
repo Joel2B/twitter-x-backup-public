@@ -82,8 +82,7 @@ public class MediaOrchestrationServiceTests
 
         public Task<IReadOnlyList<MediaInput>> GetMediaInputs(
             CancellationToken cancellationToken = default
-        ) =>
-            Task.FromResult<IReadOnlyList<MediaInput>>(MediaInputs);
+        ) => Task.FromResult<IReadOnlyList<MediaInput>>(MediaInputs);
 
         public Task<MediaProcessingResult> Process(
             IReadOnlyList<MediaInput> posts,
@@ -121,22 +120,19 @@ public class MediaOrchestrationServiceTests
             string storageId,
             List<MediaDownload> downloads,
             CancellationToken cancellationToken = default
-        ) =>
-            Task.CompletedTask;
+        ) => Task.CompletedTask;
 
         public Task CheckStorageData(
             string storageId,
             List<MediaDownload> downloads,
             CancellationToken cancellationToken = default
-        ) =>
-            Task.CompletedTask;
+        ) => Task.CompletedTask;
 
         public Task CheckStorageIntegrity(
             string storageId,
             List<MediaDownload> downloads,
             CancellationToken cancellationToken = default
-        ) =>
-            Task.CompletedTask;
+        ) => Task.CompletedTask;
 
         public Task DownloadToStorage(
             string storageId,

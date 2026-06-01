@@ -29,7 +29,10 @@ public static class RuntimeInfrastructureConfigurationServiceCollectionExtension
             return services;
 
         RuntimeConfigurationOptions resolvedOptions = options ?? new RuntimeConfigurationOptions();
-        string configDirectory = RuntimeConfigurationDirectoryResolver.Resolve(resolvedOptions, configuration);
+        string configDirectory = RuntimeConfigurationDirectoryResolver.Resolve(
+            resolvedOptions,
+            configuration
+        );
 
         IAppConfigStore store = new JsonAppConfigStore(configDirectory);
         IAppConfigService configService = new AppConfigService(store);

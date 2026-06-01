@@ -63,7 +63,11 @@ public class MediaReplicationTests
                 {
                     Id = download.Id,
                     Data = download
-                        .Data.Select(data => new MediaDownloadData { Url = data.Url, Path = data.Path })
+                        .Data.Select(data => new MediaDownloadData
+                        {
+                            Url = data.Url,
+                            Path = data.Path,
+                        })
                         .ToList(),
                 })
                 .ToList();
@@ -84,8 +88,7 @@ public class MediaReplicationTests
     {
         public string? Id { get; set; }
 
-        public Task Save(Stream stream, string path, CancellationToken token) =>
-            Task.CompletedTask;
+        public Task Save(Stream stream, string path, CancellationToken token) => Task.CompletedTask;
 
         public Task<bool> Exists(string path) => Task.FromResult(true);
 
@@ -95,7 +98,8 @@ public class MediaReplicationTests
 
         public Task<string?> GetHash(string path) => Task.FromResult<string?>(null);
 
-        public Task<MediaCacheEntry?> GetCache(string path) => Task.FromResult<MediaCacheEntry?>(null);
+        public Task<MediaCacheEntry?> GetCache(string path) =>
+            Task.FromResult<MediaCacheEntry?>(null);
 
         public Stream GetTempStream() => new MemoryStream();
     }
@@ -104,8 +108,7 @@ public class MediaReplicationTests
     {
         public string? Id { get; set; }
 
-        public Task Save(Stream stream, string path, CancellationToken token) =>
-            Task.CompletedTask;
+        public Task Save(Stream stream, string path, CancellationToken token) => Task.CompletedTask;
 
         public Task<bool> Exists(string path) => Task.FromResult(false);
 
@@ -115,7 +118,8 @@ public class MediaReplicationTests
 
         public Task<string?> GetHash(string path) => Task.FromResult<string?>(null);
 
-        public Task<MediaCacheEntry?> GetCache(string path) => Task.FromResult<MediaCacheEntry?>(null);
+        public Task<MediaCacheEntry?> GetCache(string path) =>
+            Task.FromResult<MediaCacheEntry?>(null);
 
         public Stream GetTempStream() => new MemoryStream();
     }

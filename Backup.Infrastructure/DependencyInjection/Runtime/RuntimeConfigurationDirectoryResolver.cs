@@ -10,7 +10,9 @@ internal static class RuntimeConfigurationDirectoryResolver
         IConfiguration? configuration = null
     )
     {
-        string? fromConfiguration = configuration?[RuntimeConfigurationOptions.ConfigDirectoryConfigurationKey];
+        string? fromConfiguration = configuration?[
+            RuntimeConfigurationOptions.ConfigDirectoryConfigurationKey
+        ];
         string? fromEnvironment = Environment.GetEnvironmentVariable(
             RuntimeConfigurationOptions.ConfigDirectoryEnvironmentVariable
         );
@@ -33,7 +35,9 @@ internal static class RuntimeConfigurationDirectoryResolver
 
         foreach (string candidate in candidates.Select(Path.GetFullPath).Distinct())
         {
-            if (Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "Services.json")))
+            if (
+                Directory.Exists(candidate) && File.Exists(Path.Combine(candidate, "Services.json"))
+            )
                 return candidate;
         }
 

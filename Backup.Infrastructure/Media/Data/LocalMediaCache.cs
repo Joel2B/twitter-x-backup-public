@@ -160,7 +160,9 @@ public class LocalMediaCache(
 
                             if (probeInput.PartitionId is not null)
                             {
-                                PartitionConfig partition = _partition.GetPath(probeInput.PartitionId);
+                                PartitionConfig partition = _partition.GetPath(
+                                    probeInput.PartitionId
+                                );
                                 string fullPath = Path.Combine(
                                     [
                                         GetPathMedia(partition),

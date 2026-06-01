@@ -35,8 +35,8 @@ public partial class SqlitePostData
             StringComparer.Ordinal
         );
 
-        IReadOnlyDictionary<string, Backup.Domain.Posts.Post> existingDomain = existingPosts
-            .ToDictionary(
+        IReadOnlyDictionary<string, Backup.Domain.Posts.Post> existingDomain =
+            existingPosts.ToDictionary(
                 entry => entry.Key,
                 entry => PostReplicationMapper.ToDomain(entry.Value),
                 StringComparer.Ordinal

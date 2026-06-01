@@ -306,8 +306,9 @@ public class BulkApplicationServicesTests
         public List<BulkItem> Bulks { get; } = [];
         public Dictionary<string, int> PostCounts { get; } = [];
 
-        public Task<IReadOnlyList<BulkItem>> GetBulks(CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<BulkItem>>(Bulks);
+        public Task<IReadOnlyList<BulkItem>> GetBulks(
+            CancellationToken cancellationToken = default
+        ) => Task.FromResult<IReadOnlyList<BulkItem>>(Bulks);
 
         public Task<Dictionary<string, int>> GetPostCountsByProfileIds(
             IReadOnlyCollection<string> profileIds,
@@ -325,8 +326,9 @@ public class BulkApplicationServicesTests
         public List<BulkItem> Bulks { get; } = [];
         public int SaveBulksCalls { get; private set; }
 
-        public Task<IReadOnlyList<BulkItem>> GetBulks(CancellationToken cancellationToken = default) =>
-            Task.FromResult<IReadOnlyList<BulkItem>>(Bulks);
+        public Task<IReadOnlyList<BulkItem>> GetBulks(
+            CancellationToken cancellationToken = default
+        ) => Task.FromResult<IReadOnlyList<BulkItem>>(Bulks);
 
         public Task SaveBulks(
             IReadOnlyList<BulkItem> bulks,

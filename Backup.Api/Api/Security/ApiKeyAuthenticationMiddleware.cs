@@ -42,8 +42,9 @@ public sealed class ApiKeyAuthenticationMiddleware(
             return;
         }
 
-        string headerName =
-            string.IsNullOrWhiteSpace(_options.HeaderName) ? "X-Api-Key" : _options.HeaderName;
+        string headerName = string.IsNullOrWhiteSpace(_options.HeaderName)
+            ? "X-Api-Key"
+            : _options.HeaderName;
 
         if (
             !context.Request.Headers.TryGetValue(headerName, out var provided)

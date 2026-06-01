@@ -11,8 +11,9 @@ public sealed class MediaOrchestrationService : IMediaOrchestrationService
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<global::Backup.Domain.Posts.MediaInput> posts =
-            await command.GetMediaInputs(cancellationToken);
+        IReadOnlyList<global::Backup.Domain.Posts.MediaInput> posts = await command.GetMediaInputs(
+            cancellationToken
+        );
 
         if (posts.Count == 0)
             return;

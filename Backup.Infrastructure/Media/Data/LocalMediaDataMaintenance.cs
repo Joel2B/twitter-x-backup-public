@@ -116,7 +116,7 @@ public class LocalMediaDataMaintenance(
 
             if (probeItem.ShouldProbe)
             {
-                    string fullPath = await _mediaCache.GetPath(probeItem.Path);
+                string fullPath = await _mediaCache.GetPath(probeItem.Path);
                 isValid = MediaValidator.IsValid(
                     fullPath,
                     () => _logger.LogWarning("path {path} not exist", fullPath)
@@ -158,10 +158,7 @@ public class LocalMediaDataMaintenance(
         );
     }
 
-    public async Task Prune(
-        List<Download> downloads,
-        CancellationToken cancellationToken = default
-    )
+    public async Task Prune(List<Download> downloads, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         if (!_config.Tasks.Prune)
