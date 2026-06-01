@@ -18,8 +18,7 @@ public class LocalMediaBackup(
     IPartition _partition,
     IMediaBackupPartitionPathService mediaBackupPartitionPathService,
     IMediaBackupChunkFileNamePolicyService mediaBackupChunkFileNamePolicyService,
-    IMediaBackupChunkLoadDecisionService mediaBackupChunkLoadDecisionService,
-    IMediaBackupChunkReadFailurePolicyService mediaBackupChunkReadFailurePolicyService,
+    IMediaBackupChunkLoadExecutionService mediaBackupChunkLoadExecutionService,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaBackupData, ISetup
 {
@@ -30,10 +29,8 @@ public class LocalMediaBackup(
         mediaBackupPartitionPathService;
     private readonly IMediaBackupChunkFileNamePolicyService _mediaBackupChunkFileNamePolicyService =
         mediaBackupChunkFileNamePolicyService;
-    private readonly IMediaBackupChunkLoadDecisionService _mediaBackupChunkLoadDecisionService =
-        mediaBackupChunkLoadDecisionService;
-    private readonly IMediaBackupChunkReadFailurePolicyService _mediaBackupChunkReadFailurePolicyService =
-        mediaBackupChunkReadFailurePolicyService;
+    private readonly IMediaBackupChunkLoadExecutionService _mediaBackupChunkLoadExecutionService =
+        mediaBackupChunkLoadExecutionService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     public Task Setup()
@@ -90,61 +87,30 @@ public class LocalMediaBackup(
     public async Task<List<Chunk>?> GetChunks(CancellationToken token = default)
     {
         BackupChunks? backup = await GetBackup();
-        MediaBackupChunkLoadDecision decision = _mediaBackupChunkLoadDecisionService.Decide(
+        IReadOnlyList<Chunk>? chunks = await _mediaBackupChunkLoadExecutionService.ExecuteAsync(
             _config.Chunk.Data.File,
-            backup?.Chunks.Ids
+            backup?.Chunks.Ids,
+            token,
+            async (descriptor, ct) =>
+            {
+                string fileName = _mediaBackupChunkFileNamePolicyService.BuildDataFileName(
+                    descriptor.ChunkId,
+                    _config.Chunk.Data.File!
+                );
+                string path = Path.Combine([GetPathChunks(), fileName]);
+                string content = await File.ReadAllTextAsync(path, ct);
+
+                Chunk? chunk = JsonConvert.DeserializeObject<Chunk>(content);
+
+                if (chunk is null)
+                    throw new InvalidOperationException($"chunk null: {path}");
+
+                return chunk;
+            },
+            index => _logger.LogInformation("chunk {chunk} processed", index)
         );
 
-        if (decision.Action == MediaBackupChunkLoadAction.SkipAsNull)
-            return null;
-
-        if (decision.Action == MediaBackupChunkLoadAction.ReturnEmpty)
-            return [];
-
-        Chunk[] chunks = new Chunk[decision.ReadDescriptors.Count];
-
-        ParallelOptions options = new() { MaxDegreeOfParallelism = 16, CancellationToken = token };
-
-        try
-        {
-            await Parallel.ForEachAsync(
-                decision.ReadDescriptors,
-                options,
-                async (descriptor, ct) =>
-                {
-                    string fileName = _mediaBackupChunkFileNamePolicyService.BuildDataFileName(
-                        descriptor.ChunkId,
-                        _config.Chunk.Data.File!
-                    );
-                    string path = Path.Combine([GetPathChunks(), fileName]);
-                    string content = await File.ReadAllTextAsync(path, ct);
-
-                    Chunk? chunk = JsonConvert.DeserializeObject<Chunk>(content);
-
-                    if (chunk is null)
-                        throw new InvalidOperationException($"chunk null: {path}");
-
-                    chunks[descriptor.Index] = chunk;
-
-                    _logger.LogInformation("chunk {chunk} processed", descriptor.Index);
-                }
-            );
-        }
-        catch (Exception ex)
-        {
-            MediaBackupChunkReadFailureAction action =
-                _mediaBackupChunkReadFailurePolicyService.Decide(
-                    ex,
-                    token.IsCancellationRequested
-                );
-
-            if (action == MediaBackupChunkReadFailureAction.Throw)
-                throw;
-
-            return null;
-        }
-
-        return [.. chunks];
+        return chunks?.ToList();
     }
 
     public Task<Stream?> GetChunk(Chunk chunk)

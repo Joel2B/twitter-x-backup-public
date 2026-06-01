@@ -289,13 +289,20 @@ public class SqlitePostDataTests
             NullLogger<SqlitePostData>.Instance,
             storage,
             partition,
-            new PostMergeResolutionService(new PostMergeService()),
-            new PostSoftDeleteSelectionService(),
+            new PostMergeExecutionService(
+                new PostMergeResolutionService(new PostMergeService()),
+                new PostMergeApplyPlanningService()
+            ),
+            new PostSoftDeleteExecutionService(
+                new PostIdentifierFilterService(),
+                new PostSoftDeleteSelectionService()
+            ),
             new PostSnapshotNormalizationService(),
             new PostMediaInputsCompositionService(),
             new PostHashingService(),
             new PostChangeComputationService(),
-            new PostIdentifierFilterService()
+            new PostIdentifierFilterService(),
+            new TestDateTimeProvider()
         );
         return (sut, root);
     }
@@ -400,5 +407,10 @@ public class SqlitePostDataTests
         public PartitionConfig GetHeavy() => GetPrimary();
 
         public void SetupSizes(Dictionary<int, long> sizes) { }
+    }
+
+    private sealed class TestDateTimeProvider : Backup.Application.Core.IDateTimeProvider
+    {
+        public DateTime Now => DateTime.UtcNow;
     }
 }

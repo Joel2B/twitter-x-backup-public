@@ -23,8 +23,7 @@ public class LocalMediaCache(
     IMediaCacheRecheckObservationCompositionService mediaCacheRecheckObservationCompositionService,
     IMediaCacheRecheckEvaluationService mediaCacheRecheckEvaluationService,
     IMediaCacheRecheckMutationPlanningService mediaCacheRecheckMutationPlanningService,
-    IMediaCacheRecheckMutationApplyPlanService mediaCacheRecheckMutationApplyPlanService,
-    IMediaCacheRecheckMutationApplySelectionService mediaCacheRecheckMutationApplySelectionService,
+    IMediaCacheRecheckMutationExecutionService mediaCacheRecheckMutationExecutionService,
     IMediaCacheJsonSnapshotService mediaCacheJsonSnapshotService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
@@ -50,10 +49,8 @@ public class LocalMediaCache(
         mediaCacheRecheckEvaluationService;
     private readonly IMediaCacheRecheckMutationPlanningService _mediaCacheRecheckMutationPlanningService =
         mediaCacheRecheckMutationPlanningService;
-    private readonly IMediaCacheRecheckMutationApplyPlanService _mediaCacheRecheckMutationApplyPlanService =
-        mediaCacheRecheckMutationApplyPlanService;
-    private readonly IMediaCacheRecheckMutationApplySelectionService _mediaCacheRecheckMutationApplySelectionService =
-        mediaCacheRecheckMutationApplySelectionService;
+    private readonly IMediaCacheRecheckMutationExecutionService _mediaCacheRecheckMutationExecutionService =
+        mediaCacheRecheckMutationExecutionService;
     private readonly IMediaCacheJsonSnapshotService _mediaCacheJsonSnapshotService =
         mediaCacheJsonSnapshotService;
     private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
@@ -374,11 +371,9 @@ public class LocalMediaCache(
 
     private void ApplyRecheckMutations(IReadOnlyList<MediaCacheRecheckMutation> mutations)
     {
-        MediaCacheRecheckMutationApplyPlan plan =
-            _mediaCacheRecheckMutationApplyPlanService.BuildPlan(mutations);
         MediaCacheRecheckMutationApplySelection selection =
-            _mediaCacheRecheckMutationApplySelectionService.Select(
-                plan,
+            _mediaCacheRecheckMutationExecutionService.Execute(
+                mutations,
                 _cache.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase)
             );
 

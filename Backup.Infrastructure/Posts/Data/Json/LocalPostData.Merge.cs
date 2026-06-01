@@ -32,8 +32,8 @@ public partial class LocalPostData
 
         Backup.Domain.Posts.MergeOptions domainOptions = PostReplicationMapper.ToDomain(options);
 
-        IReadOnlyList<Backup.Application.Posts.Models.PostMergeResolutionItem> resolved =
-            _postMergeResolutionService.Resolve(
+        Backup.Application.Posts.Models.PostMergeApplyPlan plan =
+            _postMergeExecutionService.BuildApplyPlan(
                 userId,
                 origin,
                 incomingDomain,
@@ -41,7 +41,7 @@ public partial class LocalPostData
                 domainOptions
             );
 
-        foreach (Backup.Application.Posts.Models.PostMergeResolutionItem item in resolved)
+        foreach (Backup.Application.Posts.Models.PostMergeApplyPlanItem item in plan.Items)
         {
             Post merged = PostReplicationMapper.ToApp(item.MergedPost);
 
@@ -59,11 +59,14 @@ public partial class LocalPostData
                 continue;
             }
 
-            if (item.HasDataChange)
+            if (item.ShouldLogDataChange)
                 LogDataChange(current, merged, userId);
 
-            if (item.HasIndexChange)
+            if (item.ShouldLogIndexChange)
                 LogIndexChange(current, merged, userId, origin);
+
+            if (!item.ShouldPersist)
+                continue;
 
             posts[item.Id] = merged;
 

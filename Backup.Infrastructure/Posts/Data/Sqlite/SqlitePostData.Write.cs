@@ -47,18 +47,13 @@ public partial class SqlitePostData
 
         Backup.Domain.Posts.MergeOptions domainOptions = PostReplicationMapper.ToDomain(options);
 
-        IReadOnlyList<Backup.Application.Posts.Models.PostMergeResolutionItem> mergeResult =
-            _postMergeResolutionService.Resolve(
+        Backup.Application.Posts.Models.PostMergeApplyPlan plan =
+            _postMergeExecutionService.BuildApplyPlan(
                 userId,
                 origin,
                 incomingDomain,
                 existingDomain,
                 domainOptions
-            );
-        Backup.Application.Posts.Models.PostMergeApplyPlan plan =
-            _postMergeApplyPlanningService.BuildPlan(
-                mergeResult,
-                existingPosts.Keys.ToHashSet(StringComparer.Ordinal)
             );
 
         List<Post> resolved = [];

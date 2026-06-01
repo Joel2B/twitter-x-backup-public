@@ -14,8 +14,7 @@ public partial class SqlitePostData(
     ILogger<SqlitePostData> logger,
     StoragePost config,
     IPartition partition,
-    IPostMergeResolutionService postMergeResolutionService,
-    IPostMergeApplyPlanningService postMergeApplyPlanningService,
+    IPostMergeExecutionService postMergeExecutionService,
     IPostSoftDeleteExecutionService postSoftDeleteExecutionService,
     IPostSnapshotNormalizationService postSnapshotNormalizationService,
     IPostMediaInputsCompositionService postMediaInputsCompositionService,
@@ -31,10 +30,8 @@ public partial class SqlitePostData(
     private readonly ILogger<SqlitePostData> _logger = logger;
     private readonly StoragePost _config = config;
     private readonly IPartition _partition = partition;
-    private readonly IPostMergeResolutionService _postMergeResolutionService =
-        postMergeResolutionService;
-    private readonly IPostMergeApplyPlanningService _postMergeApplyPlanningService =
-        postMergeApplyPlanningService;
+    private readonly IPostMergeExecutionService _postMergeExecutionService =
+        postMergeExecutionService;
     private readonly IPostSoftDeleteExecutionService _postSoftDeleteExecutionService =
         postSoftDeleteExecutionService;
     private readonly IPostSnapshotNormalizationService _postSnapshotNormalizationService =
