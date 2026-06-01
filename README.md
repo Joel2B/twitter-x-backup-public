@@ -25,7 +25,7 @@ This project is under active personal development. Structure and configuration f
    - Set `Backup:Configuration:ConfigDirectory` to your runtime config folder.
 
 Configuration directory resolution order:
-- `BackupConfigurationOptions.ConfigDirectory` (when provided in host wiring)
+- `RuntimeConfigurationOptions.ConfigDirectory` (when provided in host wiring)
 - `Backup:Configuration:ConfigDirectory` from host configuration (`appsettings*.json`/env/providers)
 - env var `BACKUP__CONFIG__DIRECTORY`
 - `./config`

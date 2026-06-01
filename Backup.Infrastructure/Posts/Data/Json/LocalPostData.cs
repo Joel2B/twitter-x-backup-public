@@ -21,29 +21,7 @@ public partial class LocalPostData(
     AppConfig _appConfig,
     StoragePost _config,
     IPartition _partition,
-    IPostStoreMergeMutationService postStoreMergeMutationService,
-    IPostSoftDeleteExecutionService postSoftDeleteExecutionService,
-    IPostSnapshotNormalizationService postSnapshotNormalizationService,
-    IPostMediaInputsCompositionService postMediaInputsCompositionService,
-    IPostHashingService postHashingService,
-    IPostHashMetaParityService postHashMetaParityService,
-    IPostMetaNormalizationService postMetaNormalizationService,
-    IPostMetaReconciliationService postMetaReconciliationService,
-    IPostHistoryPathExtractionService postHistoryPathExtractionService,
-    IPostHistoryPrunePlanningService postHistoryPrunePlanningService,
-    IPostSnapshotVerificationExecutionService postSnapshotVerificationExecutionService,
-    IPostDataReplicationPlanningService postDataReplicationPlanningService,
-    IPostChangeComputationService postChangeComputationService,
-    IPostChangeReadModelProjectionService postChangeReadModelProjectionService,
-    IPostStoreCountsAggregationService postStoreCountsAggregationService,
-    IPostProfileCountAggregationService postProfileCountAggregationService,
-    IPostMetaConsistencyValidationService postMetaConsistencyValidationService,
-    IPostTableProjectionService postTableProjectionService,
-    IPostTableMaterializationService postTableMaterializationService,
-    IPostIdentifierFilterService postIdentifierFilterService,
-    IDataStoreGuardService dataStoreGuardService,
-    IPostHistoryArchivePathService postHistoryArchivePathService,
-    IDateTimeProvider dateTimeProvider
+    LocalPostDataDependencies dependencies
 ) : IPostDataStore, ISetup
 {
     public string? Id { get; set; }
@@ -54,48 +32,49 @@ public partial class LocalPostData(
     private readonly StoragePost _config = _config;
     private readonly IPartition _partition = _partition;
     private readonly IPostStoreMergeMutationService _postStoreMergeMutationService =
-        postStoreMergeMutationService;
+        dependencies.PostStoreMergeMutationService;
     private readonly IPostSoftDeleteExecutionService _postSoftDeleteExecutionService =
-        postSoftDeleteExecutionService;
+        dependencies.PostSoftDeleteExecutionService;
     private readonly IPostSnapshotNormalizationService _postSnapshotNormalizationService =
-        postSnapshotNormalizationService;
+        dependencies.PostSnapshotNormalizationService;
     private readonly IPostMediaInputsCompositionService _postMediaInputsCompositionService =
-        postMediaInputsCompositionService;
-    private readonly IPostHashingService _postHashingService = postHashingService;
+        dependencies.PostMediaInputsCompositionService;
+    private readonly IPostHashingService _postHashingService = dependencies.PostHashingService;
     private readonly IPostHashMetaParityService _postHashMetaParityService =
-        postHashMetaParityService;
+        dependencies.PostHashMetaParityService;
     private readonly IPostMetaNormalizationService _postMetaNormalizationService =
-        postMetaNormalizationService;
+        dependencies.PostMetaNormalizationService;
     private readonly IPostMetaReconciliationService _postMetaReconciliationService =
-        postMetaReconciliationService;
+        dependencies.PostMetaReconciliationService;
     private readonly IPostHistoryPathExtractionService _postHistoryPathExtractionService =
-        postHistoryPathExtractionService;
+        dependencies.PostHistoryPathExtractionService;
     private readonly IPostHistoryPrunePlanningService _postHistoryPrunePlanningService =
-        postHistoryPrunePlanningService;
+        dependencies.PostHistoryPrunePlanningService;
     private readonly IPostSnapshotVerificationExecutionService _postSnapshotVerificationExecutionService =
-        postSnapshotVerificationExecutionService;
+        dependencies.PostSnapshotVerificationExecutionService;
     private readonly IPostDataReplicationPlanningService _postDataReplicationPlanningService =
-        postDataReplicationPlanningService;
+        dependencies.PostDataReplicationPlanningService;
     private readonly IPostChangeComputationService _postChangeComputationService =
-        postChangeComputationService;
+        dependencies.PostChangeComputationService;
     private readonly IPostChangeReadModelProjectionService _postChangeReadModelProjectionService =
-        postChangeReadModelProjectionService;
+        dependencies.PostChangeReadModelProjectionService;
     private readonly IPostStoreCountsAggregationService _postStoreCountsAggregationService =
-        postStoreCountsAggregationService;
+        dependencies.PostStoreCountsAggregationService;
     private readonly IPostProfileCountAggregationService _postProfileCountAggregationService =
-        postProfileCountAggregationService;
+        dependencies.PostProfileCountAggregationService;
     private readonly IPostMetaConsistencyValidationService _postMetaConsistencyValidationService =
-        postMetaConsistencyValidationService;
+        dependencies.PostMetaConsistencyValidationService;
     private readonly IPostTableProjectionService _postTableProjectionService =
-        postTableProjectionService;
+        dependencies.PostTableProjectionService;
     private readonly IPostTableMaterializationService _postTableMaterializationService =
-        postTableMaterializationService;
+        dependencies.PostTableMaterializationService;
     private readonly IPostIdentifierFilterService _postIdentifierFilterService =
-        postIdentifierFilterService;
-    private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
+        dependencies.PostIdentifierFilterService;
+    private readonly IDataStoreGuardService _dataStoreGuardService =
+        dependencies.DataStoreGuardService;
     private readonly IPostHistoryArchivePathService _postHistoryArchivePathService =
-        postHistoryArchivePathService;
-    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
+        dependencies.PostHistoryArchivePathService;
+    private readonly IDateTimeProvider _dateTimeProvider = dependencies.DateTimeProvider;
 
     private Dictionary<string, Post>? _postsCache = null;
     private Dictionary<string, PostMetaRow>? _postMetaCache = null;

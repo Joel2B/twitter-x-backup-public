@@ -13,6 +13,8 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
 {
     private static IServiceCollection RegisterMediaDataStores(this IServiceCollection services)
     {
+        services.AddScoped<LocalMediaCacheDependencies>();
+
         Dictionary<string, Type> types = new() { ["local"] = typeof(LocalMediaData) };
 
         List<DataInfrastructureHelpers.DataRegistration<StorageMedia>> registrations =

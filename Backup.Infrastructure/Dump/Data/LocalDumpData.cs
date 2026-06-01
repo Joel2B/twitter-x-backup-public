@@ -24,16 +24,7 @@ public class LocalDumpData(
     IDumpsData _dumps,
     StorageDump _config,
     IPartition _partition,
-    ISecondaryStoreSelectionService secondaryStoreSelectionService,
-    IDumpContextEligibilityService dumpContextEligibilityService,
-    IDumpLifecycleService dumpLifecycleService,
-    IDumpPathService dumpPathService,
-    IDumpIndexLoadService dumpIndexLoadService,
-    IDumpSaveExecutionService dumpSaveExecutionService,
-    IDumpFlushOrchestrationService dumpFlushOrchestrationService,
-    IDumpReplicationPlanningService dumpReplicationPlanningService,
-    IDataStoreGuardService dataStoreGuardService,
-    IDateTimeProvider dateTimeProvider
+    LocalDumpDataDependencies dependencies
 ) : IDumpDataStore
 {
     public string? Id { get; set; }
@@ -44,19 +35,21 @@ public class LocalDumpData(
     private readonly StorageDump _config = _config;
     private readonly IPartition _partition = _partition;
     private readonly ISecondaryStoreSelectionService _secondaryStoreSelectionService =
-        secondaryStoreSelectionService;
+        dependencies.SecondaryStoreSelectionService;
     private readonly IDumpContextEligibilityService _dumpContextEligibilityService =
-        dumpContextEligibilityService;
-    private readonly IDumpLifecycleService _dumpLifecycleService = dumpLifecycleService;
-    private readonly IDumpPathService _dumpPathService = dumpPathService;
-    private readonly IDumpIndexLoadService _dumpIndexLoadService = dumpIndexLoadService;
-    private readonly IDumpSaveExecutionService _dumpSaveExecutionService = dumpSaveExecutionService;
+        dependencies.DumpContextEligibilityService;
+    private readonly IDumpLifecycleService _dumpLifecycleService = dependencies.DumpLifecycleService;
+    private readonly IDumpPathService _dumpPathService = dependencies.DumpPathService;
+    private readonly IDumpIndexLoadService _dumpIndexLoadService = dependencies.DumpIndexLoadService;
+    private readonly IDumpSaveExecutionService _dumpSaveExecutionService =
+        dependencies.DumpSaveExecutionService;
     private readonly IDumpFlushOrchestrationService _dumpFlushOrchestrationService =
-        dumpFlushOrchestrationService;
+        dependencies.DumpFlushOrchestrationService;
     private readonly IDumpReplicationPlanningService _dumpReplicationPlanningService =
-        dumpReplicationPlanningService;
-    private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
-    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
+        dependencies.DumpReplicationPlanningService;
+    private readonly IDataStoreGuardService _dataStoreGuardService =
+        dependencies.DataStoreGuardService;
+    private readonly IDateTimeProvider _dateTimeProvider = dependencies.DateTimeProvider;
 
     private DumpData? _dumpData;
     private DumpData Data =>

@@ -19,52 +19,40 @@ public class LocalMediaCache(
     ILogger<LocalMediaCache> _logger,
     StorageMedia _config,
     IPartition _partition,
-    IDataStoreGuardService dataStoreGuardService,
-    IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
-    IMediaCacheLoadExecutionService mediaCacheLoadExecutionService,
-    IMediaCacheRecheckProbeExecutionService mediaCacheRecheckProbeExecutionService,
-    IMediaCacheRecheckMutationExecutionService mediaCacheRecheckMutationExecutionService,
-    IMediaCacheJsonSnapshotService mediaCacheJsonSnapshotService,
-    IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
-    IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
-    IMediaCacheWritePolicyService mediaCacheWritePolicyService,
-    IMediaCacheConflictResolutionService mediaCacheConflictResolutionService,
-    IMediaCachePartitionSelectionService mediaCachePartitionSelectionService,
-    IMediaCacheStoredEntryProjectionService mediaCacheStoredEntryProjectionService,
-    IMediaCachePartitionSizeAggregationService mediaCachePartitionSizeAggregationService,
-    IMediaCacheReplicationPathService mediaCacheReplicationPathService
+    LocalMediaCacheDependencies dependencies
 ) : IMediaCache
 {
     private readonly ILogger<LocalMediaCache> _logger = _logger;
     private readonly StorageMedia _config = _config;
     private readonly IPartition _partition = _partition;
-    private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
+    private readonly IDataStoreGuardService _dataStoreGuardService =
+        dependencies.DataStoreGuardService;
     private readonly IMediaCacheDirectoryPolicyService _mediaCacheDirectoryPolicyService =
-        mediaCacheDirectoryPolicyService;
+        dependencies.MediaCacheDirectoryPolicyService;
     private readonly IMediaCacheLoadExecutionService _mediaCacheLoadExecutionService =
-        mediaCacheLoadExecutionService;
+        dependencies.MediaCacheLoadExecutionService;
     private readonly IMediaCacheRecheckProbeExecutionService _mediaCacheRecheckProbeExecutionService =
-        mediaCacheRecheckProbeExecutionService;
+        dependencies.MediaCacheRecheckProbeExecutionService;
     private readonly IMediaCacheRecheckMutationExecutionService _mediaCacheRecheckMutationExecutionService =
-        mediaCacheRecheckMutationExecutionService;
+        dependencies.MediaCacheRecheckMutationExecutionService;
     private readonly IMediaCacheJsonSnapshotService _mediaCacheJsonSnapshotService =
-        mediaCacheJsonSnapshotService;
+        dependencies.MediaCacheJsonSnapshotService;
     private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
-        mediaCacheEntryPathPolicyService;
+        dependencies.MediaCacheEntryPathPolicyService;
     private readonly IMediaCacheEntryStateFactoryService _mediaCacheEntryStateFactoryService =
-        mediaCacheEntryStateFactoryService;
+        dependencies.MediaCacheEntryStateFactoryService;
     private readonly IMediaCacheWritePolicyService _mediaCacheWritePolicyService =
-        mediaCacheWritePolicyService;
+        dependencies.MediaCacheWritePolicyService;
     private readonly IMediaCacheConflictResolutionService _mediaCacheConflictResolutionService =
-        mediaCacheConflictResolutionService;
+        dependencies.MediaCacheConflictResolutionService;
     private readonly IMediaCachePartitionSelectionService _mediaCachePartitionSelectionService =
-        mediaCachePartitionSelectionService;
+        dependencies.MediaCachePartitionSelectionService;
     private readonly IMediaCacheStoredEntryProjectionService _mediaCacheStoredEntryProjectionService =
-        mediaCacheStoredEntryProjectionService;
+        dependencies.MediaCacheStoredEntryProjectionService;
     private readonly IMediaCachePartitionSizeAggregationService _mediaCachePartitionSizeAggregationService =
-        mediaCachePartitionSizeAggregationService;
+        dependencies.MediaCachePartitionSizeAggregationService;
     private readonly IMediaCacheReplicationPathService _mediaCacheReplicationPathService =
-        mediaCacheReplicationPathService;
+        dependencies.MediaCacheReplicationPathService;
 
     private readonly ConcurrentDictionary<string, MediaCacheEntry> _cache = new(
         StringComparer.OrdinalIgnoreCase

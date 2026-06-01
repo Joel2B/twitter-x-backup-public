@@ -13,6 +13,8 @@ public static partial class DumpDataInfrastructureServiceCollectionExtensions
 {
     private static IServiceCollection RegisterDumpDataStores(this IServiceCollection services)
     {
+        services.AddScoped<LocalDumpDataDependencies>();
+
         Dictionary<string, Type> types = new() { ["local"] = typeof(LocalDumpData) };
 
         List<DataInfrastructureHelpers.DataRegistration<StorageDump>> registrations =

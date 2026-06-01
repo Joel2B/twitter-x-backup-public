@@ -22,54 +22,43 @@ public class ProxyEmptyException(string? message = null) : ProxyException(messag
 public class ProxyProvider(
     ILogger<ProxyProvider> _logger,
     AppConfig _config,
-    IProxyData _data,
-    IProxyHealthProbePort proxyHealthProbePort,
-    IProxyResourceLoadPort proxyResourceLoadPort,
-    IProxyHttpClientFactoryPolicyService proxyHttpClientFactoryPolicyService,
-    IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService,
-    IProxyKeyPolicyService proxyKeyPolicyService,
-    IProxyProviderCandidateLoadOrchestrationService proxyProviderCandidateLoadOrchestrationService,
-    IProxySetupExecutionService proxySetupExecutionService,
-    IProxyCheckExecutionService proxyCheckExecutionService,
-    IProxyRuntimeRecordMapper proxyRuntimeRecordMapper,
-    IProxyAcceptanceApplyOrchestrationService proxyAcceptanceApplyOrchestrationService,
-    IProxyFailureStateService proxyFailureStateService,
-    IProxyFailureExecutionPlanService proxyFailureExecutionPlanService,
-    IProxyFailureSettingsPolicyService proxyFailureSettingsPolicyService,
-    IProxyUseHandlingOrchestrationService proxyUseHandlingOrchestrationService,
-    IProxyErrorHandlingOrchestrationService proxyErrorHandlingOrchestrationService,
-    IDateTimeProvider dateTimeProvider
+    ProxyProviderDependencies dependencies
 ) : IProxyProvider, ISetup, IDisposable
 {
     private readonly ILogger<ProxyProvider> _logger = _logger;
     private readonly AppConfig _config = _config;
-    private readonly IProxyData _data = _data;
-    private readonly IProxyHealthProbePort _proxyHealthProbePort = proxyHealthProbePort;
-    private readonly IProxyResourceLoadPort _proxyResourceLoadPort = proxyResourceLoadPort;
+    private readonly IProxyData _data = dependencies.Data;
+    private readonly IProxyHealthProbePort _proxyHealthProbePort =
+        dependencies.ProxyHealthProbePort;
+    private readonly IProxyResourceLoadPort _proxyResourceLoadPort =
+        dependencies.ProxyResourceLoadPort;
     private readonly IProxyHttpClientFactoryPolicyService _proxyHttpClientFactoryPolicyService =
-        proxyHttpClientFactoryPolicyService;
+        dependencies.ProxyHttpClientFactoryPolicyService;
     private readonly IProxyHttpClientHeaderPolicyService _proxyHttpClientHeaderPolicyService =
-        proxyHttpClientHeaderPolicyService;
-    private readonly IProxyKeyPolicyService _proxyKeyPolicyService = proxyKeyPolicyService;
+        dependencies.ProxyHttpClientHeaderPolicyService;
+    private readonly IProxyKeyPolicyService _proxyKeyPolicyService =
+        dependencies.ProxyKeyPolicyService;
     private readonly IProxyProviderCandidateLoadOrchestrationService _proxyProviderCandidateLoadOrchestrationService =
-        proxyProviderCandidateLoadOrchestrationService;
+        dependencies.ProxyProviderCandidateLoadOrchestrationService;
     private readonly IProxySetupExecutionService _proxySetupExecutionService =
-        proxySetupExecutionService;
+        dependencies.ProxySetupExecutionService;
     private readonly IProxyCheckExecutionService _proxyCheckExecutionService =
-        proxyCheckExecutionService;
-    private readonly IProxyRuntimeRecordMapper _proxyRuntimeRecordMapper = proxyRuntimeRecordMapper;
+        dependencies.ProxyCheckExecutionService;
+    private readonly IProxyRuntimeRecordMapper _proxyRuntimeRecordMapper =
+        dependencies.ProxyRuntimeRecordMapper;
     private readonly IProxyAcceptanceApplyOrchestrationService _proxyAcceptanceApplyOrchestrationService =
-        proxyAcceptanceApplyOrchestrationService;
-    private readonly IProxyFailureStateService _proxyFailureStateService = proxyFailureStateService;
+        dependencies.ProxyAcceptanceApplyOrchestrationService;
+    private readonly IProxyFailureStateService _proxyFailureStateService =
+        dependencies.ProxyFailureStateService;
     private readonly IProxyFailureExecutionPlanService _proxyFailureExecutionPlanService =
-        proxyFailureExecutionPlanService;
+        dependencies.ProxyFailureExecutionPlanService;
     private readonly IProxyFailureSettingsPolicyService _proxyFailureSettingsPolicyService =
-        proxyFailureSettingsPolicyService;
+        dependencies.ProxyFailureSettingsPolicyService;
     private readonly IProxyUseHandlingOrchestrationService _proxyUseHandlingOrchestrationService =
-        proxyUseHandlingOrchestrationService;
+        dependencies.ProxyUseHandlingOrchestrationService;
     private readonly IProxyErrorHandlingOrchestrationService _proxyErrorHandlingOrchestrationService =
-        proxyErrorHandlingOrchestrationService;
-    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
+        dependencies.ProxyErrorHandlingOrchestrationService;
+    private readonly IDateTimeProvider _dateTimeProvider = dependencies.DateTimeProvider;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
 
