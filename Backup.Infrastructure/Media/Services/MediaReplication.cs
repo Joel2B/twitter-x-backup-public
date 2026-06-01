@@ -9,12 +9,14 @@ namespace Backup.Infrastructure.Media.Services;
 
 public class MediaReplication(
     ILogger<MediaReplication> _logger,
-    IMediaReplicationPlanningService mediaReplicationPlanningService
+    IMediaReplicationPlanningService mediaReplicationPlanningService,
+    IMediaDownloadModelMapper mediaDownloadModelMapper
 ) : IMediaReplication
 {
     private readonly ILogger<MediaReplication> _logger = _logger;
     private readonly IMediaReplicationPlanningService _mediaReplicationPlanningService =
         mediaReplicationPlanningService;
+    private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper = mediaDownloadModelMapper;
 
     public async Task Replicate(
         List<Download> downloads,
@@ -27,7 +29,7 @@ public class MediaReplication(
         if (target == source)
             return;
 
-        List<MediaReplicationPathObservation> observations = [];
+        List<Backup.Application.Media.Models.MediaReplicationPathObservation> observations = [];
 
         foreach (Download download in downloads)
         {
@@ -37,7 +39,7 @@ public class MediaReplication(
                 bool existsTarget = await target.Exists(dataDownload.Path);
 
                 observations.Add(
-                    new MediaReplicationPathObservation
+                    new Backup.Application.Media.Models.MediaReplicationPathObservation
                     {
                         DownloadId = download.Id,
                         Url = dataDownload.Url,
@@ -49,13 +51,13 @@ public class MediaReplication(
             }
         }
 
-        IReadOnlyList<MediaReplicationCopyAction> copyActions =
+        IReadOnlyList<Backup.Application.Media.Models.MediaReplicationCopyAction> copyActions =
             _mediaReplicationPlanningService.SelectCopyActions(observations);
-        List<MediaReplicationCopyAction> copied = [];
+        List<Backup.Application.Media.Models.MediaReplicationCopyAction> copied = [];
 
         try
         {
-            foreach (MediaReplicationCopyAction action in copyActions)
+            foreach (Backup.Application.Media.Models.MediaReplicationCopyAction action in copyActions)
             {
                 using Stream read = await source.Read(action.Path);
                 using Stream write = await target.Write(action.Path);
@@ -79,38 +81,12 @@ public class MediaReplication(
         }
 
         IReadOnlyList<Backup.Application.Media.Models.MediaDownload> remaining =
-            _mediaReplicationPlanningService.RemoveCopied(ToApplication(downloads), copied);
+            _mediaReplicationPlanningService.RemoveCopied(
+                _mediaDownloadModelMapper.ToApplication(downloads),
+                copied
+            );
 
-        SyncDownloads(downloads, remaining);
-    }
-
-    private static List<Backup.Application.Media.Models.MediaDownload> ToApplication(
-        IEnumerable<Download> downloads
-    ) =>
-        downloads
-            .Select(download => new Backup.Application.Media.Models.MediaDownload
-            {
-                Id = download.Id,
-                Data = download
-                    .Data.Select(item => new MediaDownloadData { Url = item.Url, Path = item.Path })
-                    .ToList(),
-            })
-            .ToList();
-
-    private static void SyncDownloads(
-        List<Download> target,
-        IReadOnlyList<Backup.Application.Media.Models.MediaDownload> source
-    )
-    {
-        target.Clear();
-        target.AddRange(
-            source.Select(download => new Download
-            {
-                Id = download.Id,
-                Data = download
-                    .Data.Select(item => new DataDownload { Url = item.Url, Path = item.Path })
-                    .ToList(),
-            })
-        );
+        downloads.Clear();
+        downloads.AddRange(_mediaDownloadModelMapper.ToInfrastructure(remaining));
     }
 }
