@@ -81,6 +81,11 @@ public class MediaReplication(
                 copied.Add(action);
             }
         }
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("media replication cancelled for target {targetId}", target.Id);
+            throw;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "error replicating media to target {targetId}", target.Id);
