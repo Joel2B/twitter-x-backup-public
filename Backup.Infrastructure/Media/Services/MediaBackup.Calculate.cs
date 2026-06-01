@@ -14,53 +14,12 @@ public partial class MediaBackup
     {
         await ShowInfoChunks();
 
-        MediaBackupChunkPlanningResult plan = _mediaBackupChunkPlanningService.Plan(
-            _paths.Count,
-            _config.Chunk.Count,
-            _backup.Chunks.Path.Increase,
-            _config.Chunk.Path.Increase,
-            _chunks.Keys
-        );
-
-        _logger.LogInformation(
-            "paths/residue: {paths}/{residue}",
-            _paths.Count,
-            _paths.Count % _config.Chunk.Count
-        );
-
-        _logger.LogInformation(
-            "pathsPerChunk/increase/total: {paths}/{increase}/{total}",
-            plan.PathsPerChunk,
-            plan.IncreaseCount,
-            plan.CapacityPerChunk
-        );
-
         _logger.LogInfo("cloning chunks");
 
         Dictionary<int, Chunk> _chunksClone = _chunks.ToDictionary(
             o => o.Key,
             o => o.Value.Clone()
         );
-
-        if (plan.RequiresSeedChunk)
-            _chunks[0] = new() { Id = 0 };
-
-        _logger.LogInfo("expanding chunks");
-
-        HashSet<string> assignedCachePaths = [.. _chunks.Values.SelectMany(chunk => chunk.Data).Select(o => o.Path)];
-
-        foreach (int missingChunkId in plan.MissingChunkIds)
-            _chunks.Add(missingChunkId, new() { Id = missingChunkId });
-
-        IReadOnlyList<MediaBackupChunkState> chunkStates =
-            _mediaBackupChunkRuntimeCompositionService.BuildChunkStates(
-                _chunks.Values.Select(chunk => new MediaBackupChunkStateInput
-                {
-                    Id = chunk.Id,
-                    PathCount = chunk.Data.Count,
-                    SizeBytes = chunk.Data.Sum(item => item.FileSize ?? 0),
-                })
-            );
 
         List<MediaBackupPathCacheObservationInput> cacheObservationInputs = [];
 
@@ -79,37 +38,6 @@ public partial class MediaBackup
             );
         }
 
-        IReadOnlyList<MediaBackupPathCacheObservation> candidateObservations =
-            _mediaBackupPathObservationCompositionService.BuildPathCacheObservations(
-                cacheObservationInputs
-            );
-
-        IReadOnlyList<MediaBackupPathCandidate> candidates =
-            _mediaBackupPathCandidateCompositionService.Compose(
-                candidateObservations,
-                assignedCachePaths
-            );
-
-        MediaBackupChunkAssignmentResult assignment = _mediaBackupChunkAssignmentService.Assign(
-            chunkStates,
-            candidates,
-            _backup.Chunks.Total,
-            plan.PathsPerChunk,
-            plan.IncreaseCount,
-            _config.Chunk.Path.Size
-        );
-
-        _logger.LogInfo("current chunk: {chunk}", assignment.InitialChunkId);
-
-        MediaBackupChunkAssignmentApplyResult applyAssignments =
-            _mediaBackupChunkAssignmentApplyService.Apply(assignment.Assignments);
-
-        foreach ((int chunkId, IReadOnlyList<string> addedPaths) in applyAssignments.AddedCachePathsByChunk)
-        {
-            foreach (string path in addedPaths)
-                _chunks[chunkId].Data.Add(new() { Path = path });
-        }
-
         IReadOnlyList<MediaBackupChunkPathsState> beforeChunkPaths =
             _mediaBackupChunkRuntimeCompositionService.BuildChunkPathStates(
                 _chunksClone.Values.Select(chunk => new MediaBackupChunkPathsInput
@@ -118,57 +46,86 @@ public partial class MediaBackup
                     Paths = chunk.Data.Select(data => data.Path).ToList(),
                 })
             );
+        IReadOnlyList<MediaBackupChunkStateInput> chunkStateInputs = _chunks
+            .Values.Select(chunk => new MediaBackupChunkStateInput
+            {
+                Id = chunk.Id,
+                PathCount = chunk.Data.Count,
+                SizeBytes = chunk.Data.Sum(item => item.FileSize ?? 0),
+            })
+            .ToList();
+        HashSet<string> assignedCachePaths = [.. _chunks.Values.SelectMany(chunk => chunk.Data).Select(o => o.Path)];
 
-        IReadOnlyList<MediaBackupChunkPathsState> afterChunkPaths =
-            _mediaBackupChunkRuntimeCompositionService.BuildChunkPathStates(
-                _chunks.Values.Select(chunk => new MediaBackupChunkPathsInput
-                {
-                    Id = chunk.Id,
-                    Paths = chunk.Data.Select(data => data.Path).ToList(),
-                })
+        IReadOnlyDictionary<string, long> sizeByPath = cacheObservationInputs
+            .Where(input => !string.IsNullOrWhiteSpace(input.CachePath))
+            .GroupBy(input => input.CachePath!, StringComparer.Ordinal)
+            .ToDictionary(
+                group => group.Key,
+                group => group.FirstOrDefault(entry => entry.FileSizeBytes.HasValue)?.FileSizeBytes
+                    ?? 0,
+                StringComparer.Ordinal
             );
 
-        IReadOnlyList<MediaBackupChunkCountState> beforeCountStates =
-            _mediaBackupChunkSnapshotCompositionService.BuildChunkCountStates(beforeChunkPaths);
-        IReadOnlyList<MediaBackupChunkCountState> afterCountStates =
-            _mediaBackupChunkSnapshotCompositionService.BuildChunkCountStates(afterChunkPaths);
-
-        MediaBackupChunkCountDeltaResult deltas = _mediaBackupChunkCountDeltaService.Compare(
-            beforeCountStates,
-            afterCountStates
+        MediaBackupCalculateExecutionResult calculation = _mediaBackupCalculateExecutionService.Execute(
+            new MediaBackupCalculateExecutionInput
+            {
+                TotalPathCount = _paths.Count,
+                ChunkCount = _backup.Chunks.Total,
+                BackupIncreaseCount = _backup.Chunks.Path.Increase,
+                ConfigIncreaseCount = _config.Chunk.Path.Increase,
+                ExistingChunkIds = _chunks.Keys.ToList(),
+                ChunkStateInputs = chunkStateInputs,
+                AssignedCachePaths = assignedCachePaths.ToList(),
+                CacheObservationInputs = cacheObservationInputs,
+                BeforeChunkPaths = beforeChunkPaths,
+                SizeByPath = sizeByPath,
+                MaxPathSizeBytes = _config.Chunk.Path.Size,
+            }
         );
 
-        MediaBackupChunkPathMaps pathMaps =
-            _mediaBackupChunkSnapshotCompositionService.BuildPathMaps(
-                beforeChunkPaths,
-                afterChunkPaths
-            );
+        MediaBackupChunkPlanningResult plan = calculation.Planning;
 
-        Dictionary<string, long> sizeByPath = [];
+        _logger.LogInformation(
+            "paths/residue: {paths}/{residue}",
+            _paths.Count,
+            _paths.Count % _config.Chunk.Count
+        );
 
-        foreach (string path in pathMaps.DistinctPathsForSizeLookup)
+        _logger.LogInformation(
+            "pathsPerChunk/increase/total: {paths}/{increase}/{total}",
+            plan.PathsPerChunk,
+            plan.IncreaseCount,
+            plan.CapacityPerChunk
+        );
+
+        if (plan.RequiresSeedChunk)
+            _chunks[0] = new() { Id = 0 };
+
+        _logger.LogInfo("expanding chunks");
+
+        foreach (int missingChunkId in plan.MissingChunkIds)
         {
-            MediaCacheEntry? cache = await MediaData.GetCache(path);
-
-            if (cache is null)
-                continue;
-
-            sizeByPath[path] = cache.Size?.File ?? 0;
+            if (!_chunks.ContainsKey(missingChunkId))
+                _chunks.Add(missingChunkId, new() { Id = missingChunkId });
         }
 
-        IReadOnlyList<MediaBackupChunkDeltaLogInput> deltaLogInputs =
-            _mediaBackupChunkDeltaInputCompositionService.Compose(
-                deltas.Items,
-                pathMaps.BeforePathsByChunk,
-                pathMaps.AfterPathsByChunk,
-                sizeByPath
-            );
+        _logger.LogInfo("current chunk: {chunk}", calculation.Assignment.InitialChunkId);
 
-        MediaBackupChunkDeltaLogPlan deltaLogPlan = _mediaBackupChunkDeltaLogPlanningService.Plan(
-            deltaLogInputs,
-            deltas.TotalAddedPaths,
-            applyAssignments.AddedOriginalPaths.Count
-        );
+        foreach (
+            (
+                int chunkId,
+                IReadOnlyList<string> addedPaths
+            ) in calculation.ApplyAssignments.AddedCachePathsByChunk
+        )
+        {
+            if (!_chunks.TryGetValue(chunkId, out Chunk? chunk))
+                continue;
+
+            foreach (string path in addedPaths)
+                chunk.Data.Add(new() { Path = path });
+        }
+
+        MediaBackupChunkDeltaLogPlan deltaLogPlan = calculation.DeltaLogPlan;
 
         if (deltaLogPlan.Rows.Count > 0)
         {
@@ -196,11 +153,11 @@ public partial class MediaBackup
             }
         }
 
-        _logger.LogInformation(
-            "{paths1}/{paths2} new paths",
-            deltaLogPlan.TotalAddedPaths,
-            deltaLogPlan.AddedPathCount
-        );
+            _logger.LogInformation(
+                "{paths1}/{paths2} new paths",
+                deltaLogPlan.TotalAddedPaths,
+                calculation.ApplyAssignments.AddedOriginalPaths.Count
+            );
     }
 
     private async Task CalculateDirect()

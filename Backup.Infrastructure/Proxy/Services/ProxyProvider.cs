@@ -29,10 +29,10 @@ public class ProxyProvider(
     IProxyKeyPolicyService proxyKeyPolicyService,
     IProxyEndpointParserService proxyEndpointParserService,
     IProxyProviderTypeResolverService proxyProviderTypeResolverService,
-    IProxyCandidateLoadService proxyCandidateLoadService,
+    IProxyCandidateLoadExecutionService proxyCandidateLoadExecutionService,
+    IProxySetupExecutionService proxySetupExecutionService,
+    IProxyCheckExecutionService proxyCheckExecutionService,
     IProxyRuntimeRecordMapper proxyRuntimeRecordMapper,
-    IProxyProviderRuntimeOrchestrationService proxyProviderRuntimeOrchestrationService,
-    IProxySetupOrchestrationService proxySetupOrchestrationService,
     IProxyAcceptanceApplyOrchestrationService proxyAcceptanceApplyOrchestrationService,
     IProxyFailureStateService proxyFailureStateService,
     IProxyFailureExecutionPlanService proxyFailureExecutionPlanService,
@@ -58,12 +58,13 @@ public class ProxyProvider(
         proxyEndpointParserService;
     private readonly IProxyProviderTypeResolverService _proxyProviderTypeResolverService =
         proxyProviderTypeResolverService;
-    private readonly IProxyCandidateLoadService _proxyCandidateLoadService = proxyCandidateLoadService;
+    private readonly IProxyCandidateLoadExecutionService _proxyCandidateLoadExecutionService =
+        proxyCandidateLoadExecutionService;
+    private readonly IProxySetupExecutionService _proxySetupExecutionService =
+        proxySetupExecutionService;
+    private readonly IProxyCheckExecutionService _proxyCheckExecutionService =
+        proxyCheckExecutionService;
     private readonly IProxyRuntimeRecordMapper _proxyRuntimeRecordMapper = proxyRuntimeRecordMapper;
-    private readonly IProxyProviderRuntimeOrchestrationService _proxyProviderRuntimeOrchestrationService =
-        proxyProviderRuntimeOrchestrationService;
-    private readonly IProxySetupOrchestrationService _proxySetupOrchestrationService =
-        proxySetupOrchestrationService;
     private readonly IProxyAcceptanceApplyOrchestrationService _proxyAcceptanceApplyOrchestrationService =
         proxyAcceptanceApplyOrchestrationService;
     private readonly IProxyFailureStateService _proxyFailureStateService = proxyFailureStateService;
@@ -97,21 +98,19 @@ public class ProxyProvider(
         List<ProxyData> stored = (await _data.GetAllAsDictionary() ?? [])
             .Values
             .ToList();
-        IReadOnlyList<ProxyRuntimeRecord> runtimePool =
-            _proxyProviderRuntimeOrchestrationService.BuildRuntimePool(
-                stored.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
-                await LoadCandidatesFromProviders()
-            );
-        ProxySetupPlan setupPlan = _proxySetupOrchestrationService.BuildPlan(runtimePool.Count);
-        _proxies = runtimePool.Select(_proxyRuntimeRecordMapper.ToProxyData).ToList();
+        ProxySetupExecutionResult setup = _proxySetupExecutionService.Execute(
+            stored.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
+            await LoadCandidatesFromProviders()
+        );
+        _proxies = setup.RuntimePool.Select(_proxyRuntimeRecordMapper.ToProxyData).ToList();
 
-        if (setupPlan.ShouldThrowPoolEmpty)
+        if (setup.SetupPlan.ShouldThrowPoolEmpty)
             throw new ProxyEmptyException();
 
-        if (setupPlan.ShouldInitializeFailureState)
+        if (setup.SetupPlan.ShouldInitializeFailureState)
             _proxyFailureStateService.Initialize(_proxies.Count);
 
-        if (setupPlan.ShouldPersistPool)
+        if (setup.SetupPlan.ShouldPersistPool)
             await SaveData();
 
         NewClient();
@@ -124,13 +123,12 @@ public class ProxyProvider(
 
         HashSet<string> proxiesAdded = [.. _proxies.Select(o => GetProxyKey(o.Proxy))];
         List<ProxyData> proxiesStorage = await _data.GetAll() ?? [];
-        ProxyHealthAcceptanceResult acceptance =
-            await _proxyProviderRuntimeOrchestrationService.AcceptCandidatesAsync(
+        ProxyHealthAcceptanceResult acceptance = await _proxyCheckExecutionService.ExecuteAsync(
                 proxiesStorage.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
                 await LoadCandidatesFromProviders(),
                 proxiesAdded,
-                flushEvery: 10,
-                _proxyHealthProbePort
+                _proxyHealthProbePort,
+                flushEvery: 10
             );
 
         foreach (string error in acceptance.ProbeErrors)
@@ -314,7 +312,7 @@ public class ProxyProvider(
             _proxyProviderTypeResolverService
         );
 
-        return await _proxyCandidateLoadService.Load(providers, port);
+        return await _proxyCandidateLoadExecutionService.ExecuteAsync(providers, port);
     }
 
     private static ProxyLoadProviderDefinition ToProviderDefinition(Provider provider) =>

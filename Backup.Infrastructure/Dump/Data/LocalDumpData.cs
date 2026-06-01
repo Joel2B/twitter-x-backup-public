@@ -29,8 +29,8 @@ public class LocalDumpData(
     IDumpLifecycleService dumpLifecycleService,
     IDumpPathService dumpPathService,
     IDumpIndexLoadService dumpIndexLoadService,
-    IDumpFlushRequestFactoryService dumpFlushRequestFactoryService,
-    IDumpFlushExecutionService dumpFlushExecutionService,
+    IDumpSaveExecutionService dumpSaveExecutionService,
+    IDumpFlushOrchestrationService dumpFlushOrchestrationService,
     IDumpReplicationPlanningService dumpReplicationPlanningService,
     IDataStoreGuardService dataStoreGuardService,
     IDateTimeProvider dateTimeProvider
@@ -50,9 +50,9 @@ public class LocalDumpData(
     private readonly IDumpLifecycleService _dumpLifecycleService = dumpLifecycleService;
     private readonly IDumpPathService _dumpPathService = dumpPathService;
     private readonly IDumpIndexLoadService _dumpIndexLoadService = dumpIndexLoadService;
-    private readonly IDumpFlushRequestFactoryService _dumpFlushRequestFactoryService =
-        dumpFlushRequestFactoryService;
-    private readonly IDumpFlushExecutionService _dumpFlushExecutionService = dumpFlushExecutionService;
+    private readonly IDumpSaveExecutionService _dumpSaveExecutionService = dumpSaveExecutionService;
+    private readonly IDumpFlushOrchestrationService _dumpFlushOrchestrationService =
+        dumpFlushOrchestrationService;
     private readonly IDumpReplicationPlanningService _dumpReplicationPlanningService =
         dumpReplicationPlanningService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
@@ -152,22 +152,29 @@ public class LocalDumpData(
         _dumpData = data;
     }
 
-    private async Task SetupDirectory(ApiContext context)
+    private async Task<DumpSaveExecutionResult> SetupDirectoryForSave(
+        ApiContext context,
+        string cursor
+    )
     {
-        DumpProgressState state = _dumpLifecycleService.AdvanceDirectory(
+        DumpSaveExecutionResult result = _dumpSaveExecutionService.Execute(
             Data.Index,
             Data.IndexFile,
             Data.Count,
-            Data.QueryCount
+            Data.QueryCount,
+            cursor,
+            _dateTimeProvider.Now
         );
-        Data.Index = state.Index;
-        Data.IndexFile = state.IndexFile;
+        Data.Index = result.DirectoryState.Index;
+        Data.IndexFile = result.SaveState.IndexFile;
 
         string indexPath = await GetPathIndex(context);
         string apiPath = await GetPathApi(context);
 
         Directory.CreateDirectory(indexPath);
         Directory.CreateDirectory(apiPath);
+
+        return result;
     }
 
     public async Task<DumpData?> GetData(ApiContext context)
@@ -186,18 +193,12 @@ public class LocalDumpData(
 
     public async Task Save(string response, List<Post> posts, string cursor, ApiContext context)
     {
-        await SetupDirectory(context);
-        DumpSaveProgressState saveState = _dumpLifecycleService.AdvanceSave(
-            Data.IndexFile,
-            cursor,
-            _dateTimeProvider.Now
-        );
-        Data.IndexFile = saveState.IndexFile;
+        DumpSaveExecutionResult saveExecution = await SetupDirectoryForSave(context, cursor);
 
         string indexPath = await GetPathIndex(context);
         string apiPath = await GetPathApi(context);
 
-        string fileName = _dumpPathService.BuildIndexFileName(Data.IndexFile);
+        string fileName = saveExecution.FileName;
 
         string indexFullPath = Path.Combine(indexPath, fileName);
         string apiFullPath = Path.Combine(apiPath, fileName);
@@ -207,8 +208,8 @@ public class LocalDumpData(
         await File.WriteAllTextAsync(indexFullPath, indexJson);
         await File.WriteAllTextAsync(apiFullPath, response);
 
-        Data.Cursor = saveState.Cursor;
-        Data.LastUpdate = saveState.LastUpdate;
+        Data.Cursor = saveExecution.SaveState.Cursor;
+        Data.LastUpdate = saveExecution.SaveState.LastUpdate;
 
         await SaveData(context);
         await Replicate(context);
@@ -235,31 +236,26 @@ public class LocalDumpData(
             paths,
             [.. _config.Paths.Dumps.Dump.Api.Paths]
         );
-        DumpFlushExecutionRequest request = _dumpFlushRequestFactoryService.Build(
-            userId,
-            Data.Type,
-            context.Id,
-            domainPosts
-        );
-
-        DumpFlushExecutionResult result = await _dumpFlushExecutionService.Execute(
-            request,
+        DumpsData dumpsData = await _dumps.GetData();
+        DumpFlushOrchestrationResult orchestration =
+            await _dumpFlushOrchestrationService.ExecuteAsync(
+                userId,
+                Data.Type ?? string.Empty,
+                context.Id,
+                dumpsData.Current ?? string.Empty,
+                domainPosts,
             async (sourceId, posts) =>
                 await postData.AddPosts(userId, sourceId, posts.ToList()),
             async (sourceId, newPostIds) =>
                 await postData.MarkDeletedExcept(userId, sourceId, newPostIds.ToList())
         );
 
-        _logger.LogInformation("{posts} posts loaded from dump", result.LoadedCount);
-        _logger.LogInformation("{posts} posts deleted", result.DeletedCount);
+        _logger.LogInformation("{posts} posts loaded from dump", orchestration.FlushResult.LoadedCount);
+        _logger.LogInformation("{posts} posts deleted", orchestration.FlushResult.DeletedCount);
 
-        DumpsData dumpsData = await _dumps.GetData();
-        DumpSessionCloseResolution closeResolution = _dumpLifecycleService.ResolveSessionClose(
-            dumpsData.Current
-        );
-        dumpsData.Current = closeResolution.Current;
+        dumpsData.Current = orchestration.SessionCloseResolution.Current;
 
-        if (closeResolution.ShouldPersist)
+        if (orchestration.SessionCloseResolution.ShouldPersist)
             await _dumps.Save(dumpsData);
     }
 

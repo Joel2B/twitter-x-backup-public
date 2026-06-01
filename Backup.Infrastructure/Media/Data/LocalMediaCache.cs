@@ -20,7 +20,7 @@ public class LocalMediaCache(
     IDataStoreGuardService dataStoreGuardService,
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
     IMediaCacheRecheckExecutionInputService mediaCacheRecheckExecutionInputService,
-    IMediaCacheRecheckObservationCompositionService mediaCacheRecheckObservationCompositionService,
+    IMediaCacheRecheckProbeExecutionService mediaCacheRecheckProbeExecutionService,
     IMediaCacheRecheckEvaluationService mediaCacheRecheckEvaluationService,
     IMediaCacheRecheckMutationPlanningService mediaCacheRecheckMutationPlanningService,
     IMediaCacheRecheckMutationExecutionService mediaCacheRecheckMutationExecutionService,
@@ -43,8 +43,8 @@ public class LocalMediaCache(
         mediaCacheDirectoryPolicyService;
     private readonly IMediaCacheRecheckExecutionInputService _mediaCacheRecheckExecutionInputService =
         mediaCacheRecheckExecutionInputService;
-    private readonly IMediaCacheRecheckObservationCompositionService _mediaCacheRecheckObservationCompositionService =
-        mediaCacheRecheckObservationCompositionService;
+    private readonly IMediaCacheRecheckProbeExecutionService _mediaCacheRecheckProbeExecutionService =
+        mediaCacheRecheckProbeExecutionService;
     private readonly IMediaCacheRecheckEvaluationService _mediaCacheRecheckEvaluationService =
         mediaCacheRecheckEvaluationService;
     private readonly IMediaCacheRecheckMutationPlanningService _mediaCacheRecheckMutationPlanningService =
@@ -326,47 +326,43 @@ public class LocalMediaCache(
         IReadOnlyList<MediaCacheRecheckProbeInput> probeInputs
     )
     {
-        List<MediaCacheRecheckProbeOutcome> outcomes = [];
-
-        foreach (MediaCacheRecheckProbeInput probeInput in probeInputs)
-        {
-            try
-            {
-                bool fileExists = false;
-                long? fileSize = null;
-
-                if (probeInput.PartitionId is not null)
+        MediaCacheRecheckProbeExecutionResult result =
+            _mediaCacheRecheckProbeExecutionService.Execute(
+                probeInputs,
+                probeInput =>
                 {
-                    PartitionConfig partition = _partition.GetPath(probeInput.PartitionId);
-                    string fullPath = Path.Combine(
-                        [
-                            GetPathMedia(partition),
-                            _mediaCacheEntryPathPolicyService.NormalizeForStoragePath(probeInput.Path),
-                        ]
-                    );
-                    FileInfo fi = new(fullPath);
-                    fileExists = fi.Exists;
-                    fileSize = fileExists ? fi.Length : null;
-                }
+                    bool fileExists = false;
+                    long? fileSize = null;
 
-                outcomes.Add(
-                    new MediaCacheRecheckProbeOutcome
+                    if (probeInput.PartitionId is not null)
+                    {
+                        PartitionConfig partition = _partition.GetPath(probeInput.PartitionId);
+                        string fullPath = Path.Combine(
+                            [
+                                GetPathMedia(partition),
+                                _mediaCacheEntryPathPolicyService.NormalizeForStoragePath(probeInput.Path),
+                            ]
+                        );
+                        FileInfo fi = new(fullPath);
+                        fileExists = fi.Exists;
+                        fileSize = fileExists ? fi.Length : null;
+                    }
+
+                    return new MediaCacheRecheckProbeOutcome
                     {
                         Path = probeInput.Path,
                         PartitionId = probeInput.PartitionId,
                         StreamSizeBytes = probeInput.StreamSizeBytes,
                         FileExists = fileExists,
                         FileSizeBytes = fileSize,
-                    }
-                );
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("Error in {path}: {error}", probeInput.Path, ex.Message);
-            }
-        }
+                    };
+                }
+            );
 
-        return _mediaCacheRecheckObservationCompositionService.ToObservations(outcomes);
+        foreach (string path in result.FailedPaths)
+            _logger.LogError("Error in {path}: probe execution failed", path);
+
+        return result.Observations;
     }
 
     private void ApplyRecheckMutations(IReadOnlyList<MediaCacheRecheckMutation> mutations)

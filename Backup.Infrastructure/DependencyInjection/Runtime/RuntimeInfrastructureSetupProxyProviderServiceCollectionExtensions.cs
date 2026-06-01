@@ -46,6 +46,9 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
         services.AddScoped<IProxyErrorTrackingService, ProxyErrorTrackingService>();
         services.AddScoped<IProxySourceLoadService, ProxySourceLoadService>();
         services.AddScoped<IProxyCandidateLoadService, ProxyCandidateLoadService>();
+        services.AddScoped<IProxyCandidateLoadExecutionService, ProxyCandidateLoadExecutionService>();
+        services.AddScoped<IProxySetupExecutionService, ProxySetupExecutionService>();
+        services.AddScoped<IProxyCheckExecutionService, ProxyCheckExecutionService>();
         services.AddScoped<IProxyHealthProbePort, ProxyHealthProbePortAdapter>();
         services.AddScoped<IProxyRuntimeRecordMapper, ProxyRuntimeRecordMapper>();
         services.AddScoped<ProxyProvider>();
