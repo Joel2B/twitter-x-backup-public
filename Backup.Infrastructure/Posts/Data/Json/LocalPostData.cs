@@ -19,7 +19,7 @@ public partial class LocalPostData(
     AppConfig _appConfig,
     StoragePost _config,
     IPartition _partition,
-    IPostMergeExecutionService postMergeExecutionService,
+    IPostStoreMergeMutationService postStoreMergeMutationService,
     IPostSoftDeleteExecutionService postSoftDeleteExecutionService,
     IPostSnapshotNormalizationService postSnapshotNormalizationService,
     IPostMediaInputsCompositionService postMediaInputsCompositionService,
@@ -50,8 +50,8 @@ public partial class LocalPostData(
     private readonly AppConfig _appConfig = _appConfig;
     private readonly StoragePost _config = _config;
     private readonly IPartition _partition = _partition;
-    private readonly IPostMergeExecutionService _postMergeExecutionService =
-        postMergeExecutionService;
+    private readonly IPostStoreMergeMutationService _postStoreMergeMutationService =
+        postStoreMergeMutationService;
     private readonly IPostSoftDeleteExecutionService _postSoftDeleteExecutionService =
         postSoftDeleteExecutionService;
     private readonly IPostSnapshotNormalizationService _postSnapshotNormalizationService =
