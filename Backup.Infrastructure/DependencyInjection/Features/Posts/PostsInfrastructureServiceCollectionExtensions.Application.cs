@@ -57,6 +57,10 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
         services.AddScoped<IPostStoreParityReportService, PostStoreParityReportService>();
         services.AddScoped<IPostStoreCountsAggregationService, PostStoreCountsAggregationService>();
         services.AddScoped<IPostChangeComputationService, PostChangeComputationService>();
+        services.AddScoped<
+            IPostChangeReadModelProjectionService,
+            PostChangeReadModelProjectionService
+        >();
         services.AddScoped<IPostTimelineExtractionService, PostTimelineExtractionService>();
         services.AddScoped<IPostUserParsePolicyService, PostUserParsePolicyService>();
         services.AddScoped<IPostProjectionParseService, PostProjectionParseService>();

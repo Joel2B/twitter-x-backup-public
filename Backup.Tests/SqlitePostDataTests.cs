@@ -309,6 +309,7 @@ public class SqlitePostDataTests
             new PostMediaInputsCompositionService(),
             postHashingService,
             new PostChangeComputationService(),
+            new PostChangeReadModelProjectionService(),
             new PostIdentifierFilterService(),
             new TestDateTimeProvider()
         );

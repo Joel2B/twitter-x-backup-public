@@ -131,7 +131,7 @@ public partial class SqlitePostData
         return entity;
     }
 
-    private static Post ToModel(PostEntity entity, bool deleted = false)
+    private Post ToModel(PostEntity entity, bool deleted = false)
     {
         List<string>? hashtags = entity
             .Hashtags.OrderBy(o => o.Ordinal)

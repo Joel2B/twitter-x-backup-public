@@ -20,6 +20,7 @@ public partial class SqlitePostData(
     IPostMediaInputsCompositionService postMediaInputsCompositionService,
     IPostHashingService postHashingService,
     IPostChangeComputationService postChangeComputationService,
+    IPostChangeReadModelProjectionService postChangeReadModelProjectionService,
     IPostIdentifierFilterService postIdentifierFilterService,
     IDateTimeProvider dateTimeProvider
 ) : IPostDataStore, ISetup, IAsyncDisposable
@@ -41,6 +42,8 @@ public partial class SqlitePostData(
     private readonly IPostHashingService _postHashingService = postHashingService;
     private readonly IPostChangeComputationService _postChangeComputationService =
         postChangeComputationService;
+    private readonly IPostChangeReadModelProjectionService _postChangeReadModelProjectionService =
+        postChangeReadModelProjectionService;
     private readonly IPostIdentifierFilterService _postIdentifierFilterService =
         postIdentifierFilterService;
     private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;

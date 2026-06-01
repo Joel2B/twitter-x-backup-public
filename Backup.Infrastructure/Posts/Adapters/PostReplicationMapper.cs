@@ -83,6 +83,8 @@ internal static class PostReplicationMapper
             HashMeta = source.HashMeta,
         };
 
+    public static AppPosts.Change ToAppChange(Change source) => ToApp(source);
+
     private static PostProfile ToDomain(AppPosts.PostProfile source) =>
         new()
         {

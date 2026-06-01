@@ -32,6 +32,7 @@ public partial class LocalPostData(
     IPostSnapshotVerificationExecutionService postSnapshotVerificationExecutionService,
     IPostDataReplicationPlanningService postDataReplicationPlanningService,
     IPostChangeComputationService postChangeComputationService,
+    IPostChangeReadModelProjectionService postChangeReadModelProjectionService,
     IPostStoreCountsAggregationService postStoreCountsAggregationService,
     IPostProfileCountAggregationService postProfileCountAggregationService,
     IPostMetaConsistencyValidationService postMetaConsistencyValidationService,
@@ -75,6 +76,8 @@ public partial class LocalPostData(
         postDataReplicationPlanningService;
     private readonly IPostChangeComputationService _postChangeComputationService =
         postChangeComputationService;
+    private readonly IPostChangeReadModelProjectionService _postChangeReadModelProjectionService =
+        postChangeReadModelProjectionService;
     private readonly IPostStoreCountsAggregationService _postStoreCountsAggregationService =
         postStoreCountsAggregationService;
     private readonly IPostProfileCountAggregationService _postProfileCountAggregationService =
