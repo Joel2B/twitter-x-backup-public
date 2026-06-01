@@ -23,6 +23,7 @@ public class LocalMediaCache(
     IMediaCacheRecheckObservationCompositionService mediaCacheRecheckObservationCompositionService,
     IMediaCacheRecheckEvaluationService mediaCacheRecheckEvaluationService,
     IMediaCacheRecheckMutationPlanningService mediaCacheRecheckMutationPlanningService,
+    IMediaCacheRecheckMutationApplyPlanService mediaCacheRecheckMutationApplyPlanService,
     IMediaCacheJsonSnapshotService mediaCacheJsonSnapshotService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
@@ -47,6 +48,8 @@ public class LocalMediaCache(
         mediaCacheRecheckEvaluationService;
     private readonly IMediaCacheRecheckMutationPlanningService _mediaCacheRecheckMutationPlanningService =
         mediaCacheRecheckMutationPlanningService;
+    private readonly IMediaCacheRecheckMutationApplyPlanService _mediaCacheRecheckMutationApplyPlanService =
+        mediaCacheRecheckMutationApplyPlanService;
     private readonly IMediaCacheJsonSnapshotService _mediaCacheJsonSnapshotService =
         mediaCacheJsonSnapshotService;
     private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
@@ -364,40 +367,31 @@ public class LocalMediaCache(
 
     private void ApplyRecheckMutations(IReadOnlyList<MediaCacheRecheckMutation> mutations)
     {
-        foreach (MediaCacheRecheckMutation mutation in mutations)
+        MediaCacheRecheckMutationApplyPlan plan =
+            _mediaCacheRecheckMutationApplyPlanService.BuildPlan(mutations);
+
+        foreach (string path in plan.InvalidPaths)
         {
-            switch (mutation.Kind)
-            {
-                case MediaCacheRecheckMutationKind.Invalid:
-                    _logger.LogError("invalid recheck evaluation for path {path}", mutation.Path);
-                    break;
-                case MediaCacheRecheckMutationKind.Remove:
-                {
-                    bool removed = _cache.TryRemove(mutation.Path, out _);
+            _logger.LogError("invalid recheck evaluation for path {path}", path);
+        }
 
-                    if (removed)
-                        _logger.LogWarning("{path} path removed from cache", mutation.Path);
-                    else
-                        _logger.LogError("error removing path {path}", mutation.Path);
-                    break;
-                }
-                case MediaCacheRecheckMutationKind.Update:
-                {
-                    if (mutation.UpdatedEntryState is null)
-                        break;
+        foreach (string path in plan.RemovePaths)
+        {
+            bool removed = _cache.TryRemove(path, out _);
 
-                    if (!_cache.TryGetValue(mutation.Path, out MediaCacheEntry? old))
-                        break;
+            if (removed)
+                _logger.LogWarning("{path} path removed from cache", path);
+            else
+                _logger.LogError("error removing path {path}", path);
+        }
 
-                    MediaCacheEntry updated = ToCacheEntry(mutation.UpdatedEntryState);
-                    _cache.TryUpdate(mutation.Path, updated, old);
-                    break;
-                }
-                case MediaCacheRecheckMutationKind.None:
-                case MediaCacheRecheckMutationKind.SkipMissing:
-                default:
-                    break;
-            }
+        foreach (MediaCacheEntryState state in plan.UpdatedEntries)
+        {
+            if (!_cache.TryGetValue(state.Path, out MediaCacheEntry? old))
+                continue;
+
+            MediaCacheEntry updated = ToCacheEntry(state);
+            _cache.TryUpdate(state.Path, updated, old);
         }
     }
 
