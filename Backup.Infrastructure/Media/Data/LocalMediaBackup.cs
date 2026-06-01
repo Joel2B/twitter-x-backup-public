@@ -19,6 +19,7 @@ public class LocalMediaBackup(
     IMediaBackupPartitionPathService mediaBackupPartitionPathService,
     IMediaBackupChunkFileNamePolicyService mediaBackupChunkFileNamePolicyService,
     IMediaBackupChunkLoadDecisionService mediaBackupChunkLoadDecisionService,
+    IMediaBackupChunkReadFailurePolicyService mediaBackupChunkReadFailurePolicyService,
     IDataStoreGuardService dataStoreGuardService
 ) : IMediaBackupData, ISetup
 {
@@ -31,6 +32,8 @@ public class LocalMediaBackup(
         mediaBackupChunkFileNamePolicyService;
     private readonly IMediaBackupChunkLoadDecisionService _mediaBackupChunkLoadDecisionService =
         mediaBackupChunkLoadDecisionService;
+    private readonly IMediaBackupChunkReadFailurePolicyService _mediaBackupChunkReadFailurePolicyService =
+        mediaBackupChunkReadFailurePolicyService;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
 
     public Task Setup()
@@ -127,12 +130,17 @@ public class LocalMediaBackup(
                 }
             );
         }
-        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        catch (Exception ex)
         {
-            throw;
-        }
-        catch
-        {
+            MediaBackupChunkReadFailureAction action =
+                _mediaBackupChunkReadFailurePolicyService.Decide(
+                    ex,
+                    token.IsCancellationRequested
+                );
+
+            if (action == MediaBackupChunkReadFailureAction.Throw)
+                throw;
+
             return null;
         }
 
