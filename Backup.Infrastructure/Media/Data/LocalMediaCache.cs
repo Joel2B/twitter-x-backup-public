@@ -29,6 +29,7 @@ public class LocalMediaCache(
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
     IMediaCacheWritePolicyService mediaCacheWritePolicyService,
+    IMediaCacheConflictResolutionService mediaCacheConflictResolutionService,
     IMediaCachePartitionSelectionService mediaCachePartitionSelectionService,
     IMediaCacheStoredEntryProjectionService mediaCacheStoredEntryProjectionService,
     IMediaCachePartitionSizeAggregationService mediaCachePartitionSizeAggregationService,
@@ -61,6 +62,8 @@ public class LocalMediaCache(
         mediaCacheEntryStateFactoryService;
     private readonly IMediaCacheWritePolicyService _mediaCacheWritePolicyService =
         mediaCacheWritePolicyService;
+    private readonly IMediaCacheConflictResolutionService _mediaCacheConflictResolutionService =
+        mediaCacheConflictResolutionService;
     private readonly IMediaCachePartitionSelectionService _mediaCachePartitionSelectionService =
         mediaCachePartitionSelectionService;
     private readonly IMediaCacheStoredEntryProjectionService _mediaCacheStoredEntryProjectionService =
@@ -296,9 +299,12 @@ public class LocalMediaCache(
                 _ => newCache,
                 (_, old) =>
                 {
-                    if (
-                        _mediaCacheWritePolicyService.HasConflict(old.Size?.Stream, writePlan)
-                    )
+                    MediaCacheConflictResolution conflict = _mediaCacheConflictResolutionService.Resolve(
+                        old.Size?.Stream,
+                        writePlan
+                    );
+
+                    if (conflict.Action == MediaCacheConflictAction.ThrowConflict)
                         throw new Exception("different sizes");
 
                     return old;
