@@ -24,6 +24,7 @@ public class LocalMediaCache(
     IMediaCacheRecheckEvaluationService mediaCacheRecheckEvaluationService,
     IMediaCacheRecheckMutationPlanningService mediaCacheRecheckMutationPlanningService,
     IMediaCacheRecheckMutationApplyPlanService mediaCacheRecheckMutationApplyPlanService,
+    IMediaCacheRecheckMutationApplySelectionService mediaCacheRecheckMutationApplySelectionService,
     IMediaCacheJsonSnapshotService mediaCacheJsonSnapshotService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
@@ -50,6 +51,8 @@ public class LocalMediaCache(
         mediaCacheRecheckMutationPlanningService;
     private readonly IMediaCacheRecheckMutationApplyPlanService _mediaCacheRecheckMutationApplyPlanService =
         mediaCacheRecheckMutationApplyPlanService;
+    private readonly IMediaCacheRecheckMutationApplySelectionService _mediaCacheRecheckMutationApplySelectionService =
+        mediaCacheRecheckMutationApplySelectionService;
     private readonly IMediaCacheJsonSnapshotService _mediaCacheJsonSnapshotService =
         mediaCacheJsonSnapshotService;
     private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
@@ -369,29 +372,39 @@ public class LocalMediaCache(
     {
         MediaCacheRecheckMutationApplyPlan plan =
             _mediaCacheRecheckMutationApplyPlanService.BuildPlan(mutations);
+        MediaCacheRecheckMutationApplySelection selection =
+            _mediaCacheRecheckMutationApplySelectionService.Select(
+                plan,
+                _cache.Keys.ToHashSet(StringComparer.OrdinalIgnoreCase)
+            );
 
-        foreach (string path in plan.InvalidPaths)
+        foreach (string path in selection.InvalidPaths)
         {
             _logger.LogError("invalid recheck evaluation for path {path}", path);
         }
 
-        foreach (string path in plan.RemovePaths)
+        foreach (string path in selection.RemoveExistingPaths)
         {
-            bool removed = _cache.TryRemove(path, out _);
-
-            if (removed)
-                _logger.LogWarning("{path} path removed from cache", path);
-            else
-                _logger.LogError("error removing path {path}", path);
+            _cache.TryRemove(path, out _);
+            _logger.LogWarning("{path} path removed from cache", path);
         }
 
-        foreach (MediaCacheEntryState state in plan.UpdatedEntries)
+        foreach (string path in selection.RemoveMissingPaths)
         {
-            if (!_cache.TryGetValue(state.Path, out MediaCacheEntry? old))
-                continue;
+            _logger.LogError("error removing path {path}", path);
+        }
 
+        foreach (MediaCacheEntryState state in selection.UpdateExistingEntries)
+        {
+            _cache.TryGetValue(state.Path, out MediaCacheEntry? old);
             MediaCacheEntry updated = ToCacheEntry(state);
-            _cache.TryUpdate(state.Path, updated, old);
+            if (old is not null)
+                _cache.TryUpdate(state.Path, updated, old);
+        }
+
+        foreach (string path in selection.UpdateMissingPaths)
+        {
+            _logger.LogError("error updating path {path}", path);
         }
     }
 
