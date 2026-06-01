@@ -1,6 +1,3 @@
-using Backup.Infrastructure.Core.Abstractions.Config;
-using Backup.Infrastructure.Models.Config;
-using Backup.Infrastructure.Services.Config;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,18 +9,12 @@ public static class BackupConfigurationServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration,
         BackupConfigurationOptions? options = null
-    )
-    {
-        return services.AddBackupConfigurationCore(configuration, options);
-    }
+    ) => services.AddBackupConfigurationCore(configuration, options);
 
     public static IServiceCollection AddBackupConfiguration(
         this IServiceCollection services,
         BackupConfigurationOptions? options = null
-    )
-    {
-        return services.AddBackupConfigurationCore(null, options);
-    }
+    ) => services.AddBackupConfigurationCore(null, options);
 
     private static IServiceCollection AddBackupConfigurationCore(
         this IServiceCollection services,
@@ -31,7 +22,7 @@ public static class BackupConfigurationServiceCollectionExtensions
         BackupConfigurationOptions? options
     )
     {
-        if (services.Any(descriptor => descriptor.ServiceType == typeof(AppConfig)))
+        if (services.Any(descriptor => descriptor.ServiceType == typeof(BackupConfigurationRuntime)))
             return services;
 
         BackupConfigurationOptions resolvedOptions = options ?? new BackupConfigurationOptions();
@@ -40,13 +31,9 @@ public static class BackupConfigurationServiceCollectionExtensions
             configuration
         );
 
-        IAppConfigStore store = new JsonAppConfigStore(configDirectory);
-        IAppConfigService configService = new AppConfigService(store);
-        AppConfig config = configService.GetSnapshot().Value;
-
-        services.AddSingleton(store);
-        services.AddSingleton(configService);
-        services.AddSingleton(config);
+        services.AddSingleton(
+            new BackupConfigurationRuntime { ConfigDirectory = configDirectory }
+        );
 
         return services;
     }
