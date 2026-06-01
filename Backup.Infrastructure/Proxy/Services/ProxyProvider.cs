@@ -35,7 +35,7 @@ public class ProxyProvider(
     IProxyFailureStateService proxyFailureStateService,
     IProxyFailureExecutionPlanService proxyFailureExecutionPlanService,
     IProxyFailureSettingsPolicyService proxyFailureSettingsPolicyService,
-    IProxyUsageTrackingService proxyUsageTrackingService,
+    IProxyUseHandlingOrchestrationService proxyUseHandlingOrchestrationService,
     IProxyErrorHandlingOrchestrationService proxyErrorHandlingOrchestrationService,
     IDateTimeProvider dateTimeProvider
 )
@@ -65,7 +65,8 @@ public class ProxyProvider(
         proxyFailureExecutionPlanService;
     private readonly IProxyFailureSettingsPolicyService _proxyFailureSettingsPolicyService =
         proxyFailureSettingsPolicyService;
-    private readonly IProxyUsageTrackingService _proxyUsageTrackingService = proxyUsageTrackingService;
+    private readonly IProxyUseHandlingOrchestrationService _proxyUseHandlingOrchestrationService =
+        proxyUseHandlingOrchestrationService;
     private readonly IProxyErrorHandlingOrchestrationService _proxyErrorHandlingOrchestrationService =
         proxyErrorHandlingOrchestrationService;
     private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
@@ -230,15 +231,23 @@ public class ProxyProvider(
 
         int proxyIndex = _proxyFailureStateService.GetState().ProxyIndex;
         ProxyData proxy = _proxies[proxyIndex];
+        ProxyUseHandlingOutcome outcome;
 
         lock (proxy)
         {
             ProxyRuntimeRecord runtimeRecord = _proxyRuntimeRecordMapper.ToRuntimeRecord(proxy);
-            _proxyUsageTrackingService.RegisterUse(runtimeRecord, _dateTimeProvider.Now);
+            outcome = _proxyUseHandlingOrchestrationService.HandleUse(
+                runtimeRecord,
+                _dateTimeProvider.Now,
+                _proxyFailureStateService.GetState().StopCount
+            );
             _proxyRuntimeRecordMapper.ApplyRuntimeRecord(proxy, runtimeRecord, disabledAt: null);
         }
 
-        ResetStopCount();
+        if (outcome.ShouldLogResetStopCount)
+            _logger.LogInformation("count to stop reset");
+
+        _proxyFailureStateService.ResetStopCount();
     }
 
     public void OnError(Exception ex)
@@ -276,16 +285,6 @@ public class ProxyProvider(
                 _logger.LogInformation("proxy {proxy} disabled", proxy.Proxy.ToString());
             }
         }
-    }
-
-    private void ResetStopCount()
-    {
-        ProxyFailureState state = _proxyFailureStateService.GetState();
-
-        if (state.StopCount > 0)
-            _logger.LogInformation("count to stop reset");
-
-        _proxyFailureStateService.ResetStopCount();
     }
 
     public async Task SaveData()
