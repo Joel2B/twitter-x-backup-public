@@ -25,6 +25,7 @@ public class LocalDumpData(
     StorageDump _config,
     IPartition _partition,
     ISecondaryStoreSelectionService secondaryStoreSelectionService,
+    IDumpContextEligibilityService dumpContextEligibilityService,
     IDumpLifecycleService dumpLifecycleService,
     IDumpPathService dumpPathService,
     IDumpIndexLoadService dumpIndexLoadService,
@@ -44,6 +45,8 @@ public class LocalDumpData(
     private readonly IPartition _partition = _partition;
     private readonly ISecondaryStoreSelectionService _secondaryStoreSelectionService =
         secondaryStoreSelectionService;
+    private readonly IDumpContextEligibilityService _dumpContextEligibilityService =
+        dumpContextEligibilityService;
     private readonly IDumpLifecycleService _dumpLifecycleService = dumpLifecycleService;
     private readonly IDumpPathService _dumpPathService = dumpPathService;
     private readonly IDumpIndexLoadService _dumpIndexLoadService = dumpIndexLoadService;
@@ -169,7 +172,7 @@ public class LocalDumpData(
 
     public async Task<DumpData?> GetData(ApiContext context)
     {
-        if (context.Count != -1)
+        if (!_dumpContextEligibilityService.ShouldLoadDumpData(context.Count))
             return null;
 
         DumpsData dumpsData = await _dumps.GetData();
