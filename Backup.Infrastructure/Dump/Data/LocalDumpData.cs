@@ -248,9 +248,13 @@ public class LocalDumpData(
         _logger.LogInformation("{posts} posts deleted", result.DeletedCount);
 
         DumpsData dumpsData = await _dumps.GetData();
-        dumpsData.Current = null;
+        DumpSessionCloseResolution closeResolution = _dumpLifecycleService.ResolveSessionClose(
+            dumpsData.Current
+        );
+        dumpsData.Current = closeResolution.Current;
 
-        await _dumps.Save(dumpsData);
+        if (closeResolution.ShouldPersist)
+            await _dumps.Save(dumpsData);
     }
 
     private async Task Replicate(ApiContext context)

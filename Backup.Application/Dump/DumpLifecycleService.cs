@@ -24,6 +24,13 @@ public sealed class DumpLifecycleService(
         };
     }
 
+    public DumpSessionCloseResolution ResolveSessionClose(string? current) =>
+        new()
+        {
+            Current = null,
+            ShouldPersist = !string.IsNullOrWhiteSpace(current),
+        };
+
     public DumpDataInitialization CreateInitialData(int count, object? queryCountRaw)
     {
         int queryCount = ToInt(queryCountRaw);
