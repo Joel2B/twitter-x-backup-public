@@ -24,6 +24,7 @@ public partial class LocalPostData(
     IPostMediaInputsCompositionService postMediaInputsCompositionService,
     IPostHashingService postHashingService,
     IPostHashMetaParityService postHashMetaParityService,
+    IPostMetaNormalizationService postMetaNormalizationService,
     IPostMetaReconciliationService postMetaReconciliationService,
     IPostHistoryPathExtractionService postHistoryPathExtractionService,
     IPostHistoryPrunePlanningService postHistoryPrunePlanningService,
@@ -58,6 +59,8 @@ public partial class LocalPostData(
     private readonly IPostHashingService _postHashingService = postHashingService;
     private readonly IPostHashMetaParityService _postHashMetaParityService =
         postHashMetaParityService;
+    private readonly IPostMetaNormalizationService _postMetaNormalizationService =
+        postMetaNormalizationService;
     private readonly IPostMetaReconciliationService _postMetaReconciliationService =
         postMetaReconciliationService;
     private readonly IPostHistoryPathExtractionService _postHistoryPathExtractionService =

@@ -22,13 +22,29 @@ public partial class LocalPostData
 
             List<PostMetaRow> rows =
                 JsonConvert.DeserializeObject<List<PostMetaRow>>(content) ?? [];
+            IReadOnlyDictionary<string, PostMetaRecord> normalized =
+                _postMetaNormalizationService.Normalize(
+                    rows.Select(row => new PostMetaRecord
+                        {
+                            Id = row.Id,
+                            Hash = row.Hash,
+                            Deleted = row.Deleted,
+                        }
+                    )
+                    .ToList()
+                );
 
-            _postMetaCache = rows.Where(row =>
-                    !string.IsNullOrWhiteSpace(row.Id) && !string.IsNullOrWhiteSpace(row.Hash)
-                )
-                .GroupBy(row => row.Id, StringComparer.Ordinal)
-                .Select(group => group.Last())
-                .ToDictionary(row => row.Id, row => row, StringComparer.Ordinal);
+            _postMetaCache = normalized.ToDictionary(
+                entry => entry.Key,
+                entry =>
+                    new PostMetaRow
+                    {
+                        Id = entry.Value.Id,
+                        Hash = entry.Value.Hash,
+                        Deleted = entry.Value.Deleted,
+                    },
+                StringComparer.Ordinal
+            );
 
             return _postMetaCache;
         }
