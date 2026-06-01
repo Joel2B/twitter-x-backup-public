@@ -5,6 +5,7 @@ using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Posts;
 using Backup.Infrastructure.Posts.Models;
 using Backup.Application.Posts;
+using Backup.Application.Core;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Data.Sqlite;
@@ -19,7 +20,8 @@ public partial class SqlitePostData(
     IPostMediaInputsCompositionService postMediaInputsCompositionService,
     IPostHashingService postHashingService,
     IPostChangeComputationService postChangeComputationService,
-    IPostIdentifierFilterService postIdentifierFilterService
+    IPostIdentifierFilterService postIdentifierFilterService,
+    IDateTimeProvider dateTimeProvider
 ) : IPostDataStore, ISetup, IAsyncDisposable
 {
     public string? Id { get; set; }
@@ -41,6 +43,7 @@ public partial class SqlitePostData(
         postChangeComputationService;
     private readonly IPostIdentifierFilterService _postIdentifierFilterService =
         postIdentifierFilterService;
+    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
     private PostsDbContext? _db;
     private const int SqlInChunkSize = 5000;
 

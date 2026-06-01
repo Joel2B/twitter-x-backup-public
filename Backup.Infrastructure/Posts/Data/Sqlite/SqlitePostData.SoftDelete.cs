@@ -60,7 +60,7 @@ public partial class SqlitePostData
             return 0;
 
         int marked = 0;
-        DateTime changeDate = DateTime.Now;
+        DateTime changeDate = _dateTimeProvider.Now;
 
         foreach (PostEntity entity in sourceEntities)
         {
