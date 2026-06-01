@@ -1,11 +1,13 @@
 using Backup.Infrastructure.Utility.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
+using Backup.Application.Core;
 
 namespace Backup.Infrastructure.Services.Utils;
 
-public class BandwidthLimiter(AppConfig config) : IBandwidthLimiter
+public class BandwidthLimiter(AppConfig config, IDateTimeProvider dateTimeProvider) : IBandwidthLimiter
 {
     private readonly long _maxBytesPerSecond = Math.Max(0, config.Downloads.MaxBytesPerSecond);
+    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
 
     private long _bytesThisSecond = 0;
     private long _currentSecond = 0;
@@ -20,7 +22,7 @@ public class BandwidthLimiter(AppConfig config) : IBandwidthLimiter
         {
             token.ThrowIfCancellationRequested();
 
-            DateTimeOffset now = DateTimeOffset.UtcNow;
+            DateTimeOffset now = _dateTimeProvider.Now.ToUniversalTime();
             long nowSec = now.ToUnixTimeSeconds();
             bool wait = false;
             int delayMs = 0;

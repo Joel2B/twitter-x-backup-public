@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
+using Backup.Application.Core;
 using Backup.Application.Network;
 using Backup.Application.Network.Models;
 using Backup.Infrastructure.Posts.Abstractions.Services;
@@ -17,7 +18,8 @@ public class PostDownloaderHttp(
     IRateLimitHeaderParserService rateLimitHeaderParserService,
     IRateLimitDecisionService rateLimitDecisionService,
     IRetryDelayPolicyService retryDelayPolicyService,
-    IRequestQueryStringPolicyService requestQueryStringPolicyService
+    IRequestQueryStringPolicyService requestQueryStringPolicyService,
+    IDateTimeProvider dateTimeProvider
 )
     : IPostDownloader
 {
@@ -32,6 +34,7 @@ public class PostDownloaderHttp(
     private readonly IRetryDelayPolicyService _retryDelayPolicyService = retryDelayPolicyService;
     private readonly IRequestQueryStringPolicyService _requestQueryStringPolicyService =
         requestQueryStringPolicyService;
+    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
     private readonly HttpClient _client = new(
         new HttpClientHandler
         {
@@ -113,7 +116,7 @@ public class PostDownloaderHttp(
         int reset = parsedHeaders.ResetUnixSeconds;
 
         DateTimeOffset resetAt = DateTimeOffset.FromUnixTimeSeconds(parsedHeaders.ResetUnixSeconds);
-        DateTimeOffset now = DateTimeOffset.Now;
+        DateTimeOffset now = _dateTimeProvider.Now;
         TimeSpan diff = resetAt - now;
         RateLimitDecision decision = _rateLimitDecisionService.Evaluate(
             limit,
