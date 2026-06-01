@@ -36,6 +36,7 @@ public static class CoreInfrastructureServiceCollectionExtensions
         services.AddSingleton<IDumpIndexLoadService, DumpIndexLoadService>();
         services.AddSingleton<IDumpIndexPostsReadPort, DumpIndexPostsReadPortAdapter>();
         services.AddSingleton<IDumpFlushPlanningService, DumpFlushPlanningService>();
+        services.AddSingleton<IDumpFlushRequestFactoryService, DumpFlushRequestFactoryService>();
         services.AddSingleton<IDumpFlushExecutionService, DumpFlushExecutionService>();
         services.AddSingleton<IDumpReplicationPlanningService, DumpReplicationPlanningService>();
         services.AddSingleton<IBulkArchiveFilePolicyService, BulkArchiveFilePolicyService>();

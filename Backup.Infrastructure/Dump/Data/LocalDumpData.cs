@@ -28,6 +28,7 @@ public class LocalDumpData(
     IDumpLifecycleService dumpLifecycleService,
     IDumpPathService dumpPathService,
     IDumpIndexLoadService dumpIndexLoadService,
+    IDumpFlushRequestFactoryService dumpFlushRequestFactoryService,
     IDumpFlushExecutionService dumpFlushExecutionService,
     IDumpReplicationPlanningService dumpReplicationPlanningService,
     IDataStoreGuardService dataStoreGuardService,
@@ -46,6 +47,8 @@ public class LocalDumpData(
     private readonly IDumpLifecycleService _dumpLifecycleService = dumpLifecycleService;
     private readonly IDumpPathService _dumpPathService = dumpPathService;
     private readonly IDumpIndexLoadService _dumpIndexLoadService = dumpIndexLoadService;
+    private readonly IDumpFlushRequestFactoryService _dumpFlushRequestFactoryService =
+        dumpFlushRequestFactoryService;
     private readonly IDumpFlushExecutionService _dumpFlushExecutionService = dumpFlushExecutionService;
     private readonly IDumpReplicationPlanningService _dumpReplicationPlanningService =
         dumpReplicationPlanningService;
@@ -229,15 +232,15 @@ public class LocalDumpData(
             paths,
             [.. _config.Paths.Dumps.Dump.Api.Paths]
         );
+        DumpFlushExecutionRequest request = _dumpFlushRequestFactoryService.Build(
+            userId,
+            Data.Type,
+            context.Id,
+            domainPosts
+        );
 
         DumpFlushExecutionResult result = await _dumpFlushExecutionService.Execute(
-            new DumpFlushExecutionRequest
-            {
-                UserId = userId,
-                Type = Data.Type ?? string.Empty,
-                ContextId = context.Id,
-                Posts = domainPosts,
-            },
+            request,
             async (sourceId, posts) =>
                 await postData.AddPosts(userId, sourceId, posts.ToList()),
             async (sourceId, newPostIds) =>
