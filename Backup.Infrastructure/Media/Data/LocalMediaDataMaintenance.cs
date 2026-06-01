@@ -21,7 +21,7 @@ public class LocalMediaDataMaintenance(
     IMediaMaintenanceDownloadProjectionService mediaMaintenanceDownloadProjectionService,
     IMediaMaintenanceCachedDownloadFilterService mediaMaintenanceCachedDownloadFilterService,
     IMediaMaintenanceIntegrityDecisionService mediaMaintenanceIntegrityDecisionService,
-    IMediaMaintenanceIntegritySummaryService mediaMaintenanceIntegritySummaryService,
+    IMediaMaintenanceIntegrityBatchService mediaMaintenanceIntegrityBatchService,
     IMediaMaintenancePrunePathSelectionService mediaMaintenancePrunePathSelectionService
 ) : IMediaDataMaintenance
 {
@@ -38,8 +38,8 @@ public class LocalMediaDataMaintenance(
         mediaMaintenanceCachedDownloadFilterService;
     private readonly IMediaMaintenanceIntegrityDecisionService _mediaMaintenanceIntegrityDecisionService =
         mediaMaintenanceIntegrityDecisionService;
-    private readonly IMediaMaintenanceIntegritySummaryService _mediaMaintenanceIntegritySummaryService =
-        mediaMaintenanceIntegritySummaryService;
+    private readonly IMediaMaintenanceIntegrityBatchService _mediaMaintenanceIntegrityBatchService =
+        mediaMaintenanceIntegrityBatchService;
     private readonly IMediaMaintenancePrunePathSelectionService _mediaMaintenancePrunePathSelectionService =
         mediaMaintenancePrunePathSelectionService;
 
@@ -72,11 +72,13 @@ public class LocalMediaDataMaintenance(
 
     public async Task CheckIntegrity(List<Download> downloads)
     {
-        List<MediaMaintenanceIntegrityEvaluation> evaluations = [];
+        List<MediaMaintenanceIntegrityObservation> observations = [];
 
-        foreach (Download download in downloads)
+        for (int d = 0; d < downloads.Count; d++)
         {
-            for (int i = download.Data.Count - 1; i >= 0; i--)
+            Download download = downloads[d];
+
+            for (int i = 0; i < download.Data.Count; i++)
             {
                 DataDownload data = download.Data[i];
 
@@ -93,19 +95,38 @@ public class LocalMediaDataMaintenance(
                     );
                 }
 
-                MediaMaintenanceIntegrityEvaluation evaluation =
-                    _mediaMaintenanceIntegrityDecisionService.Evaluate(size, isValid);
-                evaluations.Add(evaluation);
+                observations.Add(
+                    new MediaMaintenanceIntegrityObservation
+                    {
+                        CorrelationId = $"{d}:{i}",
+                        CacheFileSize = size,
+                        IsValidMediaFile = isValid,
+                    }
+                );
+            }
+        }
 
-                if (evaluation.Remove)
+        MediaMaintenanceIntegrityBatchResult result = _mediaMaintenanceIntegrityBatchService.Evaluate(
+            observations
+        );
+        HashSet<string> removeSet = result
+            .Items.Where(item => item.Remove)
+            .Select(item => item.CorrelationId)
+            .ToHashSet(StringComparer.Ordinal);
+
+        for (int d = downloads.Count - 1; d >= 0; d--)
+        {
+            Download download = downloads[d];
+
+            for (int i = download.Data.Count - 1; i >= 0; i--)
+            {
+                if (removeSet.Contains($"{d}:{i}"))
                     download.Data.RemoveAt(i);
             }
         }
 
         downloads.RemoveAll(dl => dl.Data.Count == 0);
-        MediaMaintenanceIntegritySummary summary = _mediaMaintenanceIntegritySummaryService.Summarize(
-            evaluations
-        );
+        MediaMaintenanceIntegritySummary summary = result.Summary;
 
         _logger.LogInformation(
             "null: {nullCount}, size: {sizeCount}, invalid: {invalidCount}",
