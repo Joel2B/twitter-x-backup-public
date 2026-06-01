@@ -10,6 +10,12 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         this IServiceCollection services
     )
     {
+        services.AddScoped<IMediaBackupCalculatePhase, MediaBackupCalculatePhase>();
+        services.AddScoped<IMediaBackupApplyPhase, MediaBackupApplyPhase>();
+        services.AddScoped<IMediaBackupDuplicatePhase, MediaBackupDuplicatePhase>();
+        services.AddScoped<IMediaBackupMetadataPhase, MediaBackupMetadataPhase>();
+        services.AddScoped<IMediaBackupIntegrityPhase, MediaBackupIntegrityPhase>();
+
         services.AddScoped<IMediaBackupPipelineStep, MediaBackupCalculateStep>();
         services.AddScoped<IMediaBackupPipelineStep, MediaBackupCalculateDirectStep>();
         services.AddScoped<IMediaBackupPipelineStep, MediaBackupApplyDirectStep>();

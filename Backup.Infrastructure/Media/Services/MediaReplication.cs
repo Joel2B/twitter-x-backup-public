@@ -65,8 +65,8 @@ public class MediaReplication(
                 await read.CopyToAsync(write);
 
                 _logger.LogInformation(
+                    "target={TargetId} id={Id} url={Url} path={Path}",
                     target.Id,
-                    "{Id}, {Url}, {Path}",
                     action.DownloadId,
                     action.Url,
                     action.Path

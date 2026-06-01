@@ -82,6 +82,7 @@ public static class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaBackupZipEntryReaderIOService, MediaBackupZipEntryReaderIOService>();
         services.AddScoped<IMediaBackupZipMutationIOService, MediaBackupZipMutationIOService>();
         services.AddScoped<IMediaBackupChunkPersistenceIOService, MediaBackupChunkPersistenceIOService>();
+        services.AddScoped<MediaBackupDependencies>();
 
         Dictionary<string, Type> types = new() { ["local"] = typeof(MediaBackup) };
 

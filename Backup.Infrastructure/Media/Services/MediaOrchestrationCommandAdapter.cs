@@ -64,16 +64,12 @@ public sealed class MediaOrchestrationCommandAdapter(
 
     public async Task Prune(List<MediaDownload> downloads)
     {
-        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
-        await _mediaPrune.Prune(infra);
-        Sync(downloads, infra);
+        await ExecuteOnInfrastructureDownloads(downloads, _mediaPrune.Prune);
     }
 
     public async Task Filter(List<MediaDownload> downloads)
     {
-        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
-        await _mediaFilter.Check(infra);
-        Sync(downloads, infra);
+        await ExecuteOnInfrastructureDownloads(downloads, _mediaFilter.Check);
     }
 
     public IReadOnlyList<string> GetStorageIds() =>
@@ -99,9 +95,7 @@ public sealed class MediaOrchestrationCommandAdapter(
         if (maintenance is null)
             return;
 
-        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
-        await maintenance.Prune(infra);
-        Sync(downloads, infra);
+        await ExecuteOnInfrastructureDownloads(downloads, maintenance.Prune);
     }
 
     public async Task CheckStorageData(string storageId, List<MediaDownload> downloads)
@@ -111,9 +105,7 @@ public sealed class MediaOrchestrationCommandAdapter(
         if (maintenance is null)
             return;
 
-        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
-        await maintenance.CheckData(infra);
-        Sync(downloads, infra);
+        await ExecuteOnInfrastructureDownloads(downloads, maintenance.CheckData);
     }
 
     public async Task CheckStorageIntegrity(string storageId, List<MediaDownload> downloads)
@@ -123,9 +115,10 @@ public sealed class MediaOrchestrationCommandAdapter(
         if (maintenance is null)
             return;
 
-        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
-        await _mediaIntegrity.Check(infra, maintenance);
-        Sync(downloads, infra);
+        await ExecuteOnInfrastructureDownloads(downloads, async infra =>
+        {
+            await _mediaIntegrity.Check(infra, maintenance);
+        });
     }
 
     public async Task DownloadToStorage(string storageId, List<MediaDownload> downloads)
@@ -135,9 +128,10 @@ public sealed class MediaOrchestrationCommandAdapter(
         if (storage is null)
             return;
 
-        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
-        await _mediaDownload.Download(infra, storage);
-        Sync(downloads, infra);
+        await ExecuteOnInfrastructureDownloads(downloads, async infra =>
+        {
+            await _mediaDownload.Download(infra, storage);
+        });
     }
 
     public async Task ReplicateFromStorage(string storageId, List<MediaDownload> downloads)
@@ -147,9 +141,10 @@ public sealed class MediaOrchestrationCommandAdapter(
         if (storage is null)
             return;
 
-        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
-        await _mediaReplication.Replicate(infra, _mediaData.Values, storage);
-        Sync(downloads, infra);
+        await ExecuteOnInfrastructureDownloads(downloads, async infra =>
+        {
+            await _mediaReplication.Replicate(infra, _mediaData.Values, storage);
+        });
     }
 
     public async Task RunBackups(List<MediaDownload> downloads)
@@ -204,5 +199,15 @@ public sealed class MediaOrchestrationCommandAdapter(
     {
         target.Clear();
         target.AddRange(_mediaDownloadModelMapper.ToApplication(source));
+    }
+
+    private async Task ExecuteOnInfrastructureDownloads(
+        List<MediaDownload> downloads,
+        Func<List<Download>, Task> action
+    )
+    {
+        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
+        await action(infra);
+        Sync(downloads, infra);
     }
 }
