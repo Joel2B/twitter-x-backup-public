@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging;
 namespace Backup.Infrastructure.Media.Services;
 
 internal sealed class MediaBackupIntegrityPhase(
-    IMediaBackupZipEntryReaderIOService zipEntryReaderIoService,
     IMediaBackupPathProjectionService pathProjectionService,
     IMediaBackupIntegrityObservationCompositionService integrityObservationCompositionService,
     IMediaBackupIntegrityChangeDetectionService integrityChangeDetectionService,
@@ -23,8 +22,6 @@ internal sealed class MediaBackupIntegrityPhase(
     IMediaBackupChunkPersistenceIOService chunkPersistenceIoService
 ) : IMediaBackupIntegrityPhase
 {
-    private readonly IMediaBackupZipEntryReaderIOService _zipEntryReaderIoService =
-        zipEntryReaderIoService;
     private readonly IMediaBackupPathProjectionService _pathProjectionService =
         pathProjectionService;
     private readonly IMediaBackupIntegrityObservationCompositionService _integrityObservationCompositionService =
@@ -65,27 +62,13 @@ internal sealed class MediaBackupIntegrityPhase(
                 continue;
 
             runtime.Logger.LogInformation("processing chunk {chunk}", kvp.Key);
-            IZipWriter? zip = await runtime.OpenChunkZipRead(
+            Dictionary<string, ZipEntry>? entries = await runtime.ReadChunkEntries(
                 runtime.Context.Chunks[kvp.Key],
                 "check-integrity"
             );
 
-            if (zip is null)
+            if (entries is null)
                 continue;
-
-            Dictionary<string, ZipEntry> entries;
-
-            try
-            {
-                runtime.Logger.LogInfo("read zip");
-                runtime.Logger.LogInfo("reading entries");
-                entries = _zipEntryReaderIoService.ReadEntriesByFullName(zip);
-            }
-            finally
-            {
-                runtime.Logger.LogInfo("disposing");
-                zip.Dispose();
-            }
 
             runtime.Logger.LogInfo("checking changes");
             IReadOnlyList<MediaBackupChunkEntryState> entryStates = runtime.BuildChunkEntryStates(
@@ -161,37 +144,31 @@ internal sealed class MediaBackupIntegrityPhase(
         {
             cancellationToken.ThrowIfCancellationRequested();
             runtime.Logger.LogInformation("processing chunk {chunk}", change.ChunkId);
-            IZipWriter? zip = await runtime.OpenChunkZipWrite(
+            bool mutated = await runtime.MutateChunkZip(
                 runtime.Context.Chunks[change.ChunkId],
-                "fix-integrity"
+                "fix-integrity",
+                async zip =>
+                {
+                    runtime.Logger.LogInfo("applying fixes");
+
+                    foreach (string path in change.Paths)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        string relativePath = _pathProjectionService.ToArchivePath(path);
+                        await _zipMutationIoService.ReplaceEntryFromMediaStorage(
+                            runtime.MediaData,
+                            zip,
+                            path,
+                            relativePath
+                        );
+
+                        runtime.Logger.LogInfo("{path} processed", relativePath);
+                    }
+                }
             );
 
-            if (zip is null)
+            if (!mutated)
                 continue;
-
-            try
-            {
-                runtime.Logger.LogInfo("applying fixes");
-
-                foreach (string path in change.Paths)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    string relativePath = _pathProjectionService.ToArchivePath(path);
-                    await _zipMutationIoService.ReplaceEntryFromMediaStorage(
-                        runtime.MediaData,
-                        zip,
-                        path,
-                        relativePath
-                    );
-
-                    runtime.Logger.LogInfo("{path} processed", relativePath);
-                }
-            }
-            finally
-            {
-                runtime.Logger.LogInfo("disposing");
-                zip.Dispose();
-            }
         }
 
         runtime.Logger.LogInformation("set new file sizes");
@@ -201,26 +178,13 @@ internal sealed class MediaBackupIntegrityPhase(
             cancellationToken.ThrowIfCancellationRequested();
             runtime.Logger.LogInformation("processing chunk {chunk}", change.ChunkId);
 
-            IZipWriter? zip = await runtime.OpenChunkZipRead(
+            Dictionary<string, ZipEntry>? entries = await runtime.ReadChunkEntries(
                 runtime.Context.Chunks[change.ChunkId],
                 "set-new-file-sizes-after-fix"
             );
 
-            if (zip is null)
+            if (entries is null)
                 continue;
-
-            Dictionary<string, ZipEntry> entries;
-
-            try
-            {
-                runtime.Logger.LogInfo("reading entries");
-                entries = _zipEntryReaderIoService.ReadEntriesByFullName(zip);
-            }
-            finally
-            {
-                runtime.Logger.LogInfo("disposing");
-                zip.Dispose();
-            }
 
             runtime.Logger.LogInfo("expanding chunk");
             IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByArchivePath =

@@ -20,6 +20,7 @@ internal sealed class MediaBackupRuntime(
     IZipWriterFactory zipWriterFactory,
     IMediaBackupData mediaBackupData,
     IDataStoreGuardService dataStoreGuardService,
+    IMediaBackupZipEntryReaderIOService zipEntryReaderIoService,
     IMediaBackupChunkEntryStateOrchestrationService chunkEntryStateOrchestrationService,
     IMediaBackupChunkFailureApplyService chunkFailureApplyService,
     IMediaBackupChunkReportObservationAggregationService chunkReportObservationAggregationService,
@@ -29,6 +30,8 @@ internal sealed class MediaBackupRuntime(
 )
 {
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
+    private readonly IMediaBackupZipEntryReaderIOService _zipEntryReaderIoService =
+        zipEntryReaderIoService;
     private readonly IMediaBackupChunkEntryStateOrchestrationService _chunkEntryStateOrchestrationService =
         chunkEntryStateOrchestrationService;
     private readonly IMediaBackupChunkFailureApplyService _chunkFailureApplyService =
@@ -154,6 +157,49 @@ internal sealed class MediaBackupRuntime(
         ApplyChunkEntryStates(chunk, resetStates);
 
         await MediaBackupData.Save([chunk]);
+    }
+
+    public async Task<Dictionary<string, ZipEntry>?> ReadChunkEntries(Chunk chunk, string stage)
+    {
+        IZipWriter? zip = await OpenChunkZipRead(chunk, stage);
+
+        if (zip is null)
+            return null;
+
+        try
+        {
+            Logger.LogInfo("read zip");
+            Logger.LogInfo("reading entries");
+            return _zipEntryReaderIoService.ReadEntriesByFullName(zip);
+        }
+        finally
+        {
+            Logger.LogInfo("disposing");
+            zip.Dispose();
+        }
+    }
+
+    public async Task<bool> MutateChunkZip(
+        Chunk chunk,
+        string stage,
+        Func<IZipWriter, Task> mutation
+    )
+    {
+        IZipWriter? zip = await OpenChunkZipWrite(chunk, stage);
+
+        if (zip is null)
+            return false;
+
+        try
+        {
+            await mutation(zip);
+            return true;
+        }
+        finally
+        {
+            Logger.LogInfo("disposing");
+            zip.Dispose();
+        }
     }
 
     public async Task ShowInfoChunks(string? id)

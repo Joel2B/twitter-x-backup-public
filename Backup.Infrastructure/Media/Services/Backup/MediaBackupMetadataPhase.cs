@@ -11,7 +11,6 @@ namespace Backup.Infrastructure.Media.Services;
 
 internal sealed class MediaBackupMetadataPhase(
     IMediaBackupChunkMetadataRefreshExecutionService chunkMetadataRefreshExecutionService,
-    IMediaBackupZipEntryReaderIOService zipEntryReaderIoService,
     IMediaBackupArchiveMetadataMapService archiveMetadataMapService,
     IMediaBackupPathArchiveMetadataProjectionService pathArchiveMetadataProjectionService,
     IMediaBackupChunkPersistenceIOService chunkPersistenceIoService
@@ -19,8 +18,6 @@ internal sealed class MediaBackupMetadataPhase(
 {
     private readonly IMediaBackupChunkMetadataRefreshExecutionService _chunkMetadataRefreshExecutionService =
         chunkMetadataRefreshExecutionService;
-    private readonly IMediaBackupZipEntryReaderIOService _zipEntryReaderIoService =
-        zipEntryReaderIoService;
     private readonly IMediaBackupArchiveMetadataMapService _archiveMetadataMapService =
         archiveMetadataMapService;
     private readonly IMediaBackupPathArchiveMetadataProjectionService _pathArchiveMetadataProjectionService =
@@ -52,24 +49,13 @@ internal sealed class MediaBackupMetadataPhase(
                 continue;
 
             runtime.Logger.LogInformation("processing chunk {chunk}", kvp.Key);
-            IZipWriter? zip = await runtime.OpenChunkZipRead(kvp.Value, "set-file-sizes");
+            Dictionary<string, ZipEntry>? entries = await runtime.ReadChunkEntries(
+                kvp.Value,
+                "set-file-sizes"
+            );
 
-            if (zip is null)
+            if (entries is null)
                 continue;
-
-            Dictionary<string, ZipEntry> entries;
-
-            try
-            {
-                runtime.Logger.LogInfo("read zip");
-                runtime.Logger.LogInfo("reading entries");
-                entries = _zipEntryReaderIoService.ReadEntriesByFullName(zip);
-            }
-            finally
-            {
-                runtime.Logger.LogInfo("disposing");
-                zip.Dispose();
-            }
 
             runtime.Logger.LogInfo("updating data");
             IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByArchivePath =

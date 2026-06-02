@@ -1,6 +1,7 @@
 using Backup.Application.Media.Backup;
 using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Logging;
+using Backup.Infrastructure.Models.Utils;
 using Backup.Infrastructure.Utility.Abstractions.Services;
 using Microsoft.Extensions.Logging;
 
@@ -32,19 +33,17 @@ internal sealed class MediaBackupDuplicatePhase(
                 continue;
 
             runtime.Logger.LogInformation("processing chunk {chunk}", kvp.Key);
-            IZipWriter? zip = null;
+            Dictionary<string, ZipEntry>? entries = null;
             IEnumerable<string> storage = [];
 
             try
             {
-                runtime.Logger.LogInfo("read zip");
-                zip = await runtime.OpenChunkZipRead(kvp.Value, "check-duplicates");
+                entries = await runtime.ReadChunkEntries(kvp.Value, "check-duplicates");
 
-                if (zip is null)
+                if (entries is null)
                     continue;
 
-                runtime.Logger.LogInfo("reading entries");
-                storage = [.. zip.GetEntries().Select(o => o.FullName)];
+                storage = entries.Keys;
             }
             catch (Exception ex)
             {
@@ -54,13 +53,7 @@ internal sealed class MediaBackupDuplicatePhase(
                     kvp.Key
                 );
             }
-            finally
-            {
-                runtime.Logger.LogInfo("disposing");
-                zip?.Dispose();
-            }
-
-            if (zip is null)
+            if (entries is null)
                 continue;
 
             MediaBackupDuplicateChunkExecutionResult executionResult =
@@ -95,31 +88,30 @@ internal sealed class MediaBackupDuplicatePhase(
                 );
                 runtime.Logger.LogInformation("processing chunk {chunk}", kvp.Key);
 
-                IZipWriter? writeZip = await runtime.OpenChunkZipWrite(
+                bool removed = await runtime.MutateChunkZip(
                     kvp.Value,
-                    "check-duplicates-remove"
+                    "check-duplicates-remove",
+                    zip =>
+                    {
+                        runtime.Logger.LogInfo("removing entries");
+
+                        foreach (
+                            MediaBackupDuplicateCleanupOperation operation in executionPlan.CleanupOperations
+                        )
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            zip.RemoveEntry(
+                                operation.EntryPath,
+                                operation.RemoveDuplicateEntries
+                            );
+                        }
+
+                        return Task.CompletedTask;
+                    }
                 );
 
-                if (writeZip is null)
+                if (!removed)
                     continue;
-
-                try
-                {
-                    runtime.Logger.LogInfo("removing entries");
-
-                    foreach (
-                        MediaBackupDuplicateCleanupOperation operation in executionPlan.CleanupOperations
-                    )
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
-                        writeZip.RemoveEntry(operation.EntryPath, operation.RemoveDuplicateEntries);
-                    }
-                }
-                finally
-                {
-                    runtime.Logger.LogInfo("disposing");
-                    writeZip.Dispose();
-                }
 
                 runtime.Logger.LogInformation(
                     "{paths} duplicate paths removed",
@@ -156,30 +148,26 @@ internal sealed class MediaBackupDuplicatePhase(
 
                     runtime.Logger.LogInformation("processing chunk {chunk}", kvp.Key);
 
-                    IZipWriter? writeZip = await runtime.OpenChunkZipWrite(
+                    bool removed = await runtime.MutateChunkZip(
                         kvp.Value,
-                        "check-duplicates-extras"
+                        "check-duplicates-extras",
+                        zip =>
+                        {
+                            runtime.Logger.LogInformation("removing paths extras");
+
+                            foreach (string item in executionPlan.ExtraPathsToRemove)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+                                zip.RemoveEntry(item);
+                                runtime.Logger.LogInfo("{path} removed", item);
+                            }
+
+                            return Task.CompletedTask;
+                        }
                     );
 
-                    if (writeZip is null)
+                    if (!removed)
                         continue;
-
-                    try
-                    {
-                        runtime.Logger.LogInformation("removing paths extras");
-
-                        foreach (string item in executionPlan.ExtraPathsToRemove)
-                        {
-                            cancellationToken.ThrowIfCancellationRequested();
-                            writeZip.RemoveEntry(item);
-                            runtime.Logger.LogInfo("{path} removed", item);
-                        }
-                    }
-                    finally
-                    {
-                        runtime.Logger.LogInfo("disposing");
-                        writeZip.Dispose();
-                    }
 
                     runtime.Logger.LogInformation(
                         "{paths} paths extras removed in storage",

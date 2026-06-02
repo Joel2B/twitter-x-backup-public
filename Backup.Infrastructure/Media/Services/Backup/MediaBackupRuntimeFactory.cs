@@ -1,5 +1,6 @@
 using Backup.Application.IO;
 using Backup.Application.Media.Backup;
+using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Abstractions.Data;
 using Backup.Infrastructure.Media.Models.Backup;
 using Backup.Infrastructure.Models.Config.Data.Backup;
@@ -11,6 +12,7 @@ namespace Backup.Infrastructure.Media.Services;
 internal sealed class MediaBackupRuntimeFactory(
     IZipWriterFactory zipWriterFactory,
     IDataStoreGuardService dataStoreGuardService,
+    IMediaBackupZipEntryReaderIOService zipEntryReaderIoService,
     IMediaBackupChunkEntryStateOrchestrationService chunkEntryStateOrchestrationService,
     IMediaBackupChunkFailureApplyService chunkFailureApplyService,
     IMediaBackupChunkReportObservationAggregationService chunkReportObservationAggregationService,
@@ -20,6 +22,8 @@ internal sealed class MediaBackupRuntimeFactory(
 {
     private readonly IZipWriterFactory _zipWriterFactory = zipWriterFactory;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
+    private readonly IMediaBackupZipEntryReaderIOService _zipEntryReaderIoService =
+        zipEntryReaderIoService;
     private readonly IMediaBackupChunkEntryStateOrchestrationService _chunkEntryStateOrchestrationService =
         chunkEntryStateOrchestrationService;
     private readonly IMediaBackupChunkFailureApplyService _chunkFailureApplyService =
@@ -41,6 +45,7 @@ internal sealed class MediaBackupRuntimeFactory(
             _zipWriterFactory,
             mediaBackupData,
             _dataStoreGuardService,
+            _zipEntryReaderIoService,
             _chunkEntryStateOrchestrationService,
             _chunkFailureApplyService,
             _chunkReportObservationAggregationService,
