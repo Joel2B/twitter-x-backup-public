@@ -54,7 +54,7 @@ public class PostsParserComponentsTests
     [Fact]
     public void TimelineEntryExtractor_ExtractsEntriesAndBottomCursor_FromTimelineItems()
     {
-        IPostTimelineExtractionService service = new PostTimelineExtractionService();
+        IPostTimelineExtractionService service = new PostTimelineExtractor();
         JObject root = JObject.Parse(
             """
             {
@@ -106,7 +106,7 @@ public class PostsParserComponentsTests
     [Fact]
     public void TimelineEntryExtractor_FallsBackToModuleItems()
     {
-        IPostTimelineExtractionService service = new PostTimelineExtractionService();
+        IPostTimelineExtractionService service = new PostTimelineExtractor();
         JObject root = JObject.Parse(
             """
             {

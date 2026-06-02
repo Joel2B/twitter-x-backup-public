@@ -3,7 +3,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Backup.Infrastructure.Posts.Adapters;
 
-public sealed class PostTimelineExtractionService : IPostTimelineExtractionService
+public sealed class PostTimelineExtractor : IPostTimelineExtractionService
 {
     public IReadOnlyList<JObject> ExtractEntries(JObject root)
     {

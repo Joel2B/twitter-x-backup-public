@@ -4,7 +4,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Backup.Infrastructure.Posts.Adapters;
 
-public sealed class PostTokenMaterializationService : IPostTokenMaterializationService
+public sealed class PostTokenMaterializer : IPostTokenMaterializationService
 {
     public PostTokenMaterializationBatchResult<T> MaterializeMany<T>(IEnumerable<JObject> tokens)
         where T : class

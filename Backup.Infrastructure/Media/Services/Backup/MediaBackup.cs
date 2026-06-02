@@ -16,8 +16,8 @@ internal sealed class MediaBackup(
     StorageBackup config,
     IMediaBackupData mediaBackupData,
     IEnumerable<IMediaBackupPipelineStep> pipelineSteps,
-    IMediaBackupRuntimeFactory mediaBackupRuntimeFactory,
-    IMediaBackupPipelinePlanService mediaBackupPipelinePlanService,
+    MediaBackupRuntimeFactory mediaBackupRuntimeFactory,
+    MediaBackupPipelinePlanner mediaBackupPipelinePlanService,
     IMediaBackupCalculatePhase calculatePhase,
     IMediaBackupApplyPhase applyPhase,
     IMediaBackupDuplicatePhase duplicatePhase,
@@ -30,7 +30,7 @@ internal sealed class MediaBackup(
     private readonly IReadOnlyDictionary<string, IMediaBackupPipelineStep> _pipelineStepsById =
         pipelineSteps.ToDictionary(GetPipelineStepId, StringComparer.Ordinal);
 
-    private readonly IMediaBackupPipelinePlanService _mediaBackupPipelinePlanService =
+    private readonly MediaBackupPipelinePlanner _mediaBackupPipelinePlanService =
         mediaBackupPipelinePlanService;
 
     private readonly IMediaBackupCalculatePhase _calculatePhase = calculatePhase;

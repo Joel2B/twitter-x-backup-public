@@ -219,8 +219,8 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             MediaBackupChunkReportObservationAggregationService
         >();
         services.AddScoped<IMediaBackupChunkReportService, MediaBackupChunkReportService>();
-        services.AddScoped<IMediaBackupRuntimeFactory, MediaBackupRuntimeFactory>();
-        services.AddScoped<IMediaBackupPipelinePlanService, MediaBackupPipelinePlanner>();
+        services.AddScoped<MediaBackupRuntimeFactory>();
+        services.AddScoped<MediaBackupPipelinePlanner>();
         services.AddScoped<MediaBackupChunkStateRuntimeAdapter>();
         services.AddScoped<MediaBackupChunkRecoveryCoordinator>();
         services.AddScoped<MediaBackupChunkZipCoordinator>();

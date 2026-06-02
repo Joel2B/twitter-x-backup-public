@@ -14,7 +14,7 @@ internal sealed class MediaBackupRuntimeFactory(
     MediaBackupChunkRecoveryCoordinator chunkRecoveryCoordinator,
     MediaBackupChunkZipCoordinator chunkZipCoordinator,
     MediaBackupChunkReportCoordinator chunkReportCoordinator
-) : IMediaBackupRuntimeFactory
+)
 {
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
     private readonly MediaBackupChunkStateRuntimeAdapter _chunkStateRuntimeAdapter =

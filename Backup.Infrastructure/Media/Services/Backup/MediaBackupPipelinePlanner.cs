@@ -7,7 +7,7 @@ namespace Backup.Infrastructure.Media.Services;
 internal sealed class MediaBackupPipelinePlanner(
     IMediaBackupPhaseOrchestrationService phaseOrchestrationService,
     IMediaBackupPipelineStepCompositionService pipelineStepCompositionService
-) : IMediaBackupPipelinePlanService
+)
 {
     private readonly IMediaBackupPhaseOrchestrationService _phaseOrchestrationService =
         phaseOrchestrationService;

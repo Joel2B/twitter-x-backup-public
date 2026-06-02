@@ -13,8 +13,8 @@ public static partial class PostsInfrastructureServiceCollectionExtensions
     {
         services.AddScoped<IPostLogger, LocalPostLogger>();
         services.AddScoped<IPostDownloader, PostDownloaderHttp>();
-        services.AddScoped<IPostTimelineExtractionService, PostTimelineExtractionService>();
-        services.AddScoped<IPostTokenMaterializationService, PostTokenMaterializationService>();
+        services.AddScoped<IPostTimelineExtractionService, PostTimelineExtractor>();
+        services.AddScoped<IPostTokenMaterializationService, PostTokenMaterializer>();
         services.AddScoped<IPostParser, PostParser>();
         services.AddScoped<IPostDomainParser, PostDomainParserAdapter>();
         services.AddScoped<IPostTweetDetailRequestFactory, PostTweetDetailRequestFactory>();
