@@ -79,7 +79,11 @@ public class PostDownloaderHttp(
         HttpStatusCode code = response.StatusCode;
 
         if (code is not HttpStatusCode.OK)
-            throw new Exception(code.ToString());
+            throw new HttpRequestException(
+                $"Post download request failed with status code {(int)code} ({code}).",
+                inner: null,
+                statusCode: code
+            );
 
         _headers = response.Headers;
         _request = request.Clone();

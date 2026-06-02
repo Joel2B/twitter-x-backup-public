@@ -7,10 +7,16 @@ public static class ProfileMapper
 {
     public static ParsedPostProfileProjection Map(Result result)
     {
-        CoreUser resultCore = result.Core ?? throw new Exception("core");
+        CoreUser resultCore =
+            result.Core ?? throw new FormatException("Tweet payload is missing core user data.");
+
         Result? userResults = resultCore.UserResults.Result;
 
-        string id = result.Legacy?.UserIdStr ?? userResults?.RestId ?? throw new Exception("id");
+        string id =
+            result.Legacy?.UserIdStr
+            ?? userResults?.RestId
+            ?? throw new FormatException("Tweet payload is missing profile id.");
+
         string? name = result.Legacy?.Name ?? userResults?.Core?.Name;
         string? userName = result.Legacy?.ScreenName ?? userResults?.Core?.ScreenName;
         string? imageUrl = result.Legacy?.ProfileImageUrlHttps ?? userResults?.Avatar?.ImageUrl;

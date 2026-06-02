@@ -6,7 +6,9 @@ public static class HashtagMapper
 {
     public static List<string>? Map(Result result)
     {
-        Entities entities = result.Legacy?.Entities ?? throw new Exception();
+        Entities entities =
+            result.Legacy?.Entities
+            ?? throw new FormatException("Tweet payload is missing hashtag entities.");
 
         List<string> hashtags =
             entities

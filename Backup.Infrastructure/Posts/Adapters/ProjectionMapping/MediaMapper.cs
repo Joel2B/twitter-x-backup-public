@@ -40,7 +40,9 @@ public static class MediaMapper
             return null;
 
         if (bindings.Count > 1)
-            throw new Exception();
+            throw new FormatException(
+                "Unified card payload contains multiple unified_card bindings."
+            );
 
         string value = bindings.Select(o => o.Value.StringValue).First();
         JObject root = JObject.Parse(value);
@@ -51,7 +53,7 @@ public static class MediaMapper
             .ToList();
 
         if (key is null && ids.Count == 0)
-            throw new Exception();
+            throw new FormatException("Unified card payload does not contain media ids.");
 
         List<Medium> media = [];
 
@@ -66,7 +68,9 @@ public static class MediaMapper
             Medium? mediaCard = root.SelectToken($"media_entities['{id}']")?.ToObject<Medium>();
 
             if (mediaCard is null)
-                throw new Exception();
+                throw new KeyNotFoundException(
+                    $"Unified card payload is missing media entity '{id}'."
+                );
 
             media.Add(mediaCard);
         }
