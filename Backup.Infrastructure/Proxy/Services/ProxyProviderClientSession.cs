@@ -2,10 +2,10 @@ using Backup.Infrastructure.Proxy.Models;
 
 namespace Backup.Infrastructure.Proxy.Services;
 
-internal sealed class ProxyProviderClientSession(ProxyClientRotationService proxyClientRotationService)
+internal sealed class ProxyProviderClientSession(ProxyClientFactory proxyClientRotationService)
     : IDisposable
 {
-    private readonly ProxyClientRotationService _proxyClientRotationService =
+    private readonly ProxyClientFactory _proxyClientRotationService =
         proxyClientRotationService;
     private volatile HttpClient? _client;
 

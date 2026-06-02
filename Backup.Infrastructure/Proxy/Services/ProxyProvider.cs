@@ -18,7 +18,7 @@ public class ProxyProvider : IProxyProvider, ISetup, IDisposable
 {
     private readonly AppConfig _config;
     private readonly IProxyData _data;
-    private readonly ProxyProviderLifecycleService _proxyProviderLifecycleService;
+    private readonly ProxyProviderLifecycleCoordinator _proxyProviderLifecycleService;
     private readonly ProxyProviderCandidateLoader _candidateLoader;
     private readonly ProxyProviderClientSession _clientSession;
     private readonly ProxyProviderRuntimeEventCoordinator _runtimeEvents;
@@ -30,7 +30,7 @@ public class ProxyProvider : IProxyProvider, ISetup, IDisposable
     internal ProxyProvider(
         AppConfig config,
         IProxyData data,
-        ProxyProviderLifecycleService proxyProviderLifecycleService,
+        ProxyProviderLifecycleCoordinator proxyProviderLifecycleService,
         ProxyProviderCandidateLoader candidateLoader,
         ProxyProviderClientSession clientSession,
         ProxyProviderRuntimeEventCoordinator runtimeEvents

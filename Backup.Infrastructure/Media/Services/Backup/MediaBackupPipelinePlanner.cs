@@ -4,7 +4,7 @@ using Backup.Infrastructure.Media.Abstractions.Services;
 
 namespace Backup.Infrastructure.Media.Services;
 
-internal sealed class MediaBackupPipelinePlanService(
+internal sealed class MediaBackupPipelinePlanner(
     IMediaBackupPhaseOrchestrationService phaseOrchestrationService,
     IMediaBackupPipelineStepCompositionService pipelineStepCompositionService
 ) : IMediaBackupPipelinePlanService

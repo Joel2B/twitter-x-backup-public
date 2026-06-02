@@ -10,8 +10,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Proxy.Services;
 
-public sealed class ProxyProviderLifecycleService(
-    ILogger<ProxyProviderLifecycleService> logger,
+public sealed class ProxyProviderLifecycleCoordinator(
+    ILogger<ProxyProviderLifecycleCoordinator> logger,
     AppConfig config,
     IProxyData data,
     IProxyKeyPolicyService proxyKeyPolicyService,
@@ -23,7 +23,7 @@ public sealed class ProxyProviderLifecycleService(
     ProxyRuntimeRecordMapper proxyRuntimeRecordMapper
 )
 {
-    private readonly ILogger<ProxyProviderLifecycleService> _logger = logger;
+    private readonly ILogger<ProxyProviderLifecycleCoordinator> _logger = logger;
     private readonly AppConfig _config = config;
     private readonly IProxyData _data = data;
     private readonly IProxyKeyPolicyService _proxyKeyPolicyService = proxyKeyPolicyService;

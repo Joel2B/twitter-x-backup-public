@@ -110,8 +110,8 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
 
     private static IServiceCollection AddProxyProviderFacade(this IServiceCollection services)
     {
-        services.AddScoped<ProxyClientRotationService>();
-        services.AddScoped<ProxyProviderLifecycleService>();
+        services.AddScoped<ProxyClientFactory>();
+        services.AddScoped<ProxyProviderLifecycleCoordinator>();
         services.AddScoped(
             sp =>
                 new ProxyProviderCandidateLoader(
@@ -124,7 +124,7 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
         services.AddScoped(
             sp =>
                 new ProxyProviderClientSession(
-                    sp.GetRequiredService<ProxyClientRotationService>()
+                    sp.GetRequiredService<ProxyClientFactory>()
                 )
         );
         services.AddScoped(
@@ -143,7 +143,7 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
                 new ProxyProvider(
                     sp.GetRequiredService<AppConfig>(),
                     sp.GetRequiredService<IProxyData>(),
-                    sp.GetRequiredService<ProxyProviderLifecycleService>(),
+                    sp.GetRequiredService<ProxyProviderLifecycleCoordinator>(),
                     sp.GetRequiredService<ProxyProviderCandidateLoader>(),
                     sp.GetRequiredService<ProxyProviderClientSession>(),
                     sp.GetRequiredService<ProxyProviderRuntimeEventCoordinator>()

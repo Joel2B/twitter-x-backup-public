@@ -5,12 +5,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Proxy.Services;
 
-public sealed class ProxyClientRotationService(
+public sealed class ProxyClientFactory(
     AppConfig config,
     IProxyFailureStateService proxyFailureStateService,
     IProxyHttpClientFactoryPolicyService proxyHttpClientFactoryPolicyService,
     IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService,
-    ILogger<ProxyClientRotationService> logger
+    ILogger<ProxyClientFactory> logger
 )
 {
     private readonly AppConfig _config = config;
@@ -19,7 +19,7 @@ public sealed class ProxyClientRotationService(
         proxyHttpClientFactoryPolicyService;
     private readonly IProxyHttpClientHeaderPolicyService _proxyHttpClientHeaderPolicyService =
         proxyHttpClientHeaderPolicyService;
-    private readonly ILogger<ProxyClientRotationService> _logger = logger;
+    private readonly ILogger<ProxyClientFactory> _logger = logger;
 
     public HttpClient CreateClient(IReadOnlyList<ProxyData> runtimePool)
     {
