@@ -18,7 +18,9 @@ internal sealed class MediaOrchestrationDownloadMutationRunner(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        List<Download> infrastructureDownloads = _mediaDownloadModelMapper.ToInfrastructure(downloads);
+        List<Download> infrastructureDownloads = _mediaDownloadModelMapper.ToInfrastructure(
+            downloads
+        );
         await action(infrastructureDownloads, cancellationToken);
 
         downloads.Clear();

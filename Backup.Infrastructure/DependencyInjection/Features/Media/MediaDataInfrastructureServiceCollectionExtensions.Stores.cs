@@ -104,28 +104,29 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
                 key,
                 (sp, _) =>
                 {
-                    IMediaCache instance = cacheType == typeof(LocalMediaCache)
-                        ? new LocalMediaCache(
-                            sp.GetRequiredService<IMediaCacheEntryPathPolicyService>(),
-                            sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key),
-                            sp.GetRequiredKeyedService<LocalMediaCacheSnapshotCoordinator>(key),
-                            sp.GetRequiredKeyedService<LocalMediaCacheMutationApplier>(key),
-                            sp.GetRequiredKeyedService<LocalMediaCacheLoadCoordinator>(key),
-                            sp.GetRequiredKeyedService<LocalMediaCacheWriteCoordinator>(key)
-                        )
-                        : (IMediaCache)
-                            ActivatorUtilities.CreateInstance(
-                                sp,
-                                cacheType,
+                    IMediaCache instance =
+                        cacheType == typeof(LocalMediaCache)
+                            ? new LocalMediaCache(
                                 sp.GetRequiredService<IMediaCacheEntryPathPolicyService>(),
                                 sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key),
-                                sp.GetRequiredKeyedService<LocalMediaCacheSnapshotCoordinator>(
-                                    key
-                                ),
+                                sp.GetRequiredKeyedService<LocalMediaCacheSnapshotCoordinator>(key),
                                 sp.GetRequiredKeyedService<LocalMediaCacheMutationApplier>(key),
                                 sp.GetRequiredKeyedService<LocalMediaCacheLoadCoordinator>(key),
                                 sp.GetRequiredKeyedService<LocalMediaCacheWriteCoordinator>(key)
-                            );
+                            )
+                            : (IMediaCache)
+                                ActivatorUtilities.CreateInstance(
+                                    sp,
+                                    cacheType,
+                                    sp.GetRequiredService<IMediaCacheEntryPathPolicyService>(),
+                                    sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key),
+                                    sp.GetRequiredKeyedService<LocalMediaCacheSnapshotCoordinator>(
+                                        key
+                                    ),
+                                    sp.GetRequiredKeyedService<LocalMediaCacheMutationApplier>(key),
+                                    sp.GetRequiredKeyedService<LocalMediaCacheLoadCoordinator>(key),
+                                    sp.GetRequiredKeyedService<LocalMediaCacheWriteCoordinator>(key)
+                                );
 
                     return instance;
                 }

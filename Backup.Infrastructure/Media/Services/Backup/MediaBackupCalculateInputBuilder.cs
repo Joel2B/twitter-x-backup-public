@@ -57,7 +57,9 @@ internal sealed class MediaBackupCalculateInputBuilder(
             .ToList();
         HashSet<string> assignedCachePaths =
         [
-            .. runtime.Context.Chunks.Values.SelectMany(chunk => chunk.Data).Select(item => item.Path),
+            .. runtime
+                .Context.Chunks.Values.SelectMany(chunk => chunk.Data)
+                .Select(item => item.Path),
         ];
 
         IReadOnlyDictionary<string, long> sizeByPath = cacheObservationInputs

@@ -28,7 +28,11 @@ internal sealed class LocalDumpDataLoadCoordinator(
 
         DumpsData dumpsData = await _dumps.GetData(cancellationToken);
         DumpData dumpData = await _stateCoordinator.Load(context, cancellationToken);
-        dumpData.Type = _dumpLifecycleService.ResolveType(dumpsData.Current, context.Id, dumpData.Type);
+        dumpData.Type = _dumpLifecycleService.ResolveType(
+            dumpsData.Current,
+            context.Id,
+            dumpData.Type
+        );
         return dumpData;
     }
 }

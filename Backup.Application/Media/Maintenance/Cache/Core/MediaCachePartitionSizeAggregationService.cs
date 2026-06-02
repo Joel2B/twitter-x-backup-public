@@ -7,7 +7,7 @@ public sealed class MediaCachePartitionSizeAggregationService
         IEnumerable<KeyValuePair<int?, long?>> partitionFileSizes
     )
     {
-        Dictionary<int, long> result = new();
+        Dictionary<int, long> result = [];
 
         foreach (KeyValuePair<int?, long?> item in partitionFileSizes)
         {

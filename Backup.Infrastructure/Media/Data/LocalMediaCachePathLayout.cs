@@ -23,9 +23,7 @@ internal sealed class LocalMediaCachePathLayout(
     {
         foreach (PartitionConfig item in _partition.GetPartitions())
         {
-            if (
-                _mediaCacheDirectoryPolicyService.ShouldCreateCacheDirectory(item.Type, item.Tags)
-            )
+            if (_mediaCacheDirectoryPolicyService.ShouldCreateCacheDirectory(item.Type, item.Tags))
                 Directory.CreateDirectory(GetCachePath(item));
 
             if (_mediaCacheDirectoryPolicyService.ShouldCreateMediaDirectory(item.Type))

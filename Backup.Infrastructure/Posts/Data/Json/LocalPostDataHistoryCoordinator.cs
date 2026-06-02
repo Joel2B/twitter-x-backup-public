@@ -34,12 +34,13 @@ internal sealed class LocalPostDataHistoryCoordinator(
         bool currentExists,
         string currentFileName,
         IReadOnlyList<PostHistoryPath> historyPaths
-    ) => _postSnapshotVerificationExecutionService.BuildDecision(
-        verifyEnabled,
-        currentExists,
-        currentFileName,
-        historyPaths
-    );
+    ) =>
+        _postSnapshotVerificationExecutionService.BuildDecision(
+            verifyEnabled,
+            currentExists,
+            currentFileName,
+            historyPaths
+        );
 
     public void ValidateSnapshotIfNeeded(
         PostSnapshotVerificationDecision decision,
@@ -47,13 +48,14 @@ internal sealed class LocalPostDataHistoryCoordinator(
         long currentLength,
         long historyLength,
         long maxSizeDiffBytes
-    ) => _postSnapshotVerificationExecutionService.ValidateIfNeeded(
-        decision,
-        historyExists,
-        currentLength,
-        historyLength,
-        maxSizeDiffBytes
-    );
+    ) =>
+        _postSnapshotVerificationExecutionService.ValidateIfNeeded(
+            decision,
+            historyExists,
+            currentLength,
+            historyLength,
+            maxSizeDiffBytes
+        );
 
     public IReadOnlyList<PostDataFileReplicationOperation> PlanReplication(
         IReadOnlyList<string> sourcePaths,
@@ -64,12 +66,13 @@ internal sealed class LocalPostDataHistoryCoordinator(
         string basePath,
         string legacyDateFormat,
         Func<string, bool> pathExists
-    ) => _postHistoryArchivePathService.ResolveUniqueHistoryDirectoryPath(
-        basePath,
-        _dateTimeProvider.Now,
-        legacyDateFormat,
-        pathExists
-    );
+    ) =>
+        _postHistoryArchivePathService.ResolveUniqueHistoryDirectoryPath(
+            basePath,
+            _dateTimeProvider.Now,
+            legacyDateFormat,
+            pathExists
+        );
 
     public PostHistoryPrunePlan PlanPrune(
         IReadOnlyList<PostHistoryPath> historyPaths,

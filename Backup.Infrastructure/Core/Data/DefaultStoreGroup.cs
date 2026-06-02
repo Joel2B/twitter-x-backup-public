@@ -34,9 +34,6 @@ internal sealed class DefaultStoreGroup<TStore>(
         if (_secondaryStoreSelectionService is null)
             return [];
 
-        return
-        [
-            .. _secondaryStoreSelectionService.SelectSecondaries(_stores, primary),
-        ];
+        return [.. _secondaryStoreSelectionService.SelectSecondaries(_stores, primary)];
     }
 }

@@ -31,14 +31,14 @@ public class PostDataDomainAdapterTests
         await adapter.AddPosts("user-1", "origin-1", posts, new MergeOptions { Index = false });
 
         Assert.Single(fake.AddCalls);
-        var call = fake.AddCalls[0];
-        Assert.Equal("user-1", call.UserId);
-        Assert.Equal("origin-1", call.Origin);
-        Assert.Single(call.Posts);
-        Assert.Equal("p1", call.Posts[0].Id);
-        Assert.Equal("u1", call.Posts[0].Profile.Id);
-        Assert.NotNull(call.Options);
-        Assert.False(call.Options!.Index);
+        var (UserId, Origin, Posts, Options) = fake.AddCalls[0];
+        Assert.Equal("user-1", UserId);
+        Assert.Equal("origin-1", Origin);
+        Assert.Single(Posts);
+        Assert.Equal("p1", Posts[0].Id);
+        Assert.Equal("u1", Posts[0].Profile.Id);
+        Assert.NotNull(Options);
+        Assert.False(Options!.Index);
     }
 
     [Fact]
@@ -46,8 +46,8 @@ public class PostDataDomainAdapterTests
     {
         FakePostData fake = new()
         {
-            NextAll = new List<AppPosts.Post>
-            {
+            NextAll =
+            [
                 new AppPosts.Post
                 {
                     Id = "x1",
@@ -59,7 +59,7 @@ public class PostDataDomainAdapterTests
                     CreatedAt = "Sun May 24 04:00:00 +0000 2026",
                     Deleted = false,
                 },
-            },
+            ],
         };
         PostDataDomainAdapter adapter = new(fake);
 

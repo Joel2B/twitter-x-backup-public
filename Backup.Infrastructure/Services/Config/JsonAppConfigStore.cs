@@ -4,16 +4,11 @@ using Backup.Infrastructure.Models.Config.Data;
 
 namespace Backup.Infrastructure.Services.Config;
 
-public sealed class JsonAppConfigStore : IAppConfigStore
+public sealed class JsonAppConfigStore(string? configDirectory = null) : IAppConfigStore
 {
-    private readonly string? _configDirectory;
-
-    public JsonAppConfigStore(string? configDirectory = null)
-    {
-        _configDirectory = string.IsNullOrWhiteSpace(configDirectory)
-            ? ResolveDefaultDirectory()
-            : Path.GetFullPath(configDirectory);
-    }
+    private readonly string? _configDirectory = string.IsNullOrWhiteSpace(configDirectory)
+        ? ResolveDefaultDirectory()
+        : Path.GetFullPath(configDirectory);
 
     public AppConfig Load() => ConfigLoader.Load(_configDirectory);
 
@@ -30,6 +25,7 @@ public sealed class JsonAppConfigStore : IAppConfigStore
         AddCandidates(candidates, currentDirectory);
 
         DirectoryInfo? cursor = new(currentDirectory);
+
         for (int depth = 0; depth < 8 && cursor is not null; depth++)
         {
             AddCandidates(candidates, cursor.FullName);

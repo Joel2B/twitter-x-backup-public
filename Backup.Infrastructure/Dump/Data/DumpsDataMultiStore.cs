@@ -15,9 +15,9 @@ public class DumpsDataMultiStore(
         stores,
         primarySelectionService,
         secondaryStoreSelectionService,
-            "No dumps data stores are configured.",
-            "Only one dumps data store can be marked as default."
-        );
+        "No dumps data stores are configured.",
+        "Only one dumps data store can be marked as default."
+    );
 
     private IDumpsDataStore Primary => _storeGroup.Primary;
 

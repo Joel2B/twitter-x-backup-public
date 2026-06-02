@@ -415,6 +415,7 @@ public sealed class MediaDownloadProjectionService(
         );
 
         downloads.Clear();
+
         foreach (MediaDownload download in deduped)
             downloads[download.Id] = download.Clone();
     }

@@ -210,10 +210,10 @@ public partial class PostsApiIntegrationTests
         Assert.Equal(2, body.GetProperty("savedPosts").GetInt32());
         Assert.Equal("CURSOR_123", body.GetProperty("nextCursor").GetString());
 
-        var parseCall = Assert.Single(fakeParser.ParseCalls);
-        Assert.Equal("42", parseCall.UserId);
-        Assert.Equal("extension-search-timeline", parseCall.Origin);
-        Assert.Contains("timeline", parseCall.ResponseBody);
+        var (UserId, Origin, ResponseBody) = Assert.Single(fakeParser.ParseCalls);
+        Assert.Equal("42", UserId);
+        Assert.Equal("extension-search-timeline", Origin);
+        Assert.Contains("timeline", ResponseBody);
 
         Assert.Single(fakePostData.AddCalls);
         Assert.Equal(2, fakePostData.AddCalls[0].Posts.Count);

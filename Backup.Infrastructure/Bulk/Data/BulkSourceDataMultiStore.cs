@@ -14,9 +14,9 @@ public class BulkSourceDataMultiStore(
         stores,
         primarySelectionService,
         null,
-            "No bulk source data stores are configured.",
-            "Only one bulk source data store can be marked as default."
-        );
+        "No bulk source data stores are configured.",
+        "Only one bulk source data store can be marked as default."
+    );
 
     private IBulkSourceDataStore Primary => _storeGroup.Primary;
 

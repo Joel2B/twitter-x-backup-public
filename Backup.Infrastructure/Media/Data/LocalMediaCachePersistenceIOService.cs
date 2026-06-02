@@ -70,11 +70,7 @@ public sealed class LocalMediaCachePersistenceIOService(
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
-        await LocalMediaCacheReader.Save(
-            file,
-            [.. entries],
-            _mediaCacheJsonSnapshotService
-        );
+        await LocalMediaCacheReader.Save(file, [.. entries], _mediaCacheJsonSnapshotService);
     }
 
     public async Task SaveIncrementalSnapshot(

@@ -34,8 +34,7 @@ internal sealed class MediaBackupCalculatePhase(
             runtime,
             cancellationToken
         );
-        MediaBackupCalculateExecutionResult calculation =
-            _calculateExecutionService.Execute(input);
+        MediaBackupCalculateExecutionResult calculation = _calculateExecutionService.Execute(input);
         _mediaBackupCalculateResultApplier.Apply(runtime, calculation);
     }
 

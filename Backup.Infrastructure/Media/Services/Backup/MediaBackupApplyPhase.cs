@@ -35,6 +35,7 @@ internal sealed class MediaBackupApplyPhase(
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
+
         foreach (KeyValuePair<int, Chunk> kvp in runtime.Context.Chunks)
         {
             if (runtime.Stop)

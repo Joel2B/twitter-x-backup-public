@@ -25,7 +25,8 @@ internal sealed class PostDataDomainStoreAdapter(IPostDataStore store) : IPostDo
 
     public async Task<List<MediaInput>?> GetMediaInputs()
     {
-        List<Backup.Infrastructure.Posts.Models.Stored.MediaInput>? inputs = await _store.GetMediaInputs();
+        List<Backup.Infrastructure.Posts.Models.Stored.MediaInput>? inputs =
+            await _store.GetMediaInputs();
         return inputs?.Select(PostReplicationMapper.ToDomain).ToList();
     }
 
@@ -72,7 +73,8 @@ internal sealed class PostDataDomainStoreAdapter(IPostDataStore store) : IPostDo
 
     public async Task<PostStoreCounts> GetStoreCounts()
     {
-        Backup.Infrastructure.Posts.Models.Stored.PostStoreCounts counts = await _store.GetStoreCounts();
+        Backup.Infrastructure.Posts.Models.Stored.PostStoreCounts counts =
+            await _store.GetStoreCounts();
         return PostReplicationMapper.ToDomain(counts);
     }
 }

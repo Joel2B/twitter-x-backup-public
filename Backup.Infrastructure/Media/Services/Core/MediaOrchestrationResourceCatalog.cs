@@ -41,7 +41,10 @@ internal sealed class MediaOrchestrationResourceCatalog(
 
     public IMediaStorage? GetStorage(string storageId)
     {
-        string? resolvedId = _storageResolutionService.ResolveStorageId(storageId, _storageById.Keys);
+        string? resolvedId = _storageResolutionService.ResolveStorageId(
+            storageId,
+            _storageById.Keys
+        );
 
         if (resolvedId is null)
         {

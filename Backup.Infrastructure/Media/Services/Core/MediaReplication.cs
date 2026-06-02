@@ -36,6 +36,7 @@ public class MediaReplication(
         foreach (Download download in downloads)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
             foreach (DataDownload dataDownload in download.Data)
             {
                 bool existsSource = await source.Exists(dataDownload.Path);

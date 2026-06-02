@@ -100,10 +100,7 @@ internal sealed class MediaBackupDuplicatePhase(
                         )
                         {
                             cancellationToken.ThrowIfCancellationRequested();
-                            zip.RemoveEntry(
-                                operation.EntryPath,
-                                operation.RemoveDuplicateEntries
-                            );
+                            zip.RemoveEntry(operation.EntryPath, operation.RemoveDuplicateEntries);
                         }
 
                         return Task.CompletedTask;

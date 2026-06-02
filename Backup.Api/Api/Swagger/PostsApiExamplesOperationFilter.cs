@@ -64,7 +64,7 @@ public class PostsApiExamplesOperationFilter : IOperationFilter
         if (operation.Parameters is null)
             return;
 
-        foreach (OpenApiParameter parameter in operation.Parameters)
+        foreach (OpenApiParameter parameter in operation.Parameters.Cast<OpenApiParameter>())
         {
             if (string.Equals(parameter.Name, "userId", StringComparison.OrdinalIgnoreCase))
                 parameter.Example = JsonValue.Create("44196397");

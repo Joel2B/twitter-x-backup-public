@@ -53,23 +53,25 @@ internal sealed class MediaBackupRuntime(
         IEnumerable<ChunkData> items
     ) => _chunkStateRuntimeAdapter.BuildStates(items);
 
-    public void ApplyChunkEntryStates(Chunk chunk, IEnumerable<MediaBackupChunkEntryState> states)
-        => _chunkStateRuntimeAdapter.ApplyStates(chunk, states);
+    public void ApplyChunkEntryStates(
+        Chunk chunk,
+        IEnumerable<MediaBackupChunkEntryState> states
+    ) => _chunkStateRuntimeAdapter.ApplyStates(chunk, states);
 
-    public async Task<IZipWriter?> OpenChunkZipRead(Chunk chunk, string stage)
-        => await _chunkZipCoordinator.OpenChunkZipRead(this, chunk, stage);
+    public async Task<IZipWriter?> OpenChunkZipRead(Chunk chunk, string stage) =>
+        await _chunkZipCoordinator.OpenChunkZipRead(this, chunk, stage);
 
-    public async Task<IZipWriter?> OpenChunkZipWrite(Chunk chunk, string stage)
-        => await _chunkZipCoordinator.OpenChunkZipWrite(this, chunk, stage);
+    public async Task<IZipWriter?> OpenChunkZipWrite(Chunk chunk, string stage) =>
+        await _chunkZipCoordinator.OpenChunkZipWrite(this, chunk, stage);
 
-    public async Task RecoverCorruptChunk(Chunk chunk, string stage, Exception ex)
-        => await _chunkRecoveryCoordinator.RecoverCorruptChunk(this, chunk, stage, ex);
+    public async Task RecoverCorruptChunk(Chunk chunk, string stage, Exception ex) =>
+        await _chunkRecoveryCoordinator.RecoverCorruptChunk(this, chunk, stage, ex);
 
-    public async Task RecoverApplyFailure(Chunk chunk)
-        => await _chunkRecoveryCoordinator.RecoverApplyFailure(this, chunk);
+    public async Task RecoverApplyFailure(Chunk chunk) =>
+        await _chunkRecoveryCoordinator.RecoverApplyFailure(this, chunk);
 
-    public async Task<Dictionary<string, ZipEntry>?> ReadChunkEntries(Chunk chunk, string stage)
-        => await _chunkZipCoordinator.ReadChunkEntries(this, chunk, stage);
+    public async Task<Dictionary<string, ZipEntry>?> ReadChunkEntries(Chunk chunk, string stage) =>
+        await _chunkZipCoordinator.ReadChunkEntries(this, chunk, stage);
 
     public async Task<bool> MutateChunkZip(
         Chunk chunk,
@@ -77,6 +79,6 @@ internal sealed class MediaBackupRuntime(
         Func<IZipWriter, Task> mutation
     ) => await _chunkZipCoordinator.MutateChunkZip(this, chunk, stage, mutation);
 
-    public async Task ShowInfoChunks(string? id)
-        => await _chunkReportCoordinator.ShowInfoChunks(this, id);
+    public async Task ShowInfoChunks(string? id) =>
+        await _chunkReportCoordinator.ShowInfoChunks(this, id);
 }

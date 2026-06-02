@@ -29,7 +29,9 @@ internal sealed class MediaBackupChunkRecoveryCoordinator(
         await runtime.MediaBackupData.DeleteChunk(chunk);
 
         IReadOnlyList<MediaBackupChunkEntryState> resetStates =
-            _chunkFailureApplyService.ApplyForCorruptChunk(runtime.BuildChunkEntryStates(chunk.Data));
+            _chunkFailureApplyService.ApplyForCorruptChunk(
+                runtime.BuildChunkEntryStates(chunk.Data)
+            );
         runtime.ApplyChunkEntryStates(chunk, resetStates);
 
         await runtime.MediaBackupData.Save([chunk]);
@@ -40,7 +42,9 @@ internal sealed class MediaBackupChunkRecoveryCoordinator(
         await runtime.MediaBackupData.DeleteChunk(chunk);
 
         IReadOnlyList<MediaBackupChunkEntryState> resetStates =
-            _chunkFailureApplyService.ApplyForApplyFailure(runtime.BuildChunkEntryStates(chunk.Data));
+            _chunkFailureApplyService.ApplyForApplyFailure(
+                runtime.BuildChunkEntryStates(chunk.Data)
+            );
         runtime.ApplyChunkEntryStates(chunk, resetStates);
 
         await runtime.MediaBackupData.Save([chunk]);

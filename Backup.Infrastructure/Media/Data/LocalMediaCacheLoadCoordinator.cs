@@ -79,7 +79,9 @@ internal sealed class LocalMediaCacheLoadCoordinator(
         }
     }
 
-    private MediaCacheRecheckProbeExecutionResult Probe(IReadOnlyList<MediaCacheRecheckProbeInput> probeInputs)
+    private MediaCacheRecheckProbeExecutionResult Probe(
+        IReadOnlyList<MediaCacheRecheckProbeInput> probeInputs
+    )
     {
         MediaCacheRecheckProbeExecutionResult result =
             _mediaCacheRecheckProbeExecutionService.Execute(

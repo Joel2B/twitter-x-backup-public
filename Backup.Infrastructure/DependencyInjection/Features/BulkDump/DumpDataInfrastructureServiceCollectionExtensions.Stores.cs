@@ -146,15 +146,16 @@ public static partial class DumpDataInfrastructureServiceCollectionExtensions
                 key,
                 (sp, _) =>
                 {
-                    IDumpDataStore instance = type == typeof(LocalDumpData)
-                        ? new LocalDumpData(
-                            sp.GetRequiredService<ILogger<LocalDumpData>>(),
-                            sp.GetRequiredService<IDataStoreGuardService>(),
-                            sp.GetRequiredKeyedService<LocalDumpDataLoadCoordinator>(key),
-                            sp.GetRequiredKeyedService<LocalDumpDataSaveCoordinator>(key),
-                            sp.GetRequiredKeyedService<LocalDumpDataFlushCoordinator>(key)
-                        )
-                        : (IDumpDataStore)ActivatorUtilities.CreateInstance(sp, type, storage);
+                    IDumpDataStore instance =
+                        type == typeof(LocalDumpData)
+                            ? new LocalDumpData(
+                                sp.GetRequiredService<ILogger<LocalDumpData>>(),
+                                sp.GetRequiredService<IDataStoreGuardService>(),
+                                sp.GetRequiredKeyedService<LocalDumpDataLoadCoordinator>(key),
+                                sp.GetRequiredKeyedService<LocalDumpDataSaveCoordinator>(key),
+                                sp.GetRequiredKeyedService<LocalDumpDataFlushCoordinator>(key)
+                            )
+                            : (IDumpDataStore)ActivatorUtilities.CreateInstance(sp, type, storage);
 
                     instance.Id = registration.Id;
                     instance.IsDefault = storage.Default;

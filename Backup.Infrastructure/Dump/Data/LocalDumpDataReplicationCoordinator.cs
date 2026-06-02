@@ -26,10 +26,7 @@ internal sealed class LocalDumpDataReplicationCoordinator(
     private readonly LocalDumpDataPathLayout _pathLayout = pathLayout;
     private readonly LocalDumpDataSessionPathResolver _sessionPathResolver = sessionPathResolver;
 
-    public async Task Replicate(
-        ApiContext context,
-        CancellationToken cancellationToken = default
-    )
+    public async Task Replicate(ApiContext context, CancellationToken cancellationToken = default)
     {
         PartitionConfig primary = _partition.GetPrimary();
         IReadOnlyList<PartitionConfig> partitions =

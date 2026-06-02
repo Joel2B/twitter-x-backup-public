@@ -40,11 +40,7 @@ public class PostTweetDetailRequestFactoryTests
     [Fact]
     public void Build_WhenTweetDetailMissing_ReturnsNull()
     {
-        UsersContext context = new()
-        {
-            UserId = "user-1",
-            Api = new Dictionary<string, ApiConfig>(),
-        };
+        UsersContext context = new() { UserId = "user-1", Api = [] };
 
         PostTweetDetailRequestFactory sut = new(new ApiRequestBuildService());
 

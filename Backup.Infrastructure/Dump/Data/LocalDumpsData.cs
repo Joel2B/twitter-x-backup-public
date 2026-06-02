@@ -26,9 +26,9 @@ public class LocalDumpsData(
 
     public async Task Setup() => await _persistenceCoordinator.EnsureInitialized();
 
-    public async Task<DumpsData> GetData(CancellationToken cancellationToken = default)
-        => await _persistenceCoordinator.Read(cancellationToken);
+    public async Task<DumpsData> GetData(CancellationToken cancellationToken = default) =>
+        await _persistenceCoordinator.Read(cancellationToken);
 
-    public async Task Save(DumpsData dumps, CancellationToken cancellationToken = default)
-        => await _persistenceCoordinator.Write(dumps, cancellationToken);
+    public async Task Save(DumpsData dumps, CancellationToken cancellationToken = default) =>
+        await _persistenceCoordinator.Write(dumps, cancellationToken);
 }

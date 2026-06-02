@@ -102,11 +102,8 @@ internal sealed class MediaBackupDirectPathScanCoordinator(
                         if (shouldLog)
                         {
                             shouldLog =
-                                Interlocked.CompareExchange(
-                                    ref lastPercent,
-                                    progress.Percent,
-                                    prev
-                                ) == prev;
+                                Interlocked.CompareExchange(ref lastPercent, progress.Percent, prev)
+                                == prev;
                         }
 
                         if (shouldLog)

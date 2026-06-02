@@ -36,7 +36,11 @@ internal sealed class MediaBackupCalculateResultApplier
 
         runtime.Logger.LogInfo("current chunk: {chunk}", calculation.Assignment.InitialChunkId);
 
-        foreach ((int chunkId, IReadOnlyList<string> addedPaths) in calculation.ApplyAssignments.AddedCachePathsByChunk)
+        foreach (
+            (int chunkId, IReadOnlyList<string> addedPaths) in calculation
+                .ApplyAssignments
+                .AddedCachePathsByChunk
+        )
         {
             if (!runtime.Context.Chunks.TryGetValue(chunkId, out Chunk? chunk))
                 continue;

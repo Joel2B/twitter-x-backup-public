@@ -80,6 +80,7 @@ internal sealed class MediaBackup(
     private async Task LoadChunks(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
         using (_runtime.Logger.LogTimer(Id, "processing chunks"))
         {
             List<Chunk>? chunks = await _runtime.MediaBackupData.GetChunks();

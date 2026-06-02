@@ -331,6 +331,7 @@ public static class DynamicParallel
             _sampleWindow = Math.Max(1, _current / 2);
 
             int drained = 0;
+
             for (int i = 0; i < needRemove; i++)
             {
                 if (_semaphore.Wait(0))

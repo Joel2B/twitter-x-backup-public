@@ -114,83 +114,82 @@ public partial class LocalPostData
             tables
                 .PostChangeFields.GroupBy(o => (o.PostId, o.ChangeOrdinal))
                 .ToDictionary(g => g.Key, g => g.OrderBy(o => o.Ordinal).ToList());
-        IReadOnlyList<Backup.Domain.Posts.Post> domainPosts =
-            _tableCoordinator.Materialize(
-                new PostTableMaterializationInput
-                {
-                    Posts = tables
-                        .Posts.Select(row => new PostTablePostRow
-                        {
-                            Id = row.Id,
-                            ProfileId = row.ProfileId,
-                            Description = row.Description,
-                            Retweeted = row.Retweeted,
-                            Favorited = row.Favorited,
-                            Bookmarked = row.Bookmarked,
-                            CreatedAt = row.CreatedAt,
-                        })
-                        .ToList(),
-                    Profiles = tables
-                        .Profiles.Select(row => new PostTableProfileRow
-                        {
-                            Id = row.Id,
-                            UserName = row.UserName,
-                            Name = row.Name,
-                            BannerUrl = row.BannerUrl,
-                            ImageUrl = row.ImageUrl,
-                            Following = row.Following,
-                            CountMedia = row.CountMedia,
-                        })
-                        .ToList(),
-                    Hashtags = tables
-                        .Hashtags.Select(row => new PostTableHashtagRow
-                        {
-                            PostId = row.PostId,
-                            Value = row.Value,
-                            Ordinal = row.Ordinal,
-                        })
-                        .ToList(),
-                    Medias = tables
-                        .Medias.Select(row => new PostTableMediaRow
-                        {
-                            PostId = row.PostId,
-                            Ordinal = row.Ordinal,
-                            MediaId = row.MediaId,
-                            Url = row.Url,
-                            Type = row.Type,
-                            VideoDurationMilis = row.VideoDurationMilis,
-                        })
-                        .ToList(),
-                    MediaVariants = tables
-                        .MediaVariants.Select(row => new PostTableMediaVariantRow
-                        {
-                            PostId = row.PostId,
-                            MediaOrdinal = row.MediaOrdinal,
-                            Ordinal = row.Ordinal,
-                            ContentType = row.ContentType,
-                            Bitrate = row.Bitrate,
-                            Url = row.Url,
-                        })
-                        .ToList(),
-                    IndexEntries = tables
-                        .IndexEntries.Select(row => new PostTableIndexEntryRow
-                        {
-                            PostId = row.PostId,
-                            UserId = row.UserId,
-                            Origin = row.Origin,
-                            Previous = row.Previous,
-                            Next = row.Next,
-                        })
-                        .ToList(),
-                    PostMeta = tables
-                        .PostMeta.Select(row => new PostTableMetaRow
-                        {
-                            Id = row.Id,
-                            Deleted = row.Deleted,
-                        })
-                        .ToList(),
-                }
-            );
+        IReadOnlyList<Backup.Domain.Posts.Post> domainPosts = _tableCoordinator.Materialize(
+            new PostTableMaterializationInput
+            {
+                Posts = tables
+                    .Posts.Select(row => new PostTablePostRow
+                    {
+                        Id = row.Id,
+                        ProfileId = row.ProfileId,
+                        Description = row.Description,
+                        Retweeted = row.Retweeted,
+                        Favorited = row.Favorited,
+                        Bookmarked = row.Bookmarked,
+                        CreatedAt = row.CreatedAt,
+                    })
+                    .ToList(),
+                Profiles = tables
+                    .Profiles.Select(row => new PostTableProfileRow
+                    {
+                        Id = row.Id,
+                        UserName = row.UserName,
+                        Name = row.Name,
+                        BannerUrl = row.BannerUrl,
+                        ImageUrl = row.ImageUrl,
+                        Following = row.Following,
+                        CountMedia = row.CountMedia,
+                    })
+                    .ToList(),
+                Hashtags = tables
+                    .Hashtags.Select(row => new PostTableHashtagRow
+                    {
+                        PostId = row.PostId,
+                        Value = row.Value,
+                        Ordinal = row.Ordinal,
+                    })
+                    .ToList(),
+                Medias = tables
+                    .Medias.Select(row => new PostTableMediaRow
+                    {
+                        PostId = row.PostId,
+                        Ordinal = row.Ordinal,
+                        MediaId = row.MediaId,
+                        Url = row.Url,
+                        Type = row.Type,
+                        VideoDurationMilis = row.VideoDurationMilis,
+                    })
+                    .ToList(),
+                MediaVariants = tables
+                    .MediaVariants.Select(row => new PostTableMediaVariantRow
+                    {
+                        PostId = row.PostId,
+                        MediaOrdinal = row.MediaOrdinal,
+                        Ordinal = row.Ordinal,
+                        ContentType = row.ContentType,
+                        Bitrate = row.Bitrate,
+                        Url = row.Url,
+                    })
+                    .ToList(),
+                IndexEntries = tables
+                    .IndexEntries.Select(row => new PostTableIndexEntryRow
+                    {
+                        PostId = row.PostId,
+                        UserId = row.UserId,
+                        Origin = row.Origin,
+                        Previous = row.Previous,
+                        Next = row.Next,
+                    })
+                    .ToList(),
+                PostMeta = tables
+                    .PostMeta.Select(row => new PostTableMetaRow
+                    {
+                        Id = row.Id,
+                        Deleted = row.Deleted,
+                    })
+                    .ToList(),
+            }
+        );
 
         List<Post> posts = domainPosts.Select(PostReplicationMapper.ToApp).ToList();
 

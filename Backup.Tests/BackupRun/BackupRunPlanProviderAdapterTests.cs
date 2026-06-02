@@ -178,7 +178,7 @@ public class BackupRunPlanProviderAdapterTests
     private static DataConfig CreateDataConfig() =>
         new()
         {
-            Aliases = new Dictionary<string, string>(),
+            Aliases = [],
             Partitions = [],
             Post =
             [

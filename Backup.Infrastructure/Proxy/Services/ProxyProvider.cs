@@ -55,7 +55,9 @@ public class ProxyProvider : IProxyProvider, ISetup, IDisposable
             return;
         }
 
-        _proxies = await _proxyProviderLifecycleService.SetupRuntimePoolAsync(_candidateLoader.LoadAsync);
+        _proxies = await _proxyProviderLifecycleService.SetupRuntimePoolAsync(
+            _candidateLoader.LoadAsync
+        );
         RotateClient();
     }
 

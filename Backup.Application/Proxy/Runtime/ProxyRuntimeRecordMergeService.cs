@@ -26,6 +26,7 @@ public sealed class ProxyRuntimeRecordMergeService(
         );
 
         List<ProxyRuntimeRecord> result = [];
+
         foreach (ProxyCandidate candidate in mergedCandidates)
         {
             string key = BuildKey(candidate);

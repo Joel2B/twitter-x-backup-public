@@ -44,8 +44,10 @@ public partial class LocalPostData
             .ToList();
 
         Backup.Domain.Posts.Post domainCurrent = PostReplicationMapper.ToDomain(currentPost);
-        IReadOnlyList<Backup.Domain.Posts.Change> projected =
-            _mutationCoordinator.ProjectChanges(domainCurrent, replayEntries);
+        IReadOnlyList<Backup.Domain.Posts.Change> projected = _mutationCoordinator.ProjectChanges(
+            domainCurrent,
+            replayEntries
+        );
 
         return projected.Select(PostReplicationMapper.ToAppChange).ToList();
     }

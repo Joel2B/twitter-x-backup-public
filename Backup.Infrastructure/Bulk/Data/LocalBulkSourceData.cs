@@ -61,9 +61,12 @@ public class LocalBulkSourceData(
         string path = GetPathSources();
         string[] files = Directory.GetFiles(path);
         List<string> lines = [];
+
         foreach (string file in files)
-        await foreach (string line in File.ReadLinesAsync(file))
-            lines.Add(line);
+        {
+            await foreach (string line in File.ReadLinesAsync(file))
+                lines.Add(line);
+        }
 
         IReadOnlyList<BulkSourceLinkItem> extracted = _bulkSourceExtractionService.Extract(lines);
         return [.. extracted.Select(ToSource)];

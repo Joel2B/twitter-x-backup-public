@@ -30,12 +30,7 @@ public class PostDownloadOrchestrationService(IPostDownloadFlowService postDownl
 
             const int maxAttempts = 3;
             int attemptCount = 0;
-            PostDownloadPageResult pageResult = new()
-            {
-                Posts = [],
-                RawResponse = "",
-                NextCursor = null,
-            };
+            PostDownloadPageResult pageResult;
 
             while (true)
             {

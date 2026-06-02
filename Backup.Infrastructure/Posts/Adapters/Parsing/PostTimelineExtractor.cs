@@ -122,7 +122,7 @@ public sealed class PostTimelineExtractor : IPostTimelineExtractionService
     private static JObject ToTimelineContentEntry(JObject source)
     {
         source = (JObject)source.DeepClone();
-        JObject content = source["content"] as JObject ?? new JObject();
+        JObject content = source["content"] as JObject ?? [];
         content["entryType"] = "";
         content["itemContent"] = source.SelectToken("item.itemContent") ?? throw new Exception();
         source["content"] = content;
