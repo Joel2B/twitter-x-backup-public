@@ -13,8 +13,6 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
 {
     private static IServiceCollection RegisterMediaDataStores(this IServiceCollection services)
     {
-        services.AddScoped<LocalMediaCacheDependencies>();
-
         Dictionary<string, Type> types = new() { ["local"] = typeof(LocalMediaData) };
 
         List<DataInfrastructureHelpers.DataRegistration<StorageMedia>> registrations =
@@ -46,9 +44,12 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
                 (sp, _) =>
                 {
                     IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
+                    LocalMediaCacheDependencies dependencies = ActivatorUtilities.CreateInstance<
+                        LocalMediaCacheDependencies
+                    >(sp, storage, partition);
 
                     IMediaCache instance = (IMediaCache)
-                        ActivatorUtilities.CreateInstance(sp, cacheType, storage, partition);
+                        ActivatorUtilities.CreateInstance(sp, cacheType, dependencies);
 
                     return instance;
                 }
