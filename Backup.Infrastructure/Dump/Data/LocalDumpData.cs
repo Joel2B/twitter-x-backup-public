@@ -17,148 +17,81 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Dump.Data;
 
-public class LocalDumpData(
-    ILogger<LocalDumpData> _logger,
-    AppConfig _appConfig,
-    IDumpsData _dumps,
-    StorageDump _config,
-    IPartition _partition,
-    LocalDumpDataDependencies dependencies
-) : IDumpDataStore
+public class LocalDumpData : IDumpDataStore
 {
     public string? Id { get; set; }
     public bool IsDefault { get; set; }
 
-    private readonly ILogger<LocalDumpData> _logger = _logger;
-    private readonly AppConfig _appConfig = _appConfig;
-    private readonly StorageDump _config = _config;
-    private readonly IPartition _partition = _partition;
-    private readonly ISecondaryStoreSelectionService _secondaryStoreSelectionService =
-        dependencies.SecondaryStoreSelectionService;
-    private readonly IDumpContextEligibilityService _dumpContextEligibilityService =
-        dependencies.DumpContextEligibilityService;
-    private readonly IDumpLifecycleService _dumpLifecycleService = dependencies.DumpLifecycleService;
-    private readonly IDumpPathService _dumpPathService = dependencies.DumpPathService;
-    private readonly IDumpIndexLoadService _dumpIndexLoadService = dependencies.DumpIndexLoadService;
-    private readonly IDumpSaveExecutionService _dumpSaveExecutionService =
-        dependencies.DumpSaveExecutionService;
-    private readonly IDumpFlushOrchestrationService _dumpFlushOrchestrationService =
-        dependencies.DumpFlushOrchestrationService;
-    private readonly IDumpReplicationPlanningService _dumpReplicationPlanningService =
-        dependencies.DumpReplicationPlanningService;
-    private readonly IDumpPersistenceIOService _dumpPersistenceIOService =
-        dependencies.DumpPersistenceIOService;
-    private readonly IDataStoreGuardService _dataStoreGuardService =
-        dependencies.DataStoreGuardService;
-    private readonly IDateTimeProvider _dateTimeProvider = dependencies.DateTimeProvider;
+    private readonly ILogger<LocalDumpData> _logger;
+    private readonly IDumpsData _dumps;
+    private readonly StorageDump _config;
+    private readonly IDumpContextEligibilityService _dumpContextEligibilityService;
+    private readonly IDumpLifecycleService _dumpLifecycleService;
+    private readonly IDumpIndexLoadService _dumpIndexLoadService;
+    private readonly IDumpSaveExecutionService _dumpSaveExecutionService;
+    private readonly IDumpFlushOrchestrationService _dumpFlushOrchestrationService;
+    private readonly IDataStoreGuardService _dataStoreGuardService;
+    private readonly IDumpPersistenceIOService _dumpPersistenceIOService;
+    private readonly IDateTimeProvider _dateTimeProvider;
+    private readonly LocalDumpDataPathLayout _pathLayout;
+    private readonly LocalDumpDataSessionPathResolver _sessionPathResolver;
+    private readonly LocalDumpDataStateCoordinator _stateCoordinator;
+    private readonly LocalDumpDataReplicationCoordinator _replicationCoordinator;
 
     private DumpData? _dumpData;
     private DumpData Data =>
         _dataStoreGuardService.RequireInitialized(_dumpData, "Dump data not initialized");
 
+    public LocalDumpData(
+        ILogger<LocalDumpData> logger,
+        AppConfig appConfig,
+        IDumpsData dumps,
+        StorageDump config,
+        IPartition partition,
+        LocalDumpDataDependencies dependencies
+    )
+    {
+        _logger = logger;
+        _dumps = dumps;
+        _config = config;
+        _dumpContextEligibilityService = dependencies.DumpContextEligibilityService;
+        _dumpLifecycleService = dependencies.DumpLifecycleService;
+        _dumpIndexLoadService = dependencies.DumpIndexLoadService;
+        _dumpSaveExecutionService = dependencies.DumpSaveExecutionService;
+        _dumpFlushOrchestrationService = dependencies.DumpFlushOrchestrationService;
+        _dataStoreGuardService = dependencies.DataStoreGuardService;
+        _dumpPersistenceIOService = dependencies.DumpPersistenceIOService;
+        _dateTimeProvider = dependencies.DateTimeProvider;
+        _pathLayout = new(
+            config,
+            partition,
+            dependencies.DumpPathService,
+            dependencies.DataStoreGuardService
+        );
+        _sessionPathResolver = new(
+            dumps,
+            dependencies.DumpLifecycleService,
+            dependencies.DateTimeProvider,
+            _pathLayout
+        );
+        _stateCoordinator = new(
+            appConfig,
+            dependencies.DumpLifecycleService,
+            dependencies.DataStoreGuardService,
+            dependencies.DumpPersistenceIOService,
+            _sessionPathResolver
+        );
+        _replicationCoordinator = new(
+            dependencies.SecondaryStoreSelectionService,
+            partition,
+            dependencies.DumpReplicationPlanningService,
+            dependencies.DumpPersistenceIOService,
+            _pathLayout,
+            _sessionPathResolver
+        );
+    }
+
     public Task Setup() => Task.CompletedTask;
-
-    private string GetPath(PartitionConfig partition) =>
-        _dumpPathService.BuildDumpRootPath(
-            partition.Paths,
-            _config.Paths.Paths,
-            _config.Paths.Dumps.Paths
-        );
-
-    private async Task<string> GetPathCurrent(
-        ApiContext context,
-        CancellationToken cancellationToken = default
-    )
-    {
-        DumpsData dumpsData = await _dumps.GetData(cancellationToken);
-        DumpCurrentSessionResolution resolution = _dumpLifecycleService.ResolveCurrentSession(
-            dumpsData.Current,
-            _dateTimeProvider.Now
-        );
-
-        if (resolution.ShouldPersist)
-        {
-            dumpsData.Current = resolution.Current;
-            await _dumps.Save(dumpsData, cancellationToken);
-        }
-
-        string path = _dumpPathService.BuildCurrentUserPath(
-            GetPath(_partition.GetPrimary()),
-            resolution.Current,
-            context.UserId
-        );
-
-        Directory.CreateDirectory(path);
-
-        return path;
-    }
-
-    private async Task<string> GetPathData(
-        ApiContext context,
-        CancellationToken cancellationToken = default
-    )
-    {
-        string path = await GetPathCurrent(context, cancellationToken);
-        string fileName = _dataStoreGuardService.RequireConfiguredFileName(
-            _config.Paths.Dumps.Dump.File
-        );
-
-        return _dumpPathService.BuildDataFilePath(path, fileName);
-    }
-
-    private async Task<string> GetPathIndex(
-        ApiContext context,
-        CancellationToken cancellationToken = default
-    )
-    {
-        string path = await GetPathCurrent(context, cancellationToken);
-
-        return _dumpPathService.BuildIndexPath(path, Data.Index);
-    }
-
-    private async Task<string> GetPathApi(
-        ApiContext context,
-        CancellationToken cancellationToken = default
-    )
-    {
-        string path = await GetPathIndex(context, cancellationToken);
-
-        return _dumpPathService.BuildApiPath(path, _config.Paths.Dumps.Dump.Api.Paths);
-    }
-
-    private async Task CreateData(ApiContext context, CancellationToken cancellationToken = default)
-    {
-        string path = await GetPathData(context, cancellationToken);
-
-        if (File.Exists(path))
-            return;
-
-        DumpDataInitialization initialized = _dumpLifecycleService.CreateInitialData(
-            _appConfig.Services.Dump.Count,
-            context.Request.Query.Variables["count"]
-        );
-
-        DumpData dump = new() { Count = initialized.Count, QueryCount = initialized.QueryCount };
-        await _dumpPersistenceIOService.WriteDumpData(path, dump, cancellationToken);
-    }
-
-    private async Task SetupData(ApiContext context, CancellationToken cancellationToken = default)
-    {
-        string path = await GetPathData(context, cancellationToken);
-
-        _dataStoreGuardService.EnsureFileExists(path);
-
-        DumpData? deserialized = await _dumpPersistenceIOService.ReadDumpData(
-            path,
-            cancellationToken
-        );
-        DumpData data = _dataStoreGuardService.RequireDeserialized(
-            deserialized,
-            "Error in deserialize"
-        );
-
-        _dumpData = data;
-    }
 
     private async Task<DumpSaveExecutionResult> SetupDirectoryForSave(
         ApiContext context,
@@ -177,8 +110,16 @@ public class LocalDumpData(
         Data.Index = result.DirectoryState.Index;
         Data.IndexFile = result.SaveState.IndexFile;
 
-        string indexPath = await GetPathIndex(context, cancellationToken);
-        string apiPath = await GetPathApi(context, cancellationToken);
+        string indexPath = await _sessionPathResolver.GetIndexPath(
+            context,
+            Data.Index,
+            cancellationToken
+        );
+        string apiPath = await _sessionPathResolver.GetApiPath(
+            context,
+            Data.Index,
+            cancellationToken
+        );
 
         Directory.CreateDirectory(indexPath);
         Directory.CreateDirectory(apiPath);
@@ -195,8 +136,7 @@ public class LocalDumpData(
             return null;
 
         DumpsData dumpsData = await _dumps.GetData(cancellationToken);
-        await CreateData(context, cancellationToken);
-        await SetupData(context, cancellationToken);
+        _dumpData = await _stateCoordinator.Load(context, cancellationToken);
 
         Data.Type = _dumpLifecycleService.ResolveType(dumpsData.Current, context.Id, Data.Type);
 
@@ -217,8 +157,16 @@ public class LocalDumpData(
             cancellationToken
         );
 
-        string indexPath = await GetPathIndex(context, cancellationToken);
-        string apiPath = await GetPathApi(context, cancellationToken);
+        string indexPath = await _sessionPathResolver.GetIndexPath(
+            context,
+            Data.Index,
+            cancellationToken
+        );
+        string apiPath = await _sessionPathResolver.GetApiPath(
+            context,
+            Data.Index,
+            cancellationToken
+        );
 
         string fileName = saveExecution.FileName;
 
@@ -236,10 +184,7 @@ public class LocalDumpData(
     }
 
     private async Task SaveData(ApiContext context, CancellationToken cancellationToken = default)
-    {
-        string path = await GetPathData(context, cancellationToken);
-        await _dumpPersistenceIOService.WriteDumpData(path, Data, cancellationToken);
-    }
+    => await _stateCoordinator.Save(context, Data, cancellationToken);
 
     public async Task Flush(
         IPostDomainData postData,
@@ -250,7 +195,7 @@ public class LocalDumpData(
     {
         _logger.LogInformation("dumping data");
 
-        string currentPath = await GetPathCurrent(context, cancellationToken);
+        string currentPath = await _sessionPathResolver.GetCurrentPath(context, cancellationToken);
 
         IReadOnlyList<string> paths = _dumpPersistenceIOService.EnumerateJsonFiles(currentPath);
         IReadOnlyList<Backup.Domain.Posts.Post> domainPosts = await _dumpIndexLoadService.LoadPosts(
@@ -284,23 +229,5 @@ public class LocalDumpData(
     }
 
     private async Task Replicate(ApiContext context, CancellationToken cancellationToken = default)
-    {
-        PartitionConfig primary = _partition.GetPrimary();
-        IReadOnlyList<PartitionConfig> partitions =
-            _secondaryStoreSelectionService.SelectSecondaries(_partition.GetPartitions(), primary);
-
-        string mainPath = await GetPathCurrent(context, cancellationToken);
-        string primaryPath = GetPath(primary);
-        DumpReplicationPlan plan = _dumpReplicationPlanningService.Plan(
-            primaryPath,
-            mainPath,
-            partitions.Select(GetPath)
-        );
-
-        foreach (string path in plan.TargetPaths)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            _dumpPersistenceIOService.CopyDirectory(mainPath, path);
-        }
-    }
+        => await _replicationCoordinator.Replicate(context, cancellationToken);
 }
