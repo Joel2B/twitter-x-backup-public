@@ -15,7 +15,6 @@ public static class RuntimeInfrastructureMediaServiceCollectionExtensions
             IMediaOrchestrationStorageResolutionService,
             MediaOrchestrationStorageResolutionService
         >();
-        services.AddScoped<MediaOrchestrationCommandDependencies>();
         services.AddScoped<IMediaOrchestrationCommand, MediaOrchestrationCommandAdapter>();
         services.AddScoped<IMediaService, MediaService>();
         return services;

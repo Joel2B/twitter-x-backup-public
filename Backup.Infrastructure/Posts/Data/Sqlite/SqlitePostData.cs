@@ -16,7 +16,15 @@ public partial class SqlitePostData(
     ILogger<SqlitePostData> logger,
     StoragePost config,
     IPartition partition,
-    SqlitePostDataDependencies dependencies
+    IPostStoreMergeMutationService postStoreMergeMutationService,
+    IPostSoftDeleteExecutionService postSoftDeleteExecutionService,
+    IPostSnapshotNormalizationService postSnapshotNormalizationService,
+    IPostMediaInputsCompositionService postMediaInputsCompositionService,
+    IPostHashingService postHashingService,
+    IPostChangeComputationService postChangeComputationService,
+    IPostChangeReadModelProjectionService postChangeReadModelProjectionService,
+    IPostIdentifierFilterService postIdentifierFilterService,
+    IDateTimeProvider dateTimeProvider
 ) : IPostDataStore, ISetup, IAsyncDisposable
 {
     public string? Id { get; set; }
@@ -26,21 +34,21 @@ public partial class SqlitePostData(
     private readonly StoragePost _config = config;
     private readonly IPartition _partition = partition;
     private readonly IPostStoreMergeMutationService _postStoreMergeMutationService =
-        dependencies.PostStoreMergeMutationService;
+        postStoreMergeMutationService;
     private readonly IPostSoftDeleteExecutionService _postSoftDeleteExecutionService =
-        dependencies.PostSoftDeleteExecutionService;
+        postSoftDeleteExecutionService;
     private readonly IPostSnapshotNormalizationService _postSnapshotNormalizationService =
-        dependencies.PostSnapshotNormalizationService;
+        postSnapshotNormalizationService;
     private readonly IPostMediaInputsCompositionService _postMediaInputsCompositionService =
-        dependencies.PostMediaInputsCompositionService;
-    private readonly IPostHashingService _postHashingService = dependencies.PostHashingService;
+        postMediaInputsCompositionService;
+    private readonly IPostHashingService _postHashingService = postHashingService;
     private readonly IPostChangeComputationService _postChangeComputationService =
-        dependencies.PostChangeComputationService;
+        postChangeComputationService;
     private readonly IPostChangeReadModelProjectionService _postChangeReadModelProjectionService =
-        dependencies.PostChangeReadModelProjectionService;
+        postChangeReadModelProjectionService;
     private readonly IPostIdentifierFilterService _postIdentifierFilterService =
-        dependencies.PostIdentifierFilterService;
-    private readonly IDateTimeProvider _dateTimeProvider = dependencies.DateTimeProvider;
+        postIdentifierFilterService;
+    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
     private PostsDbContext? _db;
     private const int SqlInChunkSize = 5000;
 

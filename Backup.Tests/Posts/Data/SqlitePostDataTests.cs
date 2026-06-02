@@ -297,20 +297,18 @@ public class SqlitePostDataTests
             NullLogger<SqlitePostData>.Instance,
             storage,
             partition,
-            new SqlitePostDataDependencies(
-                new PostStoreMergeMutationService(postMergeExecutionService, postHashingService),
-                new PostSoftDeleteExecutionService(
-                    new PostIdentifierFilterService(),
-                    new PostSoftDeleteSelectionService()
-                ),
-                new PostSnapshotNormalizationService(),
-                new PostMediaInputsCompositionService(),
-                postHashingService,
-                new PostChangeComputationService(),
-                new PostChangeReadModelProjectionService(),
+            new PostStoreMergeMutationService(postMergeExecutionService, postHashingService),
+            new PostSoftDeleteExecutionService(
                 new PostIdentifierFilterService(),
-                new TestDateTimeProvider()
-            )
+                new PostSoftDeleteSelectionService()
+            ),
+            new PostSnapshotNormalizationService(),
+            new PostMediaInputsCompositionService(),
+            postHashingService,
+            new PostChangeComputationService(),
+            new PostChangeReadModelProjectionService(),
+            new PostIdentifierFilterService(),
+            new TestDateTimeProvider()
         );
         return (sut, root);
     }

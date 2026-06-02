@@ -66,7 +66,6 @@ public static partial class PostDataInfrastructureServiceCollectionExtensions
                     sp.GetRequiredService<IPostTableMaterializationService>()
                 )
         );
-        services.AddScoped<SqlitePostDataDependencies>();
 
         Dictionary<string, Type> types = new()
         {

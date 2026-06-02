@@ -12,30 +12,37 @@ namespace Backup.Infrastructure.Media.Services;
 public sealed class MediaOrchestrationCommandAdapter(
     ILogger<MediaOrchestrationCommandAdapter> logger,
     IPostDomainData postData,
-    IMediaOrchestrationStorageResolutionService mediaOrchestrationStorageResolutionService,
-    MediaOrchestrationCommandDependencies dependencies
+    IMediaProcessing mediaProcessing,
+    IMediaPrune mediaPrune,
+    IEnumerable<IMediaStorage> mediaStorage,
+    IEnumerable<IMediaDataMaintenance> mediaMaintenance,
+    MediaIntegrity mediaIntegrity,
+    IMediaFilter mediaFilter,
+    IMediaReplication mediaReplication,
+    IEnumerable<IMediaBackupStrategy> mediaBackups,
+    IMediaDownloadService mediaDownload,
+    IMediaDownloadModelMapper mediaDownloadModelMapper,
+    IMediaOrchestrationStorageResolutionService mediaOrchestrationStorageResolutionService
 ) : IMediaOrchestrationCommand
 {
     private readonly ILogger<MediaOrchestrationCommandAdapter> _logger = logger;
     private readonly IPostDomainData _postData = postData;
-    private readonly IMediaProcessing _mediaProcessing = dependencies.MediaProcessing;
-    private readonly IMediaPrune _mediaPrune = dependencies.MediaPrune;
-    private readonly MediaIntegrity _mediaIntegrity = dependencies.MediaIntegrity;
-    private readonly IMediaFilter _mediaFilter = dependencies.MediaFilter;
-    private readonly IMediaReplication _mediaReplication = dependencies.MediaReplication;
-    private readonly List<IMediaBackupStrategy> _mediaBackups = dependencies
-        .MediaBackups
-        .ToList();
-    private readonly IMediaDownloadService _mediaDownload = dependencies.MediaDownload;
-    private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper = dependencies.MediaDownloadModelMapper;
+    private readonly IMediaProcessing _mediaProcessing = mediaProcessing;
+    private readonly IMediaPrune _mediaPrune = mediaPrune;
+    private readonly MediaIntegrity _mediaIntegrity = mediaIntegrity;
+    private readonly IMediaFilter _mediaFilter = mediaFilter;
+    private readonly IMediaReplication _mediaReplication = mediaReplication;
+    private readonly List<IMediaBackupStrategy> _mediaBackups = mediaBackups.ToList();
+    private readonly IMediaDownloadService _mediaDownload = mediaDownload;
+    private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper = mediaDownloadModelMapper;
     private readonly MediaOrchestrationResourceCatalog _resourceCatalog = new(
         logger,
         mediaOrchestrationStorageResolutionService,
-        dependencies.MediaStorage,
-        dependencies.MediaMaintenance
+        mediaStorage,
+        mediaMaintenance
     );
     private readonly MediaOrchestrationDownloadMutationRunner _downloadMutationRunner = new(
-        dependencies.MediaDownloadModelMapper
+        mediaDownloadModelMapper
     );
 
     public async Task<IReadOnlyList<Backup.Domain.Posts.MediaInput>> GetMediaInputs(

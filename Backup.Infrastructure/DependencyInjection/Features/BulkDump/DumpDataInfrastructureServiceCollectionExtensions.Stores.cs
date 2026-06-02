@@ -88,6 +88,40 @@ public static partial class DumpDataInfrastructureServiceCollectionExtensions
                         sp.GetRequiredKeyedService<LocalDumpDataSessionPathResolver>(key)
                     )
             );
+            services.AddKeyedScoped(
+                key,
+                (sp, _) =>
+                    new LocalDumpDataLoadCoordinator(
+                        sp.GetRequiredService<IDumpsData>(),
+                        sp.GetRequiredService<IDumpContextEligibilityService>(),
+                        sp.GetRequiredService<IDumpLifecycleService>(),
+                        sp.GetRequiredKeyedService<LocalDumpDataStateCoordinator>(key)
+                    )
+            );
+            services.AddKeyedScoped(
+                key,
+                (sp, _) =>
+                    new LocalDumpDataSaveCoordinator(
+                        sp.GetRequiredService<IDumpSaveExecutionService>(),
+                        sp.GetRequiredService<IDateTimeProvider>(),
+                        sp.GetRequiredService<IDumpPersistenceIOService>(),
+                        sp.GetRequiredKeyedService<LocalDumpDataSessionPathResolver>(key),
+                        sp.GetRequiredKeyedService<LocalDumpDataStateCoordinator>(key),
+                        sp.GetRequiredKeyedService<LocalDumpDataReplicationCoordinator>(key)
+                    )
+            );
+            services.AddKeyedScoped(
+                key,
+                (sp, _) =>
+                    new LocalDumpDataFlushCoordinator(
+                        sp.GetRequiredService<IDumpsData>(),
+                        storage,
+                        sp.GetRequiredService<IDumpIndexLoadService>(),
+                        sp.GetRequiredService<IDumpFlushOrchestrationService>(),
+                        sp.GetRequiredService<IDumpPersistenceIOService>(),
+                        sp.GetRequiredKeyedService<LocalDumpDataSessionPathResolver>(key)
+                    )
+            );
 
             services.AddKeyedScoped(
                 key,
@@ -115,19 +149,10 @@ public static partial class DumpDataInfrastructureServiceCollectionExtensions
                     IDumpDataStore instance = type == typeof(LocalDumpData)
                         ? new LocalDumpData(
                             sp.GetRequiredService<ILogger<LocalDumpData>>(),
-                            sp.GetRequiredService<IDumpsData>(),
-                            storage,
-                            sp.GetRequiredService<IDumpContextEligibilityService>(),
-                            sp.GetRequiredService<IDumpLifecycleService>(),
-                            sp.GetRequiredService<IDumpIndexLoadService>(),
-                            sp.GetRequiredService<IDumpSaveExecutionService>(),
-                            sp.GetRequiredService<IDumpFlushOrchestrationService>(),
                             sp.GetRequiredService<IDataStoreGuardService>(),
-                            sp.GetRequiredService<IDumpPersistenceIOService>(),
-                            sp.GetRequiredService<IDateTimeProvider>(),
-                            sp.GetRequiredKeyedService<LocalDumpDataSessionPathResolver>(key),
-                            sp.GetRequiredKeyedService<LocalDumpDataStateCoordinator>(key),
-                            sp.GetRequiredKeyedService<LocalDumpDataReplicationCoordinator>(key)
+                            sp.GetRequiredKeyedService<LocalDumpDataLoadCoordinator>(key),
+                            sp.GetRequiredKeyedService<LocalDumpDataSaveCoordinator>(key),
+                            sp.GetRequiredKeyedService<LocalDumpDataFlushCoordinator>(key)
                         )
                         : (IDumpDataStore)ActivatorUtilities.CreateInstance(sp, type, storage);
 
