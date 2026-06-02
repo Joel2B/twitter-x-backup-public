@@ -1,10 +1,9 @@
 using Backup.Application.Proxy.Models;
 using Backup.Infrastructure.Models.Config.Proxy;
-using Backup.Infrastructure.Proxy.Abstractions.Core;
 
 namespace Backup.Infrastructure.Proxy.Adapters;
 
-public sealed class ProxyProviderSourceInputFactory : IProxyProviderSourceInputFactory
+public sealed class ProxyProviderSourceInputFactory
 {
     public IReadOnlyList<ProxyProviderSourceInput> Build(IReadOnlyList<Provider> providers) =>
         providers

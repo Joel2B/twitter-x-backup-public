@@ -87,7 +87,7 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
         services.AddScoped<IProxyUseHandlingOrchestrationService, ProxyUseHandlingOrchestrationService>();
         services.AddScoped<IProxyUsageTrackingService, ProxyUsageTrackingService>();
         services.AddScoped<IProxyErrorTrackingService, ProxyErrorTrackingService>();
-        services.AddScoped<IProxyRuntimeMutationService, ProxyRuntimeMutationService>();
+        services.AddScoped<ProxyRuntimeMutationCoordinator>();
 
         return services;
     }
@@ -101,7 +101,7 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
             IProxyProviderCandidateLoadOrchestrationService,
             ProxyProviderCandidateLoadOrchestrationService
         >();
-        services.AddScoped<IProxyProviderSourceInputFactory, ProxyProviderSourceInputFactory>();
+        services.AddScoped<ProxyProviderSourceInputFactory>();
         services.AddScoped<IProxyResourceLoadPort, ProxyResourceLoadPortAdapter>();
         services.AddScoped<ProxyRuntimeRecordMapper>();
 
@@ -117,7 +117,7 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
                 new ProxyProviderCandidateLoader(
                     sp.GetRequiredService<AppConfig>(),
                     sp.GetRequiredService<IProxyResourceLoadPort>(),
-                    sp.GetRequiredService<IProxyProviderSourceInputFactory>(),
+                    sp.GetRequiredService<ProxyProviderSourceInputFactory>(),
                     sp.GetRequiredService<IProxyProviderCandidateLoadOrchestrationService>()
                 )
         );
@@ -135,7 +135,7 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
                     sp.GetRequiredService<IProxyFailureStateService>(),
                     sp.GetRequiredService<IProxyFailureExecutionPlanService>(),
                     sp.GetRequiredService<IProxyFailureSettingsPolicyService>(),
-                    sp.GetRequiredService<IProxyRuntimeMutationService>()
+                    sp.GetRequiredService<ProxyRuntimeMutationCoordinator>()
                 )
         );
         services.AddScoped(

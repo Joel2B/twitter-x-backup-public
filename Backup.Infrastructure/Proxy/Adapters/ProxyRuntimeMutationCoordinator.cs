@@ -2,17 +2,16 @@ using Backup.Application.Core;
 using Backup.Application.Proxy;
 using Backup.Application.Proxy.Models;
 using Backup.Infrastructure.Models.Config.Proxy;
-using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Models;
 
 namespace Backup.Infrastructure.Proxy.Adapters;
 
-public sealed class ProxyRuntimeMutationService(
+public sealed class ProxyRuntimeMutationCoordinator(
     IDateTimeProvider dateTimeProvider,
     ProxyRuntimeRecordMapper proxyRuntimeRecordMapper,
     IProxyUseHandlingOrchestrationService proxyUseHandlingOrchestrationService,
     IProxyErrorHandlingOrchestrationService proxyErrorHandlingOrchestrationService
-) : IProxyRuntimeMutationService
+)
 {
     private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
     private readonly ProxyRuntimeRecordMapper _proxyRuntimeRecordMapper = proxyRuntimeRecordMapper;

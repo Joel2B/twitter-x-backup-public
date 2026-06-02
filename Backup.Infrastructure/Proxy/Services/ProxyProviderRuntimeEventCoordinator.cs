@@ -1,7 +1,7 @@
 using Backup.Application.Proxy;
 using Backup.Application.Proxy.Models;
 using Backup.Infrastructure.Models.Config;
-using Backup.Infrastructure.Proxy.Abstractions.Core;
+using Backup.Infrastructure.Proxy.Adapters;
 using Backup.Infrastructure.Proxy.Models;
 using Microsoft.Extensions.Logging;
 
@@ -13,7 +13,7 @@ internal sealed class ProxyProviderRuntimeEventCoordinator(
     IProxyFailureStateService proxyFailureStateService,
     IProxyFailureExecutionPlanService proxyFailureExecutionPlanService,
     IProxyFailureSettingsPolicyService proxyFailureSettingsPolicyService,
-    IProxyRuntimeMutationService proxyRuntimeMutationService
+    ProxyRuntimeMutationCoordinator proxyRuntimeMutationService
 )
 {
     private readonly ILogger _logger = logger;
@@ -23,7 +23,7 @@ internal sealed class ProxyProviderRuntimeEventCoordinator(
         proxyFailureExecutionPlanService;
     private readonly IProxyFailureSettingsPolicyService _proxyFailureSettingsPolicyService =
         proxyFailureSettingsPolicyService;
-    private readonly IProxyRuntimeMutationService _proxyRuntimeMutationService =
+    private readonly ProxyRuntimeMutationCoordinator _proxyRuntimeMutationService =
         proxyRuntimeMutationService;
 
     public void ExecuteNext(Action rotateClient)
