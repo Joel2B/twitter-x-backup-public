@@ -1,6 +1,7 @@
 using Backup.Application.Core;
 using Backup.Application.Dump;
 using Backup.Application.IO;
+using Backup.Infrastructure.Dump.Abstractions.Services;
 
 namespace Backup.Infrastructure.Dump.Data;
 
@@ -13,6 +14,7 @@ public sealed class LocalDumpDataDependencies(
     IDumpSaveExecutionService dumpSaveExecutionService,
     IDumpFlushOrchestrationService dumpFlushOrchestrationService,
     IDumpReplicationPlanningService dumpReplicationPlanningService,
+    IDumpPersistenceIOService dumpPersistenceIOService,
     IDataStoreGuardService dataStoreGuardService,
     IDateTimeProvider dateTimeProvider
 )
@@ -29,6 +31,7 @@ public sealed class LocalDumpDataDependencies(
         dumpFlushOrchestrationService;
     public IDumpReplicationPlanningService DumpReplicationPlanningService { get; } =
         dumpReplicationPlanningService;
+    public IDumpPersistenceIOService DumpPersistenceIOService { get; } = dumpPersistenceIOService;
     public IDataStoreGuardService DataStoreGuardService { get; } = dataStoreGuardService;
     public IDateTimeProvider DateTimeProvider { get; } = dateTimeProvider;
 }

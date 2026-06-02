@@ -3,6 +3,7 @@ using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.DependencyInjection.Base;
 using Backup.Infrastructure.Dump.Abstractions.Data;
+using Backup.Infrastructure.Dump.Abstractions.Services;
 using Backup.Infrastructure.Dump.Data;
 using Backup.Infrastructure.Models.Config.Data.Dump;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,6 +14,7 @@ public static partial class DumpDataInfrastructureServiceCollectionExtensions
 {
     private static IServiceCollection RegisterDumpDataStores(this IServiceCollection services)
     {
+        services.AddScoped<IDumpPersistenceIOService, LocalDumpPersistenceIOService>();
         services.AddScoped<LocalDumpDataDependencies>();
 
         Dictionary<string, Type> types = new() { ["local"] = typeof(LocalDumpData) };

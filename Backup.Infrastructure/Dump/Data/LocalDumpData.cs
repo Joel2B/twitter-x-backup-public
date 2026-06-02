@@ -4,6 +4,7 @@ using Backup.Application.Dump.Models;
 using Backup.Application.IO;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Dump.Abstractions.Data;
+using Backup.Infrastructure.Dump.Abstractions.Services;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Models.Config.Data;
@@ -12,9 +13,7 @@ using Backup.Infrastructure.Models.Config.Data.Dump;
 using Backup.Infrastructure.Models.Dump;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Models;
-using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Dump.Data;
 
@@ -47,6 +46,8 @@ public class LocalDumpData(
         dependencies.DumpFlushOrchestrationService;
     private readonly IDumpReplicationPlanningService _dumpReplicationPlanningService =
         dependencies.DumpReplicationPlanningService;
+    private readonly IDumpPersistenceIOService _dumpPersistenceIOService =
+        dependencies.DumpPersistenceIOService;
     private readonly IDataStoreGuardService _dataStoreGuardService =
         dependencies.DataStoreGuardService;
     private readonly IDateTimeProvider _dateTimeProvider = dependencies.DateTimeProvider;
@@ -138,9 +139,7 @@ public class LocalDumpData(
         );
 
         DumpData dump = new() { Count = initialized.Count, QueryCount = initialized.QueryCount };
-
-        string content = JsonConvert.SerializeObject(dump);
-        await File.WriteAllTextAsync(path, content, cancellationToken);
+        await _dumpPersistenceIOService.WriteDumpData(path, dump, cancellationToken);
     }
 
     private async Task SetupData(ApiContext context, CancellationToken cancellationToken = default)
@@ -149,8 +148,10 @@ public class LocalDumpData(
 
         _dataStoreGuardService.EnsureFileExists(path);
 
-        string content = await File.ReadAllTextAsync(path, cancellationToken);
-        DumpData? deserialized = JsonConvert.DeserializeObject<DumpData>(content);
+        DumpData? deserialized = await _dumpPersistenceIOService.ReadDumpData(
+            path,
+            cancellationToken
+        );
         DumpData data = _dataStoreGuardService.RequireDeserialized(
             deserialized,
             "Error in deserialize"
@@ -224,10 +225,8 @@ public class LocalDumpData(
         string indexFullPath = Path.Combine(indexPath, fileName);
         string apiFullPath = Path.Combine(apiPath, fileName);
 
-        string indexJson = JsonConvert.SerializeObject(posts);
-
-        await File.WriteAllTextAsync(indexFullPath, indexJson, cancellationToken);
-        await File.WriteAllTextAsync(apiFullPath, response, cancellationToken);
+        await _dumpPersistenceIOService.WritePostsIndex(indexFullPath, posts, cancellationToken);
+        await _dumpPersistenceIOService.WriteApiResponse(apiFullPath, response, cancellationToken);
 
         Data.Cursor = saveExecution.SaveState.Cursor;
         Data.LastUpdate = saveExecution.SaveState.LastUpdate;
@@ -238,10 +237,8 @@ public class LocalDumpData(
 
     private async Task SaveData(ApiContext context, CancellationToken cancellationToken = default)
     {
-        string content = JsonConvert.SerializeObject(Data);
         string path = await GetPathData(context, cancellationToken);
-
-        await File.WriteAllTextAsync(path, content, cancellationToken);
+        await _dumpPersistenceIOService.WriteDumpData(path, Data, cancellationToken);
     }
 
     public async Task Flush(
@@ -255,9 +252,7 @@ public class LocalDumpData(
 
         string currentPath = await GetPathCurrent(context, cancellationToken);
 
-        List<string> paths = Directory
-            .EnumerateFiles(currentPath, "*.json", SearchOption.AllDirectories)
-            .ToList();
+        IReadOnlyList<string> paths = _dumpPersistenceIOService.EnumerateJsonFiles(currentPath);
         IReadOnlyList<Backup.Domain.Posts.Post> domainPosts = await _dumpIndexLoadService.LoadPosts(
             paths,
             [.. _config.Paths.Dumps.Dump.Api.Paths]
@@ -305,7 +300,7 @@ public class LocalDumpData(
         foreach (string path in plan.TargetPaths)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            UtilsPath.CopyDirectory(mainPath, path);
+            _dumpPersistenceIOService.CopyDirectory(mainPath, path);
         }
     }
 }
