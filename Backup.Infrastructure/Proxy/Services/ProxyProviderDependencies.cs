@@ -1,4 +1,3 @@
-using Backup.Application.Core;
 using Backup.Application.Proxy;
 using Backup.Application.Proxy.Ports;
 using Backup.Infrastructure.Proxy.Abstractions.Core;
@@ -23,9 +22,7 @@ public sealed class ProxyProviderDependencies(
     IProxyFailureStateService proxyFailureStateService,
     IProxyFailureExecutionPlanService proxyFailureExecutionPlanService,
     IProxyFailureSettingsPolicyService proxyFailureSettingsPolicyService,
-    IProxyUseHandlingOrchestrationService proxyUseHandlingOrchestrationService,
-    IProxyErrorHandlingOrchestrationService proxyErrorHandlingOrchestrationService,
-    IDateTimeProvider dateTimeProvider
+    IProxyRuntimeMutationService proxyRuntimeMutationService
 )
 {
     public IProxyData Data { get; } = data;
@@ -50,9 +47,6 @@ public sealed class ProxyProviderDependencies(
         proxyFailureExecutionPlanService;
     public IProxyFailureSettingsPolicyService ProxyFailureSettingsPolicyService { get; } =
         proxyFailureSettingsPolicyService;
-    public IProxyUseHandlingOrchestrationService ProxyUseHandlingOrchestrationService { get; } =
-        proxyUseHandlingOrchestrationService;
-    public IProxyErrorHandlingOrchestrationService ProxyErrorHandlingOrchestrationService { get; } =
-        proxyErrorHandlingOrchestrationService;
-    public IDateTimeProvider DateTimeProvider { get; } = dateTimeProvider;
+    public IProxyRuntimeMutationService ProxyRuntimeMutationService { get; } =
+        proxyRuntimeMutationService;
 }

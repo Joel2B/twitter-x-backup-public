@@ -84,6 +84,7 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
         services.AddScoped<IProxyUseHandlingOrchestrationService, ProxyUseHandlingOrchestrationService>();
         services.AddScoped<IProxyUsageTrackingService, ProxyUsageTrackingService>();
         services.AddScoped<IProxyErrorTrackingService, ProxyErrorTrackingService>();
+        services.AddScoped<IProxyRuntimeMutationService, ProxyRuntimeMutationService>();
 
         return services;
     }

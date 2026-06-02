@@ -57,11 +57,8 @@ public class ProxyProvider(
         dependencies.ProxyFailureExecutionPlanService;
     private readonly IProxyFailureSettingsPolicyService _proxyFailureSettingsPolicyService =
         dependencies.ProxyFailureSettingsPolicyService;
-    private readonly IProxyUseHandlingOrchestrationService _proxyUseHandlingOrchestrationService =
-        dependencies.ProxyUseHandlingOrchestrationService;
-    private readonly IProxyErrorHandlingOrchestrationService _proxyErrorHandlingOrchestrationService =
-        dependencies.ProxyErrorHandlingOrchestrationService;
-    private readonly IDateTimeProvider _dateTimeProvider = dependencies.DateTimeProvider;
+    private readonly IProxyRuntimeMutationService _proxyRuntimeMutationService =
+        dependencies.ProxyRuntimeMutationService;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
 
@@ -227,13 +224,10 @@ public class ProxyProvider(
 
         lock (proxy)
         {
-            ProxyRuntimeRecord runtimeRecord = _proxyRuntimeRecordMapper.ToRuntimeRecord(proxy);
-            outcome = _proxyUseHandlingOrchestrationService.HandleUse(
-                runtimeRecord,
-                _dateTimeProvider.Now,
+            outcome = _proxyRuntimeMutationService.HandleUse(
+                proxy,
                 _proxyFailureStateService.GetState().StopCount
             );
-            _proxyRuntimeRecordMapper.ApplyRuntimeRecord(proxy, runtimeRecord, disabledAt: null);
         }
 
         if (outcome.ShouldLogResetStopCount)
@@ -252,21 +246,14 @@ public class ProxyProvider(
 
         lock (proxy)
         {
-            DateTime now = _dateTimeProvider.Now;
-            ProxyRuntimeRecord runtimeRecord = _proxyRuntimeRecordMapper.ToRuntimeRecord(proxy);
-            ProxyErrorHandlingOutcome outcome = _proxyErrorHandlingOrchestrationService.Handle(
-                runtimeRecord,
-                proxy.Status.Current == StatusEnum.Active,
-                ex.Message,
-                ex.ToString(),
-                _config.Proxy.Threshold.ErrorsToInactive,
-                now
+            ProxyErrorHandlingOutcome outcome = _proxyRuntimeMutationService.HandleError(
+                proxy,
+                ex,
+                _config.Proxy.Threshold.ErrorsToInactive
             );
 
             if (!outcome.ShouldApplyRuntimeRecord)
                 return;
-
-            _proxyRuntimeRecordMapper.ApplyRuntimeRecord(proxy, runtimeRecord, outcome.DisabledAt);
 
             if (outcome.WasDisabled)
             {
