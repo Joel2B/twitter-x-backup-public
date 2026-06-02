@@ -1,0 +1,148 @@
+using System.Diagnostics;
+using Backup.Application.Media.Backup;
+using Backup.Application.Media.Backup.Models;
+using Backup.Infrastructure.Logging;
+using Backup.Infrastructure.Media.Models;
+using Microsoft.Extensions.Logging;
+
+namespace Backup.Infrastructure.Media.Services;
+
+internal sealed class MediaBackupDirectPathScanCoordinator(
+    IMediaBackupDirectPathScanOrchestrationService directPathScanOrchestrationService,
+    IMediaBackupPathObservationCompositionService pathObservationCompositionService,
+    IMediaBackupProgressPolicyService progressPolicyService,
+    IMediaBackupDirectPathFinalizeService directPathFinalizeService
+)
+{
+    private readonly IMediaBackupDirectPathScanOrchestrationService _directPathScanOrchestrationService =
+        directPathScanOrchestrationService;
+    private readonly IMediaBackupPathObservationCompositionService _pathObservationCompositionService =
+        pathObservationCompositionService;
+    private readonly IMediaBackupProgressPolicyService _progressPolicyService =
+        progressPolicyService;
+    private readonly IMediaBackupDirectPathFinalizeService _directPathFinalizeService =
+        directPathFinalizeService;
+
+    public async Task Scan(
+        MediaBackupRuntime runtime,
+        CancellationToken cancellationToken = default
+    )
+    {
+        ParallelOptions options = new()
+        {
+            MaxDegreeOfParallelism = 64,
+            CancellationToken = cancellationToken,
+        };
+
+        int total = runtime.Context.Paths.Count;
+        int done = 0;
+        int lastPercent = -1;
+        Stopwatch sw = Stopwatch.StartNew();
+
+        try
+        {
+            await Parallel.ForEachAsync(
+                runtime.Context.Paths,
+                options,
+                async (path, ct) =>
+                {
+                    try
+                    {
+                        MediaCacheEntry? cache = await runtime.MediaData.GetCache(path);
+                        bool existsSource = await runtime.MediaData.Exists(path);
+                        bool existsTarget = await runtime.MediaBackupData.Exists(path);
+
+                        MediaBackupDirectPathScanResult result =
+                            _directPathScanOrchestrationService.Evaluate(
+                                _pathObservationCompositionService.BuildDirectPathObservation(
+                                    new MediaBackupDirectPathObservationInput
+                                    {
+                                        Path = path,
+                                        CacheExists = cache is not null,
+                                        CachePath = cache?.Path,
+                                        FileSizeBytes = cache?.Size?.File,
+                                        SourceExists = existsSource,
+                                        TargetExists = existsTarget,
+                                        MaxPathSizeBytes = runtime.Config.Chunk.Path.Size,
+                                    }
+                                )
+                            );
+
+                        if (result.ShouldThrowMissingSource)
+                        {
+                            throw new InvalidOperationException(
+                                $"source media missing for path {path}"
+                            );
+                        }
+
+                        if (!result.ShouldIncludeDirectPath)
+                            return;
+
+                        runtime.Context.PathsDirect.Add(result.IncludedPath);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        runtime.Logger.LogWarning("Canceled {path}", path);
+                    }
+                    catch (Exception ex)
+                    {
+                        runtime.Logger.LogError(ex, "error in {path}: {error}", path, ex.Message);
+                    }
+                    finally
+                    {
+                        int current = Interlocked.Increment(ref done);
+                        int prev = Volatile.Read(ref lastPercent);
+                        MediaBackupProgressDecision progress = _progressPolicyService.Evaluate(
+                            current,
+                            total,
+                            prev
+                        );
+                        bool shouldLog = progress.ShouldLog;
+
+                        if (shouldLog)
+                        {
+                            shouldLog =
+                                Interlocked.CompareExchange(
+                                    ref lastPercent,
+                                    progress.Percent,
+                                    prev
+                                ) == prev;
+                        }
+
+                        if (shouldLog)
+                        {
+                            runtime.Logger.LogInfo(
+                                "Progress: {percent}% ({current}/{total}) elapsed={elapsed}",
+                                progress.Percent,
+                                current,
+                                total,
+                                sw.Elapsed
+                            );
+                        }
+                    }
+                }
+            );
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
+
+        List<string> pathsInChunks = runtime
+            .Context.Chunks.Values.SelectMany(chunk => chunk.Data)
+            .Select(item => item.Path)
+            .ToList();
+
+        MediaBackupDirectPathFinalizeResult finalize = _directPathFinalizeService.Finalize(
+            pathsInChunks,
+            runtime.Context.PathsDirect
+        );
+
+        runtime.Context.PathsInBoth = finalize.PathsInBoth.ToList();
+        runtime.Logger.LogInfo("{paths} in both", runtime.Context.PathsInBoth.Count);
+
+        runtime.Context.PathsDirect = [.. finalize.DirectPaths];
+        runtime.Logger.LogInfo(
+            "{paths} paths > {size}",
+            runtime.Context.PathsDirect.Count,
+            runtime.Config.Chunk.Path.Size
+        );
+    }
+}
