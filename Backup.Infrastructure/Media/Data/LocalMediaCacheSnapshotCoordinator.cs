@@ -7,25 +7,23 @@ using Backup.Infrastructure.Models.Config.Data;
 namespace Backup.Infrastructure.Media.Data;
 
 internal sealed class LocalMediaCacheSnapshotCoordinator(
-    IPartition partition,
     IMediaCachePersistenceIOService mediaCachePersistenceIOService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheReplicationPathService mediaCacheReplicationPathService,
-    Func<PartitionConfig, string> getPathCacheDownload,
-    Func<PartitionConfig, string> getPathCacheFile
+    IPartition partition,
+    LocalMediaCachePathLayout pathLayout
 )
 {
-    private readonly IPartition _partition = partition;
     private readonly IMediaCachePersistenceIOService _mediaCachePersistenceIOService =
         mediaCachePersistenceIOService;
     private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
         mediaCacheEntryPathPolicyService;
     private readonly IMediaCacheReplicationPathService _mediaCacheReplicationPathService =
         mediaCacheReplicationPathService;
-    private readonly Func<PartitionConfig, string> _getPathCacheDownload = getPathCacheDownload;
-    private readonly Func<PartitionConfig, string> _getPathCacheFile = getPathCacheFile;
+    private readonly IPartition _partition = partition;
+    private readonly LocalMediaCachePathLayout _pathLayout = pathLayout;
 
-    public string GetPrimaryFilePath() => _getPathCacheFile(_partition.GetPrimary());
+    public string GetPrimaryFilePath() => _pathLayout.GetPrimaryCacheFilePath();
 
     public async Task LoadIncrementalSnapshotsInto(
         IDictionary<string, MediaCacheEntry> cache,
@@ -33,7 +31,7 @@ internal sealed class LocalMediaCacheSnapshotCoordinator(
     )
     {
         PartitionConfig primary = _partition.GetPrimary();
-        string directory = _getPathCacheDownload(primary);
+        string directory = _pathLayout.GetCacheDownloadPath(primary);
         IReadOnlyList<MediaCacheEntry> snapshots =
             await _mediaCachePersistenceIOService.LoadIncrementalSnapshots(
                 directory,
@@ -75,7 +73,7 @@ internal sealed class LocalMediaCacheSnapshotCoordinator(
         List<PartitionConfig> partitions = _partition.GetCache();
         IReadOnlyList<string> replicaPaths = _mediaCacheReplicationPathService.GetReplicaPaths(
             primaryFilePath,
-            partitions.Select(_getPathCacheFile)
+            partitions.Select(_pathLayout.GetCacheFilePath)
         );
 
         return _mediaCachePersistenceIOService.ReplicatePrimarySnapshot(
@@ -91,7 +89,7 @@ internal sealed class LocalMediaCacheSnapshotCoordinator(
     )
     {
         PartitionConfig primary = _partition.GetPrimary();
-        string directory = _getPathCacheDownload(primary);
+        string directory = _pathLayout.GetCacheDownloadPath(primary);
         string fileName = _mediaCacheEntryPathPolicyService.BuildCacheSnapshotFileName(
             entry.Path,
             entry.PartitionId
@@ -108,7 +106,7 @@ internal sealed class LocalMediaCacheSnapshotCoordinator(
     public void ResetIncrementalSnapshots()
     {
         PartitionConfig primary = _partition.GetPrimary();
-        string directory = _getPathCacheDownload(primary);
+        string directory = _pathLayout.GetCacheDownloadPath(primary);
         _mediaCachePersistenceIOService.ResetIncrementalSnapshotDirectory(directory);
     }
 }

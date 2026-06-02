@@ -1,10 +1,14 @@
 using Backup.Application.IO;
 using Backup.Application.Media.Maintenance;
+using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Media.Abstractions.Services;
+using Backup.Infrastructure.Models.Config.Data.Media;
 
 namespace Backup.Infrastructure.Media.Data;
 
 public sealed class LocalMediaCacheDependencies(
+    StorageMedia config,
+    IPartition partition,
     IDataStoreGuardService dataStoreGuardService,
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService,
     IMediaCacheLoadExecutionService mediaCacheLoadExecutionService,
@@ -20,6 +24,8 @@ public sealed class LocalMediaCacheDependencies(
     IMediaCacheReplicationPathService mediaCacheReplicationPathService
 )
 {
+    public StorageMedia Config { get; } = config;
+    public IPartition Partition { get; } = partition;
     public IDataStoreGuardService DataStoreGuardService { get; } = dataStoreGuardService;
     public IMediaCacheDirectoryPolicyService MediaCacheDirectoryPolicyService { get; } =
         mediaCacheDirectoryPolicyService;
