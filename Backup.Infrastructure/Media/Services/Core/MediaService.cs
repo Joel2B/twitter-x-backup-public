@@ -1,16 +1,17 @@
 using Backup.Application.Media;
+using Backup.Application.Media.Ports;
 using Backup.Infrastructure.Media.Abstractions.Services;
 
 namespace Backup.Infrastructure.Media.Services;
 
 public class MediaService(
     IMediaOrchestrationService mediaOrchestrationService,
-    MediaOrchestrationCommandAdapter mediaOrchestrationCommand
+    IMediaOrchestrationCommand mediaOrchestrationCommand
 ) : IMediaService
 {
     private readonly IMediaOrchestrationService _mediaOrchestrationService =
         mediaOrchestrationService;
-    private readonly MediaOrchestrationCommandAdapter _mediaOrchestrationCommand =
+    private readonly IMediaOrchestrationCommand _mediaOrchestrationCommand =
         mediaOrchestrationCommand;
 
     public Task Download(CancellationToken cancellationToken = default)

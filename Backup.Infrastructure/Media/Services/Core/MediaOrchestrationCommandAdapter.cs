@@ -13,36 +13,32 @@ public sealed class MediaOrchestrationCommandAdapter(
     ILogger<MediaOrchestrationCommandAdapter> logger,
     IPostDomainData postData,
     IMediaOrchestrationStorageResolutionService mediaOrchestrationStorageResolutionService,
-    IMediaProcessing mediaProcessing,
-    IMediaPrune mediaPrune,
-    IEnumerable<IMediaStorage> mediaData,
-    IEnumerable<IMediaDataMaintenance> mediaMaintenance,
-    IMediaIntegrity mediaIntegrity,
-    IMediaFilter mediaFilter,
-    IMediaReplication mediaReplication,
-    IEnumerable<IMediaBackupStrategy> mediaBackups,
-    IMediaDownloadService mediaDownload,
-    IMediaDownloadModelMapper mediaDownloadModelMapper
+    MediaOrchestrationCommandDependencies dependencies
 ) : IMediaOrchestrationCommand
 {
     private readonly ILogger<MediaOrchestrationCommandAdapter> _logger = logger;
     private readonly IPostDomainData _postData = postData;
     private readonly IMediaOrchestrationStorageResolutionService _mediaOrchestrationStorageResolutionService =
         mediaOrchestrationStorageResolutionService;
-    private readonly IMediaProcessing _mediaProcessing = mediaProcessing;
-    private readonly IMediaPrune _mediaPrune = mediaPrune;
-    private readonly Dictionary<string, IMediaStorage> _mediaData = mediaData
+    private readonly IMediaProcessing _mediaProcessing = dependencies.MediaProcessing;
+    private readonly IMediaPrune _mediaPrune = dependencies.MediaPrune;
+    private readonly Dictionary<string, IMediaStorage> _mediaData = dependencies
+        .MediaStorage
         .Where(item => !string.IsNullOrWhiteSpace(item.Id))
         .ToDictionary(item => item.Id!, item => item, StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, IMediaDataMaintenance> _mediaMaintenance = mediaMaintenance
+    private readonly Dictionary<string, IMediaDataMaintenance> _mediaMaintenance = dependencies
+        .MediaMaintenance
         .Where(item => item.Id is not null)
         .ToDictionary(item => item.Id!, item => item, StringComparer.OrdinalIgnoreCase);
-    private readonly IMediaIntegrity _mediaIntegrity = mediaIntegrity;
-    private readonly IMediaFilter _mediaFilter = mediaFilter;
-    private readonly IMediaReplication _mediaReplication = mediaReplication;
-    private readonly List<IMediaBackupStrategy> _mediaBackups = mediaBackups.ToList();
-    private readonly IMediaDownloadService _mediaDownload = mediaDownload;
-    private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper = mediaDownloadModelMapper;
+    private readonly IMediaIntegrity _mediaIntegrity = dependencies.MediaIntegrity;
+    private readonly IMediaFilter _mediaFilter = dependencies.MediaFilter;
+    private readonly IMediaReplication _mediaReplication = dependencies.MediaReplication;
+    private readonly List<IMediaBackupStrategy> _mediaBackups = dependencies
+        .MediaBackups
+        .ToList();
+    private readonly IMediaDownloadService _mediaDownload = dependencies.MediaDownload;
+    private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper =
+        dependencies.MediaDownloadModelMapper;
 
     public async Task<IReadOnlyList<Backup.Domain.Posts.MediaInput>> GetMediaInputs(
         CancellationToken cancellationToken = default

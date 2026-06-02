@@ -1,4 +1,5 @@
 using Backup.Application.Media;
+using Backup.Application.Media.Ports;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,7 +15,8 @@ public static class RuntimeInfrastructureMediaServiceCollectionExtensions
             IMediaOrchestrationStorageResolutionService,
             MediaOrchestrationStorageResolutionService
         >();
-        services.AddScoped<MediaOrchestrationCommandAdapter>();
+        services.AddScoped<MediaOrchestrationCommandDependencies>();
+        services.AddScoped<IMediaOrchestrationCommand, MediaOrchestrationCommandAdapter>();
         services.AddScoped<IMediaService, MediaService>();
         return services;
     }
