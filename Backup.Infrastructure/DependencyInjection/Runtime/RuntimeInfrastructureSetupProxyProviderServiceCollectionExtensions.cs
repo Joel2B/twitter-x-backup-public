@@ -97,6 +97,7 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
             IProxyProviderCandidateLoadOrchestrationService,
             ProxyProviderCandidateLoadOrchestrationService
         >();
+        services.AddScoped<IProxyProviderSourceInputFactory, ProxyProviderSourceInputFactory>();
         services.AddScoped<IProxyResourceLoadPort, ProxyResourceLoadPortAdapter>();
         services.AddScoped<ProxyRuntimeRecordMapper>();
 

@@ -1,6 +1,7 @@
 using Backup.Application.Core;
 using Backup.Application.Proxy;
 using Backup.Application.Proxy.Ports;
+using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Adapters;
 using Backup.Infrastructure.Proxy.Abstractions.Data;
 
@@ -10,6 +11,7 @@ public sealed class ProxyProviderDependencies(
     IProxyData data,
     IProxyHealthProbePort proxyHealthProbePort,
     IProxyResourceLoadPort proxyResourceLoadPort,
+    IProxyProviderSourceInputFactory proxyProviderSourceInputFactory,
     IProxyHttpClientFactoryPolicyService proxyHttpClientFactoryPolicyService,
     IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService,
     IProxyKeyPolicyService proxyKeyPolicyService,
@@ -29,6 +31,8 @@ public sealed class ProxyProviderDependencies(
     public IProxyData Data { get; } = data;
     public IProxyHealthProbePort ProxyHealthProbePort { get; } = proxyHealthProbePort;
     public IProxyResourceLoadPort ProxyResourceLoadPort { get; } = proxyResourceLoadPort;
+    public IProxyProviderSourceInputFactory ProxyProviderSourceInputFactory { get; } =
+        proxyProviderSourceInputFactory;
     public IProxyHttpClientFactoryPolicyService ProxyHttpClientFactoryPolicyService { get; } =
         proxyHttpClientFactoryPolicyService;
     public IProxyHttpClientHeaderPolicyService ProxyHttpClientHeaderPolicyService { get; } =

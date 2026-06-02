@@ -33,6 +33,8 @@ public class ProxyProvider(
         dependencies.ProxyHealthProbePort;
     private readonly IProxyResourceLoadPort _proxyResourceLoadPort =
         dependencies.ProxyResourceLoadPort;
+    private readonly IProxyProviderSourceInputFactory _proxyProviderSourceInputFactory =
+        dependencies.ProxyProviderSourceInputFactory;
     private readonly IProxyHttpClientFactoryPolicyService _proxyHttpClientFactoryPolicyService =
         dependencies.ProxyHttpClientFactoryPolicyService;
     private readonly IProxyHttpClientHeaderPolicyService _proxyHttpClientHeaderPolicyService =
@@ -280,29 +282,15 @@ public class ProxyProvider(
 
     private async Task<IReadOnlyList<ProxyCandidate>> LoadCandidatesFromProviders()
     {
-        IReadOnlyList<ProxyProviderSourceInput> sources = _config
-            .Proxy.Providers.Select(ToProviderDefinition)
-            .ToList();
+        IReadOnlyList<ProxyProviderSourceInput> sources = _proxyProviderSourceInputFactory.Build(
+            _config.Proxy.Providers
+        );
 
         return await _proxyProviderCandidateLoadOrchestrationService.ExecuteAsync(
             sources,
             _proxyResourceLoadPort
         );
     }
-
-    private static ProxyProviderSourceInput ToProviderDefinition(Provider provider) =>
-        new()
-        {
-            ProviderType = provider.Type,
-            ProviderFormat = provider.Format,
-            Resources = provider
-                .Resources.Select(resource => new ProxyProviderSourceResourceInput
-                {
-                    ResourceType = resource.Type,
-                    ResourceValue = resource.Value,
-                })
-                .ToList(),
-        };
 
     private ProxyFailureSettings BuildFailureSettings() =>
         _proxyFailureSettingsPolicyService.Create(
