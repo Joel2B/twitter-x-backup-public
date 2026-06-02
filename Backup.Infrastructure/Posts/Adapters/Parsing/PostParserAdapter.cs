@@ -59,12 +59,12 @@ public class PostParser(
         JToken? token = root.SelectToken("data");
 
         if (token is null)
-            throw new Exception();
+            throw new FormatException("User parse payload is missing 'data'.");
 
         DataUser? data = _postTokenMaterializationService.Materialize<DataUser>(token);
 
         if (data is null)
-            throw new Exception();
+            throw new FormatException("User parse payload could not be materialized.");
 
         if (data.User is null)
             return new ParseUser(null);
@@ -81,7 +81,7 @@ public class PostParser(
         );
 
         if (user is null)
-            throw new Exception("User parse payload is invalid");
+            throw new FormatException("User parse payload is invalid");
 
         return new ParseUser(user);
     }

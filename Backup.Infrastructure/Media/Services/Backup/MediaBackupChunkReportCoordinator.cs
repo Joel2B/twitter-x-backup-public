@@ -18,7 +18,7 @@ internal sealed class MediaBackupChunkReportCoordinator(
         chunkRuntimeCompositionService;
     private readonly IMediaBackupChunkReportService _chunkReportService = chunkReportService;
 
-    public async Task ShowInfoChunks(MediaBackupRuntime runtime, string? id)
+    public async Task ShowInfoChunks(MediaBackupRuntime runtime, string? _)
     {
         runtime.Logger.LogInfo("{id,-3} {paths,-10} {size}", "id", "paths", "size (GiB)");
         List<MediaBackupChunkReportEntryInput> reportEntries = [];

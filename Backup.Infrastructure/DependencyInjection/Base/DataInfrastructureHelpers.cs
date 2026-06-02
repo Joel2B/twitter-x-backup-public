@@ -20,7 +20,7 @@ internal static class DataInfrastructureHelpers
         where TStorage : Storage;
 
     internal static List<DataRegistration<TStorage>> ResolveRegistrations<TStorage>(
-        IServiceCollection services,
+        IServiceCollection _,
         IEnumerable<TStorage> storages,
         IReadOnlyDictionary<string, Type> types,
         int keyOffset

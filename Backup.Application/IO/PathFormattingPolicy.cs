@@ -39,6 +39,8 @@ public static class PathFormattingPolicy
         if (OperatingSystem.IsLinux())
             return save ? path.Replace('/', '\\') : path.Replace('\\', '/');
 
-        throw new Exception();
+        throw new PlatformNotSupportedException(
+            "Path normalization is only supported on Windows and Linux."
+        );
     }
 }

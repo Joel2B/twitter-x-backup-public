@@ -83,9 +83,15 @@ public sealed class PostTimelineExtractor : IPostTimelineExtractionService
             return null;
 
         if (modules.Count > 1)
-            throw new Exception();
+        {
+            throw new FormatException(
+                "Timeline payload contains more than one TimelineTimelineModule entry."
+            );
+        }
 
-        JArray items = modules[0].SelectToken("content.items") as JArray ?? throw new Exception();
+        JArray items =
+            modules[0].SelectToken("content.items") as JArray
+            ?? throw new FormatException("Timeline module payload is missing 'content.items'.");
 
         return items
             .OfType<JObject>()
@@ -109,7 +115,8 @@ public sealed class PostTimelineExtractor : IPostTimelineExtractionService
     }
 
     private static JArray GetEntriesArray(JObject root) =>
-        root.SelectToken("..entries") as JArray ?? throw new Exception();
+        root.SelectToken("..entries") as JArray
+        ?? throw new FormatException("Timeline payload is missing '..entries'.");
 
     private static bool HasTimelineTweet(JObject entry) =>
         entry.SelectToken("content.itemContent.tweet_results.result.core") is not null
@@ -124,7 +131,9 @@ public sealed class PostTimelineExtractor : IPostTimelineExtractionService
         source = (JObject)source.DeepClone();
         JObject content = source["content"] as JObject ?? [];
         content["entryType"] = "";
-        content["itemContent"] = source.SelectToken("item.itemContent") ?? throw new Exception();
+        content["itemContent"] =
+            source.SelectToken("item.itemContent")
+            ?? throw new FormatException("Timeline module item is missing 'item.itemContent'.");
         source["content"] = content;
         source["item"] = null;
         return source;

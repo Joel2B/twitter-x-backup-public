@@ -8,7 +8,11 @@ public sealed class DumpContextGuardService : IDumpContextGuardService
             return contextId;
 
         if (!string.Equals(contextId, existingType, StringComparison.Ordinal))
-            throw new Exception();
+        {
+            throw new InvalidOperationException(
+                $"Dump context type mismatch. Expected '{existingType}', received '{contextId}'."
+            );
+        }
 
         return contextId;
     }

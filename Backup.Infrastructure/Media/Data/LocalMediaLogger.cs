@@ -54,7 +54,11 @@ public class LocalMediaLogger(
 
         foreach (Logs logs in lstLogs)
             if (!_errors.TryAdd(logs.Id, logs))
-                throw new Exception();
+            {
+                throw new InvalidOperationException(
+                    $"Duplicate media error log id '{logs.Id}' while loading persisted errors."
+                );
+            }
     }
 
     private string GetPath()
@@ -117,7 +121,11 @@ public class LocalMediaLogger(
     {
         foreach (Logs logs in lstLogs)
             if (!_errors.TryRemove(logs.Id, out _))
-                throw new Exception();
+            {
+                throw new InvalidOperationException(
+                    $"Media error log id '{logs.Id}' was not found during removal."
+                );
+            }
 
         await SaveErrors();
     }

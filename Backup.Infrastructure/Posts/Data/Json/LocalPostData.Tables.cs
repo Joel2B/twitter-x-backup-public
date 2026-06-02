@@ -97,9 +97,11 @@ public partial class LocalPostData
             .ToList();
 
         if (missingTables.Count > 0)
-            throw new Exception(
+        {
+            throw new InvalidOperationException(
                 $"Normalized current tables are incomplete. Missing files: {string.Join(", ", missingTables)}"
             );
+        }
 
         LocalPostTables tables = new();
 
@@ -109,9 +111,11 @@ public partial class LocalPostData
         string postMetaPath = GetCurrentTablesFilePath(PostMetaFileName);
 
         if (!File.Exists(postMetaPath))
-            throw new Exception(
+        {
+            throw new InvalidOperationException(
                 "Normalized current tables are incomplete. Missing file: post_meta.json"
             );
+        }
 
         tables.PostMeta = await ReadList<PostMetaRow>(postMetaPath);
 
@@ -178,7 +182,7 @@ public partial class LocalPostData
                 tables.PostChangeFields = await ReadList<PostChangeFieldRow>(path);
                 break;
             default:
-                throw new Exception($"Unknown table file '{fileName}'.");
+                throw new NotSupportedException($"Unknown table file '{fileName}'.");
         }
     }
 

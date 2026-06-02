@@ -9,8 +9,8 @@ public class DataStoreGuardServiceTests
     [Fact]
     public void RequireConfiguredFileName_Throws_WhenEmpty()
     {
-        Assert.Throws<Exception>(() => _sut.RequireConfiguredFileName(null));
-        Assert.Throws<Exception>(() => _sut.RequireConfiguredFileName(""));
+        Assert.Throws<InvalidOperationException>(() => _sut.RequireConfiguredFileName(null));
+        Assert.Throws<InvalidOperationException>(() => _sut.RequireConfiguredFileName(""));
     }
 
     [Fact]
@@ -24,7 +24,7 @@ public class DataStoreGuardServiceTests
     public void EnsureFileExists_Throws_WhenMissing()
     {
         string path = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".tmp");
-        Assert.Throws<Exception>(() => _sut.EnsureFileExists(path));
+        Assert.Throws<FileNotFoundException>(() => _sut.EnsureFileExists(path));
     }
 
     [Fact]

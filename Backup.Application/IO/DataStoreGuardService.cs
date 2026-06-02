@@ -3,12 +3,14 @@ namespace Backup.Application.IO;
 public sealed class DataStoreGuardService : IDataStoreGuardService
 {
     public string RequireConfiguredFileName(string? fileName) =>
-        string.IsNullOrWhiteSpace(fileName) ? throw new Exception("file not configured") : fileName;
+        string.IsNullOrWhiteSpace(fileName)
+            ? throw new InvalidOperationException("file not configured")
+            : fileName;
 
     public void EnsureFileExists(string path)
     {
         if (!File.Exists(path))
-            throw new Exception("File doesn't exist");
+            throw new FileNotFoundException("File doesn't exist", path);
     }
 
     public T RequireDeserialized<T>(T? value, string message)
@@ -16,7 +18,7 @@ public sealed class DataStoreGuardService : IDataStoreGuardService
         if (value is not null)
             return value;
 
-        throw new Exception(message);
+        throw new InvalidOperationException(message);
     }
 
     public T RequireInitialized<T>(T? value, string message)
@@ -24,9 +26,11 @@ public sealed class DataStoreGuardService : IDataStoreGuardService
         if (value is not null)
             return value;
 
-        throw new Exception(message);
+        throw new InvalidOperationException(message);
     }
 
     public string RequireDirectoryName(string? directory, string message) =>
-        string.IsNullOrWhiteSpace(directory) ? throw new Exception(message) : directory;
+        string.IsNullOrWhiteSpace(directory)
+            ? throw new InvalidOperationException(message)
+            : directory;
 }

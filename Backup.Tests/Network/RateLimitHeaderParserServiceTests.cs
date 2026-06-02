@@ -19,21 +19,25 @@ public class RateLimitHeaderParserServiceTests
     [Fact]
     public void Parse_ThrowsNoLimit_WhenLimitInvalid()
     {
-        Exception ex = Assert.Throws<Exception>(() => _sut.Parse("x", "23", "1748592000"));
-        Assert.Equal("no limit", ex.Message);
+        FormatException ex = Assert.Throws<FormatException>(
+            () => _sut.Parse("x", "23", "1748592000")
+        );
+        Assert.Equal("Invalid x-rate-limit-limit header value.", ex.Message);
     }
 
     [Fact]
     public void Parse_ThrowsNoRemaining_WhenRemainingInvalid()
     {
-        Exception ex = Assert.Throws<Exception>(() => _sut.Parse("150", "x", "1748592000"));
-        Assert.Equal("no remaining", ex.Message);
+        FormatException ex = Assert.Throws<FormatException>(
+            () => _sut.Parse("150", "x", "1748592000")
+        );
+        Assert.Equal("Invalid x-rate-limit-remaining header value.", ex.Message);
     }
 
     [Fact]
     public void Parse_ThrowsNoReset_WhenResetInvalid()
     {
-        Exception ex = Assert.Throws<Exception>(() => _sut.Parse("150", "23", "x"));
-        Assert.Equal("no reset", ex.Message);
+        FormatException ex = Assert.Throws<FormatException>(() => _sut.Parse("150", "23", "x"));
+        Assert.Equal("Invalid x-rate-limit-reset header value.", ex.Message);
     }
 }

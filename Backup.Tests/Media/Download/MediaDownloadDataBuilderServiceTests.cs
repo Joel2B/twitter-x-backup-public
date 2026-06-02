@@ -55,7 +55,7 @@ public class MediaDownloadDataBuilderServiceTests
     [Fact]
     public void Build_Throws_WhenUrlInvalid()
     {
-        Exception ex = Assert.Throws<Exception>(
+        ArgumentException ex = Assert.Throws<ArgumentException>(
             () =>
                 _sut.Build(
                     new MediaDownloadDataBuildInput

@@ -25,7 +25,7 @@ public class DumpContextGuardServiceTests
     [Fact]
     public void ResolveType_Throws_WhenCurrentSessionAndDifferentType()
     {
-        Assert.Throws<Exception>(
+        Assert.Throws<InvalidOperationException>(
             () => _sut.ResolveType("2026.05.30-10.00.00", "SearchTimeline", "TweetDetail")
         );
     }

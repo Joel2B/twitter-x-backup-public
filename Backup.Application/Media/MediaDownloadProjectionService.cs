@@ -29,24 +29,19 @@ public sealed class MediaDownloadProjectionService(
         Dictionary<string, MediaDownload> filtered = [];
 
         ProcessPhoto(posts, config.Photo, all, filtered);
-        ApplyDedup(all);
-        ApplyDedup(filtered);
+        ApplyDedup(all, filtered);
 
         ProcessGif(posts, config.Gif, all, filtered);
-        ApplyDedup(all);
-        ApplyDedup(filtered);
+        ApplyDedup(all, filtered);
 
         ProcessProfile(posts, config.Profile, all, filtered);
-        ApplyDedup(all);
-        ApplyDedup(filtered);
+        ApplyDedup(all, filtered);
 
         ProcessBanner(posts, config.Banner, all, filtered);
-        ApplyDedup(all);
-        ApplyDedup(filtered);
+        ApplyDedup(all, filtered);
 
         ProcessVideo(posts, config.Video, all, filtered);
-        ApplyDedup(all);
-        ApplyDedup(filtered);
+        ApplyDedup(all, filtered);
 
         return new MediaProcessingResult { All = [.. all.Values], Filtered = [.. filtered.Values] };
     }
@@ -58,52 +53,26 @@ public sealed class MediaDownloadProjectionService(
         Dictionary<string, MediaDownload> filtered
     )
     {
-        if (config.Types is null || config.Dimensions is null || config.Sizes is null)
+        RuleProjectionContext? context = CreateRuleProjectionContext(config);
+
+        if (context is null)
             return;
 
-        IReadOnlyList<MediaExclusionRule> filters = _downloadFilterPolicyService.Parse(
-            config.Filters
-        );
-        List<Resolution> resolutions = BuildResolutions(config.Dimensions, config.Sizes);
-
-        foreach (MediaInput post in posts)
+        foreach ((MediaInput post, PostMedia media) in EnumerateTypedMedias(posts, "photo"))
         {
-            IEnumerable<PostMedia> medias =
-                post.Medias?.Where(media => media.Type == "photo") ?? [];
+            string id = GetFileIdWithoutExtension(media.Url);
 
-            foreach (PostMedia media in medias)
-            {
-                string id = Path.GetFileNameWithoutExtension(media.Url);
-
-                foreach (string type in config.Types)
-                {
-                    foreach (Resolution resolution in resolutions)
-                    {
-                        MediaDownloadData built = _mediaDownloadDataBuilderService.Build(
-                            new()
-                            {
-                                PostId = post.Id,
-                                MediaType = "photo",
-                                Id = media.Id,
-                                MidPath = [id],
-                                FormatType = type,
-                                ResolutionType = resolution.Type,
-                                Name = resolution.Name,
-                                Url = media.Url,
-                            }
-                        );
-
-                        bool include = !_downloadFilterPolicyService.IsExcluded(
-                            filters,
-                            Path.GetExtension(media.Url).Trim('.'),
-                            type,
-                            resolution.Name
-                        );
-
-                        AddDataDownload(post.Id, built, include, all, filtered);
-                    }
-                }
-            }
+            AddRuleBasedDownloads(
+                resultId: post.Id,
+                postId: post.Id,
+                mediaType: "photo",
+                id: media.Id,
+                midPath: [id],
+                sourceUrl: media.Url,
+                context,
+                all,
+                filtered
+            );
         }
     }
 
@@ -114,95 +83,31 @@ public sealed class MediaDownloadProjectionService(
         Dictionary<string, MediaDownload> filtered
     )
     {
-        if (
-            config.Thumb.Types is null
-            || config.Thumb.Dimensions is null
-            || config.Thumb.Sizes is null
-            || config.Types is null
-        )
+        RuleProjectionContext? context = CreateRuleProjectionContext(config.Thumb);
+
+        if (context is null || config.Types is null)
             return;
 
-        IReadOnlyList<MediaExclusionRule> filters = _downloadFilterPolicyService.Parse(
-            config.Thumb.Filters
-        );
-        List<Resolution> resolutions = BuildResolutions(
-            config.Thumb.Dimensions,
-            config.Thumb.Sizes
-        );
-
-        IEnumerable<MediaInput> gifPosts = posts.Where(post =>
-            post.Medias is not null && post.Medias.Any(media => media.Type == "animated_gif")
-        );
-
-        foreach (MediaInput post in gifPosts)
+        foreach ((MediaInput post, PostMedia media) in EnumerateTypedMedias(posts, "animated_gif"))
         {
-            IEnumerable<PostMedia> medias = post.Medias ?? [];
+            if (media.VideoInfo?.Variants is null)
+                continue;
 
-            foreach (PostMedia media in medias)
-            {
-                if (media.Type != "animated_gif")
-                    continue;
+            string id = GetFileIdWithoutExtension(media.Url);
 
-                if (media.VideoInfo?.Variants is null)
-                    continue;
+            AddRuleBasedDownloads(
+                resultId: post.Id,
+                postId: post.Id,
+                mediaType: "gif",
+                id: media.Id,
+                midPath: ["thumb", id],
+                sourceUrl: media.Url,
+                context,
+                all,
+                filtered
+            );
 
-                string id = Path.GetFileNameWithoutExtension(media.Url);
-
-                foreach (string type in config.Thumb.Types)
-                {
-                    foreach (Resolution resolution in resolutions)
-                    {
-                        MediaDownloadData built = _mediaDownloadDataBuilderService.Build(
-                            new()
-                            {
-                                PostId = post.Id,
-                                MediaType = "gif",
-                                Id = media.Id,
-                                MidPath = ["thumb", id],
-                                FormatType = type,
-                                ResolutionType = resolution.Type,
-                                Name = resolution.Name,
-                                Url = media.Url,
-                            }
-                        );
-
-                        bool include = !_downloadFilterPolicyService.IsExcluded(
-                            filters,
-                            Path.GetExtension(media.Url).Trim('.'),
-                            type,
-                            resolution.Name
-                        );
-
-                        AddDataDownload(post.Id, built, include, all, filtered);
-                    }
-                }
-
-                foreach (PostVariant variant in media.VideoInfo.Variants)
-                {
-                    if (!config.Types.Contains(variant.ContentType))
-                        continue;
-
-                    string url = variant.Url.Split('?')[0];
-                    string videoFileName = Path.GetFileName(url);
-                    string videoId = Path.GetFileNameWithoutExtension(videoFileName);
-
-                    MediaDownloadData builtVideo = _mediaDownloadDataBuilderService.Build(
-                        new()
-                        {
-                            PostId = post.Id,
-                            MediaType = "gif",
-                            Id = media.Id,
-                            FormatType = "mp4",
-                            ResolutionType = videoId,
-                            Name = "index",
-                            Url = url,
-                            IncludeQuery = false,
-                        }
-                    );
-
-                    AddDataDownload(post.Id, builtVideo, include: true, all, filtered);
-                }
-            }
+            AddGifVariantDownloads(post, media, config.Types, all, filtered);
         }
     }
 
@@ -213,106 +118,31 @@ public sealed class MediaDownloadProjectionService(
         Dictionary<string, MediaDownload> filtered
     )
     {
-        if (
-            config.Thumb.Types is null
-            || config.Thumb.Dimensions is null
-            || config.Thumb.Sizes is null
-            || config.Types is null
-        )
+        RuleProjectionContext? context = CreateRuleProjectionContext(config.Thumb);
+
+        if (context is null || config.Types is null)
             return;
 
-        IReadOnlyList<MediaExclusionRule> filters = _downloadFilterPolicyService.Parse(
-            config.Thumb.Filters
-        );
-        List<Resolution> resolutions = BuildResolutions(
-            config.Thumb.Dimensions,
-            config.Thumb.Sizes
-        );
-
-        IEnumerable<MediaInput> videoPosts = posts.Where(post =>
-            post.Medias is not null && post.Medias.Any(media => media.Type == "video")
-        );
-
-        foreach (MediaInput post in videoPosts)
+        foreach ((MediaInput post, PostMedia media) in EnumerateTypedMedias(posts, "video"))
         {
-            IEnumerable<PostMedia> medias = post.Medias ?? [];
+            if (media.VideoInfo?.Variants is null)
+                continue;
 
-            foreach (PostMedia media in medias)
-            {
-                if (media.Type != "video" || media.VideoInfo?.Variants is null)
-                    continue;
+            string id = GetFileIdWithoutExtension(media.Url);
 
-                string id = Path.GetFileNameWithoutExtension(Path.GetFileName(media.Url));
+            AddRuleBasedDownloads(
+                resultId: post.Id,
+                postId: post.Id,
+                mediaType: "video",
+                id: media.Id,
+                midPath: ["thumb", id],
+                sourceUrl: media.Url,
+                context,
+                all,
+                filtered
+            );
 
-                foreach (string type in config.Thumb.Types)
-                {
-                    foreach (Resolution resolution in resolutions)
-                    {
-                        MediaDownloadData built = _mediaDownloadDataBuilderService.Build(
-                            new()
-                            {
-                                PostId = post.Id,
-                                MediaType = "video",
-                                Id = media.Id,
-                                MidPath = ["thumb", id],
-                                FormatType = type,
-                                ResolutionType = resolution.Type,
-                                Name = resolution.Name,
-                                Url = media.Url,
-                            }
-                        );
-
-                        bool include = !_downloadFilterPolicyService.IsExcluded(
-                            filters,
-                            Path.GetExtension(media.Url).Trim('.'),
-                            type,
-                            resolution.Name
-                        );
-
-                        AddDataDownload(post.Id, built, include, all, filtered);
-                    }
-                }
-
-                foreach (PostVariant variant in media.VideoInfo.Variants)
-                {
-                    if (!config.Types.Contains(variant.ContentType))
-                        continue;
-
-                    string? formatType = _mediaVideoVariantPolicyService.GetFormatType(
-                        variant.ContentType
-                    );
-
-                    if (formatType is null)
-                        continue;
-
-                    string url = variant.Url.Split('?')[0];
-                    string videoFileName = Path.GetFileName(url);
-                    string videoId = Path.GetFileNameWithoutExtension(videoFileName);
-                    string? resolution = _mediaVideoVariantPolicyService.GetResolution(
-                        formatType,
-                        url
-                    );
-
-                    if (resolution is null)
-                        throw new Exception();
-
-                    MediaDownloadData builtVideo = _mediaDownloadDataBuilderService.Build(
-                        new()
-                        {
-                            PostId = post.Id,
-                            MediaType = "video",
-                            Id = media.Id,
-                            FormatType = formatType,
-                            ResolutionType = videoId,
-                            Name = resolution,
-                            Url = url,
-                            IncludeQuery = false,
-                        }
-                    );
-
-                    AddDataDownload(post.Id, builtVideo, include: true, all, filtered);
-                }
-            }
+            AddVideoVariantDownloads(post, media, config.Types, all, filtered);
         }
     }
 
@@ -323,10 +153,10 @@ public sealed class MediaDownloadProjectionService(
         Dictionary<string, MediaDownload> filtered
     )
     {
-        if (config.Dimensions is null || config.Sizes is null)
-            return;
+        IReadOnlyList<Resolution>? resolutions = CreateResolutions(config);
 
-        List<Resolution> resolutions = BuildResolutions(config.Dimensions, config.Sizes);
+        if (resolutions is null)
+            return;
 
         foreach (MediaInput post in posts)
         {
@@ -337,10 +167,10 @@ public sealed class MediaDownloadProjectionService(
 
             string? fileName = Path.GetFileName(url);
 
-            if (fileName is null)
+            if (string.IsNullOrWhiteSpace(fileName))
                 continue;
 
-            string extension = Path.GetExtension(fileName).Replace(".", string.Empty);
+            string extension = Path.GetExtension(fileName).Trim('.');
             string id = fileName.Split("_normal")[0];
 
             foreach (Resolution resolution in resolutions)
@@ -372,10 +202,10 @@ public sealed class MediaDownloadProjectionService(
         Dictionary<string, MediaDownload> filtered
     )
     {
-        if (config.Dimensions is null || config.Sizes is null)
-            return;
+        IReadOnlyList<Resolution>? resolutions = CreateResolutions(config);
 
-        List<Resolution> resolutions = BuildResolutions(config.Dimensions, config.Sizes);
+        if (resolutions is null)
+            return;
 
         foreach (MediaInput post in posts)
         {
@@ -408,6 +238,139 @@ public sealed class MediaDownloadProjectionService(
         }
     }
 
+    private void AddRuleBasedDownloads(
+        string resultId,
+        string postId,
+        string mediaType,
+        string id,
+        IReadOnlyList<string> midPath,
+        string sourceUrl,
+        RuleProjectionContext context,
+        Dictionary<string, MediaDownload> all,
+        Dictionary<string, MediaDownload> filtered
+    )
+    {
+        string extension = Path.GetExtension(sourceUrl).Trim('.');
+
+        foreach (string type in context.Types)
+        {
+            foreach (Resolution resolution in context.Resolutions)
+            {
+                MediaDownloadData built = _mediaDownloadDataBuilderService.Build(
+                    new()
+                    {
+                        PostId = postId,
+                        MediaType = mediaType,
+                        Id = id,
+                        MidPath = [.. midPath],
+                        FormatType = type,
+                        ResolutionType = resolution.Type,
+                        Name = resolution.Name,
+                        Url = sourceUrl,
+                    }
+                );
+
+                bool include = !_downloadFilterPolicyService.IsExcluded(
+                    context.Filters,
+                    extension,
+                    type,
+                    resolution.Name
+                );
+
+                AddDataDownload(resultId, built, include, all, filtered);
+            }
+        }
+    }
+
+    private void AddGifVariantDownloads(
+        MediaInput post,
+        PostMedia media,
+        IReadOnlyCollection<string> allowedTypes,
+        Dictionary<string, MediaDownload> all,
+        Dictionary<string, MediaDownload> filtered
+    )
+    {
+        foreach (PostVariant variant in media.VideoInfo?.Variants ?? [])
+        {
+            if (!allowedTypes.Contains(variant.ContentType))
+                continue;
+
+            string url = StripQuery(variant.Url);
+            string videoId = GetFileIdWithoutExtension(url);
+            MediaDownloadData built = _mediaDownloadDataBuilderService.Build(
+                new()
+                {
+                    PostId = post.Id,
+                    MediaType = "gif",
+                    Id = media.Id,
+                    FormatType = "mp4",
+                    ResolutionType = videoId,
+                    Name = "index",
+                    Url = url,
+                    IncludeQuery = false,
+                }
+            );
+
+            AddDataDownload(post.Id, built, include: true, all, filtered);
+        }
+    }
+
+    private void AddVideoVariantDownloads(
+        MediaInput post,
+        PostMedia media,
+        IReadOnlyCollection<string> allowedTypes,
+        Dictionary<string, MediaDownload> all,
+        Dictionary<string, MediaDownload> filtered
+    )
+    {
+        foreach (PostVariant variant in media.VideoInfo?.Variants ?? [])
+        {
+            if (!allowedTypes.Contains(variant.ContentType))
+                continue;
+
+            string? formatType = _mediaVideoVariantPolicyService.GetFormatType(variant.ContentType);
+
+            if (formatType is null)
+                continue;
+
+            string url = StripQuery(variant.Url);
+            string videoId = GetFileIdWithoutExtension(url);
+            string? resolution = _mediaVideoVariantPolicyService.GetResolution(formatType, url);
+
+            if (resolution is null)
+            {
+                throw new InvalidOperationException(
+                    $"Unable to resolve media video resolution from variant URL '{url}'."
+                );
+            }
+
+            MediaDownloadData built = _mediaDownloadDataBuilderService.Build(
+                new()
+                {
+                    PostId = post.Id,
+                    MediaType = "video",
+                    Id = media.Id,
+                    FormatType = formatType,
+                    ResolutionType = videoId,
+                    Name = resolution,
+                    Url = url,
+                    IncludeQuery = false,
+                }
+            );
+
+            AddDataDownload(post.Id, built, include: true, all, filtered);
+        }
+    }
+
+    private void ApplyDedup(
+        Dictionary<string, MediaDownload> all,
+        Dictionary<string, MediaDownload> filtered
+    )
+    {
+        ApplyDedup(all);
+        ApplyDedup(filtered);
+    }
+
     private void ApplyDedup(Dictionary<string, MediaDownload> downloads)
     {
         IReadOnlyList<MediaDownload> deduped = _mediaDuplicateFilterService.Filter(
@@ -420,14 +383,58 @@ public sealed class MediaDownloadProjectionService(
             downloads[download.Id] = download.Clone();
     }
 
-    private static List<Resolution> BuildResolutions(
-        IReadOnlyList<string> dimensions,
-        IReadOnlyList<string> sizes
-    ) =>
+    private RuleProjectionContext? CreateRuleProjectionContext(
+        MediaDownloadProjectionRuleConfig config
+    )
+    {
+        if (config.Types is null)
+            return null;
+
+        IReadOnlyList<Resolution>? resolutions = CreateResolutions(config);
+
+        if (resolutions is null)
+            return null;
+
+        return new RuleProjectionContext(
+            _downloadFilterPolicyService.Parse(config.Filters),
+            resolutions,
+            config.Types
+        );
+    }
+
+    private static IReadOnlyList<Resolution>? CreateResolutions(
+        MediaDownloadProjectionRuleConfig config
+    )
+    {
+        if (config.Dimensions is null || config.Sizes is null)
+            return null;
+
+        return
         [
-            .. dimensions.Select(value => new Resolution(value, "dimension")),
-            .. sizes.Select(value => new Resolution(value, "size")),
+            .. config.Dimensions.Select(value => new Resolution(value, "dimension")),
+            .. config.Sizes.Select(value => new Resolution(value, "size")),
         ];
+    }
+
+    private static IEnumerable<(MediaInput Post, PostMedia Media)> EnumerateTypedMedias(
+        IReadOnlyList<MediaInput> posts,
+        string type
+    )
+    {
+        foreach (MediaInput post in posts)
+        {
+            foreach (PostMedia media in post.Medias ?? [])
+            {
+                if (media.Type == type)
+                    yield return (post, media);
+            }
+        }
+    }
+
+    private static string GetFileIdWithoutExtension(string url) =>
+        Path.GetFileNameWithoutExtension(Path.GetFileName(StripQuery(url)));
+
+    private static string StripQuery(string url) => url.Split('?')[0];
 
     private static void AddDataDownload(
         string id,
@@ -458,4 +465,10 @@ public sealed class MediaDownloadProjectionService(
     }
 
     private sealed record Resolution(string Name, string Type);
+
+    private sealed record RuleProjectionContext(
+        IReadOnlyList<MediaExclusionRule> Filters,
+        IReadOnlyList<Resolution> Resolutions,
+        IReadOnlyList<string> Types
+    );
 }

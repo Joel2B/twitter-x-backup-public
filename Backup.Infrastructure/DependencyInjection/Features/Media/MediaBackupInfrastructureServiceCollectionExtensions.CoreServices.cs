@@ -10,6 +10,22 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
 {
     private static IServiceCollection AddMediaBackupCoreServices(this IServiceCollection services)
     {
+        AddMediaBackupPathServices(services);
+        AddMediaBackupDirectPathServices(services);
+        AddMediaBackupIntegrityServices(services);
+        AddMediaBackupDuplicateServices(services);
+        AddMediaBackupPipelineServices(services);
+        AddMediaBackupChunkStateServices(services);
+        AddMediaBackupChunkMetadataServices(services);
+        AddMediaBackupChunkLoadAndReportServices(services);
+        AddMediaBackupRuntimeServices(services);
+        AddMediaBackupIOServices(services);
+
+        return services;
+    }
+
+    private static void AddMediaBackupPathServices(IServiceCollection services)
+    {
         services.AddScoped<IMediaBackupPathAnalysisService, MediaBackupPathAnalysisService>();
         services.AddScoped<IMediaBackupPartitionPathService, MediaBackupPartitionPathService>();
         services.AddScoped<
@@ -21,6 +37,31 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             IMediaBackupChunkAssignmentApplyService,
             MediaBackupChunkAssignmentApplyService
         >();
+        services.AddScoped<
+            IMediaBackupPathObservationCompositionService,
+            MediaBackupPathObservationCompositionService
+        >();
+        services.AddScoped<IMediaBackupPathProjectionService, MediaBackupPathProjectionService>();
+        services.AddScoped<
+            IMediaBackupArchiveMetadataMapService,
+            MediaBackupArchiveMetadataMapService
+        >();
+        services.AddScoped<
+            IMediaBackupPathArchiveMetadataProjectionService,
+            MediaBackupPathArchiveMetadataProjectionService
+        >();
+        services.AddScoped<
+            IMediaBackupPathCandidateCompositionService,
+            MediaBackupPathCandidateCompositionService
+        >();
+        services.AddScoped<
+            IMediaBackupStorageConsistencyDecisionService,
+            MediaBackupStorageConsistencyDecisionService
+        >();
+    }
+
+    private static void AddMediaBackupDirectPathServices(IServiceCollection services)
+    {
         services.AddScoped<
             IMediaBackupDirectPathSelectionService,
             MediaBackupDirectPathSelectionService
@@ -36,9 +77,19 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaBackupSyncFinalizeService, MediaBackupSyncFinalizeService>();
         services.AddScoped<IMediaBackupDirectApplyPathService, MediaBackupDirectApplyPathService>();
         services.AddScoped<
-            IMediaBackupPathObservationCompositionService,
-            MediaBackupPathObservationCompositionService
+            IMediaBackupDirectPathCandidateDecisionService,
+            MediaBackupDirectPathCandidateDecisionService
         >();
+        services.AddScoped<
+            IMediaBackupDirectPathScanOrchestrationService,
+            MediaBackupDirectPathScanOrchestrationService
+        >();
+        services.AddScoped<IMediaBackupDirectPathQueueService, MediaBackupDirectPathQueueService>();
+        services.AddScoped<IMediaBackupProgressPolicyService, MediaBackupProgressPolicyService>();
+    }
+
+    private static void AddMediaBackupIntegrityServices(IServiceCollection services)
+    {
         services.AddScoped<
             IMediaBackupChunkSyncPlanningService,
             MediaBackupChunkSyncPlanningService
@@ -60,45 +111,6 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             MediaBackupIntegrityChunkDataSelectionService
         >();
         services.AddScoped<
-            IMediaBackupDirectPathCandidateDecisionService,
-            MediaBackupDirectPathCandidateDecisionService
-        >();
-        services.AddScoped<
-            IMediaBackupDirectPathScanOrchestrationService,
-            MediaBackupDirectPathScanOrchestrationService
-        >();
-        services.AddScoped<IMediaBackupDirectPathQueueService, MediaBackupDirectPathQueueService>();
-        services.AddScoped<IMediaBackupProgressPolicyService, MediaBackupProgressPolicyService>();
-        services.AddScoped<IMediaBackupPathProjectionService, MediaBackupPathProjectionService>();
-        services.AddScoped<
-            IMediaBackupArchiveMetadataMapService,
-            MediaBackupArchiveMetadataMapService
-        >();
-        services.AddScoped<
-            IMediaBackupPathArchiveMetadataProjectionService,
-            MediaBackupPathArchiveMetadataProjectionService
-        >();
-        services.AddScoped<
-            IMediaBackupPathCandidateCompositionService,
-            MediaBackupPathCandidateCompositionService
-        >();
-        services.AddScoped<
-            IMediaBackupChunkFailurePolicyService,
-            MediaBackupChunkFailurePolicyService
-        >();
-        services.AddScoped<
-            IMediaBackupChunkFailureOrchestrationService,
-            MediaBackupChunkFailureOrchestrationService
-        >();
-        services.AddScoped<
-            IMediaBackupChunkFailureApplyService,
-            MediaBackupChunkFailureApplyService
-        >();
-        services.AddScoped<
-            IMediaBackupChunkMetadataOrchestrationService,
-            MediaBackupChunkMetadataOrchestrationService
-        >();
-        services.AddScoped<
             IMediaBackupIntegrityChunkUpdateOrchestrationService,
             MediaBackupIntegrityChunkUpdateOrchestrationService
         >();
@@ -110,6 +122,10 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             IMediaBackupIntegrityChunkRefreshService,
             MediaBackupIntegrityChunkRefreshService
         >();
+    }
+
+    private static void AddMediaBackupDuplicateServices(IServiceCollection services)
+    {
         services.AddScoped<
             IMediaBackupDuplicateCleanupService,
             MediaBackupDuplicateCleanupService
@@ -126,6 +142,10 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             IMediaBackupDuplicateChunkExecutionService,
             MediaBackupDuplicateChunkExecutionService
         >();
+    }
+
+    private static void AddMediaBackupPipelineServices(IServiceCollection services)
+    {
         services.AddScoped<
             IMediaBackupPhaseOrchestrationService,
             MediaBackupPhaseOrchestrationService
@@ -137,10 +157,6 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<
             IMediaBackupChunkReconciliationService,
             MediaBackupChunkReconciliationService
-        >();
-        services.AddScoped<
-            IMediaBackupStorageConsistencyDecisionService,
-            MediaBackupStorageConsistencyDecisionService
         >();
         services.AddScoped<IMediaBackupApplyFinalizeService, MediaBackupApplyFinalizeService>();
         services.AddScoped<
@@ -173,6 +189,10 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             IMediaBackupCalculateExecutionService,
             MediaBackupCalculateExecutionService
         >();
+    }
+
+    private static void AddMediaBackupChunkStateServices(IServiceCollection services)
+    {
         services.AddScoped<IMediaBackupChunkEntryStateService, MediaBackupChunkEntryStateService>();
         services.AddScoped<
             IMediaBackupChunkEntryStateMutationService,
@@ -185,6 +205,26 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<
             IMediaBackupChunkHashPreparationService,
             MediaBackupChunkHashPreparationService
+        >();
+        services.AddScoped<
+            IMediaBackupChunkFailurePolicyService,
+            MediaBackupChunkFailurePolicyService
+        >();
+        services.AddScoped<
+            IMediaBackupChunkFailureOrchestrationService,
+            MediaBackupChunkFailureOrchestrationService
+        >();
+        services.AddScoped<
+            IMediaBackupChunkFailureApplyService,
+            MediaBackupChunkFailureApplyService
+        >();
+    }
+
+    private static void AddMediaBackupChunkMetadataServices(IServiceCollection services)
+    {
+        services.AddScoped<
+            IMediaBackupChunkMetadataOrchestrationService,
+            MediaBackupChunkMetadataOrchestrationService
         >();
         services.AddScoped<
             IMediaBackupChunkMetadataPolicyService,
@@ -202,6 +242,10 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             IMediaBackupChunkMetadataRefreshExecutionService,
             MediaBackupChunkMetadataRefreshExecutionService
         >();
+    }
+
+    private static void AddMediaBackupChunkLoadAndReportServices(IServiceCollection services)
+    {
         services.AddScoped<
             IMediaBackupChunkLoadDecisionService,
             MediaBackupChunkLoadDecisionService
@@ -219,6 +263,10 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             MediaBackupChunkReportObservationAggregationService
         >();
         services.AddScoped<IMediaBackupChunkReportService, MediaBackupChunkReportService>();
+    }
+
+    private static void AddMediaBackupRuntimeServices(IServiceCollection services)
+    {
         services.AddScoped<MediaBackupRuntimeFactory>();
         services.AddScoped<MediaBackupPipelinePlanner>();
         services.AddScoped<MediaBackupChunkStateRuntimeAdapter>();
@@ -230,6 +278,10 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<MediaBackupCalculateInputBuilder>();
         services.AddScoped<MediaBackupCalculateResultApplier>();
         services.AddScoped<MediaBackupDirectPathScanCoordinator>();
+    }
+
+    private static void AddMediaBackupIOServices(IServiceCollection services)
+    {
         services.AddScoped<
             IMediaBackupZipEntryReaderIOService,
             MediaBackupZipEntryReaderIOService
@@ -239,7 +291,5 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             IMediaBackupChunkPersistenceIOService,
             MediaBackupChunkPersistenceIOService
         >();
-
-        return services;
     }
 }
