@@ -24,17 +24,17 @@ public sealed class ConfigNormalizationService
             ConfigApiFileEntry? value = kvp.Value;
 
             if (value is null)
-                throw new Exception(
+                throw new FormatException(
                     $"error deserializing api file '{apiFileName}': entry '{key}' is null"
                 );
 
             if (string.IsNullOrWhiteSpace(value.Id))
-                throw new Exception(
+                throw new FormatException(
                     $"error deserializing api file '{apiFileName}': entry '{key}' is missing required field 'Id'"
                 );
 
             if (!value.HasRequest)
-                throw new Exception(
+                throw new FormatException(
                     $"error deserializing api file '{apiFileName}': entry '{key}' is missing required field 'Request'"
                 );
         }
@@ -43,7 +43,7 @@ public sealed class ConfigNormalizationService
     public void ValidateUsers(IReadOnlyList<ConfigUser> users)
     {
         if (users.Count == 0)
-            throw new Exception(
+            throw new FormatException(
                 "error deserializing config file 'Services.json': section 'Users' is required"
             );
 
@@ -54,12 +54,12 @@ public sealed class ConfigNormalizationService
             string userId = user.Id?.Trim() ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(userId))
-                throw new Exception(
+                throw new FormatException(
                     "error deserializing config file 'Services.json': field 'Users:Id' is required"
                 );
 
             if (!userIds.Add(userId))
-                throw new Exception(
+                throw new FormatException(
                     $"error deserializing config file 'Services.json': duplicate user id '{userId}'"
                 );
 
@@ -72,12 +72,12 @@ public sealed class ConfigNormalizationService
         foreach (ConfigApiEntry entry in apiEntries)
         {
             if (string.IsNullOrWhiteSpace(entry.Url))
-                throw new Exception(
+                throw new FormatException(
                     $"error deserializing api file: entry '{entry.Key}' is missing required field 'Request:Url'"
                 );
 
             if (entry.Variables is null)
-                throw new Exception(
+                throw new FormatException(
                     $"error deserializing api file: entry '{entry.Key}' is missing required field 'Request:Query:Variables'"
                 );
 
@@ -91,7 +91,7 @@ public sealed class ConfigNormalizationService
                 continue;
 
             if (!TryReadCount(countValue, out int normalizedCount))
-                throw new Exception(
+                throw new FormatException(
                     $"error deserializing api file: entry '{entry.Key}' has invalid 'Request:Query:Variables:count' (must be positive integer or -1)"
                 );
 
@@ -105,12 +105,12 @@ public sealed class ConfigNormalizationService
         foreach (ConfigFetchEntry entry in fetchEntries)
         {
             if (!TryReadCount(entry.CountRaw, out int normalizedCount) || normalizedCount <= 0)
-                throw new Exception(
+                throw new FormatException(
                     $"error deserializing config file 'Fetch.json': key '{entry.Key}' has invalid field 'Count' (must be positive integer)"
                 );
 
             if (!TryReadCount(entry.ApiRaw, out int normalizedApiCount) || normalizedApiCount <= 0)
-                throw new Exception(
+                throw new FormatException(
                     $"error deserializing config file 'Fetch.json': key '{entry.Key}' has invalid field 'Api' (must be positive integer)"
                 );
 
@@ -132,7 +132,7 @@ public sealed class ConfigNormalizationService
                 continue;
 
             if (!entry.Variables.ContainsKey("count"))
-                throw new Exception(
+                throw new FormatException(
                     $"error deserializing config file 'Fetch.json': key '{fetch.Key}' requires 'Request:Query:Variables:count' in api config"
                 );
 

@@ -7,6 +7,6 @@ public sealed class ConfigDeserializationGuardService
         if (value is not null)
             return value;
 
-        throw new Exception($"error deserializing config file '{fileName}'");
+        throw new FormatException($"error deserializing config file '{fileName}'");
     }
 }

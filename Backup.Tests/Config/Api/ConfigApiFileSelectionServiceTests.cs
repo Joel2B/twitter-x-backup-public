@@ -9,7 +9,9 @@ public class ConfigApiFileSelectionServiceTests
     {
         ConfigApiFileSelectionService sut = new();
 
-        Exception ex = Assert.Throws<Exception>(() => sut.ValidateApiDirectoryExists(false));
+        DirectoryNotFoundException ex = Assert.Throws<DirectoryNotFoundException>(
+            () => sut.ValidateApiDirectoryExists(false)
+        );
 
         Assert.Contains("directory does not exist", ex.Message);
     }
@@ -33,7 +35,9 @@ public class ConfigApiFileSelectionServiceTests
     {
         ConfigApiFileSelectionService sut = new();
 
-        Exception ex = Assert.Throws<Exception>(() => sut.SelectRequiredFiles(["u1"], []));
+        FileNotFoundException ex = Assert.Throws<FileNotFoundException>(
+            () => sut.SelectRequiredFiles(["u1"], [])
+        );
 
         Assert.Contains("no json files found", ex.Message);
     }
@@ -43,7 +47,7 @@ public class ConfigApiFileSelectionServiceTests
     {
         ConfigApiFileSelectionService sut = new();
 
-        Exception ex = Assert.Throws<Exception>(
+        FileNotFoundException ex = Assert.Throws<FileNotFoundException>(
             () => sut.SelectRequiredFiles(["u1", "u2"], ["u1.json"])
         );
 

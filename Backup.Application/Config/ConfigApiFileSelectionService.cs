@@ -5,7 +5,7 @@ public sealed class ConfigApiFileSelectionService
     public void ValidateApiDirectoryExists(bool exists)
     {
         if (!exists)
-            throw new Exception(
+            throw new DirectoryNotFoundException(
                 "error deserializing config folder 'Api': directory does not exist"
             );
     }
@@ -16,7 +16,9 @@ public sealed class ConfigApiFileSelectionService
     )
     {
         if (availableFileNames.Count == 0)
-            throw new Exception("error deserializing config folder 'Api': no json files found");
+            throw new FileNotFoundException(
+                "error deserializing config folder 'Api': no json files found"
+            );
 
         HashSet<string> available = availableFileNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
         Dictionary<string, string> selected = [];
@@ -26,7 +28,7 @@ public sealed class ConfigApiFileSelectionService
             string fileName = $"{userId}.json";
 
             if (!available.Contains(fileName))
-                throw new Exception(
+                throw new FileNotFoundException(
                     $"error deserializing config folder 'Api': file '{fileName}' not found for user '{userId}'"
                 );
 

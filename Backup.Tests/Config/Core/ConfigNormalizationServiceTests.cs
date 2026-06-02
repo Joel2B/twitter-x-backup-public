@@ -98,7 +98,7 @@ public class ConfigNormalizationServiceTests
             },
         };
 
-        Exception ex = Assert.Throws<Exception>(
+        FormatException ex = Assert.Throws<FormatException>(
             () => sut.ValidateApiFileEntries("1122205668801257472.json", api)
         );
 
@@ -119,7 +119,7 @@ public class ConfigNormalizationServiceTests
             },
         };
 
-        Exception ex = Assert.Throws<Exception>(
+        FormatException ex = Assert.Throws<FormatException>(
             () => sut.ValidateApiFileEntries("1122205668801257472.json", api)
         );
 
