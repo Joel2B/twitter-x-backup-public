@@ -1,5 +1,6 @@
 using Backup.Application.IO;
 using Backup.Application.Media.Maintenance;
+using Backup.Infrastructure.Media.Abstractions.Services;
 
 namespace Backup.Infrastructure.Media.Data;
 
@@ -9,7 +10,7 @@ public sealed class LocalMediaCacheDependencies(
     IMediaCacheLoadExecutionService mediaCacheLoadExecutionService,
     IMediaCacheRecheckProbeExecutionService mediaCacheRecheckProbeExecutionService,
     IMediaCacheRecheckMutationExecutionService mediaCacheRecheckMutationExecutionService,
-    IMediaCacheJsonSnapshotService mediaCacheJsonSnapshotService,
+    IMediaCachePersistenceIOService mediaCachePersistenceIOService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
     IMediaCacheWritePolicyService mediaCacheWritePolicyService,
@@ -29,8 +30,8 @@ public sealed class LocalMediaCacheDependencies(
         mediaCacheRecheckProbeExecutionService;
     public IMediaCacheRecheckMutationExecutionService MediaCacheRecheckMutationExecutionService { get; } =
         mediaCacheRecheckMutationExecutionService;
-    public IMediaCacheJsonSnapshotService MediaCacheJsonSnapshotService { get; } =
-        mediaCacheJsonSnapshotService;
+    public IMediaCachePersistenceIOService MediaCachePersistenceIOService { get; } =
+        mediaCachePersistenceIOService;
     public IMediaCacheEntryPathPolicyService MediaCacheEntryPathPolicyService { get; } =
         mediaCacheEntryPathPolicyService;
     public IMediaCacheEntryStateFactoryService MediaCacheEntryStateFactoryService { get; } =

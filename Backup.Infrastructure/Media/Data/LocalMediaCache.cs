@@ -9,7 +9,6 @@ using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Media.Data;
 
@@ -35,8 +34,8 @@ public class LocalMediaCache(
         dependencies.MediaCacheRecheckProbeExecutionService;
     private readonly IMediaCacheRecheckMutationExecutionService _mediaCacheRecheckMutationExecutionService =
         dependencies.MediaCacheRecheckMutationExecutionService;
-    private readonly IMediaCacheJsonSnapshotService _mediaCacheJsonSnapshotService =
-        dependencies.MediaCacheJsonSnapshotService;
+    private readonly IMediaCachePersistenceIOService _mediaCachePersistenceIOService =
+        dependencies.MediaCachePersistenceIOService;
     private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
         dependencies.MediaCacheEntryPathPolicyService;
     private readonly IMediaCacheEntryStateFactoryService _mediaCacheEntryStateFactoryService =
@@ -118,12 +117,9 @@ public class LocalMediaCache(
             {
                 await LoadCache();
 
-                await foreach (
-                    MediaCacheEntry entry in LocalMediaCacheReader.Get(
-                        file,
-                        _mediaCacheJsonSnapshotService
-                    )
-                )
+                IReadOnlyList<MediaCacheEntry> entries =
+                    await _mediaCachePersistenceIOService.LoadPrimarySnapshot(file);
+                foreach (MediaCacheEntry entry in entries)
                     _cache[entry.Path] = entry;
             }
 
@@ -197,11 +193,7 @@ public class LocalMediaCache(
 
         if (loadExecution.RecheckPaths.Count > 0)
         {
-            await LocalMediaCacheReader.Save(
-                file,
-                [.. _cache.Values],
-                _mediaCacheJsonSnapshotService
-            );
+            await _mediaCachePersistenceIOService.SavePrimarySnapshot(file, [.. _cache.Values]);
             DeleteCache();
         }
     }
@@ -210,34 +202,16 @@ public class LocalMediaCache(
     {
         PartitionConfig primary = _partition.GetPrimary();
         string directory = GetPathCacheDownload(primary);
+        IReadOnlyList<MediaCacheEntry> snapshots =
+            await _mediaCachePersistenceIOService.LoadIncrementalSnapshots(directory);
 
-        if (!Directory.Exists(directory))
-            return;
-
-        foreach (
-            string path in Directory.EnumerateFiles(
-                directory,
-                "*.cache",
-                SearchOption.TopDirectoryOnly
-            )
-        )
-        {
-            string json = await File.ReadAllTextAsync(path);
-            MediaCacheEntry? cache = JsonConvert.DeserializeObject<MediaCacheEntry>(json);
-
-            if (cache is null)
-                continue;
-
+        foreach (MediaCacheEntry cache in snapshots)
             _cache.TryAdd(cache.Path, cache);
-        }
     }
 
     private Task Replicate()
     {
         string primaryFilePath = GetPathCacheFilePrimary();
-
-        if (!File.Exists(primaryFilePath))
-            return Task.CompletedTask;
 
         List<PartitionConfig> partitions = _partition.GetCache();
         IReadOnlyList<string> replicaPaths = _mediaCacheReplicationPathService.GetReplicaPaths(
@@ -245,55 +219,33 @@ public class LocalMediaCache(
             partitions.Select(GetPathCacheFile)
         );
 
-        foreach (string path in replicaPaths)
-        {
-            if (File.Exists(path))
-                File.Delete(path);
-
-            File.Copy(primaryFilePath, path);
-        }
-
-        return Task.CompletedTask;
+        return _mediaCachePersistenceIOService.ReplicatePrimarySnapshot(
+            primaryFilePath,
+            replicaPaths
+        );
     }
 
     private async Task SaveCache(MediaCacheEntry cache, CancellationToken ct)
     {
         PartitionConfig primary = _partition.GetPrimary();
-        string pathCache = GetPathCacheDownload(primary);
+        string directory = GetPathCacheDownload(primary);
         string fileName = _mediaCacheEntryPathPolicyService.BuildCacheSnapshotFileName(
             cache.Path,
             cache.PartitionId
         );
-        string path = Path.Combine(pathCache, fileName);
-
-        string json = JsonConvert.SerializeObject(cache);
-
-        using FileStream fs = new(
-            path,
-            FileMode.Create,
-            FileAccess.Write,
-            FileShare.None,
-            4096,
-            FileOptions.Asynchronous | FileOptions.WriteThrough
+        await _mediaCachePersistenceIOService.SaveIncrementalSnapshot(
+            directory,
+            cache,
+            fileName,
+            ct
         );
-
-        using StreamWriter sw = new(fs);
-
-        await sw.WriteAsync(json.AsMemory(), ct);
-        await sw.FlushAsync(ct);
-        fs.Flush(true);
     }
 
     private void DeleteCache()
     {
         PartitionConfig primary = _partition.GetPrimary();
-        string path = GetPathCacheDownload(primary);
-
-        if (!Directory.Exists(path))
-            return;
-
-        Directory.Delete(path, recursive: true);
-        Directory.CreateDirectory(path);
+        string directory = GetPathCacheDownload(primary);
+        _mediaCachePersistenceIOService.ResetIncrementalSnapshotDirectory(directory);
     }
 
     public async Task<string> GetPath(string path, long size = 0, CancellationToken ct = default)

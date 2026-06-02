@@ -159,6 +159,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
             MediaCacheRecheckApplyPolicyService
         >();
         services.AddScoped<IMediaCacheJsonSnapshotService, MediaCacheJsonSnapshotService>();
+        services.AddScoped<IMediaCachePersistenceIOService, LocalMediaCachePersistenceIOService>();
         services.AddScoped<IMediaCacheEntryPathPolicyService, MediaCacheEntryPathPolicyService>();
         services.AddScoped<
             IMediaCacheEntryStateFactoryService,
