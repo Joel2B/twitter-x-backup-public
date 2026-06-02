@@ -1,7 +1,7 @@
 using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Models.Data.Json;
 using Backup.Infrastructure.Posts.Adapters;
-using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Models.Stored;
 using Backup.Infrastructure.Utils;
 using Newtonsoft.Json;
 

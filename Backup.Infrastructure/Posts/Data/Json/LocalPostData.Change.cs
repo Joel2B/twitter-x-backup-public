@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Models.Stored;
 
 namespace Backup.Infrastructure.Posts.Data.Json;
 

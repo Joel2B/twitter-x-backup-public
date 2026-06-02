@@ -54,7 +54,7 @@ public sealed class MediaOrchestrationCommandAdapter(
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
-        List<Backup.Infrastructure.Posts.Models.MediaInput> appPosts = posts
+        List<Backup.Infrastructure.Posts.Models.Stored.MediaInput> appPosts = posts
             .Select(PostReplicationMapper.ToApp)
             .ToList();
 

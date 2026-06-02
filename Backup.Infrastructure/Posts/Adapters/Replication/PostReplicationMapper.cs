@@ -1,5 +1,5 @@
 using Backup.Domain.Posts;
-using AppPosts = Backup.Infrastructure.Posts.Models;
+using AppPosts = Backup.Infrastructure.Posts.Models.Stored;
 
 namespace Backup.Infrastructure.Posts.Adapters;
 

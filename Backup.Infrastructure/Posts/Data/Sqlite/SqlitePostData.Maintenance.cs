@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Models.Stored;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 

@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Models.Dump;
-using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Models.Stored;
 
 namespace Backup.Infrastructure.Dump.Abstractions.Services;
 

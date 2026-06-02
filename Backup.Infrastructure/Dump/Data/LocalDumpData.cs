@@ -12,7 +12,7 @@ using Backup.Infrastructure.Models.Config.Data.Bulk;
 using Backup.Infrastructure.Models.Config.Data.Dump;
 using Backup.Infrastructure.Models.Dump;
 using Backup.Infrastructure.Posts.Abstractions.Data;
-using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Models.Stored;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Dump.Data;

@@ -1,7 +1,7 @@
 using Backup.Application.Dump.Ports;
 using Backup.Application.IO;
 using Backup.Infrastructure.Posts.Adapters;
-using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Models.Stored;
 using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Dump.Adapters;

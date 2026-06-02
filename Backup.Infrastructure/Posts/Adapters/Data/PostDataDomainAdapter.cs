@@ -17,13 +17,13 @@ public sealed class PostDataDomainAdapter(IPostData postData) : IPostDomainData
 
     public async Task<List<Post>?> GetAll()
     {
-        List<Backup.Infrastructure.Posts.Models.Post>? posts = await _postData.GetAll();
+        List<Backup.Infrastructure.Posts.Models.Stored.Post>? posts = await _postData.GetAll();
         return posts?.Select(PostReplicationMapper.ToDomain).ToList();
     }
 
     public async Task<List<MediaInput>?> GetMediaInputs()
     {
-        List<Backup.Infrastructure.Posts.Models.MediaInput>? inputs =
+        List<Backup.Infrastructure.Posts.Models.Stored.MediaInput>? inputs =
             await _postData.GetMediaInputs();
         return inputs?.Select(PostReplicationMapper.ToDomain).ToList();
     }
@@ -32,7 +32,7 @@ public sealed class PostDataDomainAdapter(IPostData postData) : IPostDomainData
 
     public async Task<List<Post>> GetByIds(IReadOnlyCollection<string> ids)
     {
-        List<Backup.Infrastructure.Posts.Models.Post> posts = await _postData.GetByIds(ids);
+        List<Backup.Infrastructure.Posts.Models.Stored.Post> posts = await _postData.GetByIds(ids);
         return posts.Select(PostReplicationMapper.ToDomain).ToList();
     }
 

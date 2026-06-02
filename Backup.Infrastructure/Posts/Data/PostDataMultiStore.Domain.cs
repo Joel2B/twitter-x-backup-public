@@ -16,13 +16,13 @@ public partial class PostDataMultiStore : IPostDomainData
 
     async Task<List<Post>?> IPostDomainData.GetAll()
     {
-        List<Backup.Infrastructure.Posts.Models.Post>? posts = await GetAll();
+        List<Backup.Infrastructure.Posts.Models.Stored.Post>? posts = await GetAll();
         return posts?.Select(PostReplicationMapper.ToDomain).ToList();
     }
 
     async Task<List<MediaInput>?> IPostDomainData.GetMediaInputs()
     {
-        List<Backup.Infrastructure.Posts.Models.MediaInput>? inputs = await GetMediaInputs();
+        List<Backup.Infrastructure.Posts.Models.Stored.MediaInput>? inputs = await GetMediaInputs();
         return inputs?.Select(PostReplicationMapper.ToDomain).ToList();
     }
 
@@ -30,7 +30,7 @@ public partial class PostDataMultiStore : IPostDomainData
 
     async Task<List<Post>> IPostDomainData.GetByIds(IReadOnlyCollection<string> ids)
     {
-        List<Backup.Infrastructure.Posts.Models.Post> posts = await GetByIds(ids);
+        List<Backup.Infrastructure.Posts.Models.Stored.Post> posts = await GetByIds(ids);
         return posts.Select(PostReplicationMapper.ToDomain).ToList();
     }
 

@@ -1,7 +1,7 @@
 using Backup.Application.Posts;
 using Backup.Application.Posts.Models;
 using Backup.Infrastructure.Posts.Adapters;
-using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Models.Stored;
 
 namespace Backup.Infrastructure.Posts.Data.Sqlite;
 

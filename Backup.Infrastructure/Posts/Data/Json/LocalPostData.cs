@@ -9,7 +9,7 @@ using Backup.Infrastructure.Models.Config.Data.Posts;
 using Backup.Infrastructure.Models.Data.Json;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Adapters;
-using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Models.Stored;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Data.Json;

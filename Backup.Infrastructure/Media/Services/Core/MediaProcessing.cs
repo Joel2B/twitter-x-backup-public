@@ -5,7 +5,7 @@ using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Medias;
 using Backup.Infrastructure.Posts.Adapters;
-using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Models.Stored;
 
 namespace Backup.Infrastructure.Media.Services;
 

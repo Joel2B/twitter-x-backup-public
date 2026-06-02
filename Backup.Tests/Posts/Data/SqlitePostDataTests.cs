@@ -4,7 +4,7 @@ using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Posts;
 using Backup.Infrastructure.Models.Config.Downloads;
 using Backup.Infrastructure.Posts.Data.Sqlite;
-using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Models.Stored;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Backup.Tests;

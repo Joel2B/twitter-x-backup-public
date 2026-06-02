@@ -1,4 +1,4 @@
-namespace Backup.Infrastructure.Posts.Models;
+namespace Backup.Infrastructure.Posts.Models.Stored;
 
 public class PostData
 {

@@ -1,4 +1,4 @@
-using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Models.Stored;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Adapters;

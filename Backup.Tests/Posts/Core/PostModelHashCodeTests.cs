@@ -2,10 +2,10 @@ using DomainIndexData = Backup.Domain.Posts.IndexData;
 using DomainPost = Backup.Domain.Posts.Post;
 using DomainPostMedia = Backup.Domain.Posts.PostMedia;
 using DomainPostProfile = Backup.Domain.Posts.PostProfile;
-using InfraIndexData = Backup.Infrastructure.Posts.Models.IndexData;
-using InfraPost = Backup.Infrastructure.Posts.Models.Post;
-using InfraPostMedia = Backup.Infrastructure.Posts.Models.PostMedia;
-using InfraPostProfile = Backup.Infrastructure.Posts.Models.PostProfile;
+using InfraIndexData = Backup.Infrastructure.Posts.Models.Stored.IndexData;
+using InfraPost = Backup.Infrastructure.Posts.Models.Stored.Post;
+using InfraPostMedia = Backup.Infrastructure.Posts.Models.Stored.PostMedia;
+using InfraPostProfile = Backup.Infrastructure.Posts.Models.Stored.PostProfile;
 
 namespace Backup.Tests;
 

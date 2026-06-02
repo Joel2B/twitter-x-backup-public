@@ -19,13 +19,13 @@ internal sealed class PostDataDomainStoreAdapter(IPostDataStore store) : IPostDo
 
     public async Task<List<Post>?> GetAll()
     {
-        List<Backup.Infrastructure.Posts.Models.Post>? posts = await _store.GetAll();
+        List<Backup.Infrastructure.Posts.Models.Stored.Post>? posts = await _store.GetAll();
         return posts?.Select(PostReplicationMapper.ToDomain).ToList();
     }
 
     public async Task<List<MediaInput>?> GetMediaInputs()
     {
-        List<Backup.Infrastructure.Posts.Models.MediaInput>? inputs = await _store.GetMediaInputs();
+        List<Backup.Infrastructure.Posts.Models.Stored.MediaInput>? inputs = await _store.GetMediaInputs();
         return inputs?.Select(PostReplicationMapper.ToDomain).ToList();
     }
 
@@ -33,7 +33,7 @@ internal sealed class PostDataDomainStoreAdapter(IPostDataStore store) : IPostDo
 
     public async Task<List<Post>> GetByIds(IReadOnlyCollection<string> ids)
     {
-        List<Backup.Infrastructure.Posts.Models.Post> posts = await _store.GetByIds(ids);
+        List<Backup.Infrastructure.Posts.Models.Stored.Post> posts = await _store.GetByIds(ids);
         return posts.Select(PostReplicationMapper.ToDomain).ToList();
     }
 
@@ -72,7 +72,7 @@ internal sealed class PostDataDomainStoreAdapter(IPostDataStore store) : IPostDo
 
     public async Task<PostStoreCounts> GetStoreCounts()
     {
-        Backup.Infrastructure.Posts.Models.PostStoreCounts counts = await _store.GetStoreCounts();
+        Backup.Infrastructure.Posts.Models.Stored.PostStoreCounts counts = await _store.GetStoreCounts();
         return PostReplicationMapper.ToDomain(counts);
     }
 }

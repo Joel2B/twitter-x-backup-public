@@ -1,6 +1,6 @@
 using Backup.Infrastructure.Dump.Abstractions.Services;
 using Backup.Infrastructure.Models.Dump;
-using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Models.Stored;
 using Backup.Infrastructure.Utils;
 using Newtonsoft.Json;
 

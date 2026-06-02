@@ -1,7 +1,7 @@
 using Backup.Application.Posts.Ports;
 using Backup.Infrastructure.Models.Config.Api;
 using Backup.Infrastructure.Posts.Abstractions.Data;
-using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Models.Stored;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Posts.Adapters;

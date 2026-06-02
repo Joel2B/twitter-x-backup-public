@@ -1,9 +1,9 @@
 using DomainPost = Backup.Domain.Posts.Post;
 using DomainPostMedia = Backup.Domain.Posts.PostMedia;
 using DomainPostProfile = Backup.Domain.Posts.PostProfile;
-using InfrastructurePost = Backup.Infrastructure.Posts.Models.Post;
-using InfrastructurePostMedia = Backup.Infrastructure.Posts.Models.PostMedia;
-using InfrastructurePostProfile = Backup.Infrastructure.Posts.Models.PostProfile;
+using InfrastructurePost = Backup.Infrastructure.Posts.Models.Stored.Post;
+using InfrastructurePostMedia = Backup.Infrastructure.Posts.Models.Stored.PostMedia;
+using InfrastructurePostProfile = Backup.Infrastructure.Posts.Models.Stored.PostProfile;
 
 namespace Backup.Tests;
 

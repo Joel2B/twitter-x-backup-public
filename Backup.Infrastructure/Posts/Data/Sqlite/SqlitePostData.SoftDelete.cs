@@ -1,5 +1,5 @@
 using Backup.Infrastructure.Posts.Adapters;
-using Backup.Infrastructure.Posts.Models;
+using Backup.Infrastructure.Posts.Models.Stored;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backup.Infrastructure.Posts.Data.Sqlite;
