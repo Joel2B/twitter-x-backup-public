@@ -1,4 +1,5 @@
 using Backup.Application.Core;
+using Backup.Infrastructure.Core.Data;
 using Backup.Infrastructure.Dump.Abstractions.Data;
 using Backup.Infrastructure.Models.Dump;
 
@@ -10,18 +11,15 @@ public class DumpsDataMultiStore(
     ISecondaryStoreSelectionService secondaryStoreSelectionService
 ) : IDumpsData
 {
-    private readonly List<IDumpsDataStore> _stores = [.. stores];
-    private readonly IPrimarySelectionService _primarySelectionService = primarySelectionService;
-    private readonly ISecondaryStoreSelectionService _secondaryStoreSelectionService =
-        secondaryStoreSelectionService;
-
-    private IDumpsDataStore Primary =>
-        _primarySelectionService.ResolvePrimary(
-            _stores,
-            store => store.IsDefault,
+    private readonly DefaultStoreGroup<IDumpsDataStore> _storeGroup = new(
+        stores,
+        primarySelectionService,
+        secondaryStoreSelectionService,
             "No dumps data stores are configured.",
             "Only one dumps data store can be marked as default."
         );
+
+    private IDumpsDataStore Primary => _storeGroup.Primary;
 
     public Task<DumpsData> GetData(CancellationToken cancellationToken = default) =>
         Primary.GetData(cancellationToken);
@@ -31,12 +29,7 @@ public class DumpsDataMultiStore(
         IDumpsDataStore primary = Primary;
         await primary.Save(dumps, cancellationToken);
 
-        foreach (
-            IDumpsDataStore store in _secondaryStoreSelectionService.SelectSecondaries(
-                _stores,
-                primary
-            )
-        )
+        foreach (IDumpsDataStore store in _storeGroup.GetSecondaries(primary))
         {
             cancellationToken.ThrowIfCancellationRequested();
             await store.Save(dumps, cancellationToken);

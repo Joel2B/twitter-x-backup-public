@@ -1,6 +1,7 @@
 using Backup.Application.Core;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Models;
+using Backup.Infrastructure.Core.Data;
 
 namespace Backup.Infrastructure.Bulk.Data;
 
@@ -9,16 +10,15 @@ public class BulkSourceDataMultiStore(
     IPrimarySelectionService primarySelectionService
 ) : IBulkSourceData
 {
-    private readonly List<IBulkSourceDataStore> _stores = [.. stores];
-    private readonly IPrimarySelectionService _primarySelectionService = primarySelectionService;
-
-    private IBulkSourceDataStore Primary =>
-        _primarySelectionService.ResolvePrimary(
-            _stores,
-            store => store.IsDefault,
+    private readonly DefaultStoreGroup<IBulkSourceDataStore> _storeGroup = new(
+        stores,
+        primarySelectionService,
+        null,
             "No bulk source data stores are configured.",
             "Only one bulk source data store can be marked as default."
         );
+
+    private IBulkSourceDataStore Primary => _storeGroup.Primary;
 
     public Task<List<Source>> GetSources() => Primary.GetSources();
 }

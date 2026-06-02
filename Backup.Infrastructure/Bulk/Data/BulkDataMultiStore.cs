@@ -1,6 +1,7 @@
 using Backup.Application.Core;
 using Backup.Infrastructure.Bulk.Abstractions.Data;
 using Backup.Infrastructure.Bulk.Models;
+using Backup.Infrastructure.Core.Data;
 
 namespace Backup.Infrastructure.Bulk.Data;
 
@@ -10,18 +11,15 @@ public class BulkDataMultiStore(
     ISecondaryStoreSelectionService secondaryStoreSelectionService
 ) : IBulkData
 {
-    private readonly List<IBulkDataStore> _stores = [.. stores];
-    private readonly IPrimarySelectionService _primarySelectionService = primarySelectionService;
-    private readonly ISecondaryStoreSelectionService _secondaryStoreSelectionService =
-        secondaryStoreSelectionService;
-
-    private IBulkDataStore Primary =>
-        _primarySelectionService.ResolvePrimary(
-            _stores,
-            store => store.IsDefault,
+    private readonly DefaultStoreGroup<IBulkDataStore> _storeGroup = new(
+        stores,
+        primarySelectionService,
+        secondaryStoreSelectionService,
             "No bulk data stores are configured.",
             "Only one bulk data store can be marked as default."
         );
+
+    private IBulkDataStore Primary => _storeGroup.Primary;
 
     public string? Id
     {
@@ -38,12 +36,7 @@ public class BulkDataMultiStore(
         IBulkDataStore primary = Primary;
         await primary.Save(bulks, cancellationToken);
 
-        foreach (
-            IBulkDataStore store in _secondaryStoreSelectionService.SelectSecondaries(
-                _stores,
-                primary
-            )
-        )
+        foreach (IBulkDataStore store in _storeGroup.GetSecondaries(primary))
         {
             cancellationToken.ThrowIfCancellationRequested();
             await store.Save(bulks, cancellationToken);
@@ -52,7 +45,7 @@ public class BulkDataMultiStore(
 
     public async Task Prune(CancellationToken cancellationToken = default)
     {
-        foreach (IBulkDataStore store in _stores)
+        foreach (IBulkDataStore store in _storeGroup.Stores)
         {
             cancellationToken.ThrowIfCancellationRequested();
             await store.Prune(cancellationToken);
