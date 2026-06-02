@@ -34,7 +34,7 @@ public class LocalProxyData(
 
     private string GetPath()
     {
-        PartitionConfig partition = _partition.GetPartitions(_config.Debug.Partitions).First();
+        PartitionConfig partition = _partition.GetPrimary();
 
         return Path.Combine(
             [.. partition.Paths, .. _config.Proxy.Data.Paths, .. _config.Proxy.Data.Proxy.Paths]

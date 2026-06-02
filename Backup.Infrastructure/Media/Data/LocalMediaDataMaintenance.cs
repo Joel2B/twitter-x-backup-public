@@ -191,6 +191,10 @@ public class LocalMediaDataMaintenance(
                     File.Delete(fullPath);
                     _logger.LogInformation("media deleted: {path}", fullPath);
                 }
+                catch (OperationCanceledException)
+                {
+                    throw;
+                }
                 catch (Exception ex)
                 {
                     _logger.LogError("error deleting {media}: {error}", path, ex.Message);
