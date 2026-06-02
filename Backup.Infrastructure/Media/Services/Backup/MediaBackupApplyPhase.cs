@@ -2,38 +2,31 @@ using Backup.Application.Media.Backup;
 using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Media.Models.Backup;
-using Backup.Infrastructure.Utility.Abstractions.Services;
 using Backup.Infrastructure.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
 
 internal sealed class MediaBackupApplyPhase(
-    IMediaBackupChunkHashPreparationService chunkHashPreparationService,
     IMediaBackupChunkEntryStateService chunkEntryStateService,
-    IMediaBackupApplyChunkPlanningService applyChunkPlanningService,
-    IMediaBackupChunkFailureApplyService chunkFailureApplyService,
     IMediaBackupDirectApplyPathService directApplyPathService,
     IMediaBackupChunkRuntimeCompositionService chunkRuntimeCompositionService,
     IMediaBackupSyncFinalizeService syncFinalizeService,
-    IMediaBackupPathProjectionService pathProjectionService
+    MediaBackupApplyChunkCoordinator mediaBackupApplyChunkCoordinator,
+    MediaBackupChunkSyncMutationCoordinator mediaBackupChunkSyncMutationCoordinator
 ) : IMediaBackupApplyPhase
 {
-    private readonly IMediaBackupChunkHashPreparationService _chunkHashPreparationService =
-        chunkHashPreparationService;
     private readonly IMediaBackupChunkEntryStateService _chunkEntryStateService =
         chunkEntryStateService;
-    private readonly IMediaBackupApplyChunkPlanningService _applyChunkPlanningService =
-        applyChunkPlanningService;
-    private readonly IMediaBackupChunkFailureApplyService _chunkFailureApplyService =
-        chunkFailureApplyService;
     private readonly IMediaBackupDirectApplyPathService _directApplyPathService =
         directApplyPathService;
     private readonly IMediaBackupChunkRuntimeCompositionService _chunkRuntimeCompositionService =
         chunkRuntimeCompositionService;
     private readonly IMediaBackupSyncFinalizeService _syncFinalizeService = syncFinalizeService;
-    private readonly IMediaBackupPathProjectionService _pathProjectionService =
-        pathProjectionService;
+    private readonly MediaBackupApplyChunkCoordinator _mediaBackupApplyChunkCoordinator =
+        mediaBackupApplyChunkCoordinator;
+    private readonly MediaBackupChunkSyncMutationCoordinator _mediaBackupChunkSyncMutationCoordinator =
+        mediaBackupChunkSyncMutationCoordinator;
 
     public async Task Apply(
         MediaBackupRuntime runtime,
@@ -44,123 +37,20 @@ internal sealed class MediaBackupApplyPhase(
         cancellationToken.ThrowIfCancellationRequested();
         foreach (KeyValuePair<int, Chunk> kvp in runtime.Context.Chunks)
         {
-            IZipWriter? zip = null;
-
-            try
-            {
-                if (runtime.Stop)
-                    break;
-                cancellationToken.ThrowIfCancellationRequested();
-
-                IReadOnlyList<MediaBackupChunkEntryState> initialEntryStates =
-                    runtime.BuildChunkEntryStates(kvp.Value.Data);
-                IReadOnlyList<string> pathsNeedingHash =
-                    _chunkHashPreparationService.SelectPathsNeedingHash(initialEntryStates);
-                Dictionary<string, string?> hashByPath = new(StringComparer.Ordinal);
-
-                foreach (string path in pathsNeedingHash)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    string? hash = await runtime.MediaData.GetHash(UtilsPath.NormalizePath(path));
-                    hashByPath[path] = hash;
-
-                    if (hash is null)
-                        runtime.Logger.LogInfo("error in hash: {path}", path);
-                }
-
-                IReadOnlyList<MediaBackupChunkEntryState> hashedEntryStates =
-                    _chunkHashPreparationService.ApplyHashes(initialEntryStates, hashByPath);
-                runtime.ApplyChunkEntryStates(kvp.Value, hashedEntryStates);
-
-                IReadOnlyList<MediaBackupApplyChunkPathState> chunkPaths =
-                    _chunkEntryStateService.BuildApplyChunkPathStates(hashedEntryStates);
-
-                if (!chunkPaths.Any(item => item.HasHash))
-                    continue;
-
-                runtime.Logger.LogInformation("processing chunk {chunk}", kvp.Key);
-                runtime.Logger.LogInfo("update zip");
-                zip = await runtime.OpenChunkZipWrite(kvp.Value, "apply");
-
-                if (zip is null)
-                    continue;
-
-                runtime.Logger.LogInfo("reading entries");
-                HashSet<string> storagePaths = [.. zip.GetEntries().Select(o => o.FullName)];
-                MediaBackupApplyChunkPlan chunkPlan = _applyChunkPlanningService.Plan(
-                    chunkPaths,
-                    storagePaths,
-                    runtime.Context.Backup.Chunks.Ids,
-                    kvp.Key
-                );
-
-                if (!chunkPlan.ShouldProcessChunk || chunkPlan.FinalizePlan is null)
-                    continue;
-
-                foreach (MediaBackupApplyEntryCandidate item in chunkPlan.EntriesToAdd)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    storagePaths.Add(item.ArchivePath);
-                    await using Stream read = await runtime.MediaData.Read(
-                        UtilsPath.NormalizePath(item.SourcePath)
-                    );
-                    await zip.AddEntry(item.ArchivePath, read);
-                }
-
-                MediaBackupApplyFinalizePlan finalizePlan = chunkPlan.FinalizePlan;
-                MediaBackupStorageConsistencyDecision decision = finalizePlan.ConsistencyDecision;
-
-                runtime.Logger.LogInformation(
-                    "{memory}/{storage}:{missing}/{extras}",
-                    kvp.Value.Data.Count,
-                    storagePaths.Count,
-                    decision.MissingCount,
-                    decision.ExtraPaths.Count
-                );
-
-                if (decision.ShouldFail)
-                    throw new InvalidOperationException(
-                        $"backup apply consistency check failed for chunk {kvp.Key}"
-                    );
-
-                if (decision.ShouldRemoveExtras)
-                {
-                    foreach (string path in decision.ExtraPaths)
-                        zip.RemoveEntry(path);
-
-                    runtime.Logger.LogInformation(
-                        "{extras} paths removed in storage",
-                        decision.ExtraPaths.Count
-                    );
-                }
-
-                runtime.Context.Backup.Chunks.Ids = finalizePlan.ChunkIds.ToList();
-
-                await runtime.MediaBackupData.SaveBackup(runtime.Context.Backup);
-                await runtime.MediaBackupData.Save([kvp.Value]);
-
-                runtime.Logger.LogInformation("chunk {chunk} processed", kvp.Key);
-            }
-            catch (Exception ex)
-            {
-                runtime.Logger.LogError(ex, "error applying backup chunk {chunk}", kvp.Key);
-
-                await runtime.MediaBackupData.DeleteChunk(kvp.Value);
-
-                IReadOnlyList<MediaBackupChunkEntryState> resetStates =
-                    _chunkFailureApplyService.ApplyForApplyFailure(
-                        runtime.BuildChunkEntryStates(kvp.Value.Data)
-                    );
-                runtime.ApplyChunkEntryStates(kvp.Value, resetStates);
-
-                await runtime.MediaBackupData.Save([kvp.Value]);
-
+            if (runtime.Stop)
                 break;
-            }
-            finally
-            {
-                zip?.Dispose();
-            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            bool shouldContinue = await _mediaBackupApplyChunkCoordinator.Execute(
+                runtime,
+                kvp.Key,
+                kvp.Value,
+                cancellationToken
+            );
+
+            if (!shouldContinue)
+                break;
         }
 
         await runtime.ShowInfoChunks(backupId);
@@ -242,61 +132,19 @@ internal sealed class MediaBackupApplyPhase(
 
         foreach (MediaBackupChunkSyncChunkPlan chunkPlan in plan.Chunks)
         {
-            IZipWriter? zip = null;
-
-            try
-            {
-                if (runtime.Stop)
-                    break;
-                cancellationToken.ThrowIfCancellationRequested();
-
-                foreach (string path in chunkPlan.PathsToRemove)
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (zip is null)
-                    {
-                        runtime.Logger.LogInformation(
-                            "processing chunk {chunk}",
-                            chunkPlan.ChunkId
-                        );
-                        runtime.Logger.LogInfo("update zip");
-                        zip = await runtime.OpenChunkZipWrite(
-                            runtime.Context.Chunks[chunkPlan.ChunkId],
-                            "sync-chunks"
-                        );
-
-                        if (zip is null)
-                            break;
-                    }
-
-                    runtime.Logger.LogInfo("removing entry", path);
-                    zip.RemoveEntry(_pathProjectionService.ToArchivePath(path));
-                    runtime.Logger.LogInfo("entry removed");
-
-                    runtime
-                        .Context.Chunks[chunkPlan.ChunkId]
-                        .Data.RemoveAll(data => data.Path == path);
-                }
-
-                if (zip is null)
-                    continue;
-
-                await runtime.MediaBackupData.Save([runtime.Context.Chunks[chunkPlan.ChunkId]]);
-                runtime.Logger.LogInformation("chunk {chunk} processed", chunkPlan.ChunkId);
-            }
-            catch (Exception ex)
-            {
-                runtime.Logger.LogError(
-                    ex,
-                    "error syncing backup chunk {chunk}",
-                    chunkPlan.ChunkId
-                );
+            if (runtime.Stop)
                 break;
-            }
-            finally
-            {
-                zip?.Dispose();
-            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+
+            bool shouldContinue = await _mediaBackupChunkSyncMutationCoordinator.Execute(
+                runtime,
+                chunkPlan,
+                cancellationToken
+            );
+
+            if (!shouldContinue)
+                break;
         }
 
         runtime.Context.PathsDirect = [.. finalize.MergedDirectPaths];

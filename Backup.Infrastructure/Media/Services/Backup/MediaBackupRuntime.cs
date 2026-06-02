@@ -159,6 +159,17 @@ internal sealed class MediaBackupRuntime(
         await MediaBackupData.Save([chunk]);
     }
 
+    public async Task RecoverApplyFailure(Chunk chunk)
+    {
+        await MediaBackupData.DeleteChunk(chunk);
+
+        IReadOnlyList<MediaBackupChunkEntryState> resetStates =
+            _chunkFailureApplyService.ApplyForApplyFailure(BuildChunkEntryStates(chunk.Data));
+        ApplyChunkEntryStates(chunk, resetStates);
+
+        await MediaBackupData.Save([chunk]);
+    }
+
     public async Task<Dictionary<string, ZipEntry>?> ReadChunkEntries(Chunk chunk, string stage)
     {
         IZipWriter? zip = await OpenChunkZipRead(chunk, stage);
