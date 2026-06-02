@@ -2,6 +2,7 @@ using Backup.Application.Bulk;
 using Backup.Application.Bulk.Models;
 using Backup.Application.Bulk.Ports;
 using Backup.Domain.Posts;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Backup.Tests;
 
@@ -10,7 +11,7 @@ public class BulkApplicationServicesTests
     [Fact]
     public async Task Phase1Service_SavesPostsAndMarksPhaseAsCompleted_WhenCursorEnds()
     {
-        BulkPhase1Service sut = new();
+        BulkPhase1Service sut = new(NullLogger<BulkPhase1Service>.Instance);
         FakeBulkPhase1Command command = new();
         command.Bulks.Add(
             new BulkItem

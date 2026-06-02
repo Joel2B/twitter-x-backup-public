@@ -1,11 +1,14 @@
 using Backup.Application.Bulk.Models;
 using Backup.Application.Bulk.Ports;
 using Backup.Domain.Posts;
+using Microsoft.Extensions.Logging;
 
 namespace Backup.Application.Bulk;
 
-public sealed class BulkPhase1Service : IBulkPhase1Service
+public sealed class BulkPhase1Service(ILogger<BulkPhase1Service> logger) : IBulkPhase1Service
 {
+    private readonly ILogger<BulkPhase1Service> _logger = logger;
+
     public async Task Run(
         IBulkPhase1Command command,
         BulkPhase1Options options,
@@ -13,7 +16,9 @@ public sealed class BulkPhase1Service : IBulkPhase1Service
         CancellationToken cancellationToken
     )
     {
-        _ = await command.GetPostCount();
+        _logger.LogInformation("bulk phase 1: requesting post count");
+        int postCount = await command.GetPostCount();
+        _logger.LogInformation("bulk phase 1: current post count is {postCount}", postCount);
 
         IReadOnlyList<BulkItem> bulks = await command.GetBulks();
 
@@ -22,8 +27,19 @@ public sealed class BulkPhase1Service : IBulkPhase1Service
             .OrderBy(item => item.Phase1Order)
             .ToList();
 
+        _logger.LogInformation(
+            "bulk phase 1: found {activeCount} active bulks from {totalCount} total",
+            active.Count,
+            bulks.Count
+        );
+
         if (options.UsersPerCycle > 0)
             active = active.Take(options.UsersPerCycle).ToList();
+
+        _logger.LogInformation(
+            "bulk phase 1: using {activeCount} active bulks after UsersPerCycle filter",
+            active.Count
+        );
 
         int progress = 1;
 
