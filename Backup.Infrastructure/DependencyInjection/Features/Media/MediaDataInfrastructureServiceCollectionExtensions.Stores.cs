@@ -1,3 +1,5 @@
+using Backup.Application.IO;
+using Backup.Application.Media.Maintenance;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Data.Partition;
@@ -6,6 +8,7 @@ using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.DependencyInjection.Features.Media;
 
@@ -38,18 +41,91 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
                     (IPartition)
                         ActivatorUtilities.CreateInstance(sp, typeof(LocalPartition), storage)
             );
+            services.AddKeyedScoped(
+                key,
+                (sp, _) =>
+                    new LocalMediaCachePathLayout(
+                        storage,
+                        sp.GetRequiredKeyedService<IPartition>(key),
+                        sp.GetRequiredService<IDataStoreGuardService>(),
+                        sp.GetRequiredService<IMediaCacheDirectoryPolicyService>()
+                    )
+            );
+            services.AddKeyedScoped(
+                key,
+                (sp, _) =>
+                    new LocalMediaCacheSnapshotCoordinator(
+                        sp.GetRequiredService<IMediaCachePersistenceIOService>(),
+                        sp.GetRequiredService<IMediaCacheEntryPathPolicyService>(),
+                        sp.GetRequiredService<IMediaCacheReplicationPathService>(),
+                        sp.GetRequiredKeyedService<IPartition>(key),
+                        sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key)
+                    )
+            );
+            services.AddKeyedScoped(
+                key,
+                (sp, _) =>
+                    new LocalMediaCacheMutationApplier(
+                        sp.GetRequiredService<ILogger<LocalMediaCache>>(),
+                        sp.GetRequiredService<IMediaCacheRecheckMutationExecutionService>()
+                    )
+            );
+            services.AddKeyedScoped(
+                key,
+                (sp, _) =>
+                    new LocalMediaCacheLoadCoordinator(
+                        sp.GetRequiredService<ILogger<LocalMediaCache>>(),
+                        sp.GetRequiredKeyedService<IPartition>(key),
+                        sp.GetRequiredService<IMediaCacheLoadExecutionService>(),
+                        sp.GetRequiredService<IMediaCacheRecheckProbeExecutionService>(),
+                        sp.GetRequiredService<IMediaCacheStoredEntryProjectionService>(),
+                        sp.GetRequiredService<IMediaCachePartitionSizeAggregationService>(),
+                        sp.GetRequiredService<IMediaCacheEntryPathPolicyService>(),
+                        sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key),
+                        sp.GetRequiredKeyedService<LocalMediaCacheSnapshotCoordinator>(key),
+                        sp.GetRequiredKeyedService<LocalMediaCacheMutationApplier>(key)
+                    )
+            );
+            services.AddKeyedScoped(
+                key,
+                (sp, _) =>
+                    new LocalMediaCacheWriteCoordinator(
+                        storage,
+                        sp.GetRequiredKeyedService<IPartition>(key),
+                        sp.GetRequiredService<IMediaCachePartitionSelectionService>(),
+                        sp.GetRequiredService<IMediaCacheWritePolicyService>(),
+                        sp.GetRequiredService<IMediaCacheConflictResolutionService>(),
+                        sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key),
+                        sp.GetRequiredKeyedService<LocalMediaCacheSnapshotCoordinator>(key)
+                    )
+            );
 
             services.AddKeyedScoped(
                 key,
                 (sp, _) =>
                 {
-                    IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
-                    LocalMediaCacheDependencies dependencies = ActivatorUtilities.CreateInstance<
-                        LocalMediaCacheDependencies
-                    >(sp, storage, partition);
-
-                    IMediaCache instance = (IMediaCache)
-                        ActivatorUtilities.CreateInstance(sp, cacheType, dependencies);
+                    IMediaCache instance = cacheType == typeof(LocalMediaCache)
+                        ? new LocalMediaCache(
+                            sp.GetRequiredService<IMediaCacheEntryPathPolicyService>(),
+                            sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key),
+                            sp.GetRequiredKeyedService<LocalMediaCacheSnapshotCoordinator>(key),
+                            sp.GetRequiredKeyedService<LocalMediaCacheMutationApplier>(key),
+                            sp.GetRequiredKeyedService<LocalMediaCacheLoadCoordinator>(key),
+                            sp.GetRequiredKeyedService<LocalMediaCacheWriteCoordinator>(key)
+                        )
+                        : (IMediaCache)
+                            ActivatorUtilities.CreateInstance(
+                                sp,
+                                cacheType,
+                                sp.GetRequiredService<IMediaCacheEntryPathPolicyService>(),
+                                sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key),
+                                sp.GetRequiredKeyedService<LocalMediaCacheSnapshotCoordinator>(
+                                    key
+                                ),
+                                sp.GetRequiredKeyedService<LocalMediaCacheMutationApplier>(key),
+                                sp.GetRequiredKeyedService<LocalMediaCacheLoadCoordinator>(key),
+                                sp.GetRequiredKeyedService<LocalMediaCacheWriteCoordinator>(key)
+                            );
 
                     return instance;
                 }

@@ -45,7 +45,7 @@ public partial class LocalPostData
 
         Backup.Domain.Posts.Post domainCurrent = PostReplicationMapper.ToDomain(currentPost);
         IReadOnlyList<Backup.Domain.Posts.Change> projected =
-            _postChangeReadModelProjectionService.Project(domainCurrent, replayEntries);
+            _mutationCoordinator.ProjectChanges(domainCurrent, replayEntries);
 
         return projected.Select(PostReplicationMapper.ToAppChange).ToList();
     }

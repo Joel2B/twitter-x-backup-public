@@ -1,6 +1,5 @@
 using Backup.Application.Proxy;
 using Backup.Infrastructure.Models.Config;
-using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Models;
 using Microsoft.Extensions.Logging;
 
@@ -12,7 +11,7 @@ public sealed class ProxyClientRotationService(
     IProxyHttpClientFactoryPolicyService proxyHttpClientFactoryPolicyService,
     IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService,
     ILogger<ProxyClientRotationService> logger
-) : IProxyClientRotationService
+)
 {
     private readonly AppConfig _config = config;
     private readonly IProxyFailureStateService _proxyFailureStateService = proxyFailureStateService;

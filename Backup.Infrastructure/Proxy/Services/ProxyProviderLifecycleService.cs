@@ -3,7 +3,6 @@ using Backup.Application.Proxy.Models;
 using Backup.Application.Proxy.Ports;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Proxy;
-using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Backup.Infrastructure.Proxy.Adapters;
 using Backup.Infrastructure.Proxy.Models;
@@ -22,7 +21,7 @@ public sealed class ProxyProviderLifecycleService(
     IProxySetupExecutionService proxySetupExecutionService,
     IProxyFailureStateService proxyFailureStateService,
     ProxyRuntimeRecordMapper proxyRuntimeRecordMapper
-) : IProxyProviderLifecycleService
+)
 {
     private readonly ILogger<ProxyProviderLifecycleService> _logger = logger;
     private readonly AppConfig _config = config;

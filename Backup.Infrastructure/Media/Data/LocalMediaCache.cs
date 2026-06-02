@@ -21,47 +21,21 @@ public class LocalMediaCache : IMediaCache
     private readonly LocalMediaCacheLoadCoordinator _loadCoordinator;
     private readonly LocalMediaCacheWriteCoordinator _writeCoordinator;
 
-    public LocalMediaCache(
-        ILogger<LocalMediaCache> logger,
-        LocalMediaCacheDependencies dependencies
+    internal LocalMediaCache(
+        IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
+        LocalMediaCachePathLayout pathLayout,
+        LocalMediaCacheSnapshotCoordinator snapshotCoordinator,
+        LocalMediaCacheMutationApplier mutationApplier,
+        LocalMediaCacheLoadCoordinator loadCoordinator,
+        LocalMediaCacheWriteCoordinator writeCoordinator
     )
     {
-        _mediaCacheEntryPathPolicyService = dependencies.MediaCacheEntryPathPolicyService;
-        _pathLayout = new(
-            dependencies.Config,
-            dependencies.Partition,
-            dependencies.DataStoreGuardService,
-            dependencies.MediaCacheDirectoryPolicyService
-        );
-        _snapshotCoordinator = new(
-            dependencies.MediaCachePersistenceIOService,
-            dependencies.MediaCacheEntryPathPolicyService,
-            dependencies.MediaCacheReplicationPathService,
-            dependencies.Partition,
-            _pathLayout
-        );
-        _mutationApplier = new(logger, dependencies.MediaCacheRecheckMutationExecutionService);
-        _loadCoordinator = new(
-            logger,
-            dependencies.Partition,
-            dependencies.MediaCacheLoadExecutionService,
-            dependencies.MediaCacheRecheckProbeExecutionService,
-            dependencies.MediaCacheStoredEntryProjectionService,
-            dependencies.MediaCachePartitionSizeAggregationService,
-            dependencies.MediaCacheEntryPathPolicyService,
-            _pathLayout,
-            _snapshotCoordinator,
-            _mutationApplier
-        );
-        _writeCoordinator = new(
-            dependencies.Config,
-            dependencies.Partition,
-            dependencies.MediaCachePartitionSelectionService,
-            dependencies.MediaCacheWritePolicyService,
-            dependencies.MediaCacheConflictResolutionService,
-            _pathLayout,
-            _snapshotCoordinator
-        );
+        _mediaCacheEntryPathPolicyService = mediaCacheEntryPathPolicyService;
+        _pathLayout = pathLayout;
+        _snapshotCoordinator = snapshotCoordinator;
+        _mutationApplier = mutationApplier;
+        _loadCoordinator = loadCoordinator;
+        _writeCoordinator = writeCoordinator;
     }
 
     public Task Setup()

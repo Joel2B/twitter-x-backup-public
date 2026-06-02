@@ -10,7 +10,7 @@ public partial class LocalPostData
     private void AddChangeRows(LocalPostTables tables, Post post)
     {
         Backup.Domain.Posts.Post domainPost = PostReplicationMapper.ToDomain(post);
-        IReadOnlyList<PostComputedChange> computedChanges = _postChangeComputationService.Compute(
+        IReadOnlyList<PostComputedChange> computedChanges = _mutationCoordinator.ComputeChanges(
             domainPost
         );
 

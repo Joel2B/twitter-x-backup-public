@@ -1,10 +1,13 @@
 using Backup.Application.Proxy;
 using Backup.Application.Proxy.Ports;
 using Backup.Infrastructure.Core.Abstractions.Setup;
+using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Proxy.Abstractions.Core;
+using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Backup.Infrastructure.Proxy.Adapters;
 using Backup.Infrastructure.Proxy.Services;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.DependencyInjection.Runtime;
 
@@ -107,10 +110,45 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
 
     private static IServiceCollection AddProxyProviderFacade(this IServiceCollection services)
     {
-        services.AddScoped<IProxyClientRotationService, ProxyClientRotationService>();
-        services.AddScoped<IProxyProviderLifecycleService, ProxyProviderLifecycleService>();
-        services.AddScoped<ProxyProviderDependencies>();
-        services.AddScoped<ProxyProvider>();
+        services.AddScoped<ProxyClientRotationService>();
+        services.AddScoped<ProxyProviderLifecycleService>();
+        services.AddScoped(
+            sp =>
+                new ProxyProviderCandidateLoader(
+                    sp.GetRequiredService<AppConfig>(),
+                    sp.GetRequiredService<IProxyResourceLoadPort>(),
+                    sp.GetRequiredService<IProxyProviderSourceInputFactory>(),
+                    sp.GetRequiredService<IProxyProviderCandidateLoadOrchestrationService>()
+                )
+        );
+        services.AddScoped(
+            sp =>
+                new ProxyProviderClientSession(
+                    sp.GetRequiredService<ProxyClientRotationService>()
+                )
+        );
+        services.AddScoped(
+            sp =>
+                new ProxyProviderRuntimeEventCoordinator(
+                    sp.GetRequiredService<ILogger<ProxyProvider>>(),
+                    sp.GetRequiredService<AppConfig>(),
+                    sp.GetRequiredService<IProxyFailureStateService>(),
+                    sp.GetRequiredService<IProxyFailureExecutionPlanService>(),
+                    sp.GetRequiredService<IProxyFailureSettingsPolicyService>(),
+                    sp.GetRequiredService<IProxyRuntimeMutationService>()
+                )
+        );
+        services.AddScoped(
+            sp =>
+                new ProxyProvider(
+                    sp.GetRequiredService<AppConfig>(),
+                    sp.GetRequiredService<IProxyData>(),
+                    sp.GetRequiredService<ProxyProviderLifecycleService>(),
+                    sp.GetRequiredService<ProxyProviderCandidateLoader>(),
+                    sp.GetRequiredService<ProxyProviderClientSession>(),
+                    sp.GetRequiredService<ProxyProviderRuntimeEventCoordinator>()
+                )
+        );
         services.AddScoped<IProxyProvider>(sp => sp.GetRequiredService<ProxyProvider>());
         services.AddScoped<ISetup>(sp => sp.GetRequiredService<ProxyProvider>());
 

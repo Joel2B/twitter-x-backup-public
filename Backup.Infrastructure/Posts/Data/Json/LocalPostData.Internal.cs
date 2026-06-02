@@ -58,11 +58,11 @@ public partial class LocalPostData
         bool currentExists = File.Exists(currentPath);
 
         string basePath = GetPath(_partition.GetPrimary());
-        IReadOnlyList<PostHistoryPath> historyPaths = _postHistoryPathExtractionService.Extract(
+        IReadOnlyList<PostHistoryPath> historyPaths = _historyCoordinator.ExtractHistoryPaths(
             Directory.GetDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
         );
         PostSnapshotVerificationDecision decision =
-            _postSnapshotVerificationExecutionService.BuildDecision(
+            _historyCoordinator.BuildSnapshotDecision(
                 _config.Tasks.Verify,
                 currentExists,
                 Path.GetFileName(NormalizedPostsFileName),
@@ -81,7 +81,7 @@ public partial class LocalPostData
         long currentLength = new FileInfo(currentPath).Length;
         long historyLength = new FileInfo(historyPath).Length;
 
-        _postSnapshotVerificationExecutionService.ValidateIfNeeded(
+        _historyCoordinator.ValidateSnapshotIfNeeded(
             decision,
             historyExists,
             currentLength,
@@ -107,9 +107,9 @@ public partial class LocalPostData
             List<string> paths = [.. GetDataFilePaths(partition)];
             List<string> pathsFormatted = [.. paths.Select(UtilsPath.GetPathFormatted)];
             IReadOnlyList<PostDataFileReplicationOperation> operations =
-                _postDataReplicationPlanningService.Plan(mainPaths, paths);
+                _historyCoordinator.PlanReplication(mainPaths, paths);
             IReadOnlyList<PostDataFileReplicationOperation> formattedOperations =
-                _postDataReplicationPlanningService.Plan(mainPathsFormatted, pathsFormatted);
+                _historyCoordinator.PlanReplication(mainPathsFormatted, pathsFormatted);
 
             foreach (PostDataFileReplicationOperation operation in operations)
             {
@@ -146,7 +146,7 @@ public partial class LocalPostData
         string basePath = GetPath(partition);
         _logger.LogInformation("base path: {path}", Path.GetFileName(basePath));
 
-        IReadOnlyList<PostHistoryPath> pathsDate = _postHistoryPathExtractionService.Extract(
+        IReadOnlyList<PostHistoryPath> pathsDate = _historyCoordinator.ExtractHistoryPaths(
             Directory.GetDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
         );
 
@@ -155,7 +155,7 @@ public partial class LocalPostData
         if (pathsDate.Count == 0)
             return Task.CompletedTask;
 
-        var plan = _postHistoryPrunePlanningService.Plan(
+        var plan = _historyCoordinator.PlanPrune(
             pathsDate,
             _appConfig.Tasks.Prune.Data.Post.KeepDays,
             _appConfig.Tasks.Prune.Data.Post.KeepCount

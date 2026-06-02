@@ -1,12 +1,17 @@
+using Backup.Application.Core;
+using Backup.Application.IO;
+using Backup.Application.Posts;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Data.Partition;
 using Backup.Infrastructure.DependencyInjection.Base;
+using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data.Posts;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Data.Json;
 using Backup.Infrastructure.Posts.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.DependencyInjection.Features.Posts;
 
@@ -14,7 +19,53 @@ public static partial class PostDataInfrastructureServiceCollectionExtensions
 {
     private static IServiceCollection RegisterPostDataStores(this IServiceCollection services)
     {
-        services.AddScoped<LocalPostDataDependencies>();
+        services.AddScoped(
+            sp =>
+                new LocalPostDataMutationCoordinator(
+                    sp.GetRequiredService<IPostStoreMergeMutationService>(),
+                    sp.GetRequiredService<IPostSoftDeleteExecutionService>(),
+                    sp.GetRequiredService<IPostSnapshotNormalizationService>(),
+                    sp.GetRequiredService<IPostChangeComputationService>(),
+                    sp.GetRequiredService<IPostChangeReadModelProjectionService>()
+                )
+        );
+        services.AddScoped(
+            sp =>
+                new LocalPostDataReadCoordinator(
+                    sp.GetRequiredService<IPostMediaInputsCompositionService>(),
+                    sp.GetRequiredService<IPostStoreCountsAggregationService>(),
+                    sp.GetRequiredService<IPostProfileCountAggregationService>(),
+                    sp.GetRequiredService<IPostIdentifierFilterService>()
+                )
+        );
+        services.AddScoped(
+            sp =>
+                new LocalPostDataHashCoordinator(
+                    sp.GetRequiredService<IPostHashingService>(),
+                    sp.GetRequiredService<IPostHashMetaParityService>(),
+                    sp.GetRequiredService<IPostMetaNormalizationService>(),
+                    sp.GetRequiredService<IPostMetaReconciliationService>(),
+                    sp.GetRequiredService<IPostMetaConsistencyValidationService>()
+                )
+        );
+        services.AddScoped(
+            sp =>
+                new LocalPostDataHistoryCoordinator(
+                    sp.GetRequiredService<IPostHistoryPathExtractionService>(),
+                    sp.GetRequiredService<IPostHistoryPrunePlanningService>(),
+                    sp.GetRequiredService<IPostSnapshotVerificationExecutionService>(),
+                    sp.GetRequiredService<IPostDataReplicationPlanningService>(),
+                    sp.GetRequiredService<IPostHistoryArchivePathService>(),
+                    sp.GetRequiredService<IDateTimeProvider>()
+                )
+        );
+        services.AddScoped(
+            sp =>
+                new LocalPostDataTableCoordinator(
+                    sp.GetRequiredService<IPostTableProjectionService>(),
+                    sp.GetRequiredService<IPostTableMaterializationService>()
+                )
+        );
         services.AddScoped<SqlitePostDataDependencies>();
 
         Dictionary<string, Type> types = new()
@@ -75,8 +126,20 @@ public static partial class PostDataInfrastructureServiceCollectionExtensions
     {
         IPartition partition = sp.GetRequiredKeyedService<IPartition>(key);
 
-        IPostDataStore instance = (IPostDataStore)
-            ActivatorUtilities.CreateInstance(sp, storeType, storage, partition);
+        IPostDataStore instance = storeType == typeof(LocalPostData)
+            ? new LocalPostData(
+                sp.GetRequiredService<ILogger<LocalPostData>>(),
+                sp.GetRequiredService<AppConfig>(),
+                storage,
+                partition,
+                sp.GetRequiredService<LocalPostDataMutationCoordinator>(),
+                sp.GetRequiredService<LocalPostDataReadCoordinator>(),
+                sp.GetRequiredService<LocalPostDataHashCoordinator>(),
+                sp.GetRequiredService<LocalPostDataHistoryCoordinator>(),
+                sp.GetRequiredService<LocalPostDataTableCoordinator>(),
+                sp.GetRequiredService<IDataStoreGuardService>()
+            )
+            : (IPostDataStore)ActivatorUtilities.CreateInstance(sp, storeType, storage, partition);
 
         instance.Id = id;
         instance.IsDefault = storage.Default;

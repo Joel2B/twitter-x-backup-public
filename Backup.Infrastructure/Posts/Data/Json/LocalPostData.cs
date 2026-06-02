@@ -16,68 +16,49 @@ namespace Backup.Infrastructure.Posts.Data.Json;
 
 // Facade for JSON-backed post storage. Public behavior should remain stable;
 // internal responsibilities are intentionally delegated to collaborators.
-public partial class LocalPostData(
-    ILogger<LocalPostData> _logger,
-    AppConfig _appConfig,
-    StoragePost _config,
-    IPartition _partition,
-    LocalPostDataDependencies dependencies
-) : IPostDataStore, ISetup
+public partial class LocalPostData : IPostDataStore, ISetup
 {
     public string? Id { get; set; }
     public bool IsDefault { get; set; }
 
-    private readonly ILogger<LocalPostData> _logger = _logger;
-    private readonly AppConfig _appConfig = _appConfig;
-    private readonly StoragePost _config = _config;
-    private readonly IPartition _partition = _partition;
-    private readonly IPostStoreMergeMutationService _postStoreMergeMutationService =
-        dependencies.PostStoreMergeMutationService;
-    private readonly IPostSoftDeleteExecutionService _postSoftDeleteExecutionService =
-        dependencies.PostSoftDeleteExecutionService;
-    private readonly IPostSnapshotNormalizationService _postSnapshotNormalizationService =
-        dependencies.PostSnapshotNormalizationService;
-    private readonly IPostMediaInputsCompositionService _postMediaInputsCompositionService =
-        dependencies.PostMediaInputsCompositionService;
-    private readonly IPostHashingService _postHashingService = dependencies.PostHashingService;
-    private readonly IPostHashMetaParityService _postHashMetaParityService =
-        dependencies.PostHashMetaParityService;
-    private readonly IPostMetaNormalizationService _postMetaNormalizationService =
-        dependencies.PostMetaNormalizationService;
-    private readonly IPostMetaReconciliationService _postMetaReconciliationService =
-        dependencies.PostMetaReconciliationService;
-    private readonly IPostHistoryPathExtractionService _postHistoryPathExtractionService =
-        dependencies.PostHistoryPathExtractionService;
-    private readonly IPostHistoryPrunePlanningService _postHistoryPrunePlanningService =
-        dependencies.PostHistoryPrunePlanningService;
-    private readonly IPostSnapshotVerificationExecutionService _postSnapshotVerificationExecutionService =
-        dependencies.PostSnapshotVerificationExecutionService;
-    private readonly IPostDataReplicationPlanningService _postDataReplicationPlanningService =
-        dependencies.PostDataReplicationPlanningService;
-    private readonly IPostChangeComputationService _postChangeComputationService =
-        dependencies.PostChangeComputationService;
-    private readonly IPostChangeReadModelProjectionService _postChangeReadModelProjectionService =
-        dependencies.PostChangeReadModelProjectionService;
-    private readonly IPostStoreCountsAggregationService _postStoreCountsAggregationService =
-        dependencies.PostStoreCountsAggregationService;
-    private readonly IPostProfileCountAggregationService _postProfileCountAggregationService =
-        dependencies.PostProfileCountAggregationService;
-    private readonly IPostMetaConsistencyValidationService _postMetaConsistencyValidationService =
-        dependencies.PostMetaConsistencyValidationService;
-    private readonly IPostTableProjectionService _postTableProjectionService =
-        dependencies.PostTableProjectionService;
-    private readonly IPostTableMaterializationService _postTableMaterializationService =
-        dependencies.PostTableMaterializationService;
-    private readonly IPostIdentifierFilterService _postIdentifierFilterService =
-        dependencies.PostIdentifierFilterService;
-    private readonly IDataStoreGuardService _dataStoreGuardService =
-        dependencies.DataStoreGuardService;
-    private readonly IPostHistoryArchivePathService _postHistoryArchivePathService =
-        dependencies.PostHistoryArchivePathService;
-    private readonly IDateTimeProvider _dateTimeProvider = dependencies.DateTimeProvider;
+    private readonly ILogger<LocalPostData> _logger;
+    private readonly AppConfig _appConfig;
+    private readonly StoragePost _config;
+    private readonly IPartition _partition;
+    private readonly LocalPostDataMutationCoordinator _mutationCoordinator;
+    private readonly LocalPostDataReadCoordinator _readCoordinator;
+    private readonly LocalPostDataHashCoordinator _hashCoordinator;
+    private readonly LocalPostDataHistoryCoordinator _historyCoordinator;
+    private readonly LocalPostDataTableCoordinator _tableCoordinator;
+    private readonly IDataStoreGuardService _dataStoreGuardService;
 
     private Dictionary<string, Post>? _postsCache = null;
     private Dictionary<string, PostMetaRow>? _postMetaCache = null;
+
+    internal LocalPostData(
+        ILogger<LocalPostData> logger,
+        AppConfig appConfig,
+        StoragePost config,
+        IPartition partition,
+        LocalPostDataMutationCoordinator mutationCoordinator,
+        LocalPostDataReadCoordinator readCoordinator,
+        LocalPostDataHashCoordinator hashCoordinator,
+        LocalPostDataHistoryCoordinator historyCoordinator,
+        LocalPostDataTableCoordinator tableCoordinator,
+        IDataStoreGuardService dataStoreGuardService
+    )
+    {
+        _logger = logger;
+        _appConfig = appConfig;
+        _config = config;
+        _partition = partition;
+        _mutationCoordinator = mutationCoordinator;
+        _readCoordinator = readCoordinator;
+        _hashCoordinator = hashCoordinator;
+        _historyCoordinator = historyCoordinator;
+        _tableCoordinator = tableCoordinator;
+        _dataStoreGuardService = dataStoreGuardService;
+    }
 
     public Task Setup()
     {
@@ -100,7 +81,7 @@ public partial class LocalPostData(
         int postCount = posts?.Count ?? 0;
         int metaCount = postMeta.Count;
 
-        _postHashMetaParityService.EnsureMatch(postCount, metaCount, Id ?? _config.Id ?? "unknown");
+        _hashCoordinator.EnsureParity(postCount, metaCount, Id ?? _config.Id ?? "unknown");
 
         return postMeta.ToDictionary(
             entry => entry.Key,
@@ -111,7 +92,7 @@ public partial class LocalPostData(
 
     public async Task<List<Post>> GetByIds(IReadOnlyCollection<string> ids)
     {
-        IReadOnlySet<string> filter = _postIdentifierFilterService.Normalize(ids);
+        IReadOnlySet<string> filter = _readCoordinator.NormalizeIdentifiers(ids);
 
         if (filter.Count == 0)
             return [];
@@ -143,7 +124,7 @@ public partial class LocalPostData(
             ? []
             : cache.Values.Select(PostReplicationMapper.ToDomain).ToList();
 
-        Backup.Domain.Posts.PostStoreCounts counts = _postStoreCountsAggregationService.Compute(
+        Backup.Domain.Posts.PostStoreCounts counts = _readCoordinator.ComputeStoreCounts(
             domainPosts,
             _postMetaCache?.Count ?? cache?.Count ?? 0
         );
@@ -182,7 +163,7 @@ public partial class LocalPostData(
             StringComparer.Ordinal
         );
 
-        IReadOnlySet<string> idsToDelete = _postSoftDeleteExecutionService.SelectIdsToMarkDeleted(
+        IReadOnlySet<string> idsToDelete = _mutationCoordinator.SelectIdsToMarkDeleted(
             userId,
             origin,
             keepPostIds,
@@ -225,7 +206,7 @@ public partial class LocalPostData(
             .ToList();
 
         IReadOnlyList<Backup.Domain.Posts.MediaInput> composed =
-            _postMediaInputsCompositionService.Compose(domainPosts);
+            _readCoordinator.ComposeMediaInputs(domainPosts);
 
         return composed.Select(PostReplicationMapper.ToApp).ToList();
     }
@@ -234,7 +215,7 @@ public partial class LocalPostData(
         IReadOnlyCollection<string> profileIds
     )
     {
-        IReadOnlySet<string> filter = _postIdentifierFilterService.Normalize(profileIds);
+        IReadOnlySet<string> filter = _readCoordinator.NormalizeIdentifiers(profileIds);
 
         if (filter.Count == 0)
             return [];
@@ -243,11 +224,10 @@ public partial class LocalPostData(
         if (cache is null)
             return [];
 
-        IReadOnlyDictionary<string, int> counts =
-            _postProfileCountAggregationService.CountByProfileIds(
-                cache.Values.Select(post => post.Profile.Id),
-                filter
-            );
+        IReadOnlyDictionary<string, int> counts = _readCoordinator.CountByProfileIds(
+            cache.Values.Select(post => post.Profile.Id),
+            filter
+        );
 
         return counts.ToDictionary(
             entry => entry.Key,

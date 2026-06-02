@@ -1,6 +1,7 @@
 using Backup.Application.Proxy;
 using Backup.Application.Proxy.Models;
 using Backup.Infrastructure.Core.Abstractions.Setup;
+using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Proxy.Abstractions.Core;
 using Backup.Infrastructure.Proxy.Abstractions.Data;
 using Backup.Infrastructure.Proxy.Models;
@@ -13,40 +14,41 @@ public class ProxyEmptyException(string? message = null) : ProxyException(messag
 
 // Facade for proxy runtime lifecycle (setup, selection, failure handling, and persistence).
 // Keep this public behavior stable while internal collaborators evolve.
-public class ProxyProvider(
-    ProxyProviderDependencies dependencies
-) : IProxyProvider, ISetup, IDisposable
+public class ProxyProvider : IProxyProvider, ISetup, IDisposable
 {
-    private readonly IProxyData _data = dependencies.Data;
-    private readonly IProxyProviderLifecycleService _proxyProviderLifecycleService =
-        dependencies.ProxyProviderLifecycleService;
-    private readonly ProxyProviderCandidateLoader _candidateLoader = new(
-        dependencies.Config,
-        dependencies.ProxyResourceLoadPort,
-        dependencies.ProxyProviderSourceInputFactory,
-        dependencies.ProxyProviderCandidateLoadOrchestrationService
-    );
-    private readonly ProxyProviderClientSession _clientSession = new(
-        dependencies.ProxyClientRotationService
-    );
-    private readonly ProxyProviderRuntimeEventCoordinator _runtimeEvents = new(
-        dependencies.Logger,
-        dependencies.Config,
-        dependencies.ProxyFailureStateService,
-        dependencies.ProxyFailureExecutionPlanService,
-        dependencies.ProxyFailureSettingsPolicyService,
-        dependencies.ProxyRuntimeMutationService
-    );
+    private readonly AppConfig _config;
+    private readonly IProxyData _data;
+    private readonly ProxyProviderLifecycleService _proxyProviderLifecycleService;
+    private readonly ProxyProviderCandidateLoader _candidateLoader;
+    private readonly ProxyProviderClientSession _clientSession;
+    private readonly ProxyProviderRuntimeEventCoordinator _runtimeEvents;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
 
     private List<ProxyData> _proxies = [];
 
+    internal ProxyProvider(
+        AppConfig config,
+        IProxyData data,
+        ProxyProviderLifecycleService proxyProviderLifecycleService,
+        ProxyProviderCandidateLoader candidateLoader,
+        ProxyProviderClientSession clientSession,
+        ProxyProviderRuntimeEventCoordinator runtimeEvents
+    )
+    {
+        _config = config;
+        _data = data;
+        _proxyProviderLifecycleService = proxyProviderLifecycleService;
+        _candidateLoader = candidateLoader;
+        _clientSession = clientSession;
+        _runtimeEvents = runtimeEvents;
+    }
+
     public async Task Setup()
     {
         await _proxyProviderLifecycleService.CheckAsync(_proxies, _candidateLoader.LoadAsync);
 
-        if (!dependencies.Config.Proxy.Enabled)
+        if (!_config.Proxy.Enabled)
         {
             RotateClient();
 
@@ -61,7 +63,7 @@ public class ProxyProvider(
 
     public async Task Next(CancellationToken token)
     {
-        if (!dependencies.Config.Proxy.Enabled)
+        if (!_config.Proxy.Enabled)
             return;
 
         try

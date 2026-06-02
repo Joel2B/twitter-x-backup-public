@@ -30,7 +30,7 @@ public partial class LocalPostData
         Backup.Domain.Posts.MergeOptions domainOptions = PostReplicationMapper.ToDomain(options);
 
         IReadOnlyList<Backup.Application.Posts.Models.PostStoreMergeMutation> mutations =
-            _postStoreMergeMutationService.BuildMergeMutations(
+            _mutationCoordinator.BuildMergeMutations(
                 userId,
                 origin,
                 incomingDomain,
@@ -132,7 +132,7 @@ public partial class LocalPostData
 
     private IReadOnlyList<Post> NormalizePosts(IReadOnlyCollection<Post> posts)
     {
-        return PostSnapshotNormalizationAdapter.Normalize(_postSnapshotNormalizationService, posts);
+        return _mutationCoordinator.Normalize(posts);
     }
 
     private void LogDataChange(Post current, Post merged, string userId)

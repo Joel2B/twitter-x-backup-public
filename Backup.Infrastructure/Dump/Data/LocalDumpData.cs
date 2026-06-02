@@ -33,7 +33,6 @@ public class LocalDumpData : IDumpDataStore
     private readonly IDataStoreGuardService _dataStoreGuardService;
     private readonly IDumpPersistenceIOService _dumpPersistenceIOService;
     private readonly IDateTimeProvider _dateTimeProvider;
-    private readonly LocalDumpDataPathLayout _pathLayout;
     private readonly LocalDumpDataSessionPathResolver _sessionPathResolver;
     private readonly LocalDumpDataStateCoordinator _stateCoordinator;
     private readonly LocalDumpDataReplicationCoordinator _replicationCoordinator;
@@ -42,53 +41,37 @@ public class LocalDumpData : IDumpDataStore
     private DumpData Data =>
         _dataStoreGuardService.RequireInitialized(_dumpData, "Dump data not initialized");
 
-    public LocalDumpData(
+    internal LocalDumpData(
         ILogger<LocalDumpData> logger,
-        AppConfig appConfig,
         IDumpsData dumps,
         StorageDump config,
-        IPartition partition,
-        LocalDumpDataDependencies dependencies
+        IDumpContextEligibilityService dumpContextEligibilityService,
+        IDumpLifecycleService dumpLifecycleService,
+        IDumpIndexLoadService dumpIndexLoadService,
+        IDumpSaveExecutionService dumpSaveExecutionService,
+        IDumpFlushOrchestrationService dumpFlushOrchestrationService,
+        IDataStoreGuardService dataStoreGuardService,
+        IDumpPersistenceIOService dumpPersistenceIOService,
+        IDateTimeProvider dateTimeProvider,
+        LocalDumpDataSessionPathResolver sessionPathResolver,
+        LocalDumpDataStateCoordinator stateCoordinator,
+        LocalDumpDataReplicationCoordinator replicationCoordinator
     )
     {
         _logger = logger;
         _dumps = dumps;
         _config = config;
-        _dumpContextEligibilityService = dependencies.DumpContextEligibilityService;
-        _dumpLifecycleService = dependencies.DumpLifecycleService;
-        _dumpIndexLoadService = dependencies.DumpIndexLoadService;
-        _dumpSaveExecutionService = dependencies.DumpSaveExecutionService;
-        _dumpFlushOrchestrationService = dependencies.DumpFlushOrchestrationService;
-        _dataStoreGuardService = dependencies.DataStoreGuardService;
-        _dumpPersistenceIOService = dependencies.DumpPersistenceIOService;
-        _dateTimeProvider = dependencies.DateTimeProvider;
-        _pathLayout = new(
-            config,
-            partition,
-            dependencies.DumpPathService,
-            dependencies.DataStoreGuardService
-        );
-        _sessionPathResolver = new(
-            dumps,
-            dependencies.DumpLifecycleService,
-            dependencies.DateTimeProvider,
-            _pathLayout
-        );
-        _stateCoordinator = new(
-            appConfig,
-            dependencies.DumpLifecycleService,
-            dependencies.DataStoreGuardService,
-            dependencies.DumpPersistenceIOService,
-            _sessionPathResolver
-        );
-        _replicationCoordinator = new(
-            dependencies.SecondaryStoreSelectionService,
-            partition,
-            dependencies.DumpReplicationPlanningService,
-            dependencies.DumpPersistenceIOService,
-            _pathLayout,
-            _sessionPathResolver
-        );
+        _dumpContextEligibilityService = dumpContextEligibilityService;
+        _dumpLifecycleService = dumpLifecycleService;
+        _dumpIndexLoadService = dumpIndexLoadService;
+        _dumpSaveExecutionService = dumpSaveExecutionService;
+        _dumpFlushOrchestrationService = dumpFlushOrchestrationService;
+        _dataStoreGuardService = dataStoreGuardService;
+        _dumpPersistenceIOService = dumpPersistenceIOService;
+        _dateTimeProvider = dateTimeProvider;
+        _sessionPathResolver = sessionPathResolver;
+        _stateCoordinator = stateCoordinator;
+        _replicationCoordinator = replicationCoordinator;
     }
 
     public Task Setup() => Task.CompletedTask;

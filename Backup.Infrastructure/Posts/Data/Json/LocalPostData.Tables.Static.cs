@@ -27,7 +27,7 @@ public partial class LocalPostData
         IReadOnlyList<Backup.Domain.Posts.Post> domainPosts = posts
             .Select(PostReplicationMapper.ToDomain)
             .ToList();
-        PostTableProjectionResult projection = _postTableProjectionService.Project(domainPosts);
+        PostTableProjectionResult projection = _tableCoordinator.Project(domainPosts);
 
         tables.Posts = projection
             .Posts.Select(row => new PostRow
@@ -115,7 +115,7 @@ public partial class LocalPostData
                 .PostChangeFields.GroupBy(o => (o.PostId, o.ChangeOrdinal))
                 .ToDictionary(g => g.Key, g => g.OrderBy(o => o.Ordinal).ToList());
         IReadOnlyList<Backup.Domain.Posts.Post> domainPosts =
-            _postTableMaterializationService.Materialize(
+            _tableCoordinator.Materialize(
                 new PostTableMaterializationInput
                 {
                     Posts = tables

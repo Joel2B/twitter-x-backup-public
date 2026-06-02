@@ -23,7 +23,7 @@ public partial class LocalPostData
             List<PostMetaRow> rows =
                 JsonConvert.DeserializeObject<List<PostMetaRow>>(content) ?? [];
             IReadOnlyDictionary<string, PostMetaRecord> normalized =
-                _postMetaNormalizationService.Normalize(
+                _hashCoordinator.Normalize(
                     rows.Select(row => new PostMetaRecord
                         {
                             Id = row.Id,
@@ -75,7 +75,7 @@ public partial class LocalPostData
             .ToList();
 
         IReadOnlyDictionary<string, PostMetaRecord> reconciled =
-            _postMetaReconciliationService.Reconcile(existing, current);
+            _hashCoordinator.Reconcile(existing, current);
 
         return reconciled.ToDictionary(
             entry => entry.Key,
@@ -92,6 +92,6 @@ public partial class LocalPostData
     private string ComputePostHash(Post post)
     {
         Backup.Domain.Posts.Post domainPost = PostReplicationMapper.ToDomain(post);
-        return _postHashingService.Compute(domainPost);
+        return _hashCoordinator.ComputeHash(domainPost);
     }
 }

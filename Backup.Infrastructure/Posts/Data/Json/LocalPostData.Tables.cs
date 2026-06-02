@@ -58,9 +58,8 @@ public partial class LocalPostData
             return;
 
         string basePath = GetPath(target);
-        string historyPath = _postHistoryArchivePathService.ResolveUniqueHistoryDirectoryPath(
+        string historyPath = _historyCoordinator.ResolveUniqueHistoryDirectoryPath(
             basePath,
-            _dateTimeProvider.Now,
             LegacyDateFormat,
             path => Directory.Exists(path) || File.Exists(path)
         );
@@ -111,7 +110,7 @@ public partial class LocalPostData
 
         tables.PostMeta = await ReadList<PostMetaRow>(postMetaPath);
 
-        _postMetaConsistencyValidationService.EnsureAligned(
+        _hashCoordinator.EnsureAligned(
             tables.Posts.Select(row => row.Id),
             tables.PostMeta.Where(row => !string.IsNullOrWhiteSpace(row.Id)).Select(row => row.Id),
             Id ?? _config.Id ?? "unknown"
