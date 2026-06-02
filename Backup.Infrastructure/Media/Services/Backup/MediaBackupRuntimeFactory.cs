@@ -4,35 +4,26 @@ using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Abstractions.Data;
 using Backup.Infrastructure.Media.Models.Backup;
 using Backup.Infrastructure.Models.Config.Data.Backup;
-using Backup.Infrastructure.Utility.Abstractions.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
 
 internal sealed class MediaBackupRuntimeFactory(
-    IZipWriterFactory zipWriterFactory,
     IDataStoreGuardService dataStoreGuardService,
-    IMediaBackupZipEntryReaderIOService zipEntryReaderIoService,
-    IMediaBackupChunkEntryStateOrchestrationService chunkEntryStateOrchestrationService,
-    IMediaBackupChunkFailureApplyService chunkFailureApplyService,
-    IMediaBackupChunkReportObservationAggregationService chunkReportObservationAggregationService,
-    IMediaBackupChunkRuntimeCompositionService chunkRuntimeCompositionService,
-    IMediaBackupChunkReportService chunkReportService
+    MediaBackupChunkStateRuntimeAdapter chunkStateRuntimeAdapter,
+    MediaBackupChunkRecoveryCoordinator chunkRecoveryCoordinator,
+    MediaBackupChunkZipCoordinator chunkZipCoordinator,
+    MediaBackupChunkReportCoordinator chunkReportCoordinator
 ) : IMediaBackupRuntimeFactory
 {
-    private readonly IZipWriterFactory _zipWriterFactory = zipWriterFactory;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
-    private readonly IMediaBackupZipEntryReaderIOService _zipEntryReaderIoService =
-        zipEntryReaderIoService;
-    private readonly IMediaBackupChunkEntryStateOrchestrationService _chunkEntryStateOrchestrationService =
-        chunkEntryStateOrchestrationService;
-    private readonly IMediaBackupChunkFailureApplyService _chunkFailureApplyService =
-        chunkFailureApplyService;
-    private readonly IMediaBackupChunkReportObservationAggregationService _chunkReportObservationAggregationService =
-        chunkReportObservationAggregationService;
-    private readonly IMediaBackupChunkRuntimeCompositionService _chunkRuntimeCompositionService =
-        chunkRuntimeCompositionService;
-    private readonly IMediaBackupChunkReportService _chunkReportService = chunkReportService;
+    private readonly MediaBackupChunkStateRuntimeAdapter _chunkStateRuntimeAdapter =
+        chunkStateRuntimeAdapter;
+    private readonly MediaBackupChunkRecoveryCoordinator _chunkRecoveryCoordinator =
+        chunkRecoveryCoordinator;
+    private readonly MediaBackupChunkZipCoordinator _chunkZipCoordinator = chunkZipCoordinator;
+    private readonly MediaBackupChunkReportCoordinator _chunkReportCoordinator =
+        chunkReportCoordinator;
 
     public MediaBackupRuntime Create(
         ILogger<MediaBackup> logger,
@@ -42,15 +33,12 @@ internal sealed class MediaBackupRuntimeFactory(
         new(
             logger,
             config,
-            _zipWriterFactory,
             mediaBackupData,
             _dataStoreGuardService,
-            _zipEntryReaderIoService,
-            _chunkEntryStateOrchestrationService,
-            _chunkFailureApplyService,
-            _chunkReportObservationAggregationService,
-            _chunkRuntimeCompositionService,
-            _chunkReportService,
+            _chunkStateRuntimeAdapter,
+            _chunkRecoveryCoordinator,
+            _chunkZipCoordinator,
+            _chunkReportCoordinator,
             new MediaBackupExecutionContext(
                 new BackupChunks
                 {
