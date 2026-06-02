@@ -1,5 +1,3 @@
-using System.Net;
-using Backup.Application.Core;
 using Backup.Application.Proxy;
 using Backup.Application.Proxy.Models;
 using Backup.Application.Proxy.Ports;
@@ -29,28 +27,12 @@ public class ProxyProvider(
     private readonly ILogger<ProxyProvider> _logger = _logger;
     private readonly AppConfig _config = _config;
     private readonly IProxyData _data = dependencies.Data;
-    private readonly IProxyHealthProbePort _proxyHealthProbePort =
-        dependencies.ProxyHealthProbePort;
     private readonly IProxyResourceLoadPort _proxyResourceLoadPort =
         dependencies.ProxyResourceLoadPort;
     private readonly IProxyProviderSourceInputFactory _proxyProviderSourceInputFactory =
         dependencies.ProxyProviderSourceInputFactory;
-    private readonly IProxyHttpClientFactoryPolicyService _proxyHttpClientFactoryPolicyService =
-        dependencies.ProxyHttpClientFactoryPolicyService;
-    private readonly IProxyHttpClientHeaderPolicyService _proxyHttpClientHeaderPolicyService =
-        dependencies.ProxyHttpClientHeaderPolicyService;
-    private readonly IProxyKeyPolicyService _proxyKeyPolicyService =
-        dependencies.ProxyKeyPolicyService;
     private readonly IProxyProviderCandidateLoadOrchestrationService _proxyProviderCandidateLoadOrchestrationService =
         dependencies.ProxyProviderCandidateLoadOrchestrationService;
-    private readonly IProxySetupExecutionService _proxySetupExecutionService =
-        dependencies.ProxySetupExecutionService;
-    private readonly IProxyCheckExecutionService _proxyCheckExecutionService =
-        dependencies.ProxyCheckExecutionService;
-    private readonly ProxyRuntimeRecordMapper _proxyRuntimeRecordMapper =
-        dependencies.ProxyRuntimeRecordMapper;
-    private readonly IProxyAcceptanceApplyOrchestrationService _proxyAcceptanceApplyOrchestrationService =
-        dependencies.ProxyAcceptanceApplyOrchestrationService;
     private readonly IProxyFailureStateService _proxyFailureStateService =
         dependencies.ProxyFailureStateService;
     private readonly IProxyFailureExecutionPlanService _proxyFailureExecutionPlanService =
@@ -59,6 +41,10 @@ public class ProxyProvider(
         dependencies.ProxyFailureSettingsPolicyService;
     private readonly IProxyRuntimeMutationService _proxyRuntimeMutationService =
         dependencies.ProxyRuntimeMutationService;
+    private readonly IProxyClientRotationService _proxyClientRotationService =
+        dependencies.ProxyClientRotationService;
+    private readonly IProxyProviderLifecycleService _proxyProviderLifecycleService =
+        dependencies.ProxyProviderLifecycleService;
 
     private readonly SemaphoreSlim _proxyLock = new(1);
 
@@ -68,65 +54,20 @@ public class ProxyProvider(
 
     public async Task Setup()
     {
-        await Check();
+        await _proxyProviderLifecycleService.CheckAsync(_proxies, LoadCandidatesFromProviders);
 
         if (!_config.Proxy.Enabled)
         {
-            NewClient();
+            RotateClient();
 
             return;
         }
 
-        List<ProxyData> stored = (await _data.GetAllAsDictionary() ?? []).Values.ToList();
-        ProxySetupExecutionResult setup = _proxySetupExecutionService.Execute(
-            stored.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
-            await LoadCandidatesFromProviders()
+        _proxies = await _proxyProviderLifecycleService.SetupRuntimePoolAsync(
+            LoadCandidatesFromProviders
         );
-        _proxies = setup.RuntimePool.Select(_proxyRuntimeRecordMapper.ToProxyData).ToList();
-
-        if (setup.SetupPlan.ShouldThrowPoolEmpty)
-            throw new ProxyEmptyException();
-
-        if (setup.SetupPlan.ShouldInitializeFailureState)
-            _proxyFailureStateService.Initialize(_proxies.Count);
-
-        if (setup.SetupPlan.ShouldPersistPool)
-            await SaveData();
-
-        NewClient();
+        RotateClient();
     }
-
-    private async Task Check()
-    {
-        if (!_config.Proxy.Check)
-            return;
-
-        HashSet<string> proxiesAdded = [.. _proxies.Select(o => GetProxyKey(o.Proxy))];
-        List<ProxyData> proxiesStorage = await _data.GetAll() ?? [];
-        ProxyHealthAcceptanceResult acceptance = await _proxyCheckExecutionService.ExecuteAsync(
-            proxiesStorage.Select(_proxyRuntimeRecordMapper.ToRuntimeRecord),
-            await LoadCandidatesFromProviders(),
-            proxiesAdded,
-            _proxyHealthProbePort,
-            flushEvery: 10
-        );
-
-        foreach (string error in acceptance.ProbeErrors)
-            _logger.LogError("Error: {error}", error);
-
-        await _proxyAcceptanceApplyOrchestrationService.ApplyAsync(
-            acceptance.AcceptedItems,
-            record =>
-            {
-                _proxies.Add(_proxyRuntimeRecordMapper.ToProxyData(record));
-                return Task.CompletedTask;
-            },
-            SaveData
-        );
-    }
-
-    private string GetProxyKey(ProxyDataConfig proxy) =>
-        _proxyKeyPolicyService.Build(proxy.Ip, proxy.Port, proxy.Protocol);
 
     public HttpClient GetClient()
     {
@@ -164,7 +105,7 @@ public class ProxyProvider(
                 case ProxyFailureExecutionAction.ThrowStopProcess:
                     throw new ProxyException();
                 case ProxyFailureExecutionAction.RotateProxy:
-                    NewClient();
+                    RotateClient();
                     return;
                 default:
                     throw new InvalidOperationException(
@@ -188,27 +129,9 @@ public class ProxyProvider(
         return Task.CompletedTask;
     }
 
-    private void NewClient()
+    private void RotateClient()
     {
-        Uri? proxyUri = null;
-
-        if (_config.Proxy.Enabled)
-        {
-            int proxyIndex = _proxyFailureStateService.GetState().ProxyIndex;
-            string proxy = _proxies[proxyIndex].Proxy.ToString();
-            proxyUri = new Uri(proxy);
-
-            _logger.LogInformation("Uri: {uri}", proxyUri.ToString());
-        }
-
-        HttpClientHandler handler = _proxyHttpClientFactoryPolicyService.CreateHandler(proxyUri);
-        HttpClient client = _proxyHttpClientFactoryPolicyService.CreateClient(
-            handler,
-            TimeSpan.FromSeconds(_config.Downloads.Timeout)
-        );
-
-        _proxyHttpClientHeaderPolicyService.Apply(client.DefaultRequestHeaders);
-
+        HttpClient client = _proxyClientRotationService.CreateClient(_proxies);
         HttpClient? oldClient = Interlocked.Exchange(ref _client, client);
         oldClient?.Dispose();
     }

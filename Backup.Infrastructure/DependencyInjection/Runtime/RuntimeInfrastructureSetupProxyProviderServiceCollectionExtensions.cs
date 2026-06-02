@@ -107,6 +107,8 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
 
     private static IServiceCollection AddProxyProviderFacade(this IServiceCollection services)
     {
+        services.AddScoped<IProxyClientRotationService, ProxyClientRotationService>();
+        services.AddScoped<IProxyProviderLifecycleService, ProxyProviderLifecycleService>();
         services.AddScoped<ProxyProviderDependencies>();
         services.AddScoped<ProxyProvider>();
         services.AddScoped<IProxyProvider>(sp => sp.GetRequiredService<ProxyProvider>());

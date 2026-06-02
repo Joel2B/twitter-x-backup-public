@@ -8,40 +8,23 @@ namespace Backup.Infrastructure.Proxy.Services;
 
 public sealed class ProxyProviderDependencies(
     IProxyData data,
-    IProxyHealthProbePort proxyHealthProbePort,
     IProxyResourceLoadPort proxyResourceLoadPort,
     IProxyProviderSourceInputFactory proxyProviderSourceInputFactory,
-    IProxyHttpClientFactoryPolicyService proxyHttpClientFactoryPolicyService,
-    IProxyHttpClientHeaderPolicyService proxyHttpClientHeaderPolicyService,
-    IProxyKeyPolicyService proxyKeyPolicyService,
     IProxyProviderCandidateLoadOrchestrationService proxyProviderCandidateLoadOrchestrationService,
-    IProxySetupExecutionService proxySetupExecutionService,
-    IProxyCheckExecutionService proxyCheckExecutionService,
-    ProxyRuntimeRecordMapper proxyRuntimeRecordMapper,
-    IProxyAcceptanceApplyOrchestrationService proxyAcceptanceApplyOrchestrationService,
     IProxyFailureStateService proxyFailureStateService,
     IProxyFailureExecutionPlanService proxyFailureExecutionPlanService,
     IProxyFailureSettingsPolicyService proxyFailureSettingsPolicyService,
-    IProxyRuntimeMutationService proxyRuntimeMutationService
+    IProxyRuntimeMutationService proxyRuntimeMutationService,
+    IProxyClientRotationService proxyClientRotationService,
+    IProxyProviderLifecycleService proxyProviderLifecycleService
 )
 {
     public IProxyData Data { get; } = data;
-    public IProxyHealthProbePort ProxyHealthProbePort { get; } = proxyHealthProbePort;
     public IProxyResourceLoadPort ProxyResourceLoadPort { get; } = proxyResourceLoadPort;
     public IProxyProviderSourceInputFactory ProxyProviderSourceInputFactory { get; } =
         proxyProviderSourceInputFactory;
-    public IProxyHttpClientFactoryPolicyService ProxyHttpClientFactoryPolicyService { get; } =
-        proxyHttpClientFactoryPolicyService;
-    public IProxyHttpClientHeaderPolicyService ProxyHttpClientHeaderPolicyService { get; } =
-        proxyHttpClientHeaderPolicyService;
-    public IProxyKeyPolicyService ProxyKeyPolicyService { get; } = proxyKeyPolicyService;
     public IProxyProviderCandidateLoadOrchestrationService ProxyProviderCandidateLoadOrchestrationService { get; } =
         proxyProviderCandidateLoadOrchestrationService;
-    public IProxySetupExecutionService ProxySetupExecutionService { get; } = proxySetupExecutionService;
-    public IProxyCheckExecutionService ProxyCheckExecutionService { get; } = proxyCheckExecutionService;
-    public ProxyRuntimeRecordMapper ProxyRuntimeRecordMapper { get; } = proxyRuntimeRecordMapper;
-    public IProxyAcceptanceApplyOrchestrationService ProxyAcceptanceApplyOrchestrationService { get; } =
-        proxyAcceptanceApplyOrchestrationService;
     public IProxyFailureStateService ProxyFailureStateService { get; } = proxyFailureStateService;
     public IProxyFailureExecutionPlanService ProxyFailureExecutionPlanService { get; } =
         proxyFailureExecutionPlanService;
@@ -49,4 +32,8 @@ public sealed class ProxyProviderDependencies(
         proxyFailureSettingsPolicyService;
     public IProxyRuntimeMutationService ProxyRuntimeMutationService { get; } =
         proxyRuntimeMutationService;
+    public IProxyClientRotationService ProxyClientRotationService { get; } =
+        proxyClientRotationService;
+    public IProxyProviderLifecycleService ProxyProviderLifecycleService { get; } =
+        proxyProviderLifecycleService;
 }
