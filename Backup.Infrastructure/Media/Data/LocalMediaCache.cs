@@ -34,12 +34,8 @@ public class LocalMediaCache(
         dependencies.MediaCacheRecheckProbeExecutionService;
     private readonly IMediaCacheRecheckMutationExecutionService _mediaCacheRecheckMutationExecutionService =
         dependencies.MediaCacheRecheckMutationExecutionService;
-    private readonly IMediaCachePersistenceIOService _mediaCachePersistenceIOService =
-        dependencies.MediaCachePersistenceIOService;
     private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
         dependencies.MediaCacheEntryPathPolicyService;
-    private readonly IMediaCacheEntryStateFactoryService _mediaCacheEntryStateFactoryService =
-        dependencies.MediaCacheEntryStateFactoryService;
     private readonly IMediaCacheWritePolicyService _mediaCacheWritePolicyService =
         dependencies.MediaCacheWritePolicyService;
     private readonly IMediaCacheConflictResolutionService _mediaCacheConflictResolutionService =
@@ -50,8 +46,28 @@ public class LocalMediaCache(
         dependencies.MediaCacheStoredEntryProjectionService;
     private readonly IMediaCachePartitionSizeAggregationService _mediaCachePartitionSizeAggregationService =
         dependencies.MediaCachePartitionSizeAggregationService;
-    private readonly IMediaCacheReplicationPathService _mediaCacheReplicationPathService =
-        dependencies.MediaCacheReplicationPathService;
+    private readonly LocalMediaCacheSnapshotCoordinator _snapshotCoordinator = new(
+        _partition,
+        dependencies.MediaCachePersistenceIOService,
+        dependencies.MediaCacheEntryPathPolicyService,
+        dependencies.MediaCacheReplicationPathService,
+        partition =>
+            Path.Combine(
+                [
+                    .. partition.Paths,
+                    .. _config.Paths.Tmp.Paths,
+                    .. _config.Paths.Tmp.Downloaded.Paths,
+                ]
+            ),
+        partition =>
+        {
+            string fileName = dependencies.DataStoreGuardService.RequireConfiguredFileName(
+                _config.Paths.Cache.File
+            );
+            string cachePath = Path.Combine([.. partition.Paths, .. _config.Paths.Cache.Paths]);
+            return Path.Combine(cachePath, fileName);
+        }
+    );
 
     private readonly ConcurrentDictionary<string, MediaCacheEntry> _cache = new(
         StringComparer.OrdinalIgnoreCase
@@ -107,20 +123,16 @@ public class LocalMediaCache(
 
     public async Task Load()
     {
-        await Replicate();
+        await _snapshotCoordinator.ReplicatePrimarySnapshot();
 
-        string file = GetPathCacheFilePrimary();
+        string file = _snapshotCoordinator.GetPrimaryFilePath();
 
         if (File.Exists(file))
         {
             if (_cache.IsEmpty)
             {
-                await LoadCache();
-
-                IReadOnlyList<MediaCacheEntry> entries =
-                    await _mediaCachePersistenceIOService.LoadPrimarySnapshot(file);
-                foreach (MediaCacheEntry entry in entries)
-                    _cache[entry.Path] = entry;
+                await _snapshotCoordinator.LoadIncrementalSnapshotsInto(_cache);
+                await _snapshotCoordinator.LoadPrimarySnapshotInto(_cache);
             }
 
             _logger.LogWarning("cache: {count}", _cache.Count);
@@ -193,59 +205,9 @@ public class LocalMediaCache(
 
         if (loadExecution.RecheckPaths.Count > 0)
         {
-            await _mediaCachePersistenceIOService.SavePrimarySnapshot(file, [.. _cache.Values]);
-            DeleteCache();
+            await _snapshotCoordinator.SavePrimarySnapshot([.. _cache.Values]);
+            _snapshotCoordinator.ResetIncrementalSnapshots();
         }
-    }
-
-    private async Task LoadCache()
-    {
-        PartitionConfig primary = _partition.GetPrimary();
-        string directory = GetPathCacheDownload(primary);
-        IReadOnlyList<MediaCacheEntry> snapshots =
-            await _mediaCachePersistenceIOService.LoadIncrementalSnapshots(directory);
-
-        foreach (MediaCacheEntry cache in snapshots)
-            _cache.TryAdd(cache.Path, cache);
-    }
-
-    private Task Replicate()
-    {
-        string primaryFilePath = GetPathCacheFilePrimary();
-
-        List<PartitionConfig> partitions = _partition.GetCache();
-        IReadOnlyList<string> replicaPaths = _mediaCacheReplicationPathService.GetReplicaPaths(
-            primaryFilePath,
-            partitions.Select(GetPathCacheFile)
-        );
-
-        return _mediaCachePersistenceIOService.ReplicatePrimarySnapshot(
-            primaryFilePath,
-            replicaPaths
-        );
-    }
-
-    private async Task SaveCache(MediaCacheEntry cache, CancellationToken ct)
-    {
-        PartitionConfig primary = _partition.GetPrimary();
-        string directory = GetPathCacheDownload(primary);
-        string fileName = _mediaCacheEntryPathPolicyService.BuildCacheSnapshotFileName(
-            cache.Path,
-            cache.PartitionId
-        );
-        await _mediaCachePersistenceIOService.SaveIncrementalSnapshot(
-            directory,
-            cache,
-            fileName,
-            ct
-        );
-    }
-
-    private void DeleteCache()
-    {
-        PartitionConfig primary = _partition.GetPrimary();
-        string directory = GetPathCacheDownload(primary);
-        _mediaCachePersistenceIOService.ResetIncrementalSnapshotDirectory(directory);
     }
 
     public async Task<string> GetPath(string path, long size = 0, CancellationToken ct = default)
@@ -284,7 +246,7 @@ public class LocalMediaCache(
                 }
             );
 
-            await SaveCache(newCache, ct);
+            await _snapshotCoordinator.SaveIncrementalSnapshot(newCache, ct);
         }
 
         return Path.Combine([GetPathMedia(partition), path]);

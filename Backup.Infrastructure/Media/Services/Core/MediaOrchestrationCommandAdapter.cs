@@ -18,18 +18,8 @@ public sealed class MediaOrchestrationCommandAdapter(
 {
     private readonly ILogger<MediaOrchestrationCommandAdapter> _logger = logger;
     private readonly IPostDomainData _postData = postData;
-    private readonly IMediaOrchestrationStorageResolutionService _mediaOrchestrationStorageResolutionService =
-        mediaOrchestrationStorageResolutionService;
     private readonly IMediaProcessing _mediaProcessing = dependencies.MediaProcessing;
     private readonly IMediaPrune _mediaPrune = dependencies.MediaPrune;
-    private readonly Dictionary<string, IMediaStorage> _mediaData = dependencies
-        .MediaStorage
-        .Where(item => !string.IsNullOrWhiteSpace(item.Id))
-        .ToDictionary(item => item.Id!, item => item, StringComparer.OrdinalIgnoreCase);
-    private readonly Dictionary<string, IMediaDataMaintenance> _mediaMaintenance = dependencies
-        .MediaMaintenance
-        .Where(item => item.Id is not null)
-        .ToDictionary(item => item.Id!, item => item, StringComparer.OrdinalIgnoreCase);
     private readonly IMediaIntegrity _mediaIntegrity = dependencies.MediaIntegrity;
     private readonly IMediaFilter _mediaFilter = dependencies.MediaFilter;
     private readonly IMediaReplication _mediaReplication = dependencies.MediaReplication;
@@ -37,8 +27,16 @@ public sealed class MediaOrchestrationCommandAdapter(
         .MediaBackups
         .ToList();
     private readonly IMediaDownloadService _mediaDownload = dependencies.MediaDownload;
-    private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper =
-        dependencies.MediaDownloadModelMapper;
+    private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper = dependencies.MediaDownloadModelMapper;
+    private readonly MediaOrchestrationResourceCatalog _resourceCatalog = new(
+        logger,
+        mediaOrchestrationStorageResolutionService,
+        dependencies.MediaStorage,
+        dependencies.MediaMaintenance
+    );
+    private readonly MediaOrchestrationDownloadMutationRunner _downloadMutationRunner = new(
+        dependencies.MediaDownloadModelMapper
+    );
 
     public async Task<IReadOnlyList<Backup.Domain.Posts.MediaInput>> GetMediaInputs(
         CancellationToken cancellationToken = default
@@ -72,7 +70,7 @@ public sealed class MediaOrchestrationCommandAdapter(
         CancellationToken cancellationToken = default
     )
     {
-        await ExecuteOnInfrastructureDownloads(
+        await _downloadMutationRunner.Execute(
             downloads,
             (infra, ct) => _mediaPrune.Prune(infra, ct),
             cancellationToken
@@ -84,31 +82,16 @@ public sealed class MediaOrchestrationCommandAdapter(
         CancellationToken cancellationToken = default
     )
     {
-        await ExecuteOnInfrastructureDownloads(
+        await _downloadMutationRunner.Execute(
             downloads,
             (infra, ct) => _mediaFilter.Check(infra, ct),
             cancellationToken
         );
     }
 
-    public IReadOnlyList<string> GetStorageIds() =>
-        _mediaOrchestrationStorageResolutionService.GetStorageIds(_mediaData.Keys);
+    public IReadOnlyList<string> GetStorageIds() => _resourceCatalog.GetStorageIds();
 
-    public bool HasMaintenance(string storageId)
-    {
-        bool has = _mediaOrchestrationStorageResolutionService.HasMaintenance(
-            storageId,
-            _mediaMaintenance.Keys
-        );
-
-        if (!has)
-            _logger.LogWarning(
-                "no media maintenance configured for media data {storageId}",
-                storageId
-            );
-
-        return has;
-    }
+    public bool HasMaintenance(string storageId) => _resourceCatalog.HasMaintenance(storageId);
 
     public async Task PruneStorage(
         string storageId,
@@ -117,12 +100,12 @@ public sealed class MediaOrchestrationCommandAdapter(
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
-        IMediaDataMaintenance? maintenance = GetMaintenance(storageId);
+        IMediaDataMaintenance? maintenance = _resourceCatalog.GetMaintenance(storageId);
 
         if (maintenance is null)
             return;
 
-        await ExecuteOnInfrastructureDownloads(
+        await _downloadMutationRunner.Execute(
             downloads,
             (infra, ct) => maintenance.Prune(infra, ct),
             cancellationToken
@@ -136,12 +119,12 @@ public sealed class MediaOrchestrationCommandAdapter(
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
-        IMediaDataMaintenance? maintenance = GetMaintenance(storageId);
+        IMediaDataMaintenance? maintenance = _resourceCatalog.GetMaintenance(storageId);
 
         if (maintenance is null)
             return;
 
-        await ExecuteOnInfrastructureDownloads(
+        await _downloadMutationRunner.Execute(
             downloads,
             (infra, ct) => maintenance.CheckData(infra, ct),
             cancellationToken
@@ -155,12 +138,12 @@ public sealed class MediaOrchestrationCommandAdapter(
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
-        IMediaDataMaintenance? maintenance = GetMaintenance(storageId);
+        IMediaDataMaintenance? maintenance = _resourceCatalog.GetMaintenance(storageId);
 
         if (maintenance is null)
             return;
 
-        await ExecuteOnInfrastructureDownloads(
+        await _downloadMutationRunner.Execute(
             downloads,
             async (infra, ct) =>
             {
@@ -178,12 +161,12 @@ public sealed class MediaOrchestrationCommandAdapter(
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
-        IMediaStorage? storage = GetStorage(storageId);
+        IMediaStorage? storage = _resourceCatalog.GetStorage(storageId);
 
         if (storage is null)
             return;
 
-        await ExecuteOnInfrastructureDownloads(
+        await _downloadMutationRunner.Execute(
             downloads,
             async (infra, ct) =>
             {
@@ -200,16 +183,16 @@ public sealed class MediaOrchestrationCommandAdapter(
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
-        IMediaStorage? storage = GetStorage(storageId);
+        IMediaStorage? storage = _resourceCatalog.GetStorage(storageId);
 
         if (storage is null)
             return;
 
-        await ExecuteOnInfrastructureDownloads(
+        await _downloadMutationRunner.Execute(
             downloads,
             async (infra, ct) =>
             {
-                await _mediaReplication.Replicate(infra, _mediaData.Values, storage, ct);
+                await _mediaReplication.Replicate(infra, _resourceCatalog.Storage, storage, ct);
             },
             cancellationToken
         );
@@ -221,10 +204,7 @@ public sealed class MediaOrchestrationCommandAdapter(
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
-        string? backupSourceId = _mediaOrchestrationStorageResolutionService.SelectBackupSourceId(
-            _mediaData.Keys
-        );
-        IMediaStorage? backupSource = backupSourceId is null ? null : _mediaData[backupSourceId];
+        IMediaStorage? backupSource = _resourceCatalog.GetBackupSource();
 
         if (backupSource is null)
         {
@@ -244,50 +224,5 @@ public sealed class MediaOrchestrationCommandAdapter(
             cancellationToken.ThrowIfCancellationRequested();
             await backup.Backup(infra, backupSource, cancellationToken);
         }
-    }
-
-    private IMediaStorage? GetStorage(string storageId)
-    {
-        string? resolvedId = _mediaOrchestrationStorageResolutionService.ResolveStorageId(
-            storageId,
-            _mediaData.Keys
-        );
-
-        if (resolvedId is null)
-        {
-            _logger.LogWarning("media storage not found: {storageId}", storageId);
-            return null;
-        }
-
-        return _mediaData[resolvedId];
-    }
-
-    private IMediaDataMaintenance? GetMaintenance(string storageId)
-    {
-        IMediaDataMaintenance? maintenance;
-
-        if (_mediaMaintenance.TryGetValue(storageId, out maintenance))
-            return maintenance;
-
-        _logger.LogWarning("media maintenance not found: {storageId}", storageId);
-        return null;
-    }
-
-    private void Sync(List<MediaDownload> target, List<Download> source)
-    {
-        target.Clear();
-        target.AddRange(_mediaDownloadModelMapper.ToApplication(source));
-    }
-
-    private async Task ExecuteOnInfrastructureDownloads(
-        List<MediaDownload> downloads,
-        Func<List<Download>, CancellationToken, Task> action,
-        CancellationToken cancellationToken = default
-    )
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        List<Download> infra = _mediaDownloadModelMapper.ToInfrastructure(downloads);
-        await action(infra, cancellationToken);
-        Sync(downloads, infra);
     }
 }

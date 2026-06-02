@@ -12,7 +12,6 @@ public sealed class LocalMediaCacheDependencies(
     IMediaCacheRecheckMutationExecutionService mediaCacheRecheckMutationExecutionService,
     IMediaCachePersistenceIOService mediaCachePersistenceIOService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
-    IMediaCacheEntryStateFactoryService mediaCacheEntryStateFactoryService,
     IMediaCacheWritePolicyService mediaCacheWritePolicyService,
     IMediaCacheConflictResolutionService mediaCacheConflictResolutionService,
     IMediaCachePartitionSelectionService mediaCachePartitionSelectionService,
@@ -34,8 +33,6 @@ public sealed class LocalMediaCacheDependencies(
         mediaCachePersistenceIOService;
     public IMediaCacheEntryPathPolicyService MediaCacheEntryPathPolicyService { get; } =
         mediaCacheEntryPathPolicyService;
-    public IMediaCacheEntryStateFactoryService MediaCacheEntryStateFactoryService { get; } =
-        mediaCacheEntryStateFactoryService;
     public IMediaCacheWritePolicyService MediaCacheWritePolicyService { get; } =
         mediaCacheWritePolicyService;
     public IMediaCacheConflictResolutionService MediaCacheConflictResolutionService { get; } =
