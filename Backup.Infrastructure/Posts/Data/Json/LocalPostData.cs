@@ -62,7 +62,9 @@ public partial class LocalPostData : IPostDataStore, ISetup
 
     public Task Setup()
     {
+        _logger.LogInformation("setup: starting");
         SetupDirectory();
+        _logger.LogInformation("setup: completed");
 
         return Task.CompletedTask;
     }
@@ -239,17 +241,29 @@ public partial class LocalPostData : IPostDataStore, ISetup
     public async Task Save()
     {
         if (_postsCache is null)
+        {
+            _logger.LogInformation("save: skipped, cache is empty");
             return;
+        }
 
+        _logger.LogInformation("save: starting for {count} posts", _postsCache.Count);
         List<Post> posts = [.. _postsCache.Values];
+
+        _logger.LogInformation("save: building tables");
         LocalPostTables tables = BuildTables(posts);
+
+        _logger.LogInformation("save: ensuring post meta cache");
         Dictionary<string, PostMetaRow> postMeta = await EnsurePostMetaCache(posts);
 
+        _logger.LogInformation("save: writing tables");
         await SaveTables(tables, postMeta);
+
+        _logger.LogInformation("save: replicating tables");
         Replicate();
 
         SetCache(posts);
         _postMetaCache = postMeta;
+        _logger.LogInformation("save: completed with {count} posts", posts.Count);
     }
 
     public async Task Prune()

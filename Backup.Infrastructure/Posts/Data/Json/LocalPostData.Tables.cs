@@ -77,11 +77,16 @@ public partial class LocalPostData
 
     private async Task<LocalPostTables> LoadTables()
     {
+        _logger.LogInformation("load-tables: starting");
         PrepareTablesDirectories();
+
         string postsPath = GetCurrentTablesFilePath(NormalizedPostsFileName);
 
         if (!File.Exists(postsPath))
+        {
+            _logger.LogInformation("load-tables: no posts table found");
             return new LocalPostTables();
+        }
 
         List<string> missingTables = TableManifest
             .Select(table => table.FileName)
@@ -116,12 +121,26 @@ public partial class LocalPostData
             Id ?? _config.Id ?? "unknown"
         );
 
+        _logger.LogInformation(
+            "load-tables: completed, posts={posts}, profiles={profiles}, hashtags={hashtags}, medias={medias}, variants={variants}, indexEntries={indexEntries}, changes={changes}, changeFields={changeFields}, postMeta={postMeta}",
+            tables.Posts.Count,
+            tables.Profiles.Count,
+            tables.Hashtags.Count,
+            tables.Medias.Count,
+            tables.MediaVariants.Count,
+            tables.IndexEntries.Count,
+            tables.PostChanges.Count,
+            tables.PostChangeFields.Count,
+            tables.PostMeta.Count
+        );
+
         return tables;
     }
 
     private async Task LoadTable(LocalPostTables tables, string fileName)
     {
         string path = GetCurrentTablesFilePath(fileName);
+        _logger.LogInformation("load-tables: reading {fileName}", fileName);
 
         switch (fileName)
         {
@@ -168,7 +187,10 @@ public partial class LocalPostData
         IReadOnlyDictionary<string, PostMetaRow> postMeta
     )
     {
+        _logger.LogInformation("save-tables: preparing directories");
         PrepareTablesDirectories();
+
+        _logger.LogInformation("save-tables: archiving previous snapshot");
         ArchiveCurrentOldDirectory();
 
         string tmpPath = GetTablesDirectoryPath(TablesTmpDirectoryName);
@@ -176,24 +198,33 @@ public partial class LocalPostData
         string currentOldPath = GetTablesDirectoryPath(TablesCurrentOldDirectoryName);
 
         Directory.CreateDirectory(tmpPath);
+
+        _logger.LogInformation("save-tables: writing tmp snapshot");
         await WriteTablesSnapshot(tables, postMeta, tmpPath);
 
         if (Directory.Exists(currentPath))
+        {
+            _logger.LogInformation("save-tables: rotating current -> current.old");
             Directory.Move(currentPath, currentOldPath);
+        }
 
         try
         {
+            _logger.LogInformation("save-tables: promoting tmp -> current");
             Directory.Move(tmpPath, currentPath);
         }
         catch
         {
+            _logger.LogInformation("save-tables: restore current from current.old");
             if (!Directory.Exists(currentPath) && Directory.Exists(currentOldPath))
                 Directory.Move(currentOldPath, currentPath);
 
             throw;
         }
 
+        _logger.LogInformation("save-tables: archiving old snapshot");
         ArchiveCurrentOldDirectory();
+        _logger.LogInformation("save-tables: completed");
     }
 
     private async Task WriteTablesSnapshot(

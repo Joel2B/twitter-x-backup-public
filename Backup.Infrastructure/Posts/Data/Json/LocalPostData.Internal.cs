@@ -11,8 +11,17 @@ public partial class LocalPostData
 {
     private void SetupDirectory()
     {
+        _logger.LogInformation("setup-directory: creating partition directories");
+
         foreach (PartitionConfig partition in _partition.GetPartitions())
+        {
+            _logger.LogInformation(
+                "setup-directory: ensuring partition {partitionId}",
+                partition.Id
+            );
+
             Directory.CreateDirectory(GetPath(partition));
+        }
     }
 
     private string GetPath(PartitionConfig partition) =>
@@ -23,20 +32,36 @@ public partial class LocalPostData
     private async Task<Dictionary<string, Post>?> GetCache()
     {
         if (_postsCache is not null)
+        {
+            _logger.LogInformation(
+                "get-cache: using in-memory cache with {count} posts",
+                _postsCache.Count
+            );
             return _postsCache;
+        }
 
+        _logger.LogInformation("get-cache: preparing tables directories");
         PrepareTablesDirectories();
         string normalizedPostsPath = GetCurrentTablesFilePath(NormalizedPostsFileName);
 
         if (!File.Exists(normalizedPostsPath))
+        {
+            _logger.LogInformation("get-cache: no normalized posts file found");
             return null;
+        }
 
+        _logger.LogInformation("get-cache: verifying snapshot");
         await Verify();
 
+        _logger.LogInformation("get-cache: loading tables");
         LocalPostTables tables = await LoadTables();
+
+        _logger.LogInformation("get-cache: building posts from tables");
         List<Post> posts = BuildPosts(tables);
 
         SetCache(posts);
+        _logger.LogInformation("get-cache: completed with {count} posts", _postsCache?.Count ?? 0);
+
         return _postsCache;
     }
 
@@ -61,22 +86,34 @@ public partial class LocalPostData
         IReadOnlyList<PostHistoryPath> historyPaths = _historyCoordinator.ExtractHistoryPaths(
             Directory.GetDirectories(basePath, "*", SearchOption.TopDirectoryOnly)
         );
-        PostSnapshotVerificationDecision decision =
-            _historyCoordinator.BuildSnapshotDecision(
-                _config.Tasks.Verify,
-                currentExists,
-                Path.GetFileName(NormalizedPostsFileName),
-                historyPaths
-            );
+
+        PostSnapshotVerificationDecision decision = _historyCoordinator.BuildSnapshotDecision(
+            _config.Tasks.Verify,
+            currentExists,
+            Path.GetFileName(NormalizedPostsFileName),
+            historyPaths
+        );
 
         if (!decision.ShouldInspectHistoryFile)
+        {
+            _logger.LogInformation("verify: skipping history inspection");
             return Task.CompletedTask;
+        }
+
         string historyPath = decision.HistoryFilePath;
+
+        _logger.LogInformation(
+            "verify: inspecting history snapshot {historyFile}",
+            Path.GetFileName(historyPath)
+        );
 
         bool historyExists = File.Exists(historyPath);
 
         if (!historyExists)
+        {
+            _logger.LogInformation("verify: history snapshot missing, skipping");
             return Task.CompletedTask;
+        }
 
         long currentLength = new FileInfo(currentPath).Length;
         long historyLength = new FileInfo(historyPath).Length;
@@ -87,6 +124,12 @@ public partial class LocalPostData
             currentLength,
             historyLength,
             _config.Tasks.VerifyMaxSizeDiffBytes
+        );
+
+        _logger.LogInformation(
+            "verify: completed, currentBytes={currentLength}, historyBytes={historyLength}",
+            currentLength,
+            historyLength
         );
 
         return Task.CompletedTask;
@@ -102,6 +145,11 @@ public partial class LocalPostData
         List<string> mainPaths = [.. GetDataFilePaths()];
         List<string> mainPathsFormatted = [.. mainPaths.Select(UtilsPath.GetPathFormatted)];
 
+        _logger.LogInformation(
+            "replicate: starting for {partitionCount} secondary partitions",
+            partitions.Count
+        );
+
         foreach (PartitionConfig partition in partitions)
         {
             List<string> paths = [.. GetDataFilePaths(partition)];
@@ -110,6 +158,13 @@ public partial class LocalPostData
                 _historyCoordinator.PlanReplication(mainPaths, paths);
             IReadOnlyList<PostDataFileReplicationOperation> formattedOperations =
                 _historyCoordinator.PlanReplication(mainPathsFormatted, pathsFormatted);
+
+            _logger.LogInformation(
+                "replicate: partition {partitionId}, files={operationCount}, formattedFiles={formattedOperationCount}",
+                partition.Id,
+                operations.Count,
+                formattedOperations.Count
+            );
 
             foreach (PostDataFileReplicationOperation operation in operations)
             {
@@ -137,6 +192,8 @@ public partial class LocalPostData
                 File.Copy(operation.SourcePath, operation.TargetPath);
             }
         }
+
+        _logger.LogInformation("replicate: completed");
     }
 
     private Task PrunePartition(PartitionConfig partition)
