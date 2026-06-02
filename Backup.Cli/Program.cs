@@ -27,7 +27,7 @@ Console.Error.WriteLine("[startup] running setup");
 await scope.ServiceProvider.RunBackupInfrastructureSetup();
 
 Console.Error.WriteLine("[startup] resolving app");
-IBackupCliRunner cliRunner = scope.ServiceProvider.GetRequiredService<IBackupCliRunner>();
+BackupCliRunner cliRunner = scope.ServiceProvider.GetRequiredService<BackupCliRunner>();
 
 using CancellationTokenSource cts = new();
 Console.CancelKeyPress += (_, eventArgs) =>

@@ -7,7 +7,7 @@ public sealed class MediaOrchestrationCommandDependencies(
     IMediaPrune mediaPrune,
     IEnumerable<IMediaStorage> mediaStorage,
     IEnumerable<IMediaDataMaintenance> mediaMaintenance,
-    IMediaIntegrity mediaIntegrity,
+    MediaIntegrity mediaIntegrity,
     IMediaFilter mediaFilter,
     IMediaReplication mediaReplication,
     IEnumerable<IMediaBackupStrategy> mediaBackups,
@@ -19,7 +19,7 @@ public sealed class MediaOrchestrationCommandDependencies(
     public IMediaPrune MediaPrune { get; } = mediaPrune;
     public IEnumerable<IMediaStorage> MediaStorage { get; } = mediaStorage;
     public IEnumerable<IMediaDataMaintenance> MediaMaintenance { get; } = mediaMaintenance;
-    public IMediaIntegrity MediaIntegrity { get; } = mediaIntegrity;
+    public MediaIntegrity MediaIntegrity { get; } = mediaIntegrity;
     public IMediaFilter MediaFilter { get; } = mediaFilter;
     public IMediaReplication MediaReplication { get; } = mediaReplication;
     public IEnumerable<IMediaBackupStrategy> MediaBackups { get; } = mediaBackups;

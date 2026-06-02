@@ -41,7 +41,7 @@ public class InfrastructureCompositionSmokeTests
         );
         using IServiceScope scope = provider.CreateScope();
 
-        Assert.NotNull(scope.ServiceProvider.GetRequiredService<IBackupCliRunner>());
+        Assert.NotNull(scope.ServiceProvider.GetRequiredService<BackupCliRunner>());
     }
 
     private sealed class TestConfigScope : IDisposable

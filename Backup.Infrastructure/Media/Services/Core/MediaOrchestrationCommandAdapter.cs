@@ -20,7 +20,7 @@ public sealed class MediaOrchestrationCommandAdapter(
     private readonly IPostDomainData _postData = postData;
     private readonly IMediaProcessing _mediaProcessing = dependencies.MediaProcessing;
     private readonly IMediaPrune _mediaPrune = dependencies.MediaPrune;
-    private readonly IMediaIntegrity _mediaIntegrity = dependencies.MediaIntegrity;
+    private readonly MediaIntegrity _mediaIntegrity = dependencies.MediaIntegrity;
     private readonly IMediaFilter _mediaFilter = dependencies.MediaFilter;
     private readonly IMediaReplication _mediaReplication = dependencies.MediaReplication;
     private readonly List<IMediaBackupStrategy> _mediaBackups = dependencies

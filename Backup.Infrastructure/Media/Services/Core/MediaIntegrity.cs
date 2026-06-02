@@ -1,3 +1,4 @@
+using Backup.Application.Media;
 using Backup.Application.Media.Integrity;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
@@ -7,7 +8,7 @@ namespace Backup.Infrastructure.Media.Services;
 public class MediaIntegrity(
     IMediaIntegrityPolicyService integrityPolicyService,
     IMediaDownloadModelMapper mediaDownloadModelMapper
-) : IMediaIntegrity
+)
 {
     private readonly IMediaIntegrityPolicyService _integrityPolicyService = integrityPolicyService;
     private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper = mediaDownloadModelMapper;
