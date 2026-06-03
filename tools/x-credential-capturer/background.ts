@@ -23,6 +23,8 @@ import { enqueueUpdate } from "./background/queue.js";
 import { defaultState, ensureStateInitialized, getState, saveState } from "./background/state.js";
 import { buildCookieHeader, getCookieValue, isPlainObject } from "./background/utils.js";
 
+type SendResponse = (response: unknown) => void;
+
 function asBackgroundMessage(message: unknown): BackgroundMessage | null {
   if (!isPlainObject(message) || typeof message.type !== "string") {
     return null;
@@ -86,6 +88,34 @@ function asBackgroundMessage(message: unknown): BackgroundMessage | null {
   }
 }
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function sendAsyncResponse<T>(
+  sendResponse: SendResponse,
+  work: () => Promise<T>,
+  toErrorResponse: (message: string) => unknown,
+  toSuccessResponse: (value: T) => unknown
+): void {
+  work()
+    .then((value) => {
+      sendResponse(toSuccessResponse(value));
+    })
+    .catch((error: unknown) => {
+      sendResponse(toErrorResponse(getErrorMessage(error, "request failed")));
+    });
+}
+
+function sendQueuedResponse<T>(
+  sendResponse: SendResponse,
+  work: () => Promise<T>,
+  toErrorResponse: (message: string) => unknown,
+  toSuccessResponse: (value: T) => unknown
+): void {
+  sendAsyncResponse(sendResponse, () => enqueueUpdate(work), toErrorResponse, toSuccessResponse);
+}
+
 chrome.webRequest.onBeforeSendHeaders.addListener(
   (details) => {
     void enqueueUpdate(async () => {
@@ -123,227 +153,171 @@ chrome.runtime.onMessage.addListener((message: unknown, _sender, sendResponse) =
     return false;
   }
 
-  if (parsed.type === "getState") {
-    getState()
-      .then((state) => sendResponse({ ok: true, state } satisfies StateMessageResponse))
-      .catch((error: unknown) =>
-        sendResponse({
-          ok: false,
-          error: error instanceof Error ? error.message : "getState failed"
-        })
+  switch (parsed.type) {
+    case "getState":
+      sendAsyncResponse(
+        sendResponse,
+        () => getState(),
+        (message) => ({ ok: false, error: message }),
+        (state) => ({ ok: true, state }) satisfies StateMessageResponse
       );
-    return true;
-  }
-
-  if (parsed.type === "clearState") {
-    const state = defaultState();
-    saveState(state)
-      .then(() => sendResponse({ ok: true, state } satisfies StateMessageResponse))
-      .catch((error: unknown) =>
-        sendResponse({
-          ok: false,
-          error: error instanceof Error ? error.message : "clearState failed"
-        })
+      return true;
+    case "clearState":
+      sendAsyncResponse(
+        sendResponse,
+        async () => {
+          const state = defaultState();
+          await saveState(state);
+          return state;
+        },
+        (message) => ({ ok: false, error: message }),
+        (state) => ({ ok: true, state }) satisfies StateMessageResponse
       );
-    return true;
-  }
+      return true;
+    case "setState":
+      sendQueuedResponse(
+        sendResponse,
+        async () => {
+          const state = parsed.state || defaultState();
+          await saveState(state);
+          return getState();
+        },
+        (message) => ({ ok: false, error: message }),
+        (state) => ({ ok: true, state }) satisfies StateMessageResponse
+      );
+      return true;
+    case "refreshCookies":
+      sendQueuedResponse(
+        sendResponse,
+        async () => {
+          const state = await getState();
+          const cookie = await buildCookieHeader();
 
-  if (parsed.type === "setState") {
-    enqueueUpdate(async () => {
-      const state = parsed.state || defaultState();
-      await saveState(state);
-      const normalized = await getState();
-      sendResponse({ ok: true, state: normalized } satisfies StateMessageResponse);
-    }).catch((error: unknown) => {
-      sendResponse({
-        ok: false,
-        error: error instanceof Error ? error.message : "setState failed"
-      });
-    });
+          if (cookie) {
+            state.global.cookie = cookie;
 
-    return true;
-  }
+            const ct0 = getCookieValue(cookie, "ct0");
 
-  if (parsed.type === "refreshCookies") {
-    enqueueUpdate(async () => {
-      const state = await getState();
-      const cookie = await buildCookieHeader();
+            if (ct0) {
+              state.global.xCsrfToken = ct0;
+            }
+          }
 
-      if (cookie) {
-        state.global.cookie = cookie;
-
-        const ct0 = getCookieValue(cookie, "ct0");
-
-        if (ct0) {
-          state.global.xCsrfToken = ct0;
-        }
+          await saveState(state);
+          return state;
+        },
+        (message) => ({ ok: false, error: message }),
+        (state) => ({ ok: true, state }) satisfies StateMessageResponse
+      );
+      return true;
+    case "rollbackEndpoint":
+      sendQueuedResponse(
+        sendResponse,
+        () => rollbackEndpoint(parsed.endpointId || ""),
+        (message) => ({ ok: false, error: message }),
+        (result) => result
+      );
+      return true;
+    case "getCapturedPosts":
+      sendAsyncResponse(
+        sendResponse,
+        () => getCapturedPostsStore(),
+        (message) => ({ ok: false, error: message }) satisfies CapturedPostsMessageResponse,
+        (store) => ({ ok: true, store }) satisfies CapturedPostsMessageResponse
+      );
+      return true;
+    case "setUploadTarget":
+      sendQueuedResponse(
+        sendResponse,
+        () =>
+          setUploadTarget({
+            apiBaseUrl: parsed.apiBaseUrl,
+            uploadUserId: parsed.uploadUserId,
+            uploadOrigin: parsed.uploadOrigin,
+            captureHashtags: parsed.captureHashtags
+          }),
+        (message) => ({ ok: false, error: message }) satisfies CapturedPostsMessageResponse,
+        (store) => ({ ok: true, store }) satisfies CapturedPostsMessageResponse
+      );
+      return true;
+    case "uploadCapturedPosts":
+      sendQueuedResponse(
+        sendResponse,
+        () => uploadCapturedPosts(parsed.ids || []),
+        (message) => ({ ok: false, error: message }) satisfies UploadCapturedPostsMessageResponse,
+        (result) => result satisfies UploadCapturedPostsMessageResponse
+      );
+      return true;
+    case "clearUploadedCapturedPosts":
+      sendQueuedResponse(
+        sendResponse,
+        () => clearUploadedCapturedPosts(),
+        (message) => ({ ok: false, error: message }) satisfies CapturedPostsMessageResponse,
+        (store) => ({ ok: true, store }) satisfies CapturedPostsMessageResponse
+      );
+      return true;
+    case "resetCapturedPostsUploadStatus":
+      sendQueuedResponse(
+        sendResponse,
+        () => resetCapturedPostsUploadStatus(),
+        (message) => ({ ok: false, error: message }) satisfies CapturedPostsMessageResponse,
+        (store) => ({ ok: true, store }) satisfies CapturedPostsMessageResponse
+      );
+      return true;
+    case "importCapturedPosts":
+      sendQueuedResponse(
+        sendResponse,
+        () => importCapturedPosts(parsed.payload),
+        (message) => ({ ok: false, error: message }) satisfies CapturedPostsMessageResponse,
+        (store) => ({ ok: true, store }) satisfies CapturedPostsMessageResponse
+      );
+      return true;
+    case "getUploadNotifications":
+      sendAsyncResponse(
+        sendResponse,
+        () => getUploadNotificationsStore(),
+        (message) => ({ ok: false, error: message }) satisfies UploadNotificationsMessageResponse,
+        (store) => ({ ok: true, store }) satisfies UploadNotificationsMessageResponse
+      );
+      return true;
+    case "clearUploadNotifications":
+      sendQueuedResponse(
+        sendResponse,
+        () => clearUploadNotifications(),
+        (message) => ({ ok: false, error: message }) satisfies UploadNotificationsMessageResponse,
+        (store) => ({ ok: true, store }) satisfies UploadNotificationsMessageResponse
+      );
+      return true;
+    case "captureGraphqlResponseBody":
+      if (!parsed.url || !parsed.body) {
+        sendResponse({ ok: false, error: "missing payload" });
+        return false;
       }
 
-      await saveState(state);
-      sendResponse({ ok: true, state } satisfies StateMessageResponse);
-    }).catch((error: unknown) => {
-      sendResponse({
-        ok: false,
-        error: error instanceof Error ? error.message : "refreshCookies failed"
-      });
-    });
+      {
+        const url = parsed.url;
+        const body = parsed.body;
+        const status = parsed.status;
+        const capturedAt = parsed.capturedAt;
 
-    return true;
-  }
-
-  if (parsed.type === "rollbackEndpoint") {
-    enqueueUpdate(async () => {
-      const result = await rollbackEndpoint(parsed.endpointId || "");
-      sendResponse(result);
-    }).catch((error: unknown) => {
-      sendResponse({
-        ok: false,
-        error: error instanceof Error ? error.message : "rollbackEndpoint failed"
-      });
-    });
-
-    return true;
-  }
-
-  if (parsed.type === "getCapturedPosts") {
-    getCapturedPostsStore()
-      .then((store) => sendResponse({ ok: true, store } satisfies CapturedPostsMessageResponse))
-      .catch((error: unknown) =>
-        sendResponse({
-          ok: false,
-          error: error instanceof Error ? error.message : "getCapturedPosts failed"
-        } satisfies CapturedPostsMessageResponse)
-      );
-
-    return true;
-  }
-
-  if (parsed.type === "setUploadTarget") {
-    enqueueUpdate(async () => {
-      const store = await setUploadTarget({
-        apiBaseUrl: parsed.apiBaseUrl,
-        uploadUserId: parsed.uploadUserId,
-        uploadOrigin: parsed.uploadOrigin,
-        captureHashtags: parsed.captureHashtags
-      });
-      sendResponse({ ok: true, store } satisfies CapturedPostsMessageResponse);
-    }).catch((error: unknown) => {
-      sendResponse({
-        ok: false,
-        error: error instanceof Error ? error.message : "setUploadTarget failed"
-      } satisfies CapturedPostsMessageResponse);
-    });
-
-    return true;
-  }
-
-  if (parsed.type === "uploadCapturedPosts") {
-    enqueueUpdate(async () => {
-      const result = await uploadCapturedPosts(parsed.ids || []);
-      sendResponse(result satisfies UploadCapturedPostsMessageResponse);
-    }).catch((error: unknown) => {
-      sendResponse({
-        ok: false,
-        error: error instanceof Error ? error.message : "uploadCapturedPosts failed"
-      } satisfies UploadCapturedPostsMessageResponse);
-    });
-
-    return true;
-  }
-
-  if (parsed.type === "clearUploadedCapturedPosts") {
-    enqueueUpdate(async () => {
-      const store = await clearUploadedCapturedPosts();
-      sendResponse({ ok: true, store } satisfies CapturedPostsMessageResponse);
-    }).catch((error: unknown) => {
-      sendResponse({
-        ok: false,
-        error: error instanceof Error ? error.message : "clearUploadedCapturedPosts failed"
-      } satisfies CapturedPostsMessageResponse);
-    });
-
-    return true;
-  }
-
-  if (parsed.type === "resetCapturedPostsUploadStatus") {
-    enqueueUpdate(async () => {
-      const store = await resetCapturedPostsUploadStatus();
-      sendResponse({ ok: true, store } satisfies CapturedPostsMessageResponse);
-    }).catch((error: unknown) => {
-      sendResponse({
-        ok: false,
-        error: error instanceof Error ? error.message : "resetCapturedPostsUploadStatus failed"
-      } satisfies CapturedPostsMessageResponse);
-    });
-
-    return true;
-  }
-
-  if (parsed.type === "importCapturedPosts") {
-    enqueueUpdate(async () => {
-      const store = await importCapturedPosts(parsed.payload);
-      sendResponse({ ok: true, store } satisfies CapturedPostsMessageResponse);
-    }).catch((error: unknown) => {
-      sendResponse({
-        ok: false,
-        error: error instanceof Error ? error.message : "importCapturedPosts failed"
-      } satisfies CapturedPostsMessageResponse);
-    });
-
-    return true;
-  }
-
-  if (parsed.type === "getUploadNotifications") {
-    getUploadNotificationsStore()
-      .then((store) => sendResponse({ ok: true, store } satisfies UploadNotificationsMessageResponse))
-      .catch((error: unknown) =>
-        sendResponse({
-          ok: false,
-          error: error instanceof Error ? error.message : "getUploadNotifications failed"
-        } satisfies UploadNotificationsMessageResponse)
-      );
-
-    return true;
-  }
-
-  if (parsed.type === "clearUploadNotifications") {
-    enqueueUpdate(async () => {
-      const store = await clearUploadNotifications();
-      sendResponse({ ok: true, store } satisfies UploadNotificationsMessageResponse);
-    }).catch((error: unknown) => {
-      sendResponse({
-        ok: false,
-        error: error instanceof Error ? error.message : "clearUploadNotifications failed"
-      } satisfies UploadNotificationsMessageResponse);
-    });
-
-    return true;
-  }
-
-  if (parsed.type === "captureGraphqlResponseBody") {
-    if (!parsed.url || !parsed.body) {
-      sendResponse({ ok: false, error: "missing payload" });
+        sendQueuedResponse(
+          sendResponse,
+          async () => {
+            console.info("[XCC] background received response body:", url, status);
+            await capturePostsFromGraphqlResponseBody({
+              url,
+              status,
+              body,
+              capturedAt
+            });
+            return { ok: true };
+          },
+          (message) => ({ ok: false, error: message }),
+          (result) => result
+        );
+      }
+      return true;
+    default:
       return false;
-    }
-
-    enqueueUpdate(async () => {
-      console.info("[XCC] background received response body:", parsed.url, parsed.status);
-      await capturePostsFromGraphqlResponseBody({
-        url: parsed.url as string,
-        status: parsed.status,
-        body: parsed.body as string,
-        capturedAt: parsed.capturedAt
-      });
-      sendResponse({ ok: true });
-    }).catch((error: unknown) => {
-      sendResponse({
-        ok: false,
-        error: error instanceof Error ? error.message : "captureGraphqlResponseBody failed"
-      });
-    });
-
-    return true;
   }
-
-  return false;
 });
