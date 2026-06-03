@@ -7,6 +7,46 @@ namespace Backup.Infrastructure.Posts.Data.Sqlite;
 
 public partial class SqlitePostData
 {
+    private async Task<Dictionary<string, PostProfileEntity>> LoadProfilesForPosts(
+        PostsDbContext db,
+        IEnumerable<Post> posts
+    )
+    {
+        HashSet<string> profileIds = posts
+            .Select(post => post.Profile.Id)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet(StringComparer.Ordinal);
+
+        return await LoadProfilesByIds(db, [.. profileIds]);
+    }
+
+    private void BufferPostEntity(
+        PostsDbContext db,
+        Dictionary<string, PostProfileEntity> profilesById,
+        List<PostEntity> batch,
+        Post post
+    )
+    {
+        PostProfileEntity profileEntity = GetOrCreateProfileEntity(db, profilesById, post.Profile);
+        PostEntity created = ToEntity(post, profileEntity, _postChangeComputationService);
+        batch.Add(created);
+
+        if (batch.Count < SqlInChunkSize)
+            return;
+
+        db.Posts.AddRange(batch);
+        batch.Clear();
+    }
+
+    private static void FlushPostBatch(PostsDbContext db, List<PostEntity> batch)
+    {
+        if (batch.Count == 0)
+            return;
+
+        db.Posts.AddRange(batch);
+        batch.Clear();
+    }
+
     private static PostProfileEntity GetOrCreateProfileEntity(
         PostsDbContext db,
         Dictionary<string, PostProfileEntity> profilesById,

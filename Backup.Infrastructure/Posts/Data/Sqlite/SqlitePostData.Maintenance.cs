@@ -80,14 +80,9 @@ public partial class SqlitePostData
         if (normalizedPosts.Count == 0)
             return;
 
-        HashSet<string> profileIds = normalizedPosts
-            .Values.Select(post => post.Profile.Id)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet(StringComparer.Ordinal);
-
-        Dictionary<string, PostProfileEntity> profilesById = await LoadProfilesByIds(
+        Dictionary<string, PostProfileEntity> profilesById = await LoadProfilesForPosts(
             db,
-            [.. profileIds]
+            normalizedPosts.Values
         );
 
         bool autoDetectOriginal = db.ChangeTracker.AutoDetectChangesEnabled;
@@ -98,25 +93,9 @@ public partial class SqlitePostData
             List<PostEntity> batch = [];
 
             foreach (Post post in normalizedPosts.Values)
-            {
-                PostProfileEntity profile = GetOrCreateProfileEntity(
-                    db,
-                    profilesById,
-                    post.Profile
-                );
+                BufferPostEntity(db, profilesById, batch, post);
 
-                PostEntity entity = ToEntity(post, profile, _postChangeComputationService);
-                batch.Add(entity);
-
-                if (batch.Count < SqlInChunkSize)
-                    continue;
-
-                db.Posts.AddRange(batch);
-                batch.Clear();
-            }
-
-            if (batch.Count > 0)
-                db.Posts.AddRange(batch);
+            FlushPostBatch(db, batch);
         }
         finally
         {

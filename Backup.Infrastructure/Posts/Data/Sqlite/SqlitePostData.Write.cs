@@ -24,38 +24,17 @@ public partial class SqlitePostData
         {
             await DeletePostGraphByIds(db, ids);
 
-            HashSet<string> profileIds = normalizedPosts
-                .Select(post => post.Profile.Id)
-                .Where(id => !string.IsNullOrWhiteSpace(id))
-                .ToHashSet(StringComparer.Ordinal);
-
-            Dictionary<string, PostProfileEntity> profilesById = await LoadProfilesByIds(
+            Dictionary<string, PostProfileEntity> profilesById = await LoadProfilesForPosts(
                 db,
-                [.. profileIds]
+                normalizedPosts
             );
 
             List<PostEntity> batch = [];
 
             foreach (Post post in normalizedPosts)
-            {
-                PostProfileEntity profileEntity = GetOrCreateProfileEntity(
-                    db,
-                    profilesById,
-                    post.Profile
-                );
+                BufferPostEntity(db, profilesById, batch, post);
 
-                PostEntity created = ToEntity(post, profileEntity, _postChangeComputationService);
-                batch.Add(created);
-
-                if (batch.Count < SqlInChunkSize)
-                    continue;
-
-                db.Posts.AddRange(batch);
-                batch.Clear();
-            }
-
-            if (batch.Count > 0)
-                db.Posts.AddRange(batch);
+            FlushPostBatch(db, batch);
 
             await UpsertHashMetaForPosts(db, normalizedPosts);
             await db.SaveChangesAsync();
