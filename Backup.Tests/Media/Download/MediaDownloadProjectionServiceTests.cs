@@ -7,13 +7,12 @@ namespace Backup.Tests;
 
 public sealed class MediaDownloadProjectionServiceTests
 {
-    private readonly MediaDownloadProjectionService _sut =
-        new(
-            new MediaDownloadFilterPolicyService(),
-            new MediaDownloadDataBuilderService(),
-            new MediaVideoVariantPolicyService(),
-            new MediaDuplicateFilterService()
-        );
+    private readonly MediaDownloadProjectionService _sut = new(
+        new MediaDownloadFilterPolicyService(),
+        new MediaDownloadDataBuilderService(),
+        new MediaVideoVariantPolicyService(),
+        new MediaDuplicateFilterService()
+    );
 
     [Fact]
     public void Project_BuildsPhotoDownloads_AndAppliesFilters()
@@ -50,27 +49,33 @@ public sealed class MediaDownloadProjectionServiceTests
         Assert.Equal("p1", all.Id);
         Assert.Equal(2, all.Data.Count);
         Assert.Single(filtered.Data);
-        Assert.Contains(all.Data, item => item.Url.Contains("format=jpg", StringComparison.Ordinal));
         Assert.Contains(
             all.Data,
-            item => item.Path.EndsWith(
-                Path.Combine("jpg", "dimension", "orig.jpg"),
-                StringComparison.Ordinal
-            )
+            item => item.Url.Contains("format=jpg", StringComparison.Ordinal)
         );
         Assert.Contains(
             all.Data,
-            item => item.Path.EndsWith(
-                Path.Combine("jpg", "size", "small.jpg"),
-                StringComparison.Ordinal
-            )
+            item =>
+                item.Path.EndsWith(
+                    Path.Combine("jpg", "dimension", "orig.jpg"),
+                    StringComparison.Ordinal
+                )
+        );
+        Assert.Contains(
+            all.Data,
+            item =>
+                item.Path.EndsWith(
+                    Path.Combine("jpg", "size", "small.jpg"),
+                    StringComparison.Ordinal
+                )
         );
         Assert.DoesNotContain(
             filtered.Data,
-            item => item.Path.EndsWith(
-                Path.Combine("jpg", "size", "small.jpg"),
-                StringComparison.Ordinal
-            )
+            item =>
+                item.Path.EndsWith(
+                    Path.Combine("jpg", "size", "small.jpg"),
+                    StringComparison.Ordinal
+                )
         );
     }
 
@@ -124,7 +129,10 @@ public sealed class MediaDownloadProjectionServiceTests
             all.Data,
             item =>
                 item.Url.Contains("format=jpg", StringComparison.Ordinal)
-                && item.Path.Contains(Path.Combine("gif", "gif-1", "thumb"), StringComparison.Ordinal)
+                && item.Path.Contains(
+                    Path.Combine("gif", "gif-1", "thumb"),
+                    StringComparison.Ordinal
+                )
         );
         Assert.Contains(
             all.Data,
@@ -161,7 +169,8 @@ public sealed class MediaDownloadProjectionServiceTests
                             new PostVariant
                             {
                                 ContentType = "video/mp4",
-                                Url = "https://video.twimg.com/ext_tw_video/1280x720/video.mp4?tag=14",
+                                Url =
+                                    "https://video.twimg.com/ext_tw_video/1280x720/video.mp4?tag=14",
                             },
                         ],
                     },
@@ -326,12 +335,7 @@ public sealed class MediaDownloadProjectionServiceTests
         new()
         {
             Id = id,
-            Profile =
-                profile
-                ?? new PostProfile
-                {
-                    Id = $"profile-{id}",
-                },
+            Profile = profile ?? new PostProfile { Id = $"profile-{id}" },
             Medias = medias,
         };
 
@@ -361,9 +365,5 @@ public sealed class MediaDownloadProjectionServiceTests
         };
 
     private static MediaDownloadProjectionVariantConfig CreateEmptyVariantConfig() =>
-        new()
-        {
-            Thumb = CreateEmptyRuleConfig(),
-            Types = [],
-        };
+        new() { Thumb = CreateEmptyRuleConfig(), Types = [] };
 }
