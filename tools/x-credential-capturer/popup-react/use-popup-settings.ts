@@ -2,12 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 
 import { SETTINGS_STORAGE_KEY } from "../popup/constants.js";
-import {
-  DEFAULT_SETTINGS,
-  detectUsernameFromState,
-  normalizeSettings
-} from "../popup/helpers.js";
-import type { CaptureState, PopupSettings } from "../popup/models.js";
+import { DEFAULT_SETTINGS, normalizeSettings } from "../popup/helpers.js";
+import type { PopupSettings } from "../popup/models.js";
 import { normalizeHashtag, normalizeUsername } from "../popup/utils.js";
 import type { ApplySettingsOptions } from "./types.js";
 
@@ -15,7 +11,6 @@ const USERNAME_SAVE_DEBOUNCE_MS = 250;
 const HASHTAG_SAVE_DEBOUNCE_MS = 250;
 
 type UsePopupSettingsOptions = {
-  isApplyingProfileRef: MutableRefObject<boolean>;
   onScheduleActiveProfileSync: () => void;
 };
 
@@ -31,13 +26,12 @@ type UsePopupSettingsResult = {
   settings: PopupSettings;
   settingsRef: MutableRefObject<PopupSettings>;
   setHashtagDraft: (value: string) => void;
+  setDetectedUsername: (value: string) => void;
   setUsernameDraft: (value: string) => void;
-  syncAutoDetectedUsername: (state: CaptureState) => Promise<void>;
   usernameDraft: string;
 };
 
 export function usePopupSettings({
-  isApplyingProfileRef,
   onScheduleActiveProfileSync
 }: UsePopupSettingsOptions): UsePopupSettingsResult {
   const [settings, setSettings] = useState<PopupSettings>({ ...DEFAULT_SETTINGS });
@@ -102,16 +96,6 @@ export function usePopupSettings({
     await chrome.storage.local.set({ [SETTINGS_STORAGE_KEY]: next });
   }
 
-  async function syncAutoDetectedUsername(state: CaptureState) {
-    const detected = detectUsernameFromState(state);
-    const normalizedDetected = detected || "";
-    setDetectedUsername(normalizedDetected);
-
-    if (!settingsRef.current.username && normalizedDetected && !isApplyingProfileRef.current) {
-      await saveSettings({ username: normalizedDetected });
-    }
-  }
-
   async function persistUsernameFromInput() {
     const normalized = normalizeUsername(usernameDraftRef.current);
 
@@ -174,8 +158,8 @@ export function usePopupSettings({
     settings,
     settingsRef,
     setHashtagDraft,
+    setDetectedUsername,
     setUsernameDraft,
-    syncAutoDetectedUsername,
     usernameDraft
   };
 }

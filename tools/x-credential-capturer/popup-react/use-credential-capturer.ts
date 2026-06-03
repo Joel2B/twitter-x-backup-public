@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   CAPTURED_POSTS_STORAGE_KEY,
@@ -23,57 +23,38 @@ import type {
   StateMessageResponse
 } from "../popup/models.js";
 import {
-  createProfileId,
+  detectUsernameFromState,
   getEmptyStateSnapshot,
-  getFallbackStateSnapshot,
-  normalizeProfileStore,
-  normalizeSettings
+  getFallbackStateSnapshot
 } from "../popup/helpers.js";
-import { cloneJson } from "../popup/utils.js";
 import {
   getHashtagHint,
   getProfileHint,
   getSensitiveHint,
   getUsernameHint,
-  sortProfiles
 } from "./view-model.js";
 import type {
   ApplyStateOptions,
   OpenUrlOptions,
-  ProfileRecord,
-  ProfilesStore,
   UseCredentialCapturerResult
 } from "./types.js";
 import { useCapturedPosts } from "./use-captured-posts.js";
 import { useEndpointTests } from "./use-endpoint-tests.js";
 import { usePopupSettings } from "./use-popup-settings.js";
-
-const PROFILE_SYNC_DEBOUNCE_MS = 400;
+import { useProfiles } from "./use-profiles.js";
 
 export function useCredentialCapturer(): UseCredentialCapturerResult {
   const [captureState, setCaptureState] = useState<CaptureState | null>(null);
-  const [profilesStore, setProfilesStore] = useState<ProfilesStore | null>(null);
-  const [isApplyingProfile, setIsApplyingProfile] = useState(false);
   const [copyPatchLabel, setCopyPatchLabel] = useState("Copy Api patch");
   const [patchOutput, setPatchOutput] = useState("");
   const [currentRawPatch, setCurrentRawPatch] = useState<ApiPatch | null>(null);
 
   const captureStateRef = useRef<CaptureState | null>(captureState);
-  const profilesStoreRef = useRef<ProfilesStore | null>(profilesStore);
-  const isApplyingProfileRef = useRef(isApplyingProfile);
-  const profileSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleActiveProfileSyncRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     captureStateRef.current = captureState;
   }, [captureState]);
-
-  useEffect(() => {
-    profilesStoreRef.current = profilesStore;
-  }, [profilesStore]);
-
-  useEffect(() => {
-    isApplyingProfileRef.current = isApplyingProfile;
-  }, [isApplyingProfile]);
 
   function reportError(error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
@@ -84,41 +65,8 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     void action().catch(reportError);
   }
 
-  function setProfilesStoreState(nextStore: ProfilesStore | null) {
-    profilesStoreRef.current = nextStore;
-    setProfilesStore(nextStore);
-  }
-
   async function sendMessage<T>(message: unknown): Promise<T> {
     return chrome.runtime.sendMessage(message) as Promise<T>;
-  }
-
-  function applyState(nextState: CaptureState | null, options: ApplyStateOptions = {}) {
-    if (!nextState) {
-      return;
-    }
-
-    const resetTests = Boolean(options.resetTests);
-    captureStateRef.current = nextState;
-    setCaptureState(nextState);
-
-    if (resetTests) {
-      clearAllTestRuntime();
-    }
-
-    runAsync(() => syncAutoDetectedUsername(nextState));
-  }
-
-  function buildNormalizedProfileStore(rawStore: unknown): ProfilesStore {
-    return normalizeProfileStore(rawStore, {
-      fallbackState: getFallbackStateSnapshot(captureStateRef.current),
-      fallbackSettings: normalizeSettings(settingsRef.current)
-    });
-  }
-
-  async function persistProfilesStore(nextStore: ProfilesStore) {
-    setProfilesStoreState(nextStore);
-    await chrome.storage.local.set({ [PROFILES_STORAGE_KEY]: nextStore });
   }
 
   async function setRemoteState(nextState: CaptureState): Promise<CaptureState> {
@@ -134,52 +82,6 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     return response.state;
   }
 
-  function scheduleActiveProfileSync() {
-    const currentState = captureStateRef.current;
-    const currentStore = profilesStoreRef.current;
-
-    if (isApplyingProfileRef.current || !currentState || !currentStore) {
-      return;
-    }
-
-    if (profileSyncTimerRef.current) {
-      clearTimeout(profileSyncTimerRef.current);
-    }
-
-    profileSyncTimerRef.current = setTimeout(() => {
-      runAsync(async () => {
-        const latestState = captureStateRef.current;
-        const latestStore = profilesStoreRef.current;
-
-        if (isApplyingProfileRef.current || !latestState || !latestStore) {
-          return;
-        }
-
-        const activeId = latestStore.activeProfileId;
-        const activeProfile = latestStore.profiles[activeId];
-
-        if (!activeProfile) {
-          return;
-        }
-
-        const nextStore: ProfilesStore = {
-          ...latestStore,
-          profiles: {
-            ...latestStore.profiles,
-            [activeId]: {
-              ...activeProfile,
-              state: cloneJson(latestState),
-              settings: cloneJson(settingsRef.current),
-              updatedAt: new Date().toISOString()
-            }
-          }
-        };
-
-        await persistProfilesStore(nextStore);
-      });
-    }, PROFILE_SYNC_DEBOUNCE_MS);
-  }
-
   const {
     applySettings,
     detectedUsername,
@@ -192,94 +94,36 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     settings,
     settingsRef,
     setHashtagDraft,
+    setDetectedUsername,
     setUsernameDraft,
-    syncAutoDetectedUsername,
     usernameDraft
   } = usePopupSettings({
-    isApplyingProfileRef,
-    onScheduleActiveProfileSync: scheduleActiveProfileSync
+    onScheduleActiveProfileSync: () => scheduleActiveProfileSyncRef.current()
   });
 
-  async function activateProfile(
-    profileId: string,
-    options: { resetTests?: boolean; persistStore?: boolean } = {},
-    sourceStore: ProfilesStore | null = null
-  ) {
-    const store = sourceStore || profilesStoreRef.current;
+  async function maybeAutoDetectUsername(state: CaptureState) {
+    const detected = detectUsernameFromState(state) || "";
+    setDetectedUsername(detected);
 
-    if (!store) {
-      throw new Error("Profiles store is not loaded");
-    }
-
-    const profile = store.profiles[profileId];
-
-    if (!profile) {
-      throw new Error("Profile not found");
-    }
-
-    const resetTests = options.resetTests !== false;
-    const persistStore = options.persistStore !== false;
-
-    isApplyingProfileRef.current = true;
-    setIsApplyingProfile(true);
-
-    try {
-      let nextStore: ProfilesStore = {
-        ...store,
-        activeProfileId: profileId
-      };
-      setProfilesStoreState(nextStore);
-
-      const nextSettings = normalizeSettings(profile.settings);
-      applySettings(nextSettings, { syncInput: true, scheduleSync: false });
-      await chrome.storage.local.set({ [SETTINGS_STORAGE_KEY]: nextSettings });
-
-      const fallbackState = getFallbackStateSnapshot(captureStateRef.current);
-      const remoteState = await setRemoteState(cloneJson(profile.state || fallbackState));
-      applyState(remoteState, { resetTests });
-
-      const activeProfile = nextStore.profiles[profileId];
-
-      if (!activeProfile) {
-        throw new Error("Profile not found");
-      }
-
-      nextStore = {
-        ...nextStore,
-        profiles: {
-          ...nextStore.profiles,
-          [profileId]: {
-            ...activeProfile,
-            state: cloneJson(remoteState),
-            settings: cloneJson(nextSettings),
-            updatedAt: new Date().toISOString()
-          }
-        }
-      };
-
-      if (persistStore) {
-        await persistProfilesStore(nextStore);
-      } else {
-        setProfilesStoreState(nextStore);
-      }
-    } finally {
-      isApplyingProfileRef.current = false;
-      setIsApplyingProfile(false);
+    if (!settingsRef.current.username && detected && !isApplyingProfileRef.current) {
+      await saveSettings({ username: detected });
     }
   }
 
-  async function handleProfilesStorageChange(nextProfilesStore: unknown) {
-    const previousActive = profilesStoreRef.current?.activeProfileId || DEFAULT_PROFILE_ID;
-    const normalizedStore = buildNormalizedProfileStore(nextProfilesStore);
-    setProfilesStoreState(normalizedStore);
-
-    if (!isApplyingProfileRef.current && normalizedStore.activeProfileId !== previousActive) {
-      await activateProfile(
-        normalizedStore.activeProfileId,
-        { persistStore: false, resetTests: true },
-        normalizedStore
-      );
+  function applyState(nextState: CaptureState | null, options: ApplyStateOptions = {}) {
+    if (!nextState) {
+      return;
     }
+
+    const resetTests = Boolean(options.resetTests);
+    captureStateRef.current = nextState;
+    setCaptureState(nextState);
+
+    if (resetTests) {
+      clearAllTestRuntime();
+    }
+
+    runAsync(() => maybeAutoDetectUsername(nextState));
   }
 
   async function loadState() {
@@ -300,45 +144,31 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     applySettings(stored, { syncInput: true, scheduleSync: false });
   }
 
-  async function loadProfiles() {
-    const data = await chrome.storage.local.get(PROFILES_STORAGE_KEY);
-    let nextStore = buildNormalizedProfileStore(data?.[PROFILES_STORAGE_KEY]);
-    setProfilesStoreState(nextStore);
 
-    if (!data?.[PROFILES_STORAGE_KEY]) {
-      await chrome.storage.local.set({ [PROFILES_STORAGE_KEY]: nextStore });
-    }
+  const {
+    activateProfile,
+    canDeleteProfile,
+    createProfile,
+    deleteSelectedProfile,
+    handleProfilesStorageChange,
+    isApplyingProfile,
+    isApplyingProfileRef,
+    loadProfiles,
+    profiles,
+    profilesStore,
+    scheduleActiveProfileSync,
+    selectedProfile
+  } = useProfiles({
+    applySettings,
+    applyState,
+    captureStateRef,
+    getEmptyStateSnapshot,
+    getFallbackStateSnapshot,
+    settingsRef,
+    setRemoteState
+  });
 
-    const activeId = nextStore.activeProfileId;
-    const activeProfile = nextStore.profiles[activeId];
-
-    if (!activeProfile) {
-      return;
-    }
-
-    applySettings(activeProfile.settings, { syncInput: true, scheduleSync: false });
-
-    const currentState = captureStateRef.current;
-
-    if (currentState) {
-      nextStore = {
-        ...nextStore,
-        profiles: {
-          ...nextStore.profiles,
-          [activeId]: {
-            ...activeProfile,
-            state: cloneJson(currentState),
-            settings: cloneJson(settingsRef.current),
-            updatedAt: new Date().toISOString()
-          }
-        }
-      };
-      await persistProfilesStore(nextStore);
-      return;
-    }
-
-    await activateProfile(activeId, { persistStore: true, resetTests: true }, nextStore);
-  }
+  scheduleActiveProfileSyncRef.current = scheduleActiveProfileSync;
 
   function ensureCopyAllowed() {
     if (settingsRef.current.maskSensitive) {
@@ -504,101 +334,6 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     setTestAllStatus(`Rolled back ${endpointId}${when}`);
   }
 
-  async function createProfile() {
-    const store = profilesStoreRef.current;
-
-    if (!store) {
-      return;
-    }
-
-    const defaultName = `Profile ${Object.keys(store.profiles).length + 1}`;
-    const name = window.prompt("New profile name:", defaultName);
-
-    if (typeof name !== "string") {
-      return;
-    }
-
-    const cleanName = name.trim();
-
-    if (!cleanName) {
-      return;
-    }
-
-    const profileId = createProfileId();
-    const nextStore: ProfilesStore = {
-      ...store,
-      profiles: {
-        ...store.profiles,
-        [profileId]: {
-          id: profileId,
-          name: cleanName,
-          state: cloneJson(getEmptyStateSnapshot()),
-          settings: cloneJson(settingsRef.current),
-          updatedAt: new Date().toISOString()
-        }
-      }
-    };
-
-    setProfilesStoreState(nextStore);
-    await activateProfile(profileId, { persistStore: true, resetTests: false }, nextStore);
-  }
-
-  async function deleteSelectedProfile() {
-    const store = profilesStoreRef.current;
-
-    if (!store) {
-      return;
-    }
-
-    const targetId = store.activeProfileId;
-
-    if (!targetId || targetId === DEFAULT_PROFILE_ID) {
-      return;
-    }
-
-    const targetProfile = store.profiles[targetId];
-
-    if (!targetProfile) {
-      return;
-    }
-
-    const confirmed = window.confirm(`Delete profile "${targetProfile.name}"?`);
-
-    if (!confirmed) {
-      return;
-    }
-
-    const nextProfiles: Record<string, ProfileRecord> = { ...store.profiles };
-    delete nextProfiles[targetId];
-
-    if (!nextProfiles[DEFAULT_PROFILE_ID]) {
-      nextProfiles[DEFAULT_PROFILE_ID] = {
-        id: DEFAULT_PROFILE_ID,
-        name: "Default",
-        state: cloneJson(getFallbackStateSnapshot(captureStateRef.current)),
-        settings: cloneJson(settingsRef.current),
-        updatedAt: new Date().toISOString()
-      };
-    }
-
-    const remainingIds = Object.keys(nextProfiles);
-
-    if (remainingIds.length === 0) {
-      return;
-    }
-
-    const nextActive = remainingIds.includes(DEFAULT_PROFILE_ID)
-      ? DEFAULT_PROFILE_ID
-      : remainingIds[0];
-    const nextStore: ProfilesStore = {
-      activeProfileId: nextActive,
-      profiles: nextProfiles
-    };
-
-    setProfilesStoreState(nextStore);
-    await activateProfile(nextActive, { persistStore: true, resetTests: false }, nextStore);
-  }
-
   useEffect(() => {
     function handleStorageChanged(
       changes: Record<string, chrome.storage.StorageChange>,
@@ -662,13 +397,6 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
       await loadCapturedPosts();
       await loadUploadNotifications();
     });
-
-    return () => {
-      if (profileSyncTimerRef.current) {
-        clearTimeout(profileSyncTimerRef.current);
-        profileSyncTimerRef.current = null;
-      }
-    };
   }, []);
 
   useEffect(() => {
@@ -684,19 +412,6 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     const previewPatch = settings.maskSensitive ? maskPatchSensitiveData(rawPatch) : rawPatch;
     setPatchOutput(JSON.stringify(previewPatch, null, 2));
   }, [captureState, settings.maskSensitive]);
-
-  const selectedProfile =
-    profilesStore && profilesStore.profiles
-      ? profilesStore.profiles[profilesStore.activeProfileId] || null
-      : null;
-
-  const profiles = useMemo(() => sortProfiles(profilesStore?.profiles), [profilesStore]);
-
-  const canDeleteProfile = Boolean(
-    selectedProfile &&
-    selectedProfile.id !== DEFAULT_PROFILE_ID &&
-    Object.keys(profilesStore?.profiles || {}).length > 1
-  );
 
   const profileHint = getProfileHint(selectedProfile);
   const sensitiveHint = getSensitiveHint(settings.maskSensitive);
