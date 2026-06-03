@@ -31,7 +31,9 @@ public sealed class MediaBackupIntegrityChunkUpdateOrchestrationService(
         foreach (string path in selectedPaths)
         {
             if (!metadataByPath.TryGetValue(path, out MediaBackupChunkDataMetadata? metadata))
-                throw new KeyNotFoundException($"missing zip metadata while fixing integrity: {path}");
+                throw new KeyNotFoundException(
+                    $"missing zip metadata while fixing integrity: {path}"
+                );
 
             selectedMetadata[path] = metadata;
         }

@@ -28,10 +28,7 @@ public sealed class MediaDownloadDataBuilderService : IMediaDownloadDataBuilderS
 
         if (!Uri.TryCreate(url, UriKind.Absolute, out _))
         {
-            throw new ArgumentException(
-                $"url: {url}, error: invalid absolute URL",
-                nameof(input)
-            );
+            throw new ArgumentException($"url: {url}, error: invalid absolute URL", nameof(input));
         }
 
         return new MediaDownloadData { Url = url, Path = path };
