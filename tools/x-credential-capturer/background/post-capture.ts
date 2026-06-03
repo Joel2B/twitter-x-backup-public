@@ -14,7 +14,9 @@ import {
   CAPTURED_POSTS_STORAGE_KEY,
   UPLOAD_NOTIFICATIONS_STORAGE_KEY,
   DEFAULT_UPLOAD_API_BASE_URL,
-  DEFAULT_UPLOAD_ORIGIN
+  DEFAULT_UPLOAD_ORIGIN,
+  UPLOAD_NOTIFICATION_EXPIRE_AFTER_MS,
+  UPLOAD_REQUEST_TIMEOUT_MS
 } from "./constants.js";
 import { isPlainObject, nowIso, parseOperation } from "./utils.js";
 
@@ -120,10 +122,14 @@ function parseUploadApiResponse(value: unknown): UploadApiResponsePayload | null
   const diagnosticsSource = readProperty(value, "diagnostics", "Diagnostics");
   const diagnostics: UploadApiDiagnosticsPayload | null = isPlainObject(diagnosticsSource)
     ? {
-        beforeCount: toNullableNumber(readProperty(diagnosticsSource, "beforeCount", "BeforeCount")),
+        beforeCount: toNullableNumber(
+          readProperty(diagnosticsSource, "beforeCount", "BeforeCount")
+        ),
         afterCount: toNullableNumber(readProperty(diagnosticsSource, "afterCount", "AfterCount")),
         deltaCount: toNullableNumber(readProperty(diagnosticsSource, "deltaCount", "DeltaCount")),
-        ignoredPosts: toNullableNumber(readProperty(diagnosticsSource, "ignoredPosts", "IgnoredPosts")),
+        ignoredPosts: toNullableNumber(
+          readProperty(diagnosticsSource, "ignoredPosts", "IgnoredPosts")
+        ),
         durationMs: toNullableNumber(readProperty(diagnosticsSource, "durationMs", "DurationMs"))
       }
     : null;
@@ -393,11 +399,15 @@ function defaultUploadNotificationsStore(): UploadNotificationsStore {
 }
 
 function normalizeUploadNotificationStatus(value: unknown): UploadNotificationItem["status"] {
-  if (value === "running" || value === "completed" || value === "failed") {
+  if (value === "running" || value === "completed" || value === "failed" || value === "expired") {
     return value;
   }
 
   return "failed";
+}
+
+function buildExpiredNotificationError(startedAt: string): string {
+  return `Upload expired after ${UPLOAD_REQUEST_TIMEOUT_MS} ms without a completion response (started ${startedAt}).`;
 }
 
 function normalizeUploadNotificationItem(value: unknown): UploadNotificationItem | null {
@@ -414,9 +424,11 @@ function normalizeUploadNotificationItem(value: unknown): UploadNotificationItem
     attemptedPosts: typeof value.attemptedPosts === "number" ? value.attemptedPosts : 0,
     uploadedPosts: typeof value.uploadedPosts === "number" ? value.uploadedPosts : 0,
     failedPosts: typeof value.failedPosts === "number" ? value.failedPosts : 0,
-    apiBaseUrl: typeof value.apiBaseUrl === "string" ? value.apiBaseUrl : DEFAULT_UPLOAD_API_BASE_URL,
+    apiBaseUrl:
+      typeof value.apiBaseUrl === "string" ? value.apiBaseUrl : DEFAULT_UPLOAD_API_BASE_URL,
     uploadUserId: typeof value.uploadUserId === "string" ? value.uploadUserId : "",
-    uploadOrigin: typeof value.uploadOrigin === "string" ? value.uploadOrigin : DEFAULT_UPLOAD_ORIGIN,
+    uploadOrigin:
+      typeof value.uploadOrigin === "string" ? value.uploadOrigin : DEFAULT_UPLOAD_ORIGIN,
     uploadSummary: normalizeUploadSummary(
       value.uploadSummary,
       typeof value.attemptedPosts === "number" ? value.attemptedPosts : 0
@@ -436,6 +448,50 @@ function normalizeUploadNotificationsItems(items: unknown): UploadNotificationIt
     .slice(0, UPLOAD_NOTIFICATIONS_LIMIT);
 }
 
+function expireStaleRunningNotifications(items: UploadNotificationItem[]): {
+  changed: boolean;
+  items: UploadNotificationItem[];
+} {
+  const nowEpoch = Date.now();
+  let changed = false;
+
+  const nextItems = items.map((item) => {
+    if (item.status !== "running") {
+      return item;
+    }
+
+    const startedAtEpoch = new Date(item.startedAt).getTime();
+
+    if (!Number.isFinite(startedAtEpoch)) {
+      return item;
+    }
+
+    if (nowEpoch - startedAtEpoch < UPLOAD_NOTIFICATION_EXPIRE_AFTER_MS) {
+      return item;
+    }
+
+    changed = true;
+
+    const expiredItem: UploadNotificationItem = {
+      ...item,
+      status: "expired",
+      completedAt: item.completedAt || new Date(nowEpoch).toISOString(),
+      failedPosts: Math.max(
+        item.failedPosts,
+        Math.max(0, item.attemptedPosts - item.uploadedPosts)
+      ),
+      error: item.error || buildExpiredNotificationError(item.startedAt)
+    };
+
+    return expiredItem;
+  });
+
+  return {
+    changed,
+    items: nextItems
+  };
+}
+
 export async function getUploadNotificationsStore(): Promise<UploadNotificationsStore> {
   const raw = await chrome.storage.local.get(UPLOAD_NOTIFICATIONS_STORAGE_KEY);
   const source = raw?.[UPLOAD_NOTIFICATIONS_STORAGE_KEY];
@@ -444,10 +500,21 @@ export async function getUploadNotificationsStore(): Promise<UploadNotifications
     return defaultUploadNotificationsStore();
   }
 
-  return {
+  const store: UploadNotificationsStore = {
     updatedAt: typeof source.updatedAt === "string" ? source.updatedAt : nowIso(),
     items: normalizeUploadNotificationsItems(source.items)
   };
+
+  const expired = expireStaleRunningNotifications(store.items);
+
+  if (!expired.changed) {
+    return store;
+  }
+
+  return saveUploadNotificationsStore({
+    ...store,
+    items: expired.items
+  });
 }
 
 async function saveUploadNotificationsStore(
@@ -1038,6 +1105,13 @@ export async function uploadCapturedPosts(
     uploadOrigin: store.uploadOrigin
   });
   const startedAtEpoch = Date.now();
+  const timeoutMessage = `Upload expired after ${UPLOAD_REQUEST_TIMEOUT_MS} ms waiting for API response.`;
+  const abortController = new AbortController();
+  let requestTimedOut = false;
+  const timeoutId = setTimeout(() => {
+    requestTimedOut = true;
+    abortController.abort();
+  }, UPLOAD_REQUEST_TIMEOUT_MS);
   let response: Response;
 
   try {
@@ -1046,9 +1120,27 @@ export async function uploadCapturedPosts(
       headers: {
         "content-type": "application/json"
       },
-      body: JSON.stringify(candidates.map((item) => item.processed))
+      body: JSON.stringify(candidates.map((item) => item.processed)),
+      signal: abortController.signal
     });
   } catch (error) {
+    clearTimeout(timeoutId);
+
+    if (requestTimedOut || (error instanceof Error && error.name === "AbortError")) {
+      await patchUploadNotification(notification.id, {
+        status: "expired",
+        completedAt: nowIso(),
+        uploadedPosts: 0,
+        failedPosts: candidates.length,
+        error: timeoutMessage
+      });
+
+      return {
+        ok: false,
+        error: timeoutMessage
+      };
+    }
+
     await patchUploadNotification(notification.id, {
       status: "failed",
       completedAt: nowIso(),
@@ -1061,6 +1153,8 @@ export async function uploadCapturedPosts(
       error: error instanceof Error ? error.message : "Upload request failed."
     };
   }
+
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");

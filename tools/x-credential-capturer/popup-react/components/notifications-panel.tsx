@@ -18,7 +18,11 @@ function resolveStatusClass(status: UploadNotificationRowView["item"]["status"])
     return "pending";
   }
 
-  return "skipped";
+  if (status === "expired") {
+    return "expired";
+  }
+
+  return "failed";
 }
 
 function resolveStatusLabel(status: UploadNotificationRowView["item"]["status"]): string {
@@ -30,10 +34,18 @@ function resolveStatusLabel(status: UploadNotificationRowView["item"]["status"])
     return "Running";
   }
 
+  if (status === "expired") {
+    return "Expired";
+  }
+
   return "Failed";
 }
 
-export function NotificationsPanel({ notifications, runningCount, onClear }: NotificationsPanelProps) {
+export function NotificationsPanel({
+  notifications,
+  runningCount,
+  onClear
+}: NotificationsPanelProps) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -79,7 +91,12 @@ export function NotificationsPanel({ notifications, runningCount, onClear }: Not
       </div>
 
       <div className="notifications-actions">
-        <button className="btn secondary" type="button" onClick={onClear} disabled={rows.length === 0}>
+        <button
+          className="btn secondary"
+          type="button"
+          onClick={onClear}
+          disabled={rows.length === 0}
+        >
           Clear notifications
         </button>
       </div>

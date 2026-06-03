@@ -22,3 +22,13 @@
   color: #5a6470;
   background: #e7ebef;
 }
+
+.status.failed {
+  color: #8f1b1b;
+  background: #f8dede;
+}
+
+.status.expired {
+  color: #7a5b00;
+  background: #f3e7ba;
+}

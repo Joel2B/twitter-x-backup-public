@@ -223,7 +223,7 @@ export type CapturedPostsStore = {
   items: Record<string, CapturedPostItem>;
 };
 
-export type UploadNotificationStatus = "running" | "completed" | "failed";
+export type UploadNotificationStatus = "running" | "completed" | "failed" | "expired";
 
 export type UploadNotificationItem = {
   id: string;

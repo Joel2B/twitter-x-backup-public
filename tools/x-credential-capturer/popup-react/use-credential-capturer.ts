@@ -248,8 +248,7 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
       return null;
     }
 
-    const matches =
-      description.match(/\b(?:https?:\/\/)?t\.co\/[A-Za-z0-9]+(?:[^\s]*)?/gi) || [];
+    const matches = description.match(/\b(?:https?:\/\/)?t\.co\/[A-Za-z0-9]+(?:[^\s]*)?/gi) || [];
 
     if (matches.length === 0) {
       return null;
@@ -285,11 +284,11 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
 
     if (summary.beforeCount !== null && summary.afterCount !== null) {
       const delta =
-        summary.deltaCount !== null
-          ? summary.deltaCount
-          : summary.afterCount - summary.beforeCount;
+        summary.deltaCount !== null ? summary.deltaCount : summary.afterCount - summary.beforeCount;
       const deltaSign = delta >= 0 ? "+" : "";
-      segments.push(`total: ${summary.beforeCount} -> ${summary.afterCount} (${deltaSign}${delta})`);
+      segments.push(
+        `total: ${summary.beforeCount} -> ${summary.afterCount} (${deltaSign}${delta})`
+      );
     }
 
     if (summary.durationMs !== null) {
@@ -644,6 +643,9 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
         previous.filter((id) => !response.uploaded.includes(id))
       );
       setUploadStatus(formatUploadSummary(response));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Upload failed";
+      setUploadStatus(message);
     } finally {
       setIsUploadingCapturedPosts(false);
     }
@@ -1212,11 +1214,10 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
 
       const uploadNotificationsChange = changes?.[UPLOAD_NOTIFICATIONS_STORAGE_KEY];
 
-      if (
-        uploadNotificationsChange &&
-        typeof uploadNotificationsChange.newValue !== "undefined"
-      ) {
-        applyUploadNotificationsStore(uploadNotificationsChange.newValue as UploadNotificationsStore);
+      if (uploadNotificationsChange && typeof uploadNotificationsChange.newValue !== "undefined") {
+        applyUploadNotificationsStore(
+          uploadNotificationsChange.newValue as UploadNotificationsStore
+        );
       }
     }
 
