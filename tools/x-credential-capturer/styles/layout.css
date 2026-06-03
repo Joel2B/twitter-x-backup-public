@@ -84,6 +84,33 @@
   gap: 4px;
 }
 
+.info-panel {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.info-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.info-panel-header h2 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.info-grid {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: #23323d;
+}
+
 .captured-posts {
   border: 1px solid var(--line);
   background: var(--panel);

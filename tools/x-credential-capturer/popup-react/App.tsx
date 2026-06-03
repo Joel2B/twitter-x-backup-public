@@ -4,11 +4,12 @@ import { ActionsBar } from "./components/actions-bar.js";
 import { CapturedPostsPanel } from "./components/captured-posts-panel.js";
 import { EndpointTable } from "./components/endpoint-table.js";
 import { GlobalSection } from "./components/global-section.js";
+import { InfoPanel } from "./components/info-panel.js";
 import { NotificationsPanel } from "./components/notifications-panel.js";
 import { PatchOutput } from "./components/patch-output.js";
 import { useCredentialCapturer } from "./use-credential-capturer.js";
 
-type TabId = "config" | "endpoints" | "captured-posts" | "notifications" | "patch-preview";
+type TabId = "config" | "endpoints" | "captured-posts" | "notifications" | "patch-preview" | "info";
 
 export default function App() {
   const {
@@ -142,6 +143,15 @@ export default function App() {
         >
           Patch Preview
         </button>
+        <button
+          className={`tab-btn ${activeTab === "info" ? "active" : ""}`}
+          type="button"
+          onClick={() => {
+            setActiveTab("info");
+          }}
+        >
+          Info
+        </button>
       </nav>
 
       {activeTab === "config" && (
@@ -243,6 +253,8 @@ export default function App() {
       )}
 
       {activeTab === "patch-preview" && <PatchOutput patchOutput={patchOutput} />}
+
+      {activeTab === "info" && <InfoPanel />}
     </main>
   );
 }
