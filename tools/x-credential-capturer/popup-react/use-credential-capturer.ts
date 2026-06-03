@@ -22,13 +22,10 @@ import type {
   BackgroundMessage,
   CaptureState,
   CapturedPostsStore,
-  CapturedPostsMessageResponse,
   EndpointDefinition,
   EndpointModel,
   EndpointTestRuntime,
   UploadNotificationsStore,
-  UploadNotificationsMessageResponse,
-  UploadCapturedPostsMessageResponse,
   RollbackMessageResponse,
   StateMessageResponse
 } from "../popup/models.js";
@@ -63,14 +60,13 @@ import type {
   ApplySettingsOptions,
   ApplyStateOptions,
   EndpointRowView,
-  CapturedPostRowView,
-  UploadNotificationRowView,
   OpenUrlOptions,
   PopupSettings,
   ProfileRecord,
   ProfilesStore,
   UseCredentialCapturerResult
 } from "./types.js";
+import { useCapturedPosts } from "./use-captured-posts.js";
 
 const PROFILE_SYNC_DEBOUNCE_MS = 400;
 const USERNAME_SAVE_DEBOUNCE_MS = 250;
@@ -93,20 +89,10 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
   const [endpointCopyLabels, setEndpointCopyLabels] = useState<Record<string, string>>({});
   const [patchOutput, setPatchOutput] = useState("");
   const [currentRawPatch, setCurrentRawPatch] = useState<ApiPatch | null>(null);
-  const [capturedPostsStore, setCapturedPostsStore] = useState<CapturedPostsStore | null>(null);
-  const [selectedCapturedPostIds, setSelectedCapturedPostIds] = useState<string[]>([]);
-  const [capturedPostsSearchQuery, setCapturedPostsSearchQuery] = useState("");
-  const [captureHashtagDraft, setCaptureHashtagDraft] = useState("");
-  const [isUploadingCapturedPosts, setIsUploadingCapturedPosts] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState("");
-  const [uploadNotificationsStore, setUploadNotificationsStore] =
-    useState<UploadNotificationsStore | null>(null);
 
   const captureStateRef = useRef<CaptureState | null>(captureState);
   const settingsRef = useRef<PopupSettings>(settings);
   const profilesStoreRef = useRef<ProfilesStore | null>(profilesStore);
-  const capturedPostsStoreRef = useRef<CapturedPostsStore | null>(capturedPostsStore);
-  const captureHashtagDraftRef = useRef(captureHashtagDraft);
   const isApplyingProfileRef = useRef(isApplyingProfile);
   const usernameDraftRef = useRef(usernameDraft);
   const hashtagDraftRef = useRef(hashtagDraft);
@@ -125,14 +111,6 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
   useEffect(() => {
     profilesStoreRef.current = profilesStore;
   }, [profilesStore]);
-
-  useEffect(() => {
-    capturedPostsStoreRef.current = capturedPostsStore;
-  }, [capturedPostsStore]);
-
-  useEffect(() => {
-    captureHashtagDraftRef.current = captureHashtagDraft;
-  }, [captureHashtagDraft]);
 
   useEffect(() => {
     isApplyingProfileRef.current = isApplyingProfile;
@@ -165,137 +143,8 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     setSettings(nextSettings);
   }
 
-  function applyCapturedPostsStore(nextStore: CapturedPostsStore | null) {
-    capturedPostsStoreRef.current = nextStore;
-    setCapturedPostsStore(nextStore);
-
-    if (!nextStore) {
-      setSelectedCapturedPostIds([]);
-      return;
-    }
-
-    const itemById = nextStore.items || {};
-
-    setSelectedCapturedPostIds((previous) =>
-      previous.filter((id) => {
-        const item = itemById[id];
-        return Boolean(item && !item.uploadedAt);
-      })
-    );
-  }
-
-  function applyUploadNotificationsStore(nextStore: UploadNotificationsStore | null) {
-    setUploadNotificationsStore(nextStore);
-  }
-
   function clearAllTestRuntime() {
     setEndpointTestState({});
-  }
-
-  function normalizeCaptureHashtag(value: string): string {
-    return value.trim().replace(/^#+/, "").toLowerCase();
-  }
-
-  function splitCaptureHashtagDraft(value: string): string[] {
-    const values = value
-      .split(/[\s,]+/g)
-      .map((entry) => normalizeCaptureHashtag(entry))
-      .filter((entry) => entry.length > 0);
-
-    return [...new Set(values)];
-  }
-
-  function postMatchesSearch(item: CapturedPostRowView["item"], searchQuery: string): boolean {
-    if (!searchQuery) {
-      return true;
-    }
-
-    const parts: string[] = [
-      item.id,
-      item.operation,
-      item.text || "",
-      item.authorUserName || "",
-      item.authorName || "",
-      item.authorId || "",
-      item.postUrl || "",
-      item.capturedAt || "",
-      item.lastSeenAt || "",
-      item.uploadedAt || "",
-      ...item.mediaUrls
-    ];
-
-    try {
-      parts.push(JSON.stringify(item.processed));
-    } catch (_error) {
-      // Ignore serialization errors and keep matching with available fields.
-    }
-
-    return parts.join("\n").toLowerCase().includes(searchQuery);
-  }
-
-  function normalizeDetectedUrl(value: string): string | null {
-    const trimmed = value.trim().replace(/[)\],.;!?]+$/g, "");
-
-    if (!trimmed) {
-      return null;
-    }
-
-    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  }
-
-  function extractLastTcoUrlFromDescription(description: string | null | undefined): string | null {
-    if (!description) {
-      return null;
-    }
-
-    const matches = description.match(/\b(?:https?:\/\/)?t\.co\/[A-Za-z0-9]+(?:[^\s]*)?/gi) || [];
-
-    if (matches.length === 0) {
-      return null;
-    }
-
-    return normalizeDetectedUrl(matches[matches.length - 1]);
-  }
-
-  function formatUploadSummary(response: UploadCapturedPostsMessageResponse): string {
-    if (!response.ok) {
-      return "";
-    }
-
-    const summary = response.uploadSummary;
-
-    if (!summary) {
-      return `Uploaded: ${response.uploaded.length}`;
-    }
-
-    const segments: string[] = [`Uploaded: ${response.uploaded.length}/${summary.attemptedPosts}`];
-
-    if (summary.receivedPosts !== null) {
-      segments.push(`received: ${summary.receivedPosts}`);
-    }
-
-    if (summary.savedPosts !== null) {
-      segments.push(`saved: ${summary.savedPosts}`);
-    }
-
-    if (summary.ignoredPosts !== null) {
-      segments.push(`ignored: ${summary.ignoredPosts}`);
-    }
-
-    if (summary.beforeCount !== null && summary.afterCount !== null) {
-      const delta =
-        summary.deltaCount !== null ? summary.deltaCount : summary.afterCount - summary.beforeCount;
-      const deltaSign = delta >= 0 ? "+" : "";
-      segments.push(
-        `total: ${summary.beforeCount} -> ${summary.afterCount} (${deltaSign}${delta})`
-      );
-    }
-
-    if (summary.durationMs !== null) {
-      segments.push(`duration: ${summary.durationMs} ms`);
-    }
-
-    return segments.join(" | ");
   }
 
   function setTestRuntime(endpointId: string, nextValue: Partial<EndpointTestRuntime>) {
@@ -575,243 +424,6 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     await activateProfile(activeId, { persistStore: true, resetTests: true }, nextStore);
   }
 
-  async function loadCapturedPosts() {
-    const response = await sendMessage<CapturedPostsMessageResponse>({
-      type: "getCapturedPosts"
-    } satisfies BackgroundMessage);
-
-    if (!response?.ok) {
-      throw new Error(response?.error || "Could not load captured posts");
-    }
-
-    applyCapturedPostsStore(response.store);
-  }
-
-  async function loadUploadNotifications() {
-    const response = await sendMessage<UploadNotificationsMessageResponse>({
-      type: "getUploadNotifications"
-    } satisfies BackgroundMessage);
-
-    if (!response?.ok) {
-      throw new Error(response?.error || "Could not load upload notifications");
-    }
-
-    applyUploadNotificationsStore(response.store);
-  }
-
-  async function updateUploadTarget(input: {
-    apiBaseUrl?: string;
-    uploadUserId?: string;
-    uploadOrigin?: string;
-    captureHashtags?: string[];
-  }) {
-    const response = await sendMessage<CapturedPostsMessageResponse>({
-      type: "setUploadTarget",
-      ...input
-    } satisfies BackgroundMessage);
-
-    if (!response?.ok) {
-      throw new Error(response?.error || "Could not update upload target");
-    }
-
-    applyCapturedPostsStore(response.store);
-  }
-
-  async function uploadSelectedCapturedPosts() {
-    const selectedIds = [...selectedCapturedPostIds];
-
-    if (selectedIds.length === 0) {
-      setUploadStatus("Select at least one pending post.");
-      return;
-    }
-
-    setIsUploadingCapturedPosts(true);
-    setUploadStatus("");
-
-    try {
-      const response = await sendMessage<UploadCapturedPostsMessageResponse>({
-        type: "uploadCapturedPosts",
-        ids: selectedIds
-      } satisfies BackgroundMessage);
-
-      if (!response?.ok) {
-        throw new Error(response?.error || "Upload failed");
-      }
-
-      applyCapturedPostsStore(response.store);
-      setSelectedCapturedPostIds((previous) =>
-        previous.filter((id) => !response.uploaded.includes(id))
-      );
-      setUploadStatus(formatUploadSummary(response));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Upload failed";
-      setUploadStatus(message);
-    } finally {
-      setIsUploadingCapturedPosts(false);
-    }
-  }
-
-  async function clearUploadedCapturedPosts() {
-    const response = await sendMessage<CapturedPostsMessageResponse>({
-      type: "clearUploadedCapturedPosts"
-    } satisfies BackgroundMessage);
-
-    if (!response?.ok) {
-      throw new Error(response?.error || "Could not clear uploaded posts");
-    }
-
-    applyCapturedPostsStore(response.store);
-    setUploadStatus("Uploaded posts cleared.");
-  }
-
-  async function resetCapturedPostsUploadStatus() {
-    const response = await sendMessage<CapturedPostsMessageResponse>({
-      type: "resetCapturedPostsUploadStatus"
-    } satisfies BackgroundMessage);
-
-    if (!response?.ok) {
-      throw new Error(response?.error || "Could not reset upload status");
-    }
-
-    applyCapturedPostsStore(response.store);
-    setUploadStatus("All posts were marked as pending.");
-  }
-
-  async function clearUploadNotifications() {
-    const response = await sendMessage<UploadNotificationsMessageResponse>({
-      type: "clearUploadNotifications"
-    } satisfies BackgroundMessage);
-
-    if (!response?.ok) {
-      throw new Error(response?.error || "Could not clear upload notifications");
-    }
-
-    applyUploadNotificationsStore(response.store);
-    setUploadStatus("Upload notifications cleared.");
-  }
-
-  async function exportCapturedPosts() {
-    const store = capturedPostsStoreRef.current;
-
-    if (!store) {
-      setUploadStatus("Nothing to export.");
-      return;
-    }
-
-    const payload = {
-      exportedAt: new Date().toISOString(),
-      version: 1,
-      ...store
-    };
-
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json"
-    });
-
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `xcc-captured-posts-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-    setUploadStatus("Export complete.");
-  }
-
-  async function importCapturedPostsFromFile(file: File) {
-    const text = await file.text();
-    let payload: unknown;
-
-    try {
-      payload = JSON.parse(text);
-    } catch (_error) {
-      throw new Error("Invalid JSON file.");
-    }
-
-    const response = await sendMessage<CapturedPostsMessageResponse>({
-      type: "importCapturedPosts",
-      payload
-    } satisfies BackgroundMessage);
-
-    if (!response?.ok) {
-      throw new Error(response?.error || "Import failed");
-    }
-
-    applyCapturedPostsStore(response.store);
-    setUploadStatus("Import complete.");
-  }
-
-  async function addCaptureHashtagFromDraft() {
-    const draftTokens = splitCaptureHashtagDraft(captureHashtagDraftRef.current);
-
-    if (draftTokens.length === 0) {
-      setCaptureHashtagDraft("");
-      captureHashtagDraftRef.current = "";
-      return;
-    }
-
-    const current = capturedPostsStoreRef.current?.captureHashtags || [];
-    const next = [...new Set([...current, ...draftTokens])];
-    await updateUploadTarget({ captureHashtags: next });
-    setCaptureHashtagDraft("");
-    captureHashtagDraftRef.current = "";
-  }
-
-  async function removeCaptureHashtag(value: string) {
-    const normalized = normalizeCaptureHashtag(value);
-
-    if (!normalized) {
-      return;
-    }
-
-    const current = capturedPostsStoreRef.current?.captureHashtags || [];
-    const next = current.filter((entry) => entry !== normalized);
-    await updateUploadTarget({ captureHashtags: next });
-  }
-
-  async function openCaptureHashtag(value: string) {
-    const hashtag = normalizeCaptureHashtag(value);
-
-    if (!hashtag) {
-      return;
-    }
-
-    const url = `https://x.com/hashtag/${encodeURIComponent(hashtag)}?f=media`;
-    await openUrlWithBypassCache(url, { active: true, bypassCache: false });
-  }
-
-  async function openCaptureHashtagInWindow(value: string) {
-    const hashtag = normalizeCaptureHashtag(value);
-
-    if (!hashtag) {
-      return;
-    }
-
-    const url = `https://x.com/hashtag/${encodeURIComponent(hashtag)}?f=media`;
-    await chrome.windows.create({
-      url,
-      focused: true,
-      type: "normal"
-    });
-  }
-
-  async function openCapturedPostExternalUrl(capturedPostId: string) {
-    const item = capturedPostsStoreRef.current?.items?.[capturedPostId];
-
-    if (!item) {
-      return;
-    }
-
-    const link =
-      extractLastTcoUrlFromDescription(item.processed?.description) ||
-      extractLastTcoUrlFromDescription(item.text);
-
-    if (!link) {
-      return;
-    }
-
-    await openUrlWithBypassCache(link, { active: true, bypassCache: false });
-  }
-
   function ensureCopyAllowed() {
     if (settingsRef.current.maskSensitive) {
       throw new Error("Sensitive guard is enabled. Disable it to copy real credentials.");
@@ -882,6 +494,44 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
       chrome.tabs.onUpdated.addListener(handleUpdated);
     });
   }
+
+  const {
+    capturedPostsStore,
+    selectedCapturedPostIds,
+    capturedPostsSearchQuery,
+    captureHashtagDraft,
+    isUploadingCapturedPosts,
+    uploadStatus,
+    uploadNotifications,
+    runningUploadNotificationsCount,
+    capturedPostRows,
+    captureHashtags,
+    applyCapturedPostsStore,
+    applyUploadNotificationsStore,
+    loadCapturedPosts,
+    loadUploadNotifications,
+    updateUploadTarget,
+    uploadSelectedCapturedPosts,
+    clearUploadedCapturedPosts,
+    resetCapturedPostsUploadStatus,
+    clearUploadNotifications,
+    exportCapturedPosts,
+    importCapturedPostsFromFile,
+    addCaptureHashtagFromDraft,
+    removeCaptureHashtag,
+    openCaptureHashtag,
+    openCaptureHashtagInWindow,
+    openCapturedPostExternalUrl,
+    toggleCapturedPostSelection,
+    selectAllPendingCapturedPosts,
+    clearCapturedPostSelection,
+    setCapturedPostsSearchQuery,
+    setCaptureHashtagDraft
+  } = useCapturedPosts({
+    sendMessage,
+    openUrlWithBypassCache,
+    sortOrder: settings.capturedPostsSort
+  });
 
   async function clearState() {
     const response = await sendMessage<StateMessageResponse>({
@@ -1331,106 +981,6 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     });
   }, [captureState, endpointCopyLabels, endpointTestState, globalHeaders, isBulkTesting, settings]);
 
-  const capturedPostRows: CapturedPostRowView[] = useMemo(() => {
-    const items = Object.values(capturedPostsStore?.items || {});
-    const normalizedSearchQuery = capturedPostsSearchQuery.trim().toLowerCase();
-
-    function asEpoch(value: string | null | undefined): number {
-      const parsed = value ? new Date(value).getTime() : Number.NaN;
-      return Number.isFinite(parsed) ? parsed : 0;
-    }
-
-    return items
-      .sort((a, b) => {
-        if (settings.capturedPostsSort === "oldest-added") {
-          return asEpoch(a.capturedAt) - asEpoch(b.capturedAt);
-        }
-
-        if (settings.capturedPostsSort === "last-seen") {
-          return asEpoch(b.lastSeenAt) - asEpoch(a.lastSeenAt);
-        }
-
-        return asEpoch(b.capturedAt) - asEpoch(a.capturedAt);
-      })
-      .filter((item) => postMatchesSearch(item, normalizedSearchQuery))
-      .map((item) => {
-        const preview =
-          (item.text && item.text.trim()) ||
-          (item.mediaUrls[0] ? `MEDIA: ${item.mediaUrls[0]}` : "(no text/media)");
-        const externalUrl =
-          extractLastTcoUrlFromDescription(item.processed?.description) ||
-          extractLastTcoUrlFromDescription(item.text);
-
-        return {
-          item,
-          preview,
-          externalUrl,
-          selected: selectedCapturedPostIds.includes(item.id),
-          selectable: !item.uploadedAt
-        };
-      });
-  }, [
-    capturedPostsSearchQuery,
-    capturedPostsStore,
-    selectedCapturedPostIds,
-    settings.capturedPostsSort
-  ]);
-
-  const uploadNotifications: UploadNotificationRowView[] = useMemo(() => {
-    const now = Date.now();
-    const items = uploadNotificationsStore?.items || [];
-
-    return items
-      .slice()
-      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
-      .map((item) => {
-        const startedMs = new Date(item.startedAt).getTime();
-        const endMs = item.completedAt ? new Date(item.completedAt).getTime() : now;
-        const progressDurationMs =
-          Number.isFinite(startedMs) && Number.isFinite(endMs) && endMs >= startedMs
-            ? endMs - startedMs
-            : 0;
-
-        return {
-          item,
-          progressDurationMs
-        };
-      });
-  }, [uploadNotificationsStore]);
-
-  const runningUploadNotificationsCount = useMemo(
-    () => uploadNotifications.filter((entry) => entry.item.status === "running").length,
-    [uploadNotifications]
-  );
-
-  function toggleCapturedPostSelection(id: string, checked: boolean) {
-    setSelectedCapturedPostIds((previous) => {
-      const exists = previous.includes(id);
-
-      if (checked && !exists) {
-        return [...previous, id];
-      }
-
-      if (!checked && exists) {
-        return previous.filter((entry) => entry !== id);
-      }
-
-      return previous;
-    });
-  }
-
-  function selectAllPendingCapturedPosts() {
-    const pendingIds = Object.values(capturedPostsStore?.items || {})
-      .filter((item) => !item.uploadedAt)
-      .map((item) => item.id);
-
-    setSelectedCapturedPostIds(pendingIds);
-  }
-
-  function clearCapturedPostSelection() {
-    setSelectedCapturedPostIds([]);
-  }
-
   return {
     activeProfileId: profilesStore?.activeProfileId || DEFAULT_PROFILE_ID,
     canDeleteProfile,
@@ -1452,7 +1002,7 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     selectedCapturedPostIds,
     capturedPostsSearchQuery,
     captureHashtagDraft,
-    captureHashtags: capturedPostsStore?.captureHashtags || [],
+    captureHashtags,
     testAllStatus,
     uploadStatus,
     hashtagDraft,
@@ -1545,7 +1095,6 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     },
     onCaptureHashtagDraftChange: (value: string) => {
       setCaptureHashtagDraft(value);
-      captureHashtagDraftRef.current = value;
     },
     onCaptureHashtagDraftKeyDown: (event: { key: string; preventDefault: () => void }) => {
       if (event.key === "Enter" || event.key === " " || event.key === "Spacebar") {

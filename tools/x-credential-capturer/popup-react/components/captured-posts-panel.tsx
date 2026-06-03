@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { formatDate } from "../../popup/format.js";
 import type { CapturedPostRowView } from "../types.js";
+import { CaptureHashtagsEditor } from "./capture-hashtags-editor.js";
+import { CapturedPostCard } from "./captured-post-card.js";
 
 const INITIAL_VISIBLE_ROWS = 40;
 const VISIBLE_ROWS_BATCH_SIZE = 40;
@@ -179,70 +180,16 @@ export function CapturedPostsPanel({
 
       <div className="settings-row">
         <label htmlFor="captureHashtagInput">Capture hashtags</label>
-        <div className="capture-hashtags-editor">
-          <div className="capture-chip-list">
-            {captureHashtags.map((hashtag) => (
-              <span key={hashtag} className="capture-chip">
-                <button
-                  className="capture-chip-open"
-                  type="button"
-                  title={`Open #${hashtag}`}
-                  onClick={() => {
-                    onOpenCaptureHashtag(hashtag);
-                  }}
-                  onMouseDown={(event) => {
-                    if (event.button !== 1) {
-                      return;
-                    }
-
-                    event.preventDefault();
-                    onOpenCaptureHashtagInWindow(hashtag);
-                  }}
-                  onAuxClick={(event) => {
-                    if (event.button !== 1) {
-                      return;
-                    }
-
-                    event.preventDefault();
-                  }}
-                >
-                  #{hashtag}
-                </button>
-                <button
-                  className="capture-chip-remove"
-                  type="button"
-                  title={`Remove #${hashtag}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onRemoveCaptureHashtag(hashtag);
-                  }}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-            {captureHashtags.length === 0 && (
-              <span className="meta">No hashtag filter: captures all SearchTimeline posts.</span>
-            )}
-          </div>
-          <div className="capture-chip-input-row">
-            <input
-              id="captureHashtagInput"
-              type="text"
-              value={captureHashtagDraft}
-              placeholder="Type hashtag and press Enter/Space"
-              onChange={(event) => {
-                onCaptureHashtagDraftChange(event.target.value);
-              }}
-              onKeyDown={(event) => {
-                onCaptureHashtagDraftKeyDown(event);
-              }}
-            />
-            <button className="btn secondary" type="button" onClick={onAddCaptureHashtag}>
-              Add
-            </button>
-          </div>
-        </div>
+        <CaptureHashtagsEditor
+          captureHashtags={captureHashtags}
+          captureHashtagDraft={captureHashtagDraft}
+          onCaptureHashtagDraftChange={onCaptureHashtagDraftChange}
+          onCaptureHashtagDraftKeyDown={onCaptureHashtagDraftKeyDown}
+          onAddCaptureHashtag={onAddCaptureHashtag}
+          onOpenCaptureHashtag={onOpenCaptureHashtag}
+          onOpenCaptureHashtagInWindow={onOpenCaptureHashtagInWindow}
+          onRemoveCaptureHashtag={onRemoveCaptureHashtag}
+        />
       </div>
 
       <div className="captured-posts-actions">
@@ -388,92 +335,14 @@ export function CapturedPostsPanel({
         )}
 
         {visibleRows.map((row) => (
-          <article
+          <CapturedPostCard
             key={row.item.id}
-            className={`captured-post-card ${row.item.uploadedAt ? "uploaded" : ""}`}
-          >
-            {showThumbnail ? (
-              <div className="captured-post-thumb-wrap">
-                {row.item.mediaUrls[0] ? (
-                  <img
-                    className={`captured-post-thumb ${row.externalUrl ? "clickable" : ""}`}
-                    src={row.item.mediaUrls[0]}
-                    alt="media thumbnail"
-                    loading="lazy"
-                    onClick={() => {
-                      if (!row.externalUrl) {
-                        return;
-                      }
-
-                      onOpenCapturedPostExternalUrl(row.item.id);
-                    }}
-                  />
-                ) : (
-                  <div className="captured-post-thumb captured-post-thumb-empty">No thumbnail</div>
-                )}
-
-                <div className="captured-post-overlay">
-                  <label className="checkbox-inline captured-post-overlay-check">
-                    <input
-                      type="checkbox"
-                      checked={row.selected}
-                      disabled={!row.selectable || isUploading}
-                      onChange={(event) => {
-                        onToggleRow(row.item.id, event.target.checked);
-                      }}
-                    />
-                    <span />
-                  </label>
-                  <span className={`status ${row.item.uploadedAt ? "ok" : "pending"}`}>
-                    {row.item.uploadedAt ? "Uploaded" : "Pending"}
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="captured-post-card-top">
-                  <label className="checkbox-inline">
-                    <input
-                      type="checkbox"
-                      checked={row.selected}
-                      disabled={!row.selectable || isUploading}
-                      onChange={(event) => {
-                        onToggleRow(row.item.id, event.target.checked);
-                      }}
-                    />
-                    <span />
-                  </label>
-                  <button
-                    className={`captured-post-id-link ${row.externalUrl ? "clickable" : ""}`}
-                    type="button"
-                    onClick={() => {
-                      if (!row.externalUrl) {
-                        return;
-                      }
-
-                      onOpenCapturedPostExternalUrl(row.item.id);
-                    }}
-                    title={
-                      row.externalUrl ? "Open link from description (last t.co)" : "No t.co link"
-                    }
-                  >
-                    {row.item.id}
-                  </button>
-                  <span className={`status ${row.item.uploadedAt ? "ok" : "pending"}`}>
-                    {row.item.uploadedAt ? "Uploaded" : "Pending"}
-                  </span>
-                </div>
-
-                <p className="captured-post-preview">{row.preview}</p>
-
-                <div className="captured-post-card-meta">
-                  <span>Author: {row.item.authorUserName || row.item.authorId}</span>
-                  <span>Seen: {formatDate(row.item.lastSeenAt)}</span>
-                  {row.item.uploadedAt && <span>Uploaded: {formatDate(row.item.uploadedAt)}</span>}
-                </div>
-              </>
-            )}
-          </article>
+            row={row}
+            showThumbnail={showThumbnail}
+            isUploading={isUploading}
+            onToggleRow={onToggleRow}
+            onOpenCapturedPostExternalUrl={onOpenCapturedPostExternalUrl}
+          />
         ))}
       </div>
 
