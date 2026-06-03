@@ -7,9 +7,8 @@ import { GlobalSection } from "./components/global-section.js";
 import { InfoPanel } from "./components/info-panel.js";
 import { NotificationsPanel } from "./components/notifications-panel.js";
 import { PatchOutput } from "./components/patch-output.js";
+import { PopupTabNav, type PopupTabId } from "./components/popup-tab-nav.js";
 import { useCredentialCapturer } from "./use-credential-capturer.js";
-
-type TabId = "config" | "endpoints" | "captured-posts" | "notifications" | "patch-preview" | "info";
 
 export default function App() {
   const {
@@ -82,7 +81,7 @@ export default function App() {
     onHashtagCommit
   } = useCredentialCapturer();
 
-  const [activeTab, setActiveTab] = useState<TabId>("config");
+  const [activeTab, setActiveTab] = useState<PopupTabId>("config");
 
   const pendingCapturedCount = useMemo(
     () => capturedPostRows.filter((row) => !row.item.uploadedAt).length,
@@ -96,63 +95,12 @@ export default function App() {
         <p className="subtitle">Endpoint checklist + shortcuts to trigger requests.</p>
       </header>
 
-      <nav className="tab-nav">
-        <button
-          className={`tab-btn ${activeTab === "config" ? "active" : ""}`}
-          type="button"
-          onClick={() => {
-            setActiveTab("config");
-          }}
-        >
-          Config
-        </button>
-        <button
-          className={`tab-btn ${activeTab === "endpoints" ? "active" : ""}`}
-          type="button"
-          onClick={() => {
-            setActiveTab("endpoints");
-          }}
-        >
-          Endpoints
-        </button>
-        <button
-          className={`tab-btn ${activeTab === "captured-posts" ? "active" : ""}`}
-          type="button"
-          onClick={() => {
-            setActiveTab("captured-posts");
-          }}
-        >
-          Captured Posts {pendingCapturedCount > 0 ? `(${pendingCapturedCount})` : ""}
-        </button>
-        <button
-          className={`tab-btn ${activeTab === "notifications" ? "active" : ""}`}
-          type="button"
-          onClick={() => {
-            setActiveTab("notifications");
-          }}
-        >
-          Notifications{" "}
-          {runningUploadNotificationsCount > 0 ? `(${runningUploadNotificationsCount})` : ""}
-        </button>
-        <button
-          className={`tab-btn ${activeTab === "patch-preview" ? "active" : ""}`}
-          type="button"
-          onClick={() => {
-            setActiveTab("patch-preview");
-          }}
-        >
-          Patch Preview
-        </button>
-        <button
-          className={`tab-btn ${activeTab === "info" ? "active" : ""}`}
-          type="button"
-          onClick={() => {
-            setActiveTab("info");
-          }}
-        >
-          Info
-        </button>
-      </nav>
+      <PopupTabNav
+        activeTab={activeTab}
+        pendingCapturedCount={pendingCapturedCount}
+        runningUploadNotificationsCount={runningUploadNotificationsCount}
+        onTabChange={setActiveTab}
+      />
 
       {activeTab === "config" && (
         <GlobalSection

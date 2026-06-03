@@ -27,17 +27,8 @@ import {
   getEmptyStateSnapshot,
   getFallbackStateSnapshot
 } from "../popup/helpers.js";
-import {
-  getHashtagHint,
-  getProfileHint,
-  getSensitiveHint,
-  getUsernameHint,
-} from "./view-model.js";
-import type {
-  ApplyStateOptions,
-  OpenUrlOptions,
-  UseCredentialCapturerResult
-} from "./types.js";
+import { getHashtagHint, getProfileHint, getSensitiveHint, getUsernameHint } from "./view-model.js";
+import type { ApplyStateOptions, OpenUrlOptions, UseCredentialCapturerResult } from "./types.js";
 import { useCapturedPosts } from "./use-captured-posts.js";
 import { useEndpointTests } from "./use-endpoint-tests.js";
 import { usePopupSettings } from "./use-popup-settings.js";
@@ -143,7 +134,6 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     const stored = data?.[SETTINGS_STORAGE_KEY] || {};
     applySettings(stored, { syncInput: true, scheduleSync: false });
   }
-
 
   const {
     activateProfile,
