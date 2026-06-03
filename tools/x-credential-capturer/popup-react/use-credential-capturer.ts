@@ -9,14 +9,8 @@ import {
   SETTINGS_STORAGE_KEY,
   UPLOAD_NOTIFICATIONS_STORAGE_KEY
 } from "../popup/constants.js";
-import { formatDate, formatDurationFromMs } from "../popup/format.js";
-import {
-  buildEndpointModel,
-  createPatch,
-  createSingleEndpointPatch,
-  maskPatchSensitiveData,
-  resolveGlobalHeaders
-} from "../popup/model.js";
+import { formatDate } from "../popup/format.js";
+import { createPatch, maskPatchSensitiveData } from "../popup/model.js";
 import type {
   ApiPatch,
   BackgroundMessage,
@@ -24,89 +18,54 @@ import type {
   CapturedPostsStore,
   EndpointDefinition,
   EndpointModel,
-  EndpointTestRuntime,
   UploadNotificationsStore,
   RollbackMessageResponse,
   StateMessageResponse
 } from "../popup/models.js";
 import {
-  DEFAULT_SETTINGS,
   createProfileId,
-  detectUsernameFromState,
   getEmptyStateSnapshot,
   getFallbackStateSnapshot,
-  getFreshnessInfo,
   normalizeProfileStore,
   normalizeSettings
 } from "../popup/helpers.js";
-import { getCapturedRateEntries, getRateEntries, runEndpointTest } from "../popup/testing.js";
+import { cloneJson } from "../popup/utils.js";
 import {
-  cloneJson,
-  normalizeHashtag,
-  normalizeUsername,
-  resolveEndpointPageUrl
-} from "../popup/utils.js";
-import {
-  getGlobalStatusOk,
   getHashtagHint,
   getProfileHint,
   getSensitiveHint,
-  getTestResultText,
   getUsernameHint,
-  makeStatusBadge,
   sortProfiles
 } from "./view-model.js";
 import type {
-  ApplySettingsOptions,
   ApplyStateOptions,
-  EndpointRowView,
   OpenUrlOptions,
-  PopupSettings,
   ProfileRecord,
   ProfilesStore,
   UseCredentialCapturerResult
 } from "./types.js";
 import { useCapturedPosts } from "./use-captured-posts.js";
+import { useEndpointTests } from "./use-endpoint-tests.js";
+import { usePopupSettings } from "./use-popup-settings.js";
 
 const PROFILE_SYNC_DEBOUNCE_MS = 400;
-const USERNAME_SAVE_DEBOUNCE_MS = 250;
-const HASHTAG_SAVE_DEBOUNCE_MS = 250;
 
 export function useCredentialCapturer(): UseCredentialCapturerResult {
   const [captureState, setCaptureState] = useState<CaptureState | null>(null);
-  const [settings, setSettings] = useState<PopupSettings>({ ...DEFAULT_SETTINGS });
-  const [detectedUsername, setDetectedUsername] = useState("");
-  const [usernameDraft, setUsernameDraft] = useState("");
-  const [hashtagDraft, setHashtagDraft] = useState("");
   const [profilesStore, setProfilesStore] = useState<ProfilesStore | null>(null);
   const [isApplyingProfile, setIsApplyingProfile] = useState(false);
-  const [endpointTestState, setEndpointTestState] = useState<Record<string, EndpointTestRuntime>>(
-    {}
-  );
-  const [isBulkTesting, setIsBulkTesting] = useState(false);
-  const [testAllStatus, setTestAllStatus] = useState("");
   const [copyPatchLabel, setCopyPatchLabel] = useState("Copy Api patch");
-  const [endpointCopyLabels, setEndpointCopyLabels] = useState<Record<string, string>>({});
   const [patchOutput, setPatchOutput] = useState("");
   const [currentRawPatch, setCurrentRawPatch] = useState<ApiPatch | null>(null);
 
   const captureStateRef = useRef<CaptureState | null>(captureState);
-  const settingsRef = useRef<PopupSettings>(settings);
   const profilesStoreRef = useRef<ProfilesStore | null>(profilesStore);
   const isApplyingProfileRef = useRef(isApplyingProfile);
-  const usernameDraftRef = useRef(usernameDraft);
-  const hashtagDraftRef = useRef(hashtagDraft);
-  const usernameSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hashtagSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const profileSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     captureStateRef.current = captureState;
   }, [captureState]);
-
-  useEffect(() => {
-    settingsRef.current = settings;
-  }, [settings]);
 
   useEffect(() => {
     profilesStoreRef.current = profilesStore;
@@ -115,14 +74,6 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
   useEffect(() => {
     isApplyingProfileRef.current = isApplyingProfile;
   }, [isApplyingProfile]);
-
-  useEffect(() => {
-    usernameDraftRef.current = usernameDraft;
-  }, [usernameDraft]);
-
-  useEffect(() => {
-    hashtagDraftRef.current = hashtagDraft;
-  }, [hashtagDraft]);
 
   function reportError(error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
@@ -138,63 +89,8 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     setProfilesStore(nextStore);
   }
 
-  function setSettingsState(nextSettings: PopupSettings) {
-    settingsRef.current = nextSettings;
-    setSettings(nextSettings);
-  }
-
-  function clearAllTestRuntime() {
-    setEndpointTestState({});
-  }
-
-  function setTestRuntime(endpointId: string, nextValue: Partial<EndpointTestRuntime>) {
-    setEndpointTestState((previous) => {
-      const merged = {
-        ...(previous[endpointId] || { running: false, result: null }),
-        ...nextValue
-      };
-
-      return {
-        ...previous,
-        [endpointId]: merged
-      };
-    });
-  }
-
   async function sendMessage<T>(message: unknown): Promise<T> {
     return chrome.runtime.sendMessage(message) as Promise<T>;
-  }
-
-  function applySettings(nextSettings: unknown, options: ApplySettingsOptions = {}) {
-    const normalized = normalizeSettings(nextSettings);
-    setSettingsState(normalized);
-
-    if (options.syncInput !== false) {
-      setUsernameDraft(normalized.username);
-      usernameDraftRef.current = normalized.username;
-      setHashtagDraft(normalized.hashtag);
-      hashtagDraftRef.current = normalized.hashtag;
-    }
-
-    if (options.scheduleSync) {
-      scheduleActiveProfileSync();
-    }
-  }
-
-  async function saveSettings(nextPartial: Partial<PopupSettings>) {
-    const next = normalizeSettings({ ...settingsRef.current, ...(nextPartial || {}) });
-    applySettings(next, { syncInput: true, scheduleSync: true });
-    await chrome.storage.local.set({ [SETTINGS_STORAGE_KEY]: next });
-  }
-
-  async function maybeAutoDetectUsername(state: CaptureState) {
-    const detected = detectUsernameFromState(state);
-    const normalizedDetected = detected || "";
-    setDetectedUsername(normalizedDetected);
-
-    if (!settingsRef.current.username && normalizedDetected && !isApplyingProfileRef.current) {
-      await saveSettings({ username: normalizedDetected });
-    }
   }
 
   function applyState(nextState: CaptureState | null, options: ApplyStateOptions = {}) {
@@ -210,7 +106,7 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
       clearAllTestRuntime();
     }
 
-    runAsync(() => maybeAutoDetectUsername(nextState));
+    runAsync(() => syncAutoDetectedUsername(nextState));
   }
 
   function buildNormalizedProfileStore(rawStore: unknown): ProfilesStore {
@@ -283,6 +179,26 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
       });
     }, PROFILE_SYNC_DEBOUNCE_MS);
   }
+
+  const {
+    applySettings,
+    detectedUsername,
+    hashtagDraft,
+    persistHashtagFromInput,
+    persistUsernameFromInput,
+    saveSettings,
+    scheduleHashtagPersist,
+    scheduleUsernamePersist,
+    settings,
+    settingsRef,
+    setHashtagDraft,
+    setUsernameDraft,
+    syncAutoDetectedUsername,
+    usernameDraft
+  } = usePopupSettings({
+    isApplyingProfileRef,
+    onScheduleActiveProfileSync: scheduleActiveProfileSync
+  });
 
   async function activateProfile(
     profileId: string,
@@ -533,6 +449,22 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     sortOrder: settings.capturedPostsSort
   });
 
+  const {
+    clearAllTestRuntime,
+    copyEndpoint,
+    endpointRows,
+    globalStatusOk,
+    isBulkTesting,
+    runAllTests,
+    runSingleTest,
+    setTestAllStatus,
+    testAllStatus
+  } = useEndpointTests({
+    captureState,
+    endpoints: ENDPOINTS,
+    settings
+  });
+
   async function clearState() {
     const response = await sendMessage<StateMessageResponse>({
       type: "clearState"
@@ -570,162 +502,6 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     applyState(response.state, { resetTests: false });
     const when = response?.restoredFrom ? ` from ${formatDate(response.restoredFrom)}` : "";
     setTestAllStatus(`Rolled back ${endpointId}${when}`);
-  }
-
-  async function persistUsernameFromInput() {
-    const normalized = normalizeUsername(usernameDraftRef.current);
-
-    if (normalized !== usernameDraftRef.current) {
-      setUsernameDraft(normalized);
-      usernameDraftRef.current = normalized;
-    }
-
-    if (normalized === settingsRef.current.username) {
-      return;
-    }
-
-    await saveSettings({ username: normalized });
-  }
-
-  function scheduleUsernamePersist() {
-    if (usernameSaveTimerRef.current) {
-      clearTimeout(usernameSaveTimerRef.current);
-    }
-
-    usernameSaveTimerRef.current = setTimeout(() => {
-      runAsync(persistUsernameFromInput);
-    }, USERNAME_SAVE_DEBOUNCE_MS);
-  }
-
-  async function persistHashtagFromInput() {
-    const normalized = normalizeHashtag(hashtagDraftRef.current);
-
-    if (normalized !== hashtagDraftRef.current) {
-      setHashtagDraft(normalized);
-      hashtagDraftRef.current = normalized;
-    }
-
-    if (normalized === settingsRef.current.hashtag) {
-      return;
-    }
-
-    await saveSettings({ hashtag: normalized });
-  }
-
-  function scheduleHashtagPersist() {
-    if (hashtagSaveTimerRef.current) {
-      clearTimeout(hashtagSaveTimerRef.current);
-    }
-
-    hashtagSaveTimerRef.current = setTimeout(() => {
-      runAsync(persistHashtagFromInput);
-    }, HASHTAG_SAVE_DEBOUNCE_MS);
-  }
-
-  async function copyEndpoint(model: EndpointModel, endpointId: string) {
-    ensureCopyAllowed();
-    const singlePatch = createSingleEndpointPatch(model);
-    const text = JSON.stringify(singlePatch, null, 2);
-    await navigator.clipboard.writeText(text);
-
-    setEndpointCopyLabels((previous) => ({
-      ...previous,
-      [endpointId]: "Copied"
-    }));
-
-    setTimeout(() => {
-      setEndpointCopyLabels((previous) => ({
-        ...previous,
-        [endpointId]: "Copy"
-      }));
-    }, 1200);
-  }
-
-  async function runSingleTest(endpoint: EndpointDefinition) {
-    setTestRuntime(endpoint.id, { running: true, result: null });
-
-    try {
-      const stateNow = captureStateRef.current;
-      const globalNow = resolveGlobalHeaders(stateNow);
-      const modelNow = buildEndpointModel(endpoint, stateNow, globalNow);
-      const result = await runEndpointTest(modelNow);
-      setTestRuntime(endpoint.id, { running: false, result });
-    } catch (error) {
-      setTestRuntime(endpoint.id, {
-        running: false,
-        result: {
-          ok: false,
-          status: 0,
-          hasData: false,
-          rate: null,
-          message: `Error: ${error instanceof Error ? error.message : String(error)}`,
-          bodySnippet: ""
-        }
-      });
-    }
-  }
-
-  async function runAllTests() {
-    const stateNow = captureStateRef.current;
-
-    if (isBulkTesting || !stateNow) {
-      return;
-    }
-
-    const globalHeaders = resolveGlobalHeaders(stateNow);
-    const testable = ENDPOINTS.filter((endpoint) => {
-      const model = buildEndpointModel(endpoint, stateNow, globalHeaders);
-      return !endpoint.skipped && model.ready;
-    });
-
-    if (testable.length === 0) {
-      setTestAllStatus("No complete endpoints available to test.");
-      return;
-    }
-
-    setIsBulkTesting(true);
-
-    let okCount = 0;
-    let failCount = 0;
-    const startedAt = Date.now();
-
-    try {
-      for (const endpoint of testable) {
-        setTestRuntime(endpoint.id, { running: true, result: null });
-
-        try {
-          const latestState = captureStateRef.current;
-          const globalNow = resolveGlobalHeaders(latestState);
-          const modelNow = buildEndpointModel(endpoint, latestState, globalNow);
-          const result = await runEndpointTest(modelNow);
-          setTestRuntime(endpoint.id, { running: false, result });
-
-          if (result.ok) {
-            okCount += 1;
-          } else {
-            failCount += 1;
-          }
-        } catch (error) {
-          failCount += 1;
-          setTestRuntime(endpoint.id, {
-            running: false,
-            result: {
-              ok: false,
-              status: 0,
-              hasData: false,
-              rate: null,
-              message: `Error: ${error instanceof Error ? error.message : String(error)}`,
-              bodySnippet: ""
-            }
-          });
-        }
-      }
-    } finally {
-      setIsBulkTesting(false);
-    }
-
-    const elapsed = formatDurationFromMs(Date.now() - startedAt);
-    setTestAllStatus(`Done: ${okCount} OK, ${failCount} failed (${elapsed})`);
   }
 
   async function createProfile() {
@@ -888,16 +664,6 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     });
 
     return () => {
-      if (usernameSaveTimerRef.current) {
-        clearTimeout(usernameSaveTimerRef.current);
-        usernameSaveTimerRef.current = null;
-      }
-
-      if (hashtagSaveTimerRef.current) {
-        clearTimeout(hashtagSaveTimerRef.current);
-        hashtagSaveTimerRef.current = null;
-      }
-
       if (profileSyncTimerRef.current) {
         clearTimeout(profileSyncTimerRef.current);
         profileSyncTimerRef.current = null;
@@ -919,9 +685,6 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     setPatchOutput(JSON.stringify(previewPatch, null, 2));
   }, [captureState, settings.maskSensitive]);
 
-  const globalHeaders = useMemo(() => resolveGlobalHeaders(captureState), [captureState]);
-  const globalStatusOk = useMemo(() => getGlobalStatusOk(globalHeaders), [globalHeaders]);
-
   const selectedProfile =
     profilesStore && profilesStore.profiles
       ? profilesStore.profiles[profilesStore.activeProfileId] || null
@@ -939,47 +702,6 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
   const sensitiveHint = getSensitiveHint(settings.maskSensitive);
   const usernameHint = getUsernameHint(settings, detectedUsername);
   const hashtagHint = getHashtagHint(settings);
-
-  const endpointRows: EndpointRowView[] = useMemo(() => {
-    return ENDPOINTS.map((endpoint) => {
-      const model = buildEndpointModel(endpoint, captureState, globalHeaders);
-      const testRuntime: EndpointTestRuntime = endpointTestState[endpoint.id] || {
-        running: false,
-        result: null
-      };
-
-      const endpointPageUrl = resolveEndpointPageUrl(endpoint, settings.username, settings.hashtag);
-      const freshness = getFreshnessInfo(model, testRuntime);
-      const testedRateEntries = getRateEntries(testRuntime.result);
-      const capturedRateEntries = getCapturedRateEntries(model.capture);
-      const rateEntries = testedRateEntries.length > 0 ? testedRateEntries : capturedRateEntries;
-      const statusBadge = makeStatusBadge(model);
-
-      const copyDisabled = settings.maskSensitive || endpoint.skipped || !model.ready;
-      const copyTitle = settings.maskSensitive
-        ? "Disable Sensitive guard to copy real credentials"
-        : endpoint.skipped
-          ? "Endpoint skipped"
-          : !model.ready
-            ? "Complete missing fields to copy"
-            : "";
-
-      return {
-        endpoint,
-        model,
-        endpointPageUrl,
-        testRuntime,
-        testResultText: getTestResultText(testRuntime),
-        statusBadge,
-        freshness,
-        rateEntries,
-        copyLabel: endpointCopyLabels[endpoint.id] || "Copy",
-        copyDisabled,
-        copyTitle,
-        testDisabled: endpoint.skipped || !model.ready || testRuntime.running || isBulkTesting
-      };
-    });
-  }, [captureState, endpointCopyLabels, endpointTestState, globalHeaders, isBulkTesting, settings]);
 
   return {
     activeProfileId: profilesStore?.activeProfileId || DEFAULT_PROFILE_ID,
@@ -1122,19 +844,17 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     },
     onUsernameChange: (value: string) => {
       setUsernameDraft(value);
-      usernameDraftRef.current = value;
       scheduleUsernamePersist();
     },
     onUsernameCommit: () => {
-      runAsync(persistUsernameFromInput);
+      runAsync(() => persistUsernameFromInput());
     },
     onHashtagChange: (value: string) => {
       setHashtagDraft(value);
-      hashtagDraftRef.current = value;
       scheduleHashtagPersist();
     },
     onHashtagCommit: () => {
-      runAsync(persistHashtagFromInput);
+      runAsync(() => persistHashtagFromInput());
     }
   };
 }
