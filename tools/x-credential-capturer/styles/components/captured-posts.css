@@ -96,3 +96,14 @@
   width: 210px;
   max-width: 100%;
 }
+
+.captured-posts-virtual-footer {
+  display: flex;
+  justify-content: center;
+  padding: 10px 0 4px;
+}
+
+.captured-posts-load-more-sentinel {
+  width: 1px;
+  height: 1px;
+}

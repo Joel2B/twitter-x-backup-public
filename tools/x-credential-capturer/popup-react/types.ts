@@ -104,6 +104,7 @@ export type UseCredentialCapturerResult = {
   onCapturedPostsViewChange: (value: "list" | "grid") => void;
   onCapturedPostsGridColumnsChange: (value: number) => void;
   onCapturedPostsShowThumbnailChange: (value: boolean) => void;
+  onCapturedPostsSortChange: (value: "latest-added" | "oldest-added" | "last-seen") => void;
   onOpenEndpointUrl: (url: string, openInBackground: boolean) => void;
   onProfileChange: (profileId: string) => void;
   onRefreshCookies: () => void;

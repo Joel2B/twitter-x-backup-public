@@ -48,6 +48,7 @@ export default function App() {
     onCapturedPostsViewChange,
     onCapturedPostsGridColumnsChange,
     onCapturedPostsShowThumbnailChange,
+    onCapturedPostsSortChange,
     onOpenEndpointUrl,
     onProfileChange,
     onRefreshCookies,
@@ -129,7 +130,8 @@ export default function App() {
             setActiveTab("notifications");
           }}
         >
-          Notifications {runningUploadNotificationsCount > 0 ? `(${runningUploadNotificationsCount})` : ""}
+          Notifications{" "}
+          {runningUploadNotificationsCount > 0 ? `(${runningUploadNotificationsCount})` : ""}
         </button>
         <button
           className={`tab-btn ${activeTab === "patch-preview" ? "active" : ""}`}
@@ -200,6 +202,7 @@ export default function App() {
           viewMode={settings.capturedPostsView}
           gridColumns={settings.capturedPostsGridColumns}
           showThumbnail={settings.capturedPostsShowThumbnail}
+          sortOrder={settings.capturedPostsSort}
           rows={capturedPostRows}
           selectedCount={selectedCapturedPostIds.length}
           capturedPostsSearchQuery={capturedPostsSearchQuery}
@@ -227,6 +230,7 @@ export default function App() {
           onViewModeChange={onCapturedPostsViewChange}
           onGridColumnsChange={onCapturedPostsGridColumnsChange}
           onShowThumbnailChange={onCapturedPostsShowThumbnailChange}
+          onSortOrderChange={onCapturedPostsSortChange}
         />
       )}
 

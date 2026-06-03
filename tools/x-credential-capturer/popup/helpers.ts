@@ -25,7 +25,8 @@ export const DEFAULT_SETTINGS = {
   maskSensitive: true,
   capturedPostsView: "list" as const,
   capturedPostsGridColumns: 2,
-  capturedPostsShowThumbnail: true
+  capturedPostsShowThumbnail: true,
+  capturedPostsSort: "latest-added" as const
 };
 
 function normalizeGridColumns(value: unknown): number {
@@ -50,7 +51,11 @@ export function normalizeSettings(value: unknown): PopupSettings {
     capturedPostsShowThumbnail:
       typeof source.capturedPostsShowThumbnail === "boolean"
         ? source.capturedPostsShowThumbnail
-        : DEFAULT_SETTINGS.capturedPostsShowThumbnail
+        : DEFAULT_SETTINGS.capturedPostsShowThumbnail,
+    capturedPostsSort:
+      source.capturedPostsSort === "oldest-added" || source.capturedPostsSort === "last-seen"
+        ? source.capturedPostsSort
+        : DEFAULT_SETTINGS.capturedPostsSort
   };
 }
 

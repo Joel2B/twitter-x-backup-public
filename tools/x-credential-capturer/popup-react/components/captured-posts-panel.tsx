@@ -1,5 +1,10 @@
+import { useEffect, useMemo, useRef, useState } from "react";
+
 import { formatDate } from "../../popup/format.js";
 import type { CapturedPostRowView } from "../types.js";
+
+const INITIAL_VISIBLE_ROWS = 40;
+const VISIBLE_ROWS_BATCH_SIZE = 40;
 
 type CapturedPostsPanelProps = {
   apiBaseUrl: string;
@@ -13,6 +18,7 @@ type CapturedPostsPanelProps = {
   viewMode: "list" | "grid";
   gridColumns: number;
   showThumbnail: boolean;
+  sortOrder: "latest-added" | "oldest-added" | "last-seen";
   rows: CapturedPostRowView[];
   selectedCount: number;
   onApiBaseUrlChange: (value: string) => void;
@@ -37,6 +43,7 @@ type CapturedPostsPanelProps = {
   onViewModeChange: (value: "list" | "grid") => void;
   onGridColumnsChange: (value: number) => void;
   onShowThumbnailChange: (value: boolean) => void;
+  onSortOrderChange: (value: "latest-added" | "oldest-added" | "last-seen") => void;
 };
 
 export function CapturedPostsPanel({
@@ -51,6 +58,7 @@ export function CapturedPostsPanel({
   viewMode,
   gridColumns,
   showThumbnail,
+  sortOrder,
   rows,
   selectedCount,
   onApiBaseUrlChange,
@@ -74,14 +82,62 @@ export function CapturedPostsPanel({
   onImport,
   onViewModeChange,
   onGridColumnsChange,
-  onShowThumbnailChange
+  onShowThumbnailChange,
+  onSortOrderChange
 }: CapturedPostsPanelProps) {
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+  const [visibleRowsCount, setVisibleRowsCount] = useState(INITIAL_VISIBLE_ROWS);
+
+  useEffect(() => {
+    setVisibleRowsCount(INITIAL_VISIBLE_ROWS);
+  }, [rows.length, capturedPostsSearchQuery, viewMode, gridColumns, showThumbnail, sortOrder]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+
+    if (!target || visibleRowsCount >= rows.length) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const firstEntry = entries[0];
+
+        if (!firstEntry?.isIntersecting) {
+          return;
+        }
+
+        setVisibleRowsCount((previous) =>
+          Math.min(rows.length, previous + VISIBLE_ROWS_BATCH_SIZE)
+        );
+      },
+      {
+        root: null,
+        rootMargin: "120px 0px",
+        threshold: 0
+      }
+    );
+
+    observer.observe(target);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [rows.length, visibleRowsCount]);
+
+  const visibleRows = useMemo(
+    () => rows.slice(0, Math.min(rows.length, visibleRowsCount)),
+    [rows, visibleRowsCount]
+  );
+  const pendingRowsCount = useMemo(() => rows.filter((row) => !row.item.uploadedAt).length, [rows]);
+  const hasMoreRows = visibleRows.length < rows.length;
+
   return (
     <section className="captured-posts">
       <div className="captured-posts-header">
         <h2>Captured SearchTimeline posts</h2>
         <span className="meta">
-          {rows.length} total • {rows.filter((row) => !row.item.uploadedAt).length} pending
+          {rows.length} total • {pendingRowsCount} pending
         </span>
       </div>
 
@@ -285,6 +341,21 @@ export function CapturedPostsPanel({
             />
             <span>Thumbnail</span>
           </label>
+          <label>
+            Order
+            <select
+              value={sortOrder}
+              onChange={(event) => {
+                onSortOrderChange(
+                  event.target.value as "latest-added" | "oldest-added" | "last-seen"
+                );
+              }}
+            >
+              <option value="latest-added">Latest added</option>
+              <option value="oldest-added">Oldest added</option>
+              <option value="last-seen">Last seen</option>
+            </select>
+          </label>
           <label className="captured-post-search">
             <span>Search</span>
             <input
@@ -316,7 +387,7 @@ export function CapturedPostsPanel({
           </p>
         )}
 
-        {rows.map((row) => (
+        {visibleRows.map((row) => (
           <article
             key={row.item.id}
             className={`captured-post-card ${row.item.uploadedAt ? "uploaded" : ""}`}
@@ -382,7 +453,9 @@ export function CapturedPostsPanel({
 
                       onOpenCapturedPostExternalUrl(row.item.id);
                     }}
-                    title={row.externalUrl ? "Open link from description (last t.co)" : "No t.co link"}
+                    title={
+                      row.externalUrl ? "Open link from description (last t.co)" : "No t.co link"
+                    }
                   >
                     {row.item.id}
                   </button>
@@ -403,6 +476,15 @@ export function CapturedPostsPanel({
           </article>
         ))}
       </div>
+
+      {rows.length > 0 && (
+        <div className="captured-posts-virtual-footer">
+          <span className="meta">
+            Showing {visibleRows.length} of {rows.length}
+          </span>
+          {hasMoreRows && <div ref={loadMoreRef} className="captured-posts-load-more-sentinel" />}
+        </div>
+      )}
     </section>
   );
 }

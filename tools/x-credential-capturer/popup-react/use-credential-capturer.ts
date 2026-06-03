@@ -1335,8 +1335,23 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     const items = Object.values(capturedPostsStore?.items || {});
     const normalizedSearchQuery = capturedPostsSearchQuery.trim().toLowerCase();
 
+    function asEpoch(value: string | null | undefined): number {
+      const parsed = value ? new Date(value).getTime() : Number.NaN;
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
     return items
-      .sort((a, b) => new Date(b.lastSeenAt).getTime() - new Date(a.lastSeenAt).getTime())
+      .sort((a, b) => {
+        if (settings.capturedPostsSort === "oldest-added") {
+          return asEpoch(a.capturedAt) - asEpoch(b.capturedAt);
+        }
+
+        if (settings.capturedPostsSort === "last-seen") {
+          return asEpoch(b.lastSeenAt) - asEpoch(a.lastSeenAt);
+        }
+
+        return asEpoch(b.capturedAt) - asEpoch(a.capturedAt);
+      })
       .filter((item) => postMatchesSearch(item, normalizedSearchQuery))
       .map((item) => {
         const preview =
@@ -1354,7 +1369,12 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
           selectable: !item.uploadedAt
         };
       });
-  }, [capturedPostsSearchQuery, capturedPostsStore, selectedCapturedPostIds]);
+  }, [
+    capturedPostsSearchQuery,
+    capturedPostsStore,
+    selectedCapturedPostIds,
+    settings.capturedPostsSort
+  ]);
 
   const uploadNotifications: UploadNotificationRowView[] = useMemo(() => {
     const now = Date.now();
@@ -1465,6 +1485,9 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
     },
     onCapturedPostsShowThumbnailChange: (value: boolean) => {
       runAsync(() => saveSettings({ capturedPostsShowThumbnail: value }));
+    },
+    onCapturedPostsSortChange: (value: "latest-added" | "oldest-added" | "last-seen") => {
+      runAsync(() => saveSettings({ capturedPostsSort: value }));
     },
     onOpenEndpointUrl: (url: string, openInBackground: boolean) => {
       runAsync(() => openUrlWithBypassCache(url, { active: !openInBackground, bypassCache: true }));

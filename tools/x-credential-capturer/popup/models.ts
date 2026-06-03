@@ -149,6 +149,7 @@ export type PopupSettings = {
   capturedPostsView: "list" | "grid";
   capturedPostsGridColumns: number;
   capturedPostsShowThumbnail: boolean;
+  capturedPostsSort: "latest-added" | "oldest-added" | "last-seen";
 };
 
 export type ProfileEntry = {
