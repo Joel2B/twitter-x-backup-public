@@ -166,34 +166,29 @@ public partial class LocalPostData
                 formattedOperations.Count
             );
 
-            foreach (PostDataFileReplicationOperation operation in operations)
-            {
-                string? pathDirectory = Path.GetDirectoryName(operation.TargetPath);
-
-                if (!string.IsNullOrWhiteSpace(pathDirectory))
-                    Directory.CreateDirectory(pathDirectory);
-
-                if (File.Exists(operation.TargetPath))
-                    File.Delete(operation.TargetPath);
-
-                File.Copy(operation.SourcePath, operation.TargetPath);
-            }
-
-            foreach (PostDataFileReplicationOperation operation in formattedOperations)
-            {
-                string? formattedPathDirectory = Path.GetDirectoryName(operation.TargetPath);
-
-                if (!string.IsNullOrWhiteSpace(formattedPathDirectory))
-                    Directory.CreateDirectory(formattedPathDirectory);
-
-                if (File.Exists(operation.TargetPath))
-                    File.Delete(operation.TargetPath);
-
-                File.Copy(operation.SourcePath, operation.TargetPath);
-            }
+            ApplyReplicationOperations(operations);
+            ApplyReplicationOperations(formattedOperations);
         }
 
         _logger.LogInformation("replicate: completed");
+    }
+
+    private static void ApplyReplicationOperations(
+        IReadOnlyList<PostDataFileReplicationOperation> operations
+    )
+    {
+        foreach (PostDataFileReplicationOperation operation in operations)
+        {
+            string? directory = Path.GetDirectoryName(operation.TargetPath);
+
+            if (!string.IsNullOrWhiteSpace(directory))
+                Directory.CreateDirectory(directory);
+
+            if (File.Exists(operation.TargetPath))
+                File.Delete(operation.TargetPath);
+
+            File.Copy(operation.SourcePath, operation.TargetPath);
+        }
     }
 
     private Task PrunePartition(PartitionConfig partition)

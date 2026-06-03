@@ -136,7 +136,7 @@ public sealed class PostTableMaterializationService : IPostTableMaterializationS
             );
 
             if (!metaById.TryGetValue(row.Id, out PostTableMetaRow? meta))
-                throw new Exception($"Missing post_meta row for post '{row.Id}'.");
+                throw new KeyNotFoundException($"Missing post_meta row for post '{row.Id}'.");
 
             posts.Add(
                 new Backup.Domain.Posts.Post

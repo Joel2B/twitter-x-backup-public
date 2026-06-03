@@ -18,7 +18,7 @@ public class PathAliasResolutionPolicyTests
     [Fact]
     public void ResolveAliases_Throws_WhenAliasIsMissing()
     {
-        Exception ex = Assert.Throws<Exception>(
+        KeyNotFoundException ex = Assert.Throws<KeyNotFoundException>(
             () =>
                 PathAliasResolutionPolicy.ResolveAliases(
                     ["@missing"],

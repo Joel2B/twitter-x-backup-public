@@ -17,7 +17,7 @@ public sealed class PostMetaConsistencyValidationService : IPostMetaConsistencyV
         int missingInMeta = postIdSet.Count(id => !metaIdSet.Contains(id));
         int missingInPosts = metaIdSet.Count(id => !postIdSet.Contains(id));
 
-        throw new Exception(
+        throw new InvalidOperationException(
             $"post_meta is out of sync in store '{storeLabel}'. missingInMeta={missingInMeta}, missingInPosts={missingInPosts}"
         );
     }

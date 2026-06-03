@@ -71,15 +71,7 @@ public partial class LocalPostData
 
             if (current is null)
             {
-                Post clone = merged.Clone();
-                posts[mutation.Id] = clone;
-
-                postMeta[mutation.Id] = new()
-                {
-                    Id = mutation.Id,
-                    Hash = mutation.Hash,
-                    Deleted = mutation.Deleted,
-                };
+                UpsertCacheEntry(posts, postMeta, mutation, merged.Clone());
                 inserted++;
                 continue;
             }
@@ -102,14 +94,7 @@ public partial class LocalPostData
                 continue;
             }
 
-            posts[mutation.Id] = merged;
-
-            postMeta[mutation.Id] = new()
-            {
-                Id = mutation.Id,
-                Hash = mutation.Hash,
-                Deleted = mutation.Deleted,
-            };
+            UpsertCacheEntry(posts, postMeta, mutation, merged);
             updated++;
         }
 
@@ -213,6 +198,22 @@ public partial class LocalPostData
     private IReadOnlyList<Post> NormalizePosts(IReadOnlyCollection<Post> posts)
     {
         return _mutationCoordinator.Normalize(posts);
+    }
+
+    private static void UpsertCacheEntry(
+        IDictionary<string, Post> posts,
+        IDictionary<string, PostMetaRow> postMeta,
+        Backup.Application.Posts.Models.PostStoreMergeMutation mutation,
+        Post post
+    )
+    {
+        posts[mutation.Id] = post;
+        postMeta[mutation.Id] = new()
+        {
+            Id = mutation.Id,
+            Hash = mutation.Hash,
+            Deleted = mutation.Deleted,
+        };
     }
 
     private void LogDataChange(Post current, Post merged, string userId)

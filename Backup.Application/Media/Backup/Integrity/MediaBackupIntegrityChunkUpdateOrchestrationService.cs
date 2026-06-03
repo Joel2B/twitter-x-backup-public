@@ -19,9 +19,11 @@ public sealed class MediaBackupIntegrityChunkUpdateOrchestrationService(
             _mediaBackupIntegrityChunkDataSelectionService.Select(changedPaths, chunkPaths);
 
         if (!selected.IsComplete)
-            throw new Exception(
+        {
+            throw new InvalidOperationException(
                 $"missing paths while fixing integrity: {string.Join(", ", selected.MissingPaths)}"
             );
+        }
 
         List<string> selectedPaths = selected.SelectedPaths.ToList();
         Dictionary<string, MediaBackupChunkDataMetadata> selectedMetadata = [];
@@ -29,7 +31,7 @@ public sealed class MediaBackupIntegrityChunkUpdateOrchestrationService(
         foreach (string path in selectedPaths)
         {
             if (!metadataByPath.TryGetValue(path, out MediaBackupChunkDataMetadata? metadata))
-                throw new Exception($"missing zip metadata while fixing integrity: {path}");
+                throw new KeyNotFoundException($"missing zip metadata while fixing integrity: {path}");
 
             selectedMetadata[path] = metadata;
         }

@@ -66,7 +66,7 @@ internal sealed class LocalMediaCacheWriteCoordinator(
                         _mediaCacheConflictResolutionService.Resolve(old.Size?.Stream, writePlan);
 
                     if (conflict.Action == MediaCacheConflictAction.ThrowConflict)
-                        throw new Exception("different sizes");
+                        throw new InvalidOperationException("different sizes");
 
                     return old;
                 }

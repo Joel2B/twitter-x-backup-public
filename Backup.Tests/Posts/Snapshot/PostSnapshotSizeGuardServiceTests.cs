@@ -21,7 +21,7 @@ public class PostSnapshotSizeGuardServiceTests
     [Fact]
     public void EnsureNotShrunkBeyondThreshold_Throws_WhenDiffExceedsThreshold()
     {
-        Exception ex = Assert.Throws<Exception>(
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
             () =>
                 _sut.EnsureNotShrunkBeyondThreshold(
                     currentLength: 700,
@@ -38,7 +38,7 @@ public class PostSnapshotSizeGuardServiceTests
     [Fact]
     public void EnsureNotShrunkBeyondThreshold_NormalizesNegativeThresholdToZero()
     {
-        Exception ex = Assert.Throws<Exception>(
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
             () =>
                 _sut.EnsureNotShrunkBeyondThreshold(
                     currentLength: 999,

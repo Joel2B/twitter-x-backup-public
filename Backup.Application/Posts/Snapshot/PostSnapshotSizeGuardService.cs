@@ -16,7 +16,7 @@ public sealed class PostSnapshotSizeGuardService : IPostSnapshotSizeGuardService
         if (diff <= normalizedThreshold)
             return;
 
-        throw new Exception(
+        throw new InvalidOperationException(
             $"current '{fileName}' is smaller than latest history beyond threshold: current={currentLength}, history={historyLength}, shrink={diff}, threshold={normalizedThreshold}, historyDir='{historyDirectoryName}'"
         );
     }

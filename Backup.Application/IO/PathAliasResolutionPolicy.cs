@@ -20,7 +20,7 @@ public static class PathAliasResolutionPolicy
             string alias = path.Replace("@", "");
 
             if (!aliases.TryGetValue(alias, out string? value))
-                throw new Exception($"alias '{path}' is not set");
+                throw new KeyNotFoundException($"alias '{path}' is not set");
 
             resolved.Add(value);
         }
