@@ -17,11 +17,7 @@ import type {
 } from "../popup/models.js";
 import { getCapturedRateEntries, getRateEntries, runEndpointTest } from "../popup/testing.js";
 import { resolveEndpointPageUrl } from "../popup/utils.js";
-import {
-  getGlobalStatusOk,
-  getTestResultText,
-  makeStatusBadge
-} from "./view-model.js";
+import { getGlobalStatusOk, getTestResultText, makeStatusBadge } from "./view-model.js";
 import type { EndpointRowView } from "./types.js";
 
 type UseEndpointTestsOptions = {
@@ -232,7 +228,15 @@ export function useEndpointTests({
         testDisabled: endpoint.skipped || !model.ready || testRuntime.running || isBulkTesting
       };
     });
-  }, [captureState, endpointCopyLabels, endpointTestState, endpoints, globalHeaders, isBulkTesting, settings]);
+  }, [
+    captureState,
+    endpointCopyLabels,
+    endpointTestState,
+    endpoints,
+    globalHeaders,
+    isBulkTesting,
+    settings
+  ]);
 
   return {
     clearAllTestRuntime,

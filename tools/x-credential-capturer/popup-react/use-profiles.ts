@@ -15,7 +15,10 @@ import type { ApplyStateOptions, ProfileRecord, ProfilesStore } from "./types.js
 const PROFILE_SYNC_DEBOUNCE_MS = 400;
 
 type UseProfilesOptions = {
-  applySettings: (nextSettings: unknown, options?: { syncInput?: boolean; scheduleSync?: boolean }) => void;
+  applySettings: (
+    nextSettings: unknown,
+    options?: { syncInput?: boolean; scheduleSync?: boolean }
+  ) => void;
   applyState: (nextState: CaptureState | null, options?: ApplyStateOptions) => void;
   captureStateRef: MutableRefObject<CaptureState | null>;
   getEmptyStateSnapshot: () => CaptureState;
