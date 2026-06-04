@@ -3,11 +3,11 @@ using System.Net.Http.Headers;
 using Backup.Application.Core;
 using Backup.Application.Network;
 using Backup.Application.Network.Models;
+using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Request;
 using Backup.Infrastructure.Posts.Abstractions.Services;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Posts.Adapters;
 
@@ -72,7 +72,7 @@ public class PostDownloaderHttp(
 
         _logger.LogInformation(
             "request headers: {headers}",
-            JsonConvert.SerializeObject(request.Headers, Formatting.None)
+            HttpHeaderSanitizer.ToSanitizedJson(request.Headers)
         );
 
         using HttpResponseMessage response = await _client.SendAsync(requestHttp, token);
