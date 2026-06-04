@@ -107,3 +107,68 @@
   width: 1px;
   height: 1px;
 }
+
+.captured-posts-list-anchor {
+  height: 1px;
+}
+
+.captured-posts-range-overlay {
+  position: fixed;
+  right: 26px;
+  bottom: 10px;
+  z-index: 19;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: rgba(22, 39, 52, 0.82);
+  color: #f5fbff;
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 14px rgba(22, 39, 52, 0.22);
+  pointer-events: none;
+}
+
+.captured-posts-jump-rail {
+  position: fixed;
+  top: 8px;
+  right: 6px;
+  bottom: 8px;
+  width: 14px;
+  border-radius: 999px;
+  background: rgba(22, 39, 52, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(22, 39, 52, 0.08);
+  opacity: 0.55;
+  cursor: pointer;
+  transition:
+    opacity 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
+  z-index: 20;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.captured-posts-jump-rail:hover,
+.captured-posts-jump-rail.is-dragging {
+  opacity: 1;
+  background: rgba(22, 39, 52, 0.2);
+}
+
+.captured-posts-jump-thumb {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #0a5a72, #1282a2);
+  box-shadow:
+    0 2px 8px rgba(10, 90, 114, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  transform: translateY(0);
+  pointer-events: none;
+}
+
+.captured-posts-list,
+.captured-posts-list * {
+  user-select: none;
+  -webkit-user-select: none;
+}
