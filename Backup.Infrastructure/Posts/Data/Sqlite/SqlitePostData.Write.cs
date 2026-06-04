@@ -29,12 +29,22 @@ public partial class SqlitePostData
                 normalizedPosts
             );
 
-            List<PostEntity> batch = [];
+            bool autoDetectOriginal = db.ChangeTracker.AutoDetectChangesEnabled;
+            db.ChangeTracker.AutoDetectChangesEnabled = false;
 
-            foreach (Post post in normalizedPosts)
-                BufferPostEntity(db, profilesById, batch, post);
+            try
+            {
+                List<PostEntity> batch = [];
 
-            FlushPostBatch(db, batch);
+                foreach (Post post in normalizedPosts)
+                    BufferPostEntity(db, profilesById, batch, post);
+
+                FlushPostBatch(db, batch);
+            }
+            finally
+            {
+                db.ChangeTracker.AutoDetectChangesEnabled = autoDetectOriginal;
+            }
 
             await UpsertHashMetaForPosts(db, normalizedPosts);
             await db.SaveChangesAsync();

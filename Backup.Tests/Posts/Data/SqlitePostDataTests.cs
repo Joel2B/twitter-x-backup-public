@@ -5,6 +5,7 @@ using Backup.Infrastructure.Models.Config.Data.Posts;
 using Backup.Infrastructure.Models.Config.Downloads;
 using Backup.Infrastructure.Posts.Data.Sqlite;
 using Backup.Infrastructure.Posts.Models.Stored;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Backup.Tests;
@@ -238,6 +239,33 @@ public class SqlitePostDataTests
 
             Post stored = (await sut.GetByIds(["p1"])).Single();
             Assert.Empty(stored.Changes);
+        }
+        finally
+        {
+            await sut.DisposeAsync();
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task Setup_UsesWalMode_OnLocalDisk()
+    {
+        (SqlitePostData sut, string root) = CreateSut();
+
+        try
+        {
+            await sut.Setup();
+
+            string dbPath = Path.Combine(root, "data", "post", "posts.db");
+
+            await using SqliteConnection connection = new($"Data Source={dbPath}");
+            await connection.OpenAsync();
+
+            await using SqliteCommand command = connection.CreateCommand();
+            command.CommandText = "PRAGMA journal_mode;";
+
+            string? mode = (await command.ExecuteScalarAsync())?.ToString();
+            Assert.Equal("wal", mode);
         }
         finally
         {

@@ -8,6 +8,21 @@ namespace Backup.Infrastructure.Posts.Data.Sqlite;
 
 public partial class SqlitePostData
 {
+    private static readonly string[] CommonPragmas =
+    [
+        "PRAGMA busy_timeout = 30000;",
+        "PRAGMA foreign_keys = ON;",
+    ];
+
+    private static readonly string[] LocalDiskPragmas =
+    [
+        "PRAGMA journal_mode = WAL;",
+        "PRAGMA synchronous = NORMAL;",
+        "PRAGMA temp_store = MEMORY;",
+        "PRAGMA cache_size = -32768;",
+        "PRAGMA mmap_size = 268435456;",
+    ];
+
     private async Task EnsureSchema()
     {
         string dbPath = GetDatabasePath();
@@ -19,7 +34,7 @@ public partial class SqlitePostData
             try
             {
                 await using PostsDbContext db = CreateDbContext(dbPath);
-                await db.Database.ExecuteSqlRawAsync("PRAGMA busy_timeout = 30000;");
+                await ApplyConnectionPragmas(db, dbPath);
                 await db.Database.EnsureCreatedAsync();
                 await db.Database.ExecuteSqlRawAsync(
                     """
@@ -36,6 +51,7 @@ public partial class SqlitePostData
                     ON post_index_entries (user_id, origin, post_id);
                     """
                 );
+                await db.Database.ExecuteSqlRawAsync("PRAGMA optimize;");
 
                 return;
             }
@@ -57,6 +73,30 @@ public partial class SqlitePostData
     }
 
     private static bool IsTransientLock(SqliteException ex) => ex.SqliteErrorCode is 5 or 6;
+
+    private static async Task ApplyConnectionPragmas(PostsDbContext db, string dbPath)
+    {
+        foreach (string pragma in CommonPragmas)
+            await db.Database.ExecuteSqlRawAsync(pragma);
+
+        if (!ShouldUseLocalDiskPragmas(dbPath))
+            return;
+
+        foreach (string pragma in LocalDiskPragmas)
+            await db.Database.ExecuteSqlRawAsync(pragma);
+    }
+
+    private static bool ShouldUseLocalDiskPragmas(string dbPath)
+    {
+        string? configured = Environment.GetEnvironmentVariable(
+            "BACKUP__POSTS__SQLITE__LOCAL_DISK"
+        );
+
+        if (bool.TryParse(configured, out bool localDiskConfigured))
+            return localDiskConfigured;
+
+        return true;
+    }
 
     private string GetBasePath(PartitionConfig p) =>
         UtilsPath.GetPath([.. p.Paths, .. _config.Paths.Paths, .. _config.Paths.Post.Paths]);

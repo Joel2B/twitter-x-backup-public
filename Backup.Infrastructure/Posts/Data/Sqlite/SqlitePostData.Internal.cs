@@ -13,6 +13,7 @@ public partial class SqlitePostData
 
         string dbPath = GetDatabasePath();
         _db = CreateDbContext(dbPath);
+        await ApplyConnectionPragmas(_db, dbPath);
 
         return _db;
     }
