@@ -24,8 +24,17 @@ public sealed class PostSnapshotVerificationPlanningService(
         return new PostSnapshotVerificationPlan
         {
             ShouldCompareWithHistory = true,
-            HistoryDirectoryName = Path.GetFileName(latest.Path) ?? string.Empty,
+            HistoryDirectoryName = GetPathLeaf(latest.Path),
             HistoryFilePath = historyFilePath,
         };
+    }
+
+    private static string GetPathLeaf(string path)
+    {
+        int slashIndex = path.LastIndexOf('/');
+        int backslashIndex = path.LastIndexOf('\\');
+        int separatorIndex = Math.Max(slashIndex, backslashIndex);
+
+        return separatorIndex >= 0 ? path[(separatorIndex + 1)..] : path;
     }
 }

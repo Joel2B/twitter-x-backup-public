@@ -6,7 +6,10 @@ public static class PathFormattingPolicy
 {
     public static DateTime? ParseTimestampFromPath(string path, bool isDirectory = false)
     {
-        string name = isDirectory ? Path.GetFileName(path) : Path.GetFileNameWithoutExtension(path);
+        string name = GetPathLeaf(path);
+
+        if (!isDirectory)
+            name = Path.GetFileNameWithoutExtension(name);
 
         bool isDate = DateTime.TryParseExact(
             name,
@@ -24,11 +27,12 @@ public static class PathFormattingPolicy
 
     public static string GetFormattedPath(string path)
     {
-        string fileName = Path.GetFileNameWithoutExtension(path);
-        string extension = Path.GetExtension(path);
-        string formattedName = $"{fileName}.formatted{extension}";
+        string fileName = GetPathLeaf(path);
+        string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        string extension = Path.GetExtension(fileName);
+        string formattedName = $"{fileNameWithoutExtension}.formatted{extension}";
 
-        return path.Replace(Path.GetFileName(path), formattedName);
+        return path[..^fileName.Length] + formattedName;
     }
 
     public static string NormalizePathForCurrentOs(string path, bool save = false)
@@ -42,5 +46,14 @@ public static class PathFormattingPolicy
         throw new PlatformNotSupportedException(
             "Path normalization is only supported on Windows and Linux."
         );
+    }
+
+    private static string GetPathLeaf(string path)
+    {
+        int slashIndex = path.LastIndexOf('/');
+        int backslashIndex = path.LastIndexOf('\\');
+        int separatorIndex = Math.Max(slashIndex, backslashIndex);
+
+        return separatorIndex >= 0 ? path[(separatorIndex + 1)..] : path;
     }
 }

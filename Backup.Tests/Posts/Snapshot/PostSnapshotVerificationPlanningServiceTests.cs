@@ -32,6 +32,6 @@ public sealed class PostSnapshotVerificationPlanningServiceTests
 
         Assert.True(plan.ShouldCompareWithHistory);
         Assert.Equal("2026.01.03-00.00.00", plan.HistoryDirectoryName);
-        Assert.EndsWith(@"2026.01.03-00.00.00\posts.json", plan.HistoryFilePath);
+        Assert.EndsWith(Path.Combine("2026.01.03-00.00.00", "posts.json"), plan.HistoryFilePath);
     }
 }
