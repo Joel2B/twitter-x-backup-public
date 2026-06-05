@@ -51,6 +51,9 @@ internal sealed class MediaBackupApplyChunkCoordinator(
                 _chunkHashPreparationService.ApplyHashes(initialEntryStates, hashByPath);
             runtime.ApplyChunkEntryStates(chunk, hashedEntryStates);
 
+            if (!hashByPath.Values.Any(hash => hash is not null))
+                return true;
+
             IReadOnlyList<MediaBackupApplyChunkPathState> chunkPaths =
                 _chunkEntryStateService.BuildApplyChunkPathStates(hashedEntryStates);
 
@@ -61,6 +64,7 @@ internal sealed class MediaBackupApplyChunkCoordinator(
 
             MediaBackupApplyChunkPlan? chunkPlan = null;
             HashSet<string>? storagePaths = null;
+
             bool mutated = await runtime.MutateChunkZip(
                 chunk,
                 "apply",
@@ -68,6 +72,7 @@ internal sealed class MediaBackupApplyChunkCoordinator(
                 {
                     runtime.Logger.LogInfo("reading entries");
                     storagePaths = [.. zip.GetEntries().Select(o => o.FullName)];
+
                     chunkPlan = _applyChunkPlanningService.Plan(
                         chunkPaths,
                         storagePaths,
