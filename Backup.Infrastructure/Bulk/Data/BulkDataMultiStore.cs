@@ -19,19 +19,29 @@ public class BulkDataMultiStore(
         "Only one bulk data store can be marked as default."
     );
 
+    private bool HasStores => _storeGroup.Stores.Count > 0;
     private IBulkDataStore Primary => _storeGroup.Primary;
 
     public string? Id
     {
-        get => Primary.Id;
-        set => Primary.Id = value;
+        get => HasStores ? Primary.Id : null;
+        set
+        {
+            if (!HasStores)
+                return;
+
+            Primary.Id = value;
+        }
     }
 
     public Task<List<BulkData>?> GetBulks(CancellationToken cancellationToken = default) =>
-        Primary.GetBulks(cancellationToken);
+        HasStores ? Primary.GetBulks(cancellationToken) : Task.FromResult<List<BulkData>?>(null);
 
     public async Task Save(List<BulkData> bulks, CancellationToken cancellationToken = default)
     {
+        if (!HasStores)
+            return;
+
         cancellationToken.ThrowIfCancellationRequested();
         IBulkDataStore primary = Primary;
         await primary.Save(bulks, cancellationToken);
@@ -45,6 +55,9 @@ public class BulkDataMultiStore(
 
     public async Task Prune(CancellationToken cancellationToken = default)
     {
+        if (!HasStores)
+            return;
+
         foreach (IBulkDataStore store in _storeGroup.Stores)
         {
             cancellationToken.ThrowIfCancellationRequested();

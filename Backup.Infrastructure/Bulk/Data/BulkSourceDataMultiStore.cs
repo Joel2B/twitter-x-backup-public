@@ -18,7 +18,11 @@ public class BulkSourceDataMultiStore(
         "Only one bulk source data store can be marked as default."
     );
 
-    private IBulkSourceDataStore Primary => _storeGroup.Primary;
+    public Task<List<Source>> GetSources()
+    {
+        if (_storeGroup.Stores.Count == 0)
+            return Task.FromResult<List<Source>>([]);
 
-    public Task<List<Source>> GetSources() => Primary.GetSources();
+        return _storeGroup.Primary.GetSources();
+    }
 }

@@ -2,6 +2,7 @@ using Backup.Application.Media;
 using Backup.Application.Media.Models;
 using Backup.Application.Media.Ports;
 using Backup.Domain.Posts;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Backup.Tests;
 
@@ -10,7 +11,7 @@ public class MediaOrchestrationServiceTests
     [Fact]
     public async Task Run_NoPosts_DoesNothing()
     {
-        MediaOrchestrationService sut = new();
+        MediaOrchestrationService sut = new(NullLogger<MediaOrchestrationService>.Instance);
         FakeMediaCommand command = new() { MediaInputs = [] };
 
         await sut.Run(command);
@@ -22,7 +23,7 @@ public class MediaOrchestrationServiceTests
     [Fact]
     public async Task Run_WithPosts_ExecutesPipelineAndBackups()
     {
-        MediaOrchestrationService sut = new();
+        MediaOrchestrationService sut = new(NullLogger<MediaOrchestrationService>.Instance);
         FakeMediaCommand command = new()
         {
             MediaInputs = [CreateMediaInput("p1")],

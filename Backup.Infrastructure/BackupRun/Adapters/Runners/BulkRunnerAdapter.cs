@@ -18,6 +18,8 @@ public class BulkRunnerAdapter(
     IBulkPhase1Runner phase1Runner,
     IBulkPhase2Runner phase2Runner,
     IBulkPhase2ResetRunner phase2ResetRunner,
+    IEnumerable<IBulkDataStore> bulkDataStores,
+    IEnumerable<IBulkSourceDataStore> bulkSourceDataStores,
     IBulkData bulkData,
     ILogger<BulkRunnerAdapter> logger
 ) : IBulkRunner
@@ -29,6 +31,11 @@ public class BulkRunnerAdapter(
     private readonly IBulkPhase1Runner _phase1Runner = phase1Runner;
     private readonly IBulkPhase2Runner _phase2Runner = phase2Runner;
     private readonly IBulkPhase2ResetRunner _phase2ResetRunner = phase2ResetRunner;
+    private readonly IReadOnlyList<IBulkDataStore> _bulkDataStores = [.. bulkDataStores];
+    private readonly IReadOnlyList<IBulkSourceDataStore> _bulkSourceDataStores =
+    [
+        .. bulkSourceDataStores,
+    ];
     private readonly IBulkData _bulkData = bulkData;
     private readonly ILogger<BulkRunnerAdapter> _logger = logger;
 
@@ -41,6 +48,24 @@ public class BulkRunnerAdapter(
 
         if (userContext is null)
             return;
+
+        if (_bulkDataStores.Count == 0)
+        {
+            _logger.LogInformation(
+                "bulk skipped for {UserId}: no bulk data stores configured",
+                userId
+            );
+            return;
+        }
+
+        if (_bulkSourceDataStores.Count == 0)
+        {
+            _logger.LogInformation(
+                "bulk skipped for {UserId}: no bulk source data stores configured",
+                userId
+            );
+            return;
+        }
 
         using (_logger.LogTimer("bulk execution service"))
             await _bulkExecutionService.Run(
