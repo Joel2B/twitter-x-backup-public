@@ -8,16 +8,10 @@ using Microsoft.Extensions.Logging;
 namespace Backup.Infrastructure.Media.Services;
 
 internal sealed class MediaBackupDirectPathScanCoordinator(
-    IMediaBackupDirectPathScanOrchestrationService directPathScanOrchestrationService,
-    IMediaBackupPathObservationCompositionService pathObservationCompositionService,
     IMediaBackupProgressPolicyService progressPolicyService,
     IMediaBackupDirectPathFinalizeService directPathFinalizeService
 )
 {
-    private readonly IMediaBackupDirectPathScanOrchestrationService _directPathScanOrchestrationService =
-        directPathScanOrchestrationService;
-    private readonly IMediaBackupPathObservationCompositionService _pathObservationCompositionService =
-        pathObservationCompositionService;
     private readonly IMediaBackupProgressPolicyService _progressPolicyService =
         progressPolicyService;
     private readonly IMediaBackupDirectPathFinalizeService _directPathFinalizeService =
@@ -49,36 +43,27 @@ internal sealed class MediaBackupDirectPathScanCoordinator(
                     try
                     {
                         MediaCacheEntry? cache = await runtime.MediaData.GetCache(path);
+
+                        if (
+                            cache is null
+                            || cache.Size?.File is not long fileSize
+                            || fileSize <= runtime.Config.Chunk.Path.Size
+                        )
+                            return;
+
                         bool existsSource = await runtime.MediaData.Exists(path);
-                        bool existsTarget = await runtime.MediaBackupData.Exists(path);
 
-                        MediaBackupDirectPathScanResult result =
-                            _directPathScanOrchestrationService.Evaluate(
-                                _pathObservationCompositionService.BuildDirectPathObservation(
-                                    new MediaBackupDirectPathObservationInput
-                                    {
-                                        Path = path,
-                                        CacheExists = cache is not null,
-                                        CachePath = cache?.Path,
-                                        FileSizeBytes = cache?.Size?.File,
-                                        SourceExists = existsSource,
-                                        TargetExists = existsTarget,
-                                        MaxPathSizeBytes = runtime.Config.Chunk.Path.Size,
-                                    }
-                                )
-                            );
-
-                        if (result.ShouldThrowMissingSource)
-                        {
+                        if (!existsSource)
                             throw new InvalidOperationException(
                                 $"source media missing for path {path}"
                             );
-                        }
 
-                        if (!result.ShouldIncludeDirectPath)
+                        bool existsTarget = await runtime.MediaBackupData.Exists(path);
+
+                        if (existsTarget || string.IsNullOrWhiteSpace(cache.Path))
                             return;
 
-                        runtime.Context.PathsDirect.Add(result.IncludedPath);
+                        runtime.Context.PathsDirect.Add(cache.Path);
                     }
                     catch (OperationCanceledException)
                     {

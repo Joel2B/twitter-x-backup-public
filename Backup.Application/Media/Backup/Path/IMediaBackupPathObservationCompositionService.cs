@@ -7,8 +7,4 @@ public interface IMediaBackupPathObservationCompositionService
     IReadOnlyList<MediaBackupPathCacheObservation> BuildPathCacheObservations(
         IEnumerable<MediaBackupPathCacheObservationInput> inputs
     );
-
-    MediaBackupDirectPathCandidateObservation BuildDirectPathObservation(
-        MediaBackupDirectPathObservationInput input
-    );
 }

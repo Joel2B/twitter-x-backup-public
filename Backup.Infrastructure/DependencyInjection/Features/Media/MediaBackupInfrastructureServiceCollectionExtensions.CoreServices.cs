@@ -67,23 +67,11 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             MediaBackupDirectPathSelectionService
         >();
         services.AddScoped<
-            IMediaBackupDirectPathEligibilityService,
-            MediaBackupDirectPathEligibilityService
-        >();
-        services.AddScoped<
             IMediaBackupDirectPathFinalizeService,
             MediaBackupDirectPathFinalizeService
         >();
         services.AddScoped<IMediaBackupSyncFinalizeService, MediaBackupSyncFinalizeService>();
         services.AddScoped<IMediaBackupDirectApplyPathService, MediaBackupDirectApplyPathService>();
-        services.AddScoped<
-            IMediaBackupDirectPathCandidateDecisionService,
-            MediaBackupDirectPathCandidateDecisionService
-        >();
-        services.AddScoped<
-            IMediaBackupDirectPathScanOrchestrationService,
-            MediaBackupDirectPathScanOrchestrationService
-        >();
         services.AddScoped<IMediaBackupDirectPathQueueService, MediaBackupDirectPathQueueService>();
         services.AddScoped<IMediaBackupProgressPolicyService, MediaBackupProgressPolicyService>();
     }
