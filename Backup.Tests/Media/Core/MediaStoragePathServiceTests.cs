@@ -4,10 +4,7 @@ namespace Backup.Tests;
 
 public sealed class MediaStoragePathServiceTests
 {
-    private readonly MediaStoragePathService _sut = new(
-        new MediaPathSelectionService(),
-        new MediaTempPathPolicyService()
-    );
+    private readonly MediaStoragePathService _sut = new(new MediaTempPathPolicyService());
 
     [Fact]
     public void BuildMediaRootPath_UsesFirstNonEmptyRoot()
@@ -35,5 +32,15 @@ public sealed class MediaStoragePathServiceTests
         string path = _sut.BuildDownloaderTempPath([@"E:\heavy-root"], ["tmp"], ["downloader"]);
 
         Assert.Equal(Path.Combine(@"E:\heavy-root", "tmp", "downloader"), path);
+    }
+
+    [Fact]
+    public void BuildMediaRootPath_ThrowsWhenMissing()
+    {
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => _sut.BuildMediaRootPath(["", " "], ["media"])
+        );
+
+        Assert.Equal("No media root path is configured.", ex.Message);
     }
 }

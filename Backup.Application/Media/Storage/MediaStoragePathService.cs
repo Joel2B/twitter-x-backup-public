@@ -1,12 +1,8 @@
 namespace Backup.Application.Media;
 
-public sealed class MediaStoragePathService(
-    IMediaPathSelectionService mediaPathSelectionService,
-    IMediaTempPathPolicyService mediaTempPathPolicyService
-) : IMediaStoragePathService
+public sealed class MediaStoragePathService(IMediaTempPathPolicyService mediaTempPathPolicyService)
+    : IMediaStoragePathService
 {
-    private readonly IMediaPathSelectionService _mediaPathSelectionService =
-        mediaPathSelectionService;
     private readonly IMediaTempPathPolicyService _mediaTempPathPolicyService =
         mediaTempPathPolicyService;
 
@@ -15,7 +11,7 @@ public sealed class MediaStoragePathService(
         IReadOnlyList<string> mediaPaths
     )
     {
-        string rootPath = _mediaPathSelectionService.SelectRequiredRootPath(partitionRootPaths);
+        string rootPath = SelectRequiredRootPath(partitionRootPaths);
         return Path.Combine([rootPath, .. mediaPaths]);
     }
 
@@ -31,11 +27,21 @@ public sealed class MediaStoragePathService(
         IReadOnlyList<string> downloaderPathSegments
     )
     {
-        string rootPath = _mediaPathSelectionService.SelectRequiredRootPath(partitionRootPaths);
+        string rootPath = SelectRequiredRootPath(partitionRootPaths);
         return _mediaTempPathPolicyService.BuildDownloaderTempPath(
             rootPath,
             tmpPathSegments,
             downloaderPathSegments
         );
+    }
+
+    private static string SelectRequiredRootPath(IEnumerable<string> rootPaths)
+    {
+        string? rootPath = rootPaths.FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
+
+        if (string.IsNullOrWhiteSpace(rootPath))
+            throw new InvalidOperationException("No media root path is configured.");
+
+        return rootPath;
     }
 }

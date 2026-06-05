@@ -61,7 +61,6 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         >();
         services.AddScoped<IMediaDownloadExecutionService, MediaDownloadExecutionService>();
         services.AddScoped<IMediaLogFilePolicyService, MediaLogFilePolicyService>();
-        services.AddScoped<IMediaPathSelectionService, MediaPathSelectionService>();
         services.AddScoped<IMediaTempPathPolicyService, MediaTempPathPolicyService>();
         services.AddScoped<IMediaStoragePathService, MediaStoragePathService>();
         services.AddScoped<IMediaVideoVariantPolicyService, MediaVideoVariantPolicyService>();
