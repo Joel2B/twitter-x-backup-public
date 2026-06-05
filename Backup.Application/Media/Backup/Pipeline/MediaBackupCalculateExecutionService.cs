@@ -5,7 +5,6 @@ namespace Backup.Application.Media.Backup;
 public sealed class MediaBackupCalculateExecutionService(
     IMediaBackupChunkPlanningService mediaBackupChunkPlanningService,
     IMediaBackupChunkRuntimeCompositionService mediaBackupChunkRuntimeCompositionService,
-    IMediaBackupPathObservationCompositionService mediaBackupPathObservationCompositionService,
     IMediaBackupPathCandidateCompositionService mediaBackupPathCandidateCompositionService,
     IMediaBackupChunkAssignmentService mediaBackupChunkAssignmentService,
     IMediaBackupChunkAssignmentApplyService mediaBackupChunkAssignmentApplyService,
@@ -19,8 +18,6 @@ public sealed class MediaBackupCalculateExecutionService(
         mediaBackupChunkPlanningService;
     private readonly IMediaBackupChunkRuntimeCompositionService _mediaBackupChunkRuntimeCompositionService =
         mediaBackupChunkRuntimeCompositionService;
-    private readonly IMediaBackupPathObservationCompositionService _mediaBackupPathObservationCompositionService =
-        mediaBackupPathObservationCompositionService;
     private readonly IMediaBackupPathCandidateCompositionService _mediaBackupPathCandidateCompositionService =
         mediaBackupPathCandidateCompositionService;
     private readonly IMediaBackupChunkAssignmentService _mediaBackupChunkAssignmentService =
@@ -49,9 +46,7 @@ public sealed class MediaBackupCalculateExecutionService(
         IReadOnlyList<MediaBackupChunkState> chunkStates =
             _mediaBackupChunkRuntimeCompositionService.BuildChunkStates(input.ChunkStateInputs);
         IReadOnlyList<MediaBackupPathCacheObservation> candidateObservations =
-            _mediaBackupPathObservationCompositionService.BuildPathCacheObservations(
-                input.CacheObservationInputs
-            );
+            BuildPathCacheObservations(input.CacheObservationInputs);
         IReadOnlyList<MediaBackupPathCandidate> candidates =
             _mediaBackupPathCandidateCompositionService.Compose(
                 candidateObservations,
@@ -140,4 +135,17 @@ public sealed class MediaBackupCalculateExecutionService(
             .Select(item => new MediaBackupChunkPathsState { Id = item.Key, Paths = item.Value })
             .ToList();
     }
+
+    private static IReadOnlyList<MediaBackupPathCacheObservation> BuildPathCacheObservations(
+        IEnumerable<MediaBackupPathCacheObservationInput> inputs
+    ) =>
+        inputs
+            .Select(input => new MediaBackupPathCacheObservation
+            {
+                OriginalPath = input.OriginalPath,
+                CacheExists = input.CacheExists,
+                CachePath = input.CachePath ?? string.Empty,
+                FileSizeBytes = input.FileSizeBytes,
+            })
+            .ToList();
 }

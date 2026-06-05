@@ -5,30 +5,26 @@ using Backup.Infrastructure.Media.Abstractions.Services;
 namespace Backup.Infrastructure.Media.Services;
 
 internal sealed class MediaBackupPipelinePlanner(
-    IMediaBackupPhaseOrchestrationService phaseOrchestrationService,
-    IMediaBackupPipelineStepCompositionService pipelineStepCompositionService
+    IMediaBackupPhaseOrchestrationService phaseOrchestrationService
 )
 {
     private readonly IMediaBackupPhaseOrchestrationService _phaseOrchestrationService =
         phaseOrchestrationService;
-    private readonly IMediaBackupPipelineStepCompositionService _pipelineStepCompositionService =
-        pipelineStepCompositionService;
 
     public IReadOnlyList<MediaBackupPhaseExecutionStep> BuildExecutionPlan(
         IEnumerable<IMediaBackupPipelineStep> steps,
         bool stop
     )
     {
-        IReadOnlyList<MediaBackupPhaseStep> phaseSteps =
-            _pipelineStepCompositionService.BuildPhaseSteps(
-                steps.Select(step => new MediaBackupPipelineStepDescriptorInput
-                {
-                    StepId = GetPipelineStepId(step),
-                    Order = step.Order,
-                    TimerName = step.TimerName,
-                    SkipWhenStopped = step.SkipWhenStopped,
-                })
-            );
+        IReadOnlyList<MediaBackupPhaseStep> phaseSteps = steps
+            .Select(step => new MediaBackupPhaseStep
+            {
+                StepId = GetPipelineStepId(step),
+                Order = step.Order,
+                TimerName = step.TimerName,
+                SkipWhenStopped = step.SkipWhenStopped,
+            })
+            .ToList();
 
         return _phaseOrchestrationService.BuildExecutionPlan(phaseSteps, stop);
     }
