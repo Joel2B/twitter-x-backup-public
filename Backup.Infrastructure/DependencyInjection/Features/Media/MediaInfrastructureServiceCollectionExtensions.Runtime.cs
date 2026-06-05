@@ -174,10 +174,6 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
             MediaCachePartitionSelectionService
         >();
         services.AddScoped<
-            IMediaCacheStoredEntryProjectionService,
-            MediaCacheStoredEntryProjectionService
-        >();
-        services.AddScoped<
             IMediaCachePartitionSizeAggregationService,
             MediaCachePartitionSizeAggregationService
         >();

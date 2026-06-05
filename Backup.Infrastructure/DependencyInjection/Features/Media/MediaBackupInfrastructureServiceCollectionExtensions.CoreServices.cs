@@ -37,7 +37,6 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             IMediaBackupChunkAssignmentApplyService,
             MediaBackupChunkAssignmentApplyService
         >();
-        services.AddScoped<IMediaBackupPathProjectionService, MediaBackupPathProjectionService>();
         services.AddScoped<
             IMediaBackupArchiveMetadataMapService,
             MediaBackupArchiveMetadataMapService
@@ -67,7 +66,6 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             MediaBackupDirectPathFinalizeService
         >();
         services.AddScoped<IMediaBackupSyncFinalizeService, MediaBackupSyncFinalizeService>();
-        services.AddScoped<IMediaBackupDirectApplyPathService, MediaBackupDirectApplyPathService>();
         services.AddScoped<IMediaBackupDirectPathQueueService, MediaBackupDirectPathQueueService>();
     }
 

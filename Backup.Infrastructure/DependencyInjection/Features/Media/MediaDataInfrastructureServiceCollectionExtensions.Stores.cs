@@ -78,7 +78,6 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
                         sp.GetRequiredKeyedService<IPartition>(key),
                         sp.GetRequiredService<IMediaCacheLoadExecutionService>(),
                         sp.GetRequiredService<IMediaCacheRecheckProbeExecutionService>(),
-                        sp.GetRequiredService<IMediaCacheStoredEntryProjectionService>(),
                         sp.GetRequiredService<IMediaCachePartitionSizeAggregationService>(),
                         sp.GetRequiredService<IMediaCacheEntryPathPolicyService>(),
                         sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key),

@@ -13,7 +13,6 @@ internal sealed class LocalMediaCacheLoadCoordinator(
     IPartition partition,
     IMediaCacheLoadExecutionService mediaCacheLoadExecutionService,
     IMediaCacheRecheckProbeExecutionService mediaCacheRecheckProbeExecutionService,
-    IMediaCacheStoredEntryProjectionService mediaCacheStoredEntryProjectionService,
     IMediaCachePartitionSizeAggregationService mediaCachePartitionSizeAggregationService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     LocalMediaCachePathLayout pathLayout,
@@ -27,8 +26,6 @@ internal sealed class LocalMediaCacheLoadCoordinator(
         mediaCacheLoadExecutionService;
     private readonly IMediaCacheRecheckProbeExecutionService _mediaCacheRecheckProbeExecutionService =
         mediaCacheRecheckProbeExecutionService;
-    private readonly IMediaCacheStoredEntryProjectionService _mediaCacheStoredEntryProjectionService =
-        mediaCacheStoredEntryProjectionService;
     private readonly IMediaCachePartitionSizeAggregationService _mediaCachePartitionSizeAggregationService =
         mediaCachePartitionSizeAggregationService;
     private readonly IMediaCacheEntryPathPolicyService _mediaCacheEntryPathPolicyService =
@@ -166,9 +163,12 @@ internal sealed class LocalMediaCacheLoadCoordinator(
     private void UpdatePartitionSizes(ConcurrentDictionary<string, MediaCacheEntry> cache)
     {
         IReadOnlyDictionary<int, long> sizes = _mediaCachePartitionSizeAggregationService.Aggregate(
-            _mediaCacheStoredEntryProjectionService.ToPartitionFileSizes(
-                cache.Values.Select(LocalMediaCacheEntryMapper.ToStoredEntry)
-            )
+            cache
+                .Values.Select(LocalMediaCacheEntryMapper.ToStoredEntry)
+                .Select(entry => new KeyValuePair<int?, long?>(
+                    entry.PartitionId,
+                    entry.FileSizeBytes
+                ))
         );
 
         _partition.SetupSizes(sizes.ToDictionary(item => item.Key, item => item.Value));

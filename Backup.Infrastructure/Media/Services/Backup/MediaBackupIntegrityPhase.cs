@@ -11,7 +11,6 @@ using Microsoft.Extensions.Logging;
 namespace Backup.Infrastructure.Media.Services;
 
 internal sealed class MediaBackupIntegrityPhase(
-    IMediaBackupPathProjectionService pathProjectionService,
     IMediaBackupIntegrityObservationCompositionService integrityObservationCompositionService,
     IMediaBackupIntegrityChangeDetectionService integrityChangeDetectionService,
     IMediaBackupIntegrityPlanningService integrityPlanningService,
@@ -22,8 +21,6 @@ internal sealed class MediaBackupIntegrityPhase(
     IMediaBackupChunkPersistenceIOService chunkPersistenceIoService
 ) : IMediaBackupIntegrityPhase
 {
-    private readonly IMediaBackupPathProjectionService _pathProjectionService =
-        pathProjectionService;
     private readonly IMediaBackupIntegrityObservationCompositionService _integrityObservationCompositionService =
         integrityObservationCompositionService;
     private readonly IMediaBackupIntegrityChangeDetectionService _integrityChangeDetectionService =
@@ -82,7 +79,7 @@ internal sealed class MediaBackupIntegrityPhase(
                 cancellationToken.ThrowIfCancellationRequested();
                 MediaCacheEntry? cache = await runtime.MediaData.GetCache(item.Path);
                 entries.TryGetValue(
-                    _pathProjectionService.ToArchivePath(item.Path),
+                    MediaBackupPathProjection.ToArchivePath(item.Path),
                     out ZipEntry? value2
                 );
 
@@ -154,7 +151,7 @@ internal sealed class MediaBackupIntegrityPhase(
                     foreach (string path in change.Paths)
                     {
                         cancellationToken.ThrowIfCancellationRequested();
-                        string relativePath = _pathProjectionService.ToArchivePath(path);
+                        string relativePath = MediaBackupPathProjection.ToArchivePath(path);
                         await _zipMutationIoService.ReplaceEntryFromMediaStorage(
                             runtime.MediaData,
                             zip,

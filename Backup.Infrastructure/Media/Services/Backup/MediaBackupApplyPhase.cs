@@ -9,7 +9,7 @@ namespace Backup.Infrastructure.Media.Services;
 
 internal sealed class MediaBackupApplyPhase(
     IMediaBackupChunkEntryStateService chunkEntryStateService,
-    IMediaBackupDirectApplyPathService directApplyPathService,
+    IMediaBackupDirectPathQueueService directPathQueueService,
     IMediaBackupChunkRuntimeCompositionService chunkRuntimeCompositionService,
     IMediaBackupSyncFinalizeService syncFinalizeService,
     MediaBackupApplyChunkCoordinator mediaBackupApplyChunkCoordinator,
@@ -18,8 +18,8 @@ internal sealed class MediaBackupApplyPhase(
 {
     private readonly IMediaBackupChunkEntryStateService _chunkEntryStateService =
         chunkEntryStateService;
-    private readonly IMediaBackupDirectApplyPathService _directApplyPathService =
-        directApplyPathService;
+    private readonly IMediaBackupDirectPathQueueService _directPathQueueService =
+        directPathQueueService;
     private readonly IMediaBackupChunkRuntimeCompositionService _chunkRuntimeCompositionService =
         chunkRuntimeCompositionService;
     private readonly IMediaBackupSyncFinalizeService _syncFinalizeService = syncFinalizeService;
@@ -64,7 +64,7 @@ internal sealed class MediaBackupApplyPhase(
     {
         cancellationToken.ThrowIfCancellationRequested();
         await SyncChunks(runtime, cancellationToken);
-        IReadOnlyList<string> directPaths = _directApplyPathService.GetPaths(
+        IReadOnlyList<string> directPaths = _directPathQueueService.Normalize(
             runtime.Context.PathsDirect
         );
 

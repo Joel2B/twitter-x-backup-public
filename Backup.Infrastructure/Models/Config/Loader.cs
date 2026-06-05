@@ -5,7 +5,6 @@ using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Downloads;
 using Backup.Infrastructure.Models.Config.Medias;
 using Backup.Infrastructure.Models.Config.Proxy;
-using Backup.Infrastructure.Models.Config.Request;
 using Backup.Infrastructure.Models.Config.Tasks;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
@@ -18,10 +17,8 @@ public static class ConfigLoader
     private static readonly ConfigNormalizationService _normalization = new();
     private static readonly ConfigApiFileSelectionService _apiFileSelection = new();
     private static readonly ConfigDeserializationGuardService _deserializationGuard = new();
-    private static readonly IConfigApiProjectionService _apiProjection =
-        new ConfigApiProjectionService();
     private static readonly IConfigApiCompositionService _apiComposition =
-        new ConfigApiCompositionService(_normalization, _apiProjection);
+        new ConfigApiCompositionService(_normalization);
 
     public static string GetConfigDirectory() => Path.Combine(AppContext.BaseDirectory, "config");
 

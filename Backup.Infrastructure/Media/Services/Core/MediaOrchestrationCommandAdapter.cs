@@ -21,8 +21,7 @@ public sealed class MediaOrchestrationCommandAdapter(
     IMediaReplication mediaReplication,
     IEnumerable<IMediaBackupStrategy> mediaBackups,
     IMediaDownloadService mediaDownload,
-    IMediaDownloadModelMapper mediaDownloadModelMapper,
-    IMediaOrchestrationStorageResolutionService mediaOrchestrationStorageResolutionService
+    IMediaDownloadModelMapper mediaDownloadModelMapper
 ) : IMediaOrchestrationCommand
 {
     private readonly ILogger<MediaOrchestrationCommandAdapter> _logger = logger;
@@ -37,7 +36,6 @@ public sealed class MediaOrchestrationCommandAdapter(
     private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper = mediaDownloadModelMapper;
     private readonly MediaOrchestrationResourceCatalog _resourceCatalog = new(
         logger,
-        mediaOrchestrationStorageResolutionService,
         mediaStorage,
         mediaMaintenance
     );

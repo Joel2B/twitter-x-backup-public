@@ -5,13 +5,8 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
 
-internal sealed class MediaBackupChunkSyncMutationCoordinator(
-    IMediaBackupPathProjectionService pathProjectionService
-)
+internal sealed class MediaBackupChunkSyncMutationCoordinator
 {
-    private readonly IMediaBackupPathProjectionService _pathProjectionService =
-        pathProjectionService;
-
     public async Task<bool> Execute(
         MediaBackupRuntime runtime,
         MediaBackupChunkSyncChunkPlan chunkPlan,
@@ -35,7 +30,7 @@ internal sealed class MediaBackupChunkSyncMutationCoordinator(
                     {
                         cancellationToken.ThrowIfCancellationRequested();
                         runtime.Logger.LogInfo("removing entry", path);
-                        zip.RemoveEntry(_pathProjectionService.ToArchivePath(path));
+                        zip.RemoveEntry(MediaBackupPathProjection.ToArchivePath(path));
                         runtime.Logger.LogInfo("entry removed");
 
                         runtime

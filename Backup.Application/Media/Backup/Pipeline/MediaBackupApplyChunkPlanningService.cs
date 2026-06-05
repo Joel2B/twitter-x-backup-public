@@ -3,13 +3,10 @@ using Backup.Application.Media.Backup.Models;
 namespace Backup.Application.Media.Backup;
 
 public sealed class MediaBackupApplyChunkPlanningService(
-    IMediaBackupPathProjectionService mediaBackupPathProjectionService,
     IMediaBackupApplyEntrySelectionService mediaBackupApplyEntrySelectionService,
     IMediaBackupApplyFinalizeService mediaBackupApplyFinalizeService
 ) : IMediaBackupApplyChunkPlanningService
 {
-    private readonly IMediaBackupPathProjectionService _mediaBackupPathProjectionService =
-        mediaBackupPathProjectionService;
     private readonly IMediaBackupApplyEntrySelectionService _mediaBackupApplyEntrySelectionService =
         mediaBackupApplyEntrySelectionService;
     private readonly IMediaBackupApplyFinalizeService _mediaBackupApplyFinalizeService =
@@ -26,7 +23,7 @@ public sealed class MediaBackupApplyChunkPlanningService(
             .Select(item => new MediaBackupApplyEntryCandidate
             {
                 SourcePath = item.SourcePath,
-                ArchivePath = _mediaBackupPathProjectionService.ToArchivePath(item.SourcePath),
+                ArchivePath = MediaBackupPathProjection.ToArchivePath(item.SourcePath),
                 HasHash = item.HasHash,
             })
             .ToList();

@@ -5,11 +5,10 @@ namespace Backup.Tests;
 
 public class ConfigApiProjectionServiceTests
 {
-    private readonly IConfigApiProjectionService _sut = new ConfigApiProjectionService();
-
     [Fact]
-    public void ToEntries_And_ToProjections_RoundTrip()
+    public void NormalizeApi_PreservesProjectionShape()
     {
+        ConfigApiCompositionService sut = new(new ConfigNormalizationService());
         IReadOnlyDictionary<string, ConfigApiProjection> source = new Dictionary<
             string,
             ConfigApiProjection
@@ -27,12 +26,11 @@ public class ConfigApiProjectionServiceTests
             },
         };
 
-        IReadOnlyList<ConfigApiEntry> entries = _sut.ToEntries(source);
-        IReadOnlyDictionary<string, ConfigApiProjection> back = _sut.ToProjections(entries);
+        IReadOnlyDictionary<string, ConfigApiProjection> back = sut.NormalizeApi(source);
 
-        Assert.Single(entries);
         Assert.True(back.ContainsKey("Api.SearchTimeline"));
         Assert.Equal("id-1", back["Api.SearchTimeline"].Id);
         Assert.Equal(20, back["Api.SearchTimeline"].Variables["count"]);
+        Assert.Equal("https://example.com", back["Api.SearchTimeline"].Url);
     }
 }

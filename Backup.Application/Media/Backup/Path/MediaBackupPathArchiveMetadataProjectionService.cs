@@ -2,13 +2,9 @@ using Backup.Application.Media.Backup.Models;
 
 namespace Backup.Application.Media.Backup;
 
-public sealed class MediaBackupPathArchiveMetadataProjectionService(
-    IMediaBackupPathProjectionService mediaBackupPathProjectionService
-) : IMediaBackupPathArchiveMetadataProjectionService
+public sealed class MediaBackupPathArchiveMetadataProjectionService
+    : IMediaBackupPathArchiveMetadataProjectionService
 {
-    private readonly IMediaBackupPathProjectionService _mediaBackupPathProjectionService =
-        mediaBackupPathProjectionService;
-
     public IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> BuildPathMetadataByPath(
         IEnumerable<string> paths,
         IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByArchivePath
@@ -17,7 +13,7 @@ public sealed class MediaBackupPathArchiveMetadataProjectionService(
             path => path,
             path =>
             {
-                string archivePath = _mediaBackupPathProjectionService.ToArchivePath(path);
+                string archivePath = MediaBackupPathProjection.ToArchivePath(path);
 
                 if (
                     !metadataByArchivePath.TryGetValue(

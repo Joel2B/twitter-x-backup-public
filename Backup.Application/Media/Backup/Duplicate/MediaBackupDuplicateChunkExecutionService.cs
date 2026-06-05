@@ -3,13 +3,10 @@ using Backup.Application.Media.Backup.Models;
 namespace Backup.Application.Media.Backup;
 
 public sealed class MediaBackupDuplicateChunkExecutionService(
-    IMediaBackupPathProjectionService mediaBackupPathProjectionService,
     IMediaBackupDuplicateCheckPlanningService mediaBackupDuplicateCheckPlanningService,
     IMediaBackupDuplicateChunkOrchestrationService mediaBackupDuplicateChunkOrchestrationService
 ) : IMediaBackupDuplicateChunkExecutionService
 {
-    private readonly IMediaBackupPathProjectionService _mediaBackupPathProjectionService =
-        mediaBackupPathProjectionService;
     private readonly IMediaBackupDuplicateCheckPlanningService _mediaBackupDuplicateCheckPlanningService =
         mediaBackupDuplicateCheckPlanningService;
     private readonly IMediaBackupDuplicateChunkOrchestrationService _mediaBackupDuplicateChunkOrchestrationService =
@@ -21,7 +18,7 @@ public sealed class MediaBackupDuplicateChunkExecutionService(
         int extraPreviewLimit
     )
     {
-        IReadOnlyList<string> memory = _mediaBackupPathProjectionService.ToArchivePaths(chunkPaths);
+        IReadOnlyList<string> memory = MediaBackupPathProjection.ToArchivePaths(chunkPaths);
         IReadOnlyList<string> storage = storageArchivePaths.ToList();
 
         MediaBackupDuplicateCheckPlan plan = _mediaBackupDuplicateCheckPlanningService.Plan(

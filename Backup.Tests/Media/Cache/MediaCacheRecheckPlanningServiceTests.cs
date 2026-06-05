@@ -6,20 +6,10 @@ namespace Backup.Tests;
 public sealed class MediaCacheRecheckPlanningServiceTests
 {
     [Fact]
-    public void SelectPathsToRecheck_ComposesProjectionAndSelection()
+    public void SelectPathsToRecheck_ProjectsEntriesAndDelegatesSelection()
     {
-        FakeProjection projection = new(
-            [
-                new MediaCacheRecheckCandidate
-                {
-                    Path = "/a.jpg",
-                    StreamSizeBytes = 100,
-                    FileSizeBytes = null,
-                },
-            ]
-        );
         FakeOrchestration orchestration = new(["/a.jpg"]);
-        MediaCacheRecheckPlanningService sut = new(projection, orchestration);
+        MediaCacheRecheckPlanningService sut = new(orchestration);
         List<MediaCacheStoredEntry> entries =
         [
             new()
@@ -33,33 +23,13 @@ public sealed class MediaCacheRecheckPlanningServiceTests
 
         IReadOnlyCollection<string> result = sut.SelectPathsToRecheck(entries);
 
-        Assert.NotNull(projection.LastEntries);
-        Assert.Single(projection.LastEntries);
-        Assert.Equal("/a.jpg", projection.LastEntries.First().Path);
         Assert.NotNull(orchestration.LastCandidates);
         Assert.Single(orchestration.LastCandidates);
         Assert.Equal("/a.jpg", orchestration.LastCandidates.First().Path);
+        Assert.Equal(100, orchestration.LastCandidates.First().StreamSizeBytes);
+        Assert.Null(orchestration.LastCandidates.First().FileSizeBytes);
         Assert.Single(result);
         Assert.Equal("/a.jpg", result.First());
-    }
-
-    private sealed class FakeProjection(IReadOnlyList<MediaCacheRecheckCandidate> candidates)
-        : IMediaCacheStoredEntryProjectionService
-    {
-        private readonly IReadOnlyList<MediaCacheRecheckCandidate> _candidates = candidates;
-        public IReadOnlyCollection<MediaCacheStoredEntry>? LastEntries { get; private set; }
-
-        public IReadOnlyList<MediaCacheRecheckCandidate> ToRecheckCandidates(
-            IEnumerable<MediaCacheStoredEntry> entries
-        )
-        {
-            LastEntries = entries.ToList();
-            return _candidates;
-        }
-
-        public IEnumerable<KeyValuePair<int?, long?>> ToPartitionFileSizes(
-            IEnumerable<MediaCacheStoredEntry> entries
-        ) => [];
     }
 
     private sealed class FakeOrchestration(IReadOnlyCollection<string> result)

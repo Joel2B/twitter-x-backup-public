@@ -6,14 +6,11 @@ namespace Backup.Infrastructure.Media.Services;
 
 internal sealed class MediaOrchestrationResourceCatalog(
     ILogger logger,
-    IMediaOrchestrationStorageResolutionService storageResolutionService,
     IEnumerable<IMediaStorage> mediaStorage,
     IEnumerable<IMediaDataMaintenance> mediaMaintenance
 )
 {
     private readonly ILogger _logger = logger;
-    private readonly IMediaOrchestrationStorageResolutionService _storageResolutionService =
-        storageResolutionService;
     private readonly Dictionary<string, IMediaStorage> _storageById = mediaStorage
         .Where(item => !string.IsNullOrWhiteSpace(item.Id))
         .ToDictionary(item => item.Id!, item => item, StringComparer.OrdinalIgnoreCase);
@@ -24,11 +21,14 @@ internal sealed class MediaOrchestrationResourceCatalog(
     public IReadOnlyCollection<IMediaStorage> Storage => _storageById.Values;
 
     public IReadOnlyList<string> GetStorageIds() =>
-        _storageResolutionService.GetStorageIds(_storageById.Keys);
+        _storageById
+            .Keys.Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
     public bool HasMaintenance(string storageId)
     {
-        bool has = _storageResolutionService.HasMaintenance(storageId, _maintenanceById.Keys);
+        bool has = _maintenanceById.Keys.Contains(storageId, StringComparer.OrdinalIgnoreCase);
 
         if (!has)
             _logger.LogWarning(
@@ -41,9 +41,8 @@ internal sealed class MediaOrchestrationResourceCatalog(
 
     public IMediaStorage? GetStorage(string storageId)
     {
-        string? resolvedId = _storageResolutionService.ResolveStorageId(
-            storageId,
-            _storageById.Keys
+        string? resolvedId = _storageById.Keys.FirstOrDefault(id =>
+            string.Equals(id, storageId, StringComparison.OrdinalIgnoreCase)
         );
 
         if (resolvedId is null)
@@ -66,7 +65,7 @@ internal sealed class MediaOrchestrationResourceCatalog(
 
     public IMediaStorage? GetBackupSource()
     {
-        string? storageId = _storageResolutionService.SelectBackupSourceId(_storageById.Keys);
+        string? storageId = GetStorageIds().FirstOrDefault();
         return storageId is null ? null : _storageById[storageId];
     }
 }
