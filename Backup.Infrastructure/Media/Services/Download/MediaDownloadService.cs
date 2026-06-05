@@ -74,6 +74,8 @@ class MediaDownloadService(
             _config.Downloads.Count
         );
 
+        _logger.LogInformation("media downloads queued: {count}", queue.Count);
+
         await _mediaDownloadExecutionService.Run(
             this,
             _mediaDownloadParallelRunner,

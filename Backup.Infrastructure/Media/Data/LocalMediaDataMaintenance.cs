@@ -5,7 +5,6 @@ using Backup.Application.Media.Models;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
-using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
 using Backup.Infrastructure.Models.Utils;
 using Microsoft.Extensions.Logging;
@@ -54,10 +53,24 @@ public class LocalMediaDataMaintenance(
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
+
+        _logger.LogInformation(
+            "check-data: starting with {DownloadCount} downloads",
+            downloads.Count
+        );
+
         DeleteTemp();
+
+        _logger.LogInformation("check-data: loading media cache");
         await _mediaCache.Load();
+        _logger.LogInformation("check-data: media cache loaded");
 
         List<MediaDownload> appDownloads = _mediaDownloadModelMapper.ToApplication(downloads);
+        _logger.LogInformation(
+            "check-data: projected {DownloadCount} application downloads",
+            appDownloads.Count
+        );
+
         Dictionary<string, long?> cacheSizesByPath = appDownloads
             .SelectMany(download => download.Data)
             .Select(item => item.Path)
@@ -68,13 +81,29 @@ public class LocalMediaDataMaintenance(
                 StringComparer.OrdinalIgnoreCase
             );
 
+        _logger.LogInformation(
+            "check-data: mapped cache sizes for {PathCount} distinct paths",
+            cacheSizesByPath.Count
+        );
+
         IReadOnlyList<MediaMaintenanceCachedDownload> cachedDownloads =
             _mediaMaintenanceDownloadProjectionService.ToCachedDownloads(
                 appDownloads,
                 cacheSizesByPath
             );
+
+        _logger.LogInformation(
+            "check-data: built {DownloadCount} cached download candidates",
+            cachedDownloads.Count
+        );
+
         IReadOnlyList<MediaMaintenanceCachedDownload> filtered =
             _mediaMaintenanceCachedDownloadFilterService.Filter(cachedDownloads);
+
+        _logger.LogInformation(
+            "check-data: filter kept {DownloadCount} cached downloads",
+            filtered.Count
+        );
 
         downloads.Clear();
         downloads.AddRange(
@@ -82,7 +111,13 @@ public class LocalMediaDataMaintenance(
                 _mediaMaintenanceDownloadProjectionService.ToDownloads(filtered)
             )
         );
+
         downloads.RemoveAll(dl => dl.Data.Count == 0);
+
+        _logger.LogInformation(
+            "check-data: completed with {DownloadCount} downloads",
+            downloads.Count
+        );
     }
 
     public async Task CheckIntegrity(
