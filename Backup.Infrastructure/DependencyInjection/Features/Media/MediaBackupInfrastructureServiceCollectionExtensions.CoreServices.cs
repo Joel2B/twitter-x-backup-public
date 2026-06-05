@@ -69,7 +69,6 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaBackupSyncFinalizeService, MediaBackupSyncFinalizeService>();
         services.AddScoped<IMediaBackupDirectApplyPathService, MediaBackupDirectApplyPathService>();
         services.AddScoped<IMediaBackupDirectPathQueueService, MediaBackupDirectPathQueueService>();
-        services.AddScoped<IMediaBackupProgressPolicyService, MediaBackupProgressPolicyService>();
     }
 
     private static void AddMediaBackupIntegrityServices(IServiceCollection services)

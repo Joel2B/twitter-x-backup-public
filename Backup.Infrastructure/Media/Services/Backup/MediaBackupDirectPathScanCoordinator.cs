@@ -8,12 +8,9 @@ using Microsoft.Extensions.Logging;
 namespace Backup.Infrastructure.Media.Services;
 
 internal sealed class MediaBackupDirectPathScanCoordinator(
-    IMediaBackupProgressPolicyService progressPolicyService,
     IMediaBackupDirectPathFinalizeService directPathFinalizeService
 )
 {
-    private readonly IMediaBackupProgressPolicyService _progressPolicyService =
-        progressPolicyService;
     private readonly IMediaBackupDirectPathFinalizeService _directPathFinalizeService =
         directPathFinalizeService;
 
@@ -77,25 +74,20 @@ internal sealed class MediaBackupDirectPathScanCoordinator(
                     {
                         int current = Interlocked.Increment(ref done);
                         int prev = Volatile.Read(ref lastPercent);
-                        MediaBackupProgressDecision progress = _progressPolicyService.Evaluate(
-                            current,
-                            total,
-                            prev
-                        );
-                        bool shouldLog = progress.ShouldLog;
+                        int percent = CalculateProgressPercent(current, total);
+                        bool shouldLog = percent != prev;
 
                         if (shouldLog)
                         {
                             shouldLog =
-                                Interlocked.CompareExchange(ref lastPercent, progress.Percent, prev)
-                                == prev;
+                                Interlocked.CompareExchange(ref lastPercent, percent, prev) == prev;
                         }
 
                         if (shouldLog)
                         {
                             runtime.Logger.LogInfo(
                                 "Progress: {percent}% ({current}/{total}) elapsed={elapsed}",
-                                progress.Percent,
+                                percent,
                                 current,
                                 total,
                                 sw.Elapsed
@@ -126,5 +118,11 @@ internal sealed class MediaBackupDirectPathScanCoordinator(
             runtime.Context.PathsDirect.Count,
             runtime.Config.Chunk.Path.Size
         );
+    }
+
+    private static int CalculateProgressPercent(int current, int total)
+    {
+        int safeTotal = Math.Max(total, 1);
+        return (int)((long)current * 100 / safeTotal);
     }
 }
