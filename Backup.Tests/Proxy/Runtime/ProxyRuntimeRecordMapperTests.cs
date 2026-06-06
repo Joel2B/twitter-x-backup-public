@@ -10,7 +10,7 @@ public sealed class ProxyRuntimeRecordMapperTests
     [Fact]
     public void ToRuntimeRecord_Maps_Status_Connections_And_Errors()
     {
-        ProxyRuntimeRecordMapper sut = new(new ProxyRuntimeStatusTransitionService());
+        ProxyRuntimeRecordMapper sut = new();
         ProxyData data = CreateProxyData(StatusEnum.Active);
 
         ProxyRuntimeRecord result = sut.ToRuntimeRecord(data);
@@ -24,7 +24,7 @@ public sealed class ProxyRuntimeRecordMapperTests
     [Fact]
     public void ToProxyData_Maps_Runtime_Record_Back_To_Storage_Model()
     {
-        ProxyRuntimeRecordMapper sut = new(new ProxyRuntimeStatusTransitionService());
+        ProxyRuntimeRecordMapper sut = new();
         ProxyRuntimeRecord runtime = new()
         {
             Candidate = new ProxyCandidate
@@ -58,7 +58,7 @@ public sealed class ProxyRuntimeRecordMapperTests
     [Fact]
     public void ApplyRuntimeRecord_Sets_Inactive_And_Date_When_Disabled()
     {
-        ProxyRuntimeRecordMapper sut = new(new ProxyRuntimeStatusTransitionService());
+        ProxyRuntimeRecordMapper sut = new();
         ProxyData proxy = CreateProxyData(StatusEnum.Active);
         DateTime disabledAt = new(2026, 5, 30, 20, 0, 0, DateTimeKind.Utc);
         ProxyRuntimeRecord source = new()
@@ -78,6 +78,32 @@ public sealed class ProxyRuntimeRecordMapperTests
 
         Assert.Equal(StatusEnum.Inactive, proxy.Status.Current);
         Assert.Equal(disabledAt, proxy.Status.Date);
+    }
+
+    [Fact]
+    public void ApplyRuntimeRecord_Active_Runtime_Keeps_Previous_Date()
+    {
+        ProxyRuntimeRecordMapper sut = new();
+        DateTime previous = new(2026, 5, 30, 9, 0, 0, DateTimeKind.Utc);
+        ProxyData proxy = CreateProxyData(StatusEnum.Inactive);
+        proxy.Status.Date = previous;
+        ProxyRuntimeRecord source = new()
+        {
+            Candidate = new ProxyCandidate
+            {
+                Ip = "1.1.1.1",
+                Port = "80",
+                Protocol = "http",
+            },
+            IsActive = true,
+            Connections = [],
+            Errors = [],
+        };
+
+        sut.ApplyRuntimeRecord(proxy, source, disabledAt: null);
+
+        Assert.Equal(StatusEnum.Active, proxy.Status.Current);
+        Assert.Equal(previous, proxy.Status.Date);
     }
 
     private static ProxyData CreateProxyData(StatusEnum status) =>

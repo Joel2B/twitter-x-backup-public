@@ -30,7 +30,6 @@ public static class CoreInfrastructureServiceCollectionExtensions
             StorageRegistrationPolicyService
         >();
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
-        services.AddSingleton<IDumpProgressPolicyService, DumpProgressPolicyService>();
         services.AddSingleton<IDumpIndexFilePolicyService, DumpIndexFilePolicyService>();
         services.AddSingleton<IDumpContextEligibilityService, DumpContextEligibilityService>();
         services.AddSingleton<IDumpContextGuardService, DumpContextGuardService>();

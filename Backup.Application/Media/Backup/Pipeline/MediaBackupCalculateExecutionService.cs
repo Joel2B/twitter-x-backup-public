@@ -5,7 +5,6 @@ namespace Backup.Application.Media.Backup;
 public sealed class MediaBackupCalculateExecutionService(
     IMediaBackupChunkPlanningService mediaBackupChunkPlanningService,
     IMediaBackupChunkRuntimeCompositionService mediaBackupChunkRuntimeCompositionService,
-    IMediaBackupPathCandidateCompositionService mediaBackupPathCandidateCompositionService,
     IMediaBackupChunkAssignmentService mediaBackupChunkAssignmentService,
     IMediaBackupChunkAssignmentApplyService mediaBackupChunkAssignmentApplyService,
     IMediaBackupChunkSnapshotCompositionService mediaBackupChunkSnapshotCompositionService,
@@ -18,8 +17,6 @@ public sealed class MediaBackupCalculateExecutionService(
         mediaBackupChunkPlanningService;
     private readonly IMediaBackupChunkRuntimeCompositionService _mediaBackupChunkRuntimeCompositionService =
         mediaBackupChunkRuntimeCompositionService;
-    private readonly IMediaBackupPathCandidateCompositionService _mediaBackupPathCandidateCompositionService =
-        mediaBackupPathCandidateCompositionService;
     private readonly IMediaBackupChunkAssignmentService _mediaBackupChunkAssignmentService =
         mediaBackupChunkAssignmentService;
     private readonly IMediaBackupChunkAssignmentApplyService _mediaBackupChunkAssignmentApplyService =
@@ -47,11 +44,10 @@ public sealed class MediaBackupCalculateExecutionService(
             _mediaBackupChunkRuntimeCompositionService.BuildChunkStates(input.ChunkStateInputs);
         IReadOnlyList<MediaBackupPathCacheObservation> candidateObservations =
             BuildPathCacheObservations(input.CacheObservationInputs);
-        IReadOnlyList<MediaBackupPathCandidate> candidates =
-            _mediaBackupPathCandidateCompositionService.Compose(
-                candidateObservations,
-                input.AssignedCachePaths.ToHashSet(StringComparer.Ordinal)
-            );
+        IReadOnlyList<MediaBackupPathCandidate> candidates = BuildPathCandidates(
+            candidateObservations,
+            input.AssignedCachePaths.ToHashSet(StringComparer.Ordinal)
+        );
 
         MediaBackupChunkAssignmentResult assignment = _mediaBackupChunkAssignmentService.Assign(
             chunkStates,
@@ -148,4 +144,30 @@ public sealed class MediaBackupCalculateExecutionService(
                 FileSizeBytes = input.FileSizeBytes,
             })
             .ToList();
+
+    private static IReadOnlyList<MediaBackupPathCandidate> BuildPathCandidates(
+        IEnumerable<MediaBackupPathCacheObservation> observations,
+        ISet<string> assignedCachePaths
+    )
+    {
+        List<MediaBackupPathCandidate> candidates = [];
+
+        foreach (MediaBackupPathCacheObservation item in observations)
+        {
+            if (!item.CacheExists)
+                continue;
+
+            candidates.Add(
+                new MediaBackupPathCandidate
+                {
+                    OriginalPath = item.OriginalPath,
+                    CachePath = item.CachePath,
+                    FileSizeBytes = item.FileSizeBytes,
+                    IsAlreadyAssigned = assignedCachePaths.Contains(item.CachePath),
+                }
+            );
+        }
+
+        return candidates;
+    }
 }

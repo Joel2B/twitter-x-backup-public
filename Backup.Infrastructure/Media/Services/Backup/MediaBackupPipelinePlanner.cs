@@ -1,16 +1,10 @@
-using Backup.Application.Media.Backup;
 using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Media.Abstractions.Services;
 
 namespace Backup.Infrastructure.Media.Services;
 
-internal sealed class MediaBackupPipelinePlanner(
-    IMediaBackupPhaseOrchestrationService phaseOrchestrationService
-)
+internal sealed class MediaBackupPipelinePlanner
 {
-    private readonly IMediaBackupPhaseOrchestrationService _phaseOrchestrationService =
-        phaseOrchestrationService;
-
     public IReadOnlyList<MediaBackupPhaseExecutionStep> BuildExecutionPlan(
         IEnumerable<IMediaBackupPipelineStep> steps,
         bool stop
@@ -26,7 +20,28 @@ internal sealed class MediaBackupPipelinePlanner(
             })
             .ToList();
 
-        return _phaseOrchestrationService.BuildExecutionPlan(phaseSteps, stop);
+        List<MediaBackupPhaseExecutionStep> plan = [];
+
+        foreach (
+            MediaBackupPhaseStep step in phaseSteps
+                .OrderBy(item => item.Order)
+                .ThenBy(item => item.TimerName, StringComparer.Ordinal)
+                .ThenBy(item => item.StepId, StringComparer.Ordinal)
+        )
+        {
+            if (stop && step.SkipWhenStopped)
+                break;
+
+            plan.Add(
+                new MediaBackupPhaseExecutionStep
+                {
+                    StepId = step.StepId,
+                    TimerName = step.TimerName,
+                }
+            );
+        }
+
+        return plan;
     }
 
     private static string GetPipelineStepId(IMediaBackupPipelineStep step) =>

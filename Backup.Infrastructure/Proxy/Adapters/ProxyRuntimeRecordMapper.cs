@@ -1,16 +1,10 @@
-using Backup.Application.Proxy;
 using Backup.Application.Proxy.Models;
 using Backup.Infrastructure.Proxy.Models;
 
 namespace Backup.Infrastructure.Proxy.Adapters;
 
-public sealed class ProxyRuntimeRecordMapper(
-    IProxyRuntimeStatusTransitionService proxyRuntimeStatusTransitionService
-)
+public sealed class ProxyRuntimeRecordMapper
 {
-    private readonly IProxyRuntimeStatusTransitionService _proxyRuntimeStatusTransitionService =
-        proxyRuntimeStatusTransitionService;
-
     public ProxyRuntimeRecord ToRuntimeRecord(ProxyData data) =>
         new()
         {
@@ -77,12 +71,11 @@ public sealed class ProxyRuntimeRecordMapper(
             })
             .ToList();
 
-        ProxyRuntimeStatusTransitionResult status =
-            _proxyRuntimeStatusTransitionService.ResolveStatus(
-                source.IsActive,
-                proxy.Status.Date,
-                disabledAt
-            );
+        ProxyRuntimeStatusTransitionResult status = ResolveStatus(
+            source.IsActive,
+            proxy.Status.Date,
+            disabledAt
+        );
         proxy.Status.Current = status.IsActive ? StatusEnum.Active : StatusEnum.Inactive;
 
         if (status.StatusDate.HasValue)
@@ -104,4 +97,21 @@ public sealed class ProxyRuntimeRecordMapper(
             Port = candidate.Port,
             Protocol = candidate.Protocol,
         };
+
+    private static ProxyRuntimeStatusTransitionResult ResolveStatus(
+        bool runtimeIsActive,
+        DateTime? previousStatusDate,
+        DateTime? disabledAt
+    ) =>
+        runtimeIsActive
+            ? new ProxyRuntimeStatusTransitionResult
+            {
+                IsActive = true,
+                StatusDate = previousStatusDate,
+            }
+            : new ProxyRuntimeStatusTransitionResult
+            {
+                IsActive = false,
+                StatusDate = disabledAt ?? previousStatusDate,
+            };
 }

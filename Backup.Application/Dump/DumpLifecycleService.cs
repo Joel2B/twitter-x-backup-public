@@ -4,15 +4,12 @@ namespace Backup.Application.Dump;
 
 public sealed class DumpLifecycleService(
     IDumpSessionNamingPolicyService dumpSessionNamingPolicyService,
-    IDumpContextGuardService dumpContextGuardService,
-    IDumpProgressPolicyService dumpProgressPolicyService
+    IDumpContextGuardService dumpContextGuardService
 ) : IDumpLifecycleService
 {
     private readonly IDumpSessionNamingPolicyService _dumpSessionNamingPolicyService =
         dumpSessionNamingPolicyService;
     private readonly IDumpContextGuardService _dumpContextGuardService = dumpContextGuardService;
-    private readonly IDumpProgressPolicyService _dumpProgressPolicyService =
-        dumpProgressPolicyService;
 
     public DumpCurrentSessionResolution ResolveCurrentSession(string? current, DateTime now)
     {
@@ -48,7 +45,7 @@ public sealed class DumpLifecycleService(
             QueryCount = queryCount,
         };
 
-        _dumpProgressPolicyService.AdvanceDirectoryIndex(state);
+        AdvanceDirectoryIndex(state);
         return state;
     }
 
@@ -72,5 +69,16 @@ public sealed class DumpLifecycleService(
                 (int)longValue,
             _ => int.TryParse(value.ToString(), out int parsed) ? parsed : 0,
         };
+    }
+
+    private static void AdvanceDirectoryIndex(DumpProgressState state)
+    {
+        int files = state.Count / state.QueryCount - 1;
+
+        if (state.IndexFile != files && state.Index != -1)
+            return;
+
+        state.Index++;
+        state.IndexFile = -1;
     }
 }

@@ -42,14 +42,6 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             MediaBackupArchiveMetadataMapService
         >();
         services.AddScoped<
-            IMediaBackupPathArchiveMetadataProjectionService,
-            MediaBackupPathArchiveMetadataProjectionService
-        >();
-        services.AddScoped<
-            IMediaBackupPathCandidateCompositionService,
-            MediaBackupPathCandidateCompositionService
-        >();
-        services.AddScoped<
             IMediaBackupStorageConsistencyDecisionService,
             MediaBackupStorageConsistencyDecisionService
         >();
@@ -127,10 +119,6 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
 
     private static void AddMediaBackupPipelineServices(IServiceCollection services)
     {
-        services.AddScoped<
-            IMediaBackupPhaseOrchestrationService,
-            MediaBackupPhaseOrchestrationService
-        >();
         services.AddScoped<
             IMediaBackupChunkReconciliationService,
             MediaBackupChunkReconciliationService

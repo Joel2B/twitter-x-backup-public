@@ -3,12 +3,9 @@ using Backup.Application.Proxy.Models;
 namespace Backup.Application.Proxy;
 
 public sealed class ProxyErrorHandlingOrchestrationService(
-    IProxyRuntimeStatusTransitionService proxyRuntimeStatusTransitionService,
     IProxyErrorTrackingService proxyErrorTrackingService
 ) : IProxyErrorHandlingOrchestrationService
 {
-    private readonly IProxyRuntimeStatusTransitionService _proxyRuntimeStatusTransitionService =
-        proxyRuntimeStatusTransitionService;
     private readonly IProxyErrorTrackingService _proxyErrorTrackingService =
         proxyErrorTrackingService;
 
@@ -21,7 +18,7 @@ public sealed class ProxyErrorHandlingOrchestrationService(
         DateTime now
     )
     {
-        if (!_proxyRuntimeStatusTransitionService.ShouldHandleError(isCurrentlyActive))
+        if (!isCurrentlyActive)
             return new ProxyErrorHandlingOutcome { ShouldApplyRuntimeRecord = false };
 
         ProxyErrorTrackingResult tracking = _proxyErrorTrackingService.RegisterError(
@@ -31,10 +28,7 @@ public sealed class ProxyErrorHandlingOrchestrationService(
             errorsToInactiveThreshold,
             now
         );
-        DateTime? disabledAt = _proxyRuntimeStatusTransitionService.ResolveDisabledAt(
-            tracking.WasDisabled,
-            now
-        );
+        DateTime? disabledAt = tracking.WasDisabled ? now : null;
 
         return new ProxyErrorHandlingOutcome
         {

@@ -49,10 +49,6 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
         services.AddScoped<IProxyProviderTypeResolverService, ProxyProviderTypeResolverService>();
         services.AddScoped<IProxyErrorDecisionService, ProxyErrorDecisionService>();
         services.AddScoped<IProxyRuntimeRecordMergeService, ProxyRuntimeRecordMergeService>();
-        services.AddScoped<
-            IProxyRuntimeStatusTransitionService,
-            ProxyRuntimeStatusTransitionService
-        >();
 
         return services;
     }

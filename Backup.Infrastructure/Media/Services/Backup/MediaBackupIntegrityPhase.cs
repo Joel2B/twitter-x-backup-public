@@ -16,7 +16,6 @@ internal sealed class MediaBackupIntegrityPhase(
     IMediaBackupIntegrityPlanningService integrityPlanningService,
     IMediaBackupZipMutationIOService zipMutationIoService,
     IMediaBackupArchiveMetadataMapService archiveMetadataMapService,
-    IMediaBackupPathArchiveMetadataProjectionService pathArchiveMetadataProjectionService,
     IMediaBackupIntegrityChunkRefreshService integrityChunkRefreshService,
     IMediaBackupChunkPersistenceIOService chunkPersistenceIoService
 ) : IMediaBackupIntegrityPhase
@@ -30,8 +29,6 @@ internal sealed class MediaBackupIntegrityPhase(
     private readonly IMediaBackupZipMutationIOService _zipMutationIoService = zipMutationIoService;
     private readonly IMediaBackupArchiveMetadataMapService _archiveMetadataMapService =
         archiveMetadataMapService;
-    private readonly IMediaBackupPathArchiveMetadataProjectionService _pathArchiveMetadataProjectionService =
-        pathArchiveMetadataProjectionService;
     private readonly IMediaBackupIntegrityChunkRefreshService _integrityChunkRefreshService =
         integrityChunkRefreshService;
     private readonly IMediaBackupChunkPersistenceIOService _chunkPersistenceIoService =
@@ -195,10 +192,7 @@ internal sealed class MediaBackupIntegrityPhase(
                 );
 
             IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByPath =
-                _pathArchiveMetadataProjectionService.BuildPathMetadataByPath(
-                    change.Paths,
-                    metadataByArchivePath
-                );
+                BuildPathMetadataByPath(change.Paths, metadataByArchivePath);
 
             MediaBackupIntegrityChunkApplyResult applyResult =
                 _integrityChunkRefreshService.Refresh(
@@ -223,4 +217,34 @@ internal sealed class MediaBackupIntegrityPhase(
             );
         }
     }
+
+    private static IReadOnlyDictionary<
+        string,
+        MediaBackupChunkDataMetadata
+    > BuildPathMetadataByPath(
+        IEnumerable<string> paths,
+        IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByArchivePath
+    ) =>
+        paths.ToDictionary(
+            path => path,
+            path =>
+            {
+                string archivePath = MediaBackupPathProjection.ToArchivePath(path);
+
+                if (
+                    !metadataByArchivePath.TryGetValue(
+                        archivePath,
+                        out MediaBackupChunkDataMetadata? metadata
+                    )
+                )
+                    return new MediaBackupChunkDataMetadata();
+
+                return new MediaBackupChunkDataMetadata
+                {
+                    FileSize = metadata.FileSize,
+                    Crc32 = metadata.Crc32,
+                };
+            },
+            StringComparer.Ordinal
+        );
 }

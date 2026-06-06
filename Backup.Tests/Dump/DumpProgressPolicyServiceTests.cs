@@ -5,11 +5,14 @@ namespace Backup.Tests;
 
 public class DumpProgressPolicyServiceTests
 {
-    private readonly DumpProgressPolicyService _sut = new();
-
     [Fact]
-    public void AdvanceDirectoryIndex_Initializes_WhenIndexIsMinusOne()
+    public void AdvanceDirectory_Initializes_WhenIndexIsMinusOne()
     {
+        DumpLifecycleService sut = new(
+            new DumpSessionNamingPolicyService(),
+            new DumpContextGuardService()
+        );
+
         DumpProgressState state = new()
         {
             Index = -1,
@@ -18,15 +21,25 @@ public class DumpProgressPolicyServiceTests
             QueryCount = 20,
         };
 
-        _sut.AdvanceDirectoryIndex(state);
+        DumpProgressState result = sut.AdvanceDirectory(
+            state.Index,
+            state.IndexFile,
+            state.Count,
+            state.QueryCount
+        );
 
-        Assert.Equal(0, state.Index);
-        Assert.Equal(-1, state.IndexFile);
+        Assert.Equal(0, result.Index);
+        Assert.Equal(-1, result.IndexFile);
     }
 
     [Fact]
-    public void AdvanceDirectoryIndex_Advances_WhenIndexFileReachedLimit()
+    public void AdvanceDirectory_Advances_WhenIndexFileReachedLimit()
     {
+        DumpLifecycleService sut = new(
+            new DumpSessionNamingPolicyService(),
+            new DumpContextGuardService()
+        );
+
         DumpProgressState state = new()
         {
             Index = 2,
@@ -35,15 +48,25 @@ public class DumpProgressPolicyServiceTests
             QueryCount = 20,
         };
 
-        _sut.AdvanceDirectoryIndex(state);
+        DumpProgressState result = sut.AdvanceDirectory(
+            state.Index,
+            state.IndexFile,
+            state.Count,
+            state.QueryCount
+        );
 
-        Assert.Equal(3, state.Index);
-        Assert.Equal(-1, state.IndexFile);
+        Assert.Equal(3, result.Index);
+        Assert.Equal(-1, result.IndexFile);
     }
 
     [Fact]
-    public void AdvanceDirectoryIndex_DoesNotAdvance_WhenNotAtLimit()
+    public void AdvanceDirectory_DoesNotAdvance_WhenNotAtLimit()
     {
+        DumpLifecycleService sut = new(
+            new DumpSessionNamingPolicyService(),
+            new DumpContextGuardService()
+        );
+
         DumpProgressState state = new()
         {
             Index = 2,
@@ -52,9 +75,14 @@ public class DumpProgressPolicyServiceTests
             QueryCount = 20,
         };
 
-        _sut.AdvanceDirectoryIndex(state);
+        DumpProgressState result = sut.AdvanceDirectory(
+            state.Index,
+            state.IndexFile,
+            state.Count,
+            state.QueryCount
+        );
 
-        Assert.Equal(2, state.Index);
-        Assert.Equal(3, state.IndexFile);
+        Assert.Equal(2, result.Index);
+        Assert.Equal(3, result.IndexFile);
     }
 }

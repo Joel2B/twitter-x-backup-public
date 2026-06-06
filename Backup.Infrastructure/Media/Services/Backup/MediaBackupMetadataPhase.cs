@@ -12,7 +12,6 @@ namespace Backup.Infrastructure.Media.Services;
 internal sealed class MediaBackupMetadataPhase(
     IMediaBackupChunkMetadataRefreshExecutionService chunkMetadataRefreshExecutionService,
     IMediaBackupArchiveMetadataMapService archiveMetadataMapService,
-    IMediaBackupPathArchiveMetadataProjectionService pathArchiveMetadataProjectionService,
     IMediaBackupChunkPersistenceIOService chunkPersistenceIoService
 ) : IMediaBackupMetadataPhase
 {
@@ -20,8 +19,6 @@ internal sealed class MediaBackupMetadataPhase(
         chunkMetadataRefreshExecutionService;
     private readonly IMediaBackupArchiveMetadataMapService _archiveMetadataMapService =
         archiveMetadataMapService;
-    private readonly IMediaBackupPathArchiveMetadataProjectionService _pathArchiveMetadataProjectionService =
-        pathArchiveMetadataProjectionService;
     private readonly IMediaBackupChunkPersistenceIOService _chunkPersistenceIoService =
         chunkPersistenceIoService;
 
@@ -69,7 +66,7 @@ internal sealed class MediaBackupMetadataPhase(
                 );
 
             IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> archiveMetadataByPath =
-                _pathArchiveMetadataProjectionService.BuildPathMetadataByPath(
+                BuildPathMetadataByPath(
                     kvp.Value.Data.Select(item => item.Path),
                     metadataByArchivePath
                 );
@@ -85,4 +82,34 @@ internal sealed class MediaBackupMetadataPhase(
             runtime.Logger.LogInformation("chunk {chunk} processed", kvp.Key);
         }
     }
+
+    private static IReadOnlyDictionary<
+        string,
+        MediaBackupChunkDataMetadata
+    > BuildPathMetadataByPath(
+        IEnumerable<string> paths,
+        IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByArchivePath
+    ) =>
+        paths.ToDictionary(
+            path => path,
+            path =>
+            {
+                string archivePath = MediaBackupPathProjection.ToArchivePath(path);
+
+                if (
+                    !metadataByArchivePath.TryGetValue(
+                        archivePath,
+                        out MediaBackupChunkDataMetadata? metadata
+                    )
+                )
+                    return new MediaBackupChunkDataMetadata();
+
+                return new MediaBackupChunkDataMetadata
+                {
+                    FileSize = metadata.FileSize,
+                    Crc32 = metadata.Crc32,
+                };
+            },
+            StringComparer.Ordinal
+        );
 }
