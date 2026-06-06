@@ -8,11 +8,14 @@ using Microsoft.Extensions.Logging;
 namespace Backup.Infrastructure.Media.Services;
 
 internal sealed class MediaBackupDirectPathScanCoordinator(
-    IMediaBackupDirectPathFinalizeService directPathFinalizeService
+    IMediaBackupDirectPathQueueService directPathQueueService,
+    IMediaBackupDirectPathSelectionService directPathSelectionService
 )
 {
-    private readonly IMediaBackupDirectPathFinalizeService _directPathFinalizeService =
-        directPathFinalizeService;
+    private readonly IMediaBackupDirectPathQueueService _directPathQueueService =
+        directPathQueueService;
+    private readonly IMediaBackupDirectPathSelectionService _directPathSelectionService =
+        directPathSelectionService;
 
     public async Task Scan(
         MediaBackupRuntime runtime,
@@ -103,16 +106,19 @@ internal sealed class MediaBackupDirectPathScanCoordinator(
             .Context.Chunks.Values.SelectMany(chunk => chunk.Data)
             .Select(item => item.Path)
             .ToList();
-
-        MediaBackupDirectPathFinalizeResult finalize = _directPathFinalizeService.Finalize(
-            pathsInChunks,
+        IReadOnlyList<string> normalizedDirectPaths = _directPathQueueService.Normalize(
             runtime.Context.PathsDirect
         );
 
-        runtime.Context.PathsInBoth = finalize.PathsInBoth.ToList();
+        MediaBackupDirectPathSelectionResult selection = _directPathSelectionService.Select(
+            pathsInChunks,
+            normalizedDirectPaths
+        );
+
+        runtime.Context.PathsInBoth = selection.PathsInBoth.ToList();
         runtime.Logger.LogInfo("{paths} in both", runtime.Context.PathsInBoth.Count);
 
-        runtime.Context.PathsDirect = [.. finalize.DirectPaths];
+        runtime.Context.PathsDirect = [.. _directPathQueueService.Normalize(selection.DirectPaths)];
         runtime.Logger.LogInfo(
             "{paths} paths > {size}",
             runtime.Context.PathsDirect.Count,

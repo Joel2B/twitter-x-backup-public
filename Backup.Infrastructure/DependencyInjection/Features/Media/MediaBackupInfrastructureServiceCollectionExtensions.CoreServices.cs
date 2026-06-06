@@ -26,7 +26,6 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
 
     private static void AddMediaBackupPathServices(IServiceCollection services)
     {
-        services.AddScoped<IMediaBackupPathAnalysisService, MediaBackupPathAnalysisService>();
         services.AddScoped<IMediaBackupPartitionPathService, MediaBackupPartitionPathService>();
         services.AddScoped<
             IMediaBackupChunkFileNamePolicyService,
@@ -36,10 +35,6 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<
             IMediaBackupChunkAssignmentApplyService,
             MediaBackupChunkAssignmentApplyService
-        >();
-        services.AddScoped<
-            IMediaBackupArchiveMetadataMapService,
-            MediaBackupArchiveMetadataMapService
         >();
         services.AddScoped<
             IMediaBackupStorageConsistencyDecisionService,
@@ -53,11 +48,6 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             IMediaBackupDirectPathSelectionService,
             MediaBackupDirectPathSelectionService
         >();
-        services.AddScoped<
-            IMediaBackupDirectPathFinalizeService,
-            MediaBackupDirectPathFinalizeService
-        >();
-        services.AddScoped<IMediaBackupSyncFinalizeService, MediaBackupSyncFinalizeService>();
         services.AddScoped<IMediaBackupDirectPathQueueService, MediaBackupDirectPathQueueService>();
     }
 
@@ -118,11 +108,6 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
         services.AddScoped<
             IMediaBackupChunkReconciliationService,
             MediaBackupChunkReconciliationService
-        >();
-        services.AddScoped<IMediaBackupApplyFinalizeService, MediaBackupApplyFinalizeService>();
-        services.AddScoped<
-            IMediaBackupApplyEntrySelectionService,
-            MediaBackupApplyEntrySelectionService
         >();
         services.AddScoped<
             IMediaBackupApplyChunkPlanningService,

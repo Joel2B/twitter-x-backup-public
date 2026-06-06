@@ -9,20 +9,21 @@ namespace Backup.Infrastructure.Media.Services;
 
 internal sealed class MediaBackupApplyPhase(
     IMediaBackupChunkEntryStateService chunkEntryStateService,
+    IMediaBackupChunkSyncPlanningService chunkSyncPlanningService,
     IMediaBackupDirectPathQueueService directPathQueueService,
     IMediaBackupChunkRuntimeCompositionService chunkRuntimeCompositionService,
-    IMediaBackupSyncFinalizeService syncFinalizeService,
     MediaBackupApplyChunkCoordinator mediaBackupApplyChunkCoordinator,
     MediaBackupChunkSyncMutationCoordinator mediaBackupChunkSyncMutationCoordinator
 ) : IMediaBackupApplyPhase
 {
     private readonly IMediaBackupChunkEntryStateService _chunkEntryStateService =
         chunkEntryStateService;
+    private readonly IMediaBackupChunkSyncPlanningService _chunkSyncPlanningService =
+        chunkSyncPlanningService;
     private readonly IMediaBackupDirectPathQueueService _directPathQueueService =
         directPathQueueService;
     private readonly IMediaBackupChunkRuntimeCompositionService _chunkRuntimeCompositionService =
         chunkRuntimeCompositionService;
-    private readonly IMediaBackupSyncFinalizeService _syncFinalizeService = syncFinalizeService;
     private readonly MediaBackupApplyChunkCoordinator _mediaBackupApplyChunkCoordinator =
         mediaBackupApplyChunkCoordinator;
     private readonly MediaBackupChunkSyncMutationCoordinator _mediaBackupChunkSyncMutationCoordinator =
@@ -123,13 +124,18 @@ internal sealed class MediaBackupApplyPhase(
                     })
                 )
             );
+        IReadOnlyList<MediaBackupChunkPathsState> states = chunkStates
+            .Select(chunk => new MediaBackupChunkPathsState
+            {
+                Id = chunk.ChunkId,
+                Paths = chunk.Paths.ToList(),
+            })
+            .ToList();
 
-        MediaBackupSyncFinalizeResult finalize = _syncFinalizeService.Finalize(
-            chunkStates,
-            runtime.Context.PathsInBoth,
-            runtime.Context.PathsDirect
+        MediaBackupChunkSyncPlan plan = _chunkSyncPlanningService.Plan(
+            states,
+            runtime.Context.PathsInBoth
         );
-        MediaBackupChunkSyncPlan plan = finalize.Plan;
 
         foreach (MediaBackupChunkSyncChunkPlan chunkPlan in plan.Chunks)
         {
@@ -148,6 +154,12 @@ internal sealed class MediaBackupApplyPhase(
                 break;
         }
 
-        runtime.Context.PathsDirect = [.. finalize.MergedDirectPaths];
+        runtime.Context.PathsDirect =
+        [
+            .. _directPathQueueService.MergeAndNormalize(
+                runtime.Context.PathsDirect,
+                plan.DirectPathsToAdd
+            ),
+        ];
     }
 }

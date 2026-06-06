@@ -3,12 +3,10 @@ using Backup.Application.Media.Backup.Models;
 namespace Backup.Application.Media.Backup;
 
 public sealed class MediaBackupDuplicateCheckPlanningService(
-    IMediaBackupPathAnalysisService pathAnalysisService,
     IMediaBackupDuplicateCleanupService duplicateCleanupService,
     IMediaBackupStorageConsistencyDecisionService storageConsistencyDecisionService
 ) : IMediaBackupDuplicateCheckPlanningService
 {
-    private readonly IMediaBackupPathAnalysisService _pathAnalysisService = pathAnalysisService;
     private readonly IMediaBackupDuplicateCleanupService _duplicateCleanupService =
         duplicateCleanupService;
     private readonly IMediaBackupStorageConsistencyDecisionService _storageConsistencyDecisionService =
@@ -19,10 +17,27 @@ public sealed class MediaBackupDuplicateCheckPlanningService(
         IReadOnlyList<string> storagePaths
     )
     {
-        IReadOnlyList<MediaPathDuplicateGroup> memoryDuplicates =
-            _pathAnalysisService.FindDuplicates(memoryPaths);
-        IReadOnlyList<MediaPathDuplicateGroup> storageDuplicates =
-            _pathAnalysisService.FindDuplicates(storagePaths);
+        IReadOnlyList<MediaPathDuplicateGroup> memoryDuplicates = memoryPaths
+            .GroupBy(path => path)
+            .Where(group => group.Count() > 1)
+            .Select(group => new MediaPathDuplicateGroup
+            {
+                Path = group.Key,
+                Count = group.Count(),
+                Entries = group.ToList(),
+            })
+            .ToList();
+
+        IReadOnlyList<MediaPathDuplicateGroup> storageDuplicates = storagePaths
+            .GroupBy(path => path)
+            .Where(group => group.Count() > 1)
+            .Select(group => new MediaPathDuplicateGroup
+            {
+                Path = group.Key,
+                Count = group.Count(),
+                Entries = group.ToList(),
+            })
+            .ToList();
 
         MediaBackupDuplicateCleanupPlan? cleanupPlan =
             storageDuplicates.Count == 0

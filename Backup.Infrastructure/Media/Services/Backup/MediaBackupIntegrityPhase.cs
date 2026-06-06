@@ -2,10 +2,8 @@ using Backup.Application.Media.Backup;
 using Backup.Application.Media.Backup.Models;
 using Backup.Infrastructure.Logging;
 using Backup.Infrastructure.Media.Abstractions.Services;
-using Backup.Infrastructure.Media.IO;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Models.Utils;
-using Backup.Infrastructure.Utility.Abstractions.Services;
 using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Services;
@@ -15,7 +13,6 @@ internal sealed class MediaBackupIntegrityPhase(
     IMediaBackupIntegrityChangeDetectionService integrityChangeDetectionService,
     IMediaBackupIntegrityPlanningService integrityPlanningService,
     IMediaBackupZipMutationIOService zipMutationIoService,
-    IMediaBackupArchiveMetadataMapService archiveMetadataMapService,
     IMediaBackupIntegrityChunkRefreshService integrityChunkRefreshService,
     IMediaBackupChunkPersistenceIOService chunkPersistenceIoService
 ) : IMediaBackupIntegrityPhase
@@ -27,8 +24,6 @@ internal sealed class MediaBackupIntegrityPhase(
     private readonly IMediaBackupIntegrityPlanningService _integrityPlanningService =
         integrityPlanningService;
     private readonly IMediaBackupZipMutationIOService _zipMutationIoService = zipMutationIoService;
-    private readonly IMediaBackupArchiveMetadataMapService _archiveMetadataMapService =
-        archiveMetadataMapService;
     private readonly IMediaBackupIntegrityChunkRefreshService _integrityChunkRefreshService =
         integrityChunkRefreshService;
     private readonly IMediaBackupChunkPersistenceIOService _chunkPersistenceIoService =
@@ -182,7 +177,7 @@ internal sealed class MediaBackupIntegrityPhase(
 
             runtime.Logger.LogInfo("expanding chunk");
             IReadOnlyDictionary<string, MediaBackupChunkDataMetadata> metadataByArchivePath =
-                _archiveMetadataMapService.BuildByArchivePath(
+                MediaBackupArchiveMetadataMap.BuildByArchivePath(
                     entries.Select(item => new MediaBackupArchiveMetadataInput
                     {
                         ArchivePath = item.Key,

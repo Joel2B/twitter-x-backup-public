@@ -3,14 +3,11 @@ using Backup.Application.Media.Backup.Models;
 namespace Backup.Application.Media.Backup;
 
 public sealed class MediaBackupApplyChunkPlanningService(
-    IMediaBackupApplyEntrySelectionService mediaBackupApplyEntrySelectionService,
-    IMediaBackupApplyFinalizeService mediaBackupApplyFinalizeService
+    IMediaBackupStorageConsistencyDecisionService mediaBackupStorageConsistencyDecisionService
 ) : IMediaBackupApplyChunkPlanningService
 {
-    private readonly IMediaBackupApplyEntrySelectionService _mediaBackupApplyEntrySelectionService =
-        mediaBackupApplyEntrySelectionService;
-    private readonly IMediaBackupApplyFinalizeService _mediaBackupApplyFinalizeService =
-        mediaBackupApplyFinalizeService;
+    private readonly IMediaBackupStorageConsistencyDecisionService _mediaBackupStorageConsistencyDecisionService =
+        mediaBackupStorageConsistencyDecisionService;
 
     public MediaBackupApplyChunkPlan Plan(
         IReadOnlyCollection<MediaBackupApplyChunkPathState> chunkPaths,
@@ -38,19 +35,29 @@ public sealed class MediaBackupApplyChunkPlanningService(
             };
         }
 
-        IReadOnlyList<MediaBackupApplyEntryCandidate> toAdd =
-            _mediaBackupApplyEntrySelectionService.SelectEntriesToAdd(candidates, storagePaths);
+        IReadOnlyList<MediaBackupApplyEntryCandidate> toAdd = candidates
+            .Where(item => item.HasHash && !storagePaths.Contains(item.ArchivePath))
+            .ToList();
+
         HashSet<string> projectedStoragePaths = [.. storagePaths];
 
         foreach (MediaBackupApplyEntryCandidate item in toAdd)
             projectedStoragePaths.Add(item.ArchivePath);
 
-        MediaBackupApplyFinalizePlan finalizePlan = _mediaBackupApplyFinalizeService.Plan(
-            candidates.Select(item => item.ArchivePath),
-            projectedStoragePaths,
-            existingChunkIds,
-            chunkId
-        );
+        MediaBackupStorageConsistencyDecision decision =
+            _mediaBackupStorageConsistencyDecisionService.DecideForApply(
+                candidates.Select(item => item.ArchivePath),
+                projectedStoragePaths
+            );
+
+        HashSet<int> ids = [.. existingChunkIds];
+        ids.Add(chunkId);
+
+        MediaBackupApplyFinalizePlan finalizePlan = new()
+        {
+            ConsistencyDecision = decision,
+            ChunkIds = ids.OrderBy(id => id).ToList(),
+        };
 
         return new MediaBackupApplyChunkPlan
         {

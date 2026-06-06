@@ -5,30 +5,41 @@ namespace Backup.Tests;
 public class MediaBackupPathAnalysisServiceTests
 {
     [Fact]
-    public void FindDuplicates_ReturnsOnlyDuplicatedPaths()
+    public void Plan_FindsDuplicates_AndBuildsCleanup()
     {
-        MediaBackupPathAnalysisService sut = new();
+        MediaBackupDuplicateCheckPlanningService sut = new(
+            new MediaBackupDuplicateCleanupService(),
+            new MediaBackupStorageConsistencyDecisionService(
+                new MediaBackupChunkReconciliationService()
+            )
+        );
         string[] paths = ["a.jpg", "b.jpg", "a.jpg", "c.jpg", "b.jpg"];
 
-        var duplicates = sut.FindDuplicates(paths);
+        var plan = sut.Plan(paths, paths);
 
-        Assert.Equal(2, duplicates.Count);
-        Assert.Contains(duplicates, group => group.Path == "a.jpg" && group.Count == 2);
-        Assert.Contains(duplicates, group => group.Path == "b.jpg" && group.Count == 2);
+        Assert.Equal(2, plan.MemoryDuplicatePathCount);
+        Assert.Equal(4, plan.MemoryDuplicateEntryCount);
+        Assert.Equal(2, plan.StorageDuplicatePathCount);
+        Assert.NotNull(plan.StorageCleanupPlan);
+        Assert.Equal(2, plan.StorageCleanupPlan!.Operations.Count);
     }
 
     [Fact]
-    public void Diff_ReturnsMissingAndExtras()
+    public void Plan_DetectsMissingAndExtras()
     {
-        MediaBackupPathAnalysisService sut = new();
+        MediaBackupDuplicateCheckPlanningService sut = new(
+            new MediaBackupDuplicateCleanupService(),
+            new MediaBackupStorageConsistencyDecisionService(
+                new MediaBackupChunkReconciliationService()
+            )
+        );
         string[] expected = ["a.jpg", "b.jpg", "d.jpg"];
         string[] actual = ["a.jpg", "c.jpg", "b.jpg"];
 
-        var diff = sut.Diff(expected, actual);
+        var plan = sut.Plan(expected, actual);
 
-        Assert.Single(diff.MissingPaths);
-        Assert.Equal("d.jpg", diff.MissingPaths[0]);
-        Assert.Single(diff.ExtraPaths);
-        Assert.Equal("c.jpg", diff.ExtraPaths[0]);
+        Assert.Equal(1, plan.ConsistencyDecision.MissingCount);
+        Assert.Single(plan.ConsistencyDecision.ExtraPaths);
+        Assert.Equal("c.jpg", plan.ConsistencyDecision.ExtraPaths[0]);
     }
 }
