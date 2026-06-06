@@ -108,10 +108,6 @@ public static partial class MediaBackupInfrastructureServiceCollectionExtensions
             MediaBackupDuplicateCheckPlanningService
         >();
         services.AddScoped<
-            IMediaBackupDuplicateChunkOrchestrationService,
-            MediaBackupDuplicateChunkOrchestrationService
-        >();
-        services.AddScoped<
             IMediaBackupDuplicateChunkExecutionService,
             MediaBackupDuplicateChunkExecutionService
         >();

@@ -3,14 +3,11 @@ using Backup.Application.Media.Backup.Models;
 namespace Backup.Application.Media.Backup;
 
 public sealed class MediaBackupDuplicateChunkExecutionService(
-    IMediaBackupDuplicateCheckPlanningService mediaBackupDuplicateCheckPlanningService,
-    IMediaBackupDuplicateChunkOrchestrationService mediaBackupDuplicateChunkOrchestrationService
+    IMediaBackupDuplicateCheckPlanningService mediaBackupDuplicateCheckPlanningService
 ) : IMediaBackupDuplicateChunkExecutionService
 {
     private readonly IMediaBackupDuplicateCheckPlanningService _mediaBackupDuplicateCheckPlanningService =
         mediaBackupDuplicateCheckPlanningService;
-    private readonly IMediaBackupDuplicateChunkOrchestrationService _mediaBackupDuplicateChunkOrchestrationService =
-        mediaBackupDuplicateChunkOrchestrationService;
 
     public MediaBackupDuplicateChunkExecutionResult Execute(
         IEnumerable<string> chunkPaths,
@@ -25,11 +22,10 @@ public sealed class MediaBackupDuplicateChunkExecutionService(
             memory,
             storage
         );
-        MediaBackupDuplicateChunkExecutionPlan executionPlan =
-            _mediaBackupDuplicateChunkOrchestrationService.BuildExecutionPlan(
-                plan,
-                extraPreviewLimit
-            );
+        MediaBackupDuplicateChunkExecutionPlan executionPlan = BuildExecutionPlan(
+            plan,
+            extraPreviewLimit
+        );
 
         int removedExtrasCount = executionPlan.ShouldRemoveExtras
             ? executionPlan.ExtraPathsToRemove.Count
@@ -48,9 +44,43 @@ public sealed class MediaBackupDuplicateChunkExecutionService(
         int currentStorageCount,
         MediaBackupDuplicateChunkExecutionResult executionResult
     ) =>
-        _mediaBackupDuplicateChunkOrchestrationService.UpdateStorageCount(
+        UpdateStorageCount(
             currentStorageCount,
             executionResult.StorageArchivePaths.Count,
             executionResult.RemovedExtrasCount
         );
+
+    private static MediaBackupDuplicateChunkExecutionPlan BuildExecutionPlan(
+        MediaBackupDuplicateCheckPlan plan,
+        int extraPreviewLimit
+    )
+    {
+        MediaBackupDuplicateCleanupPlan? cleanupPlan = plan.StorageCleanupPlan;
+        MediaBackupStorageConsistencyDecision decision = plan.ConsistencyDecision;
+        IReadOnlyList<string> extras = decision.ExtraPaths.ToList();
+
+        return new MediaBackupDuplicateChunkExecutionPlan
+        {
+            HasMemoryDuplicates = plan.MemoryDuplicatePathCount != 0,
+            MemoryDuplicatePathCount = plan.MemoryDuplicatePathCount,
+            MemoryDuplicateEntryCount = plan.MemoryDuplicateEntryCount,
+            HasStorageDuplicates = plan.StorageDuplicatePathCount != 0,
+            StorageDuplicatePathCount = plan.StorageDuplicatePathCount,
+            StorageDuplicateEntryCount = plan.StorageDuplicateEntryCount,
+            RemovedDuplicatePathCount = cleanupPlan?.RemovedPathCount ?? 0,
+            CleanupOperations = cleanupPlan?.Operations.ToList() ?? [],
+            IsConsistent = decision.IsConsistent,
+            MissingCount = decision.MissingCount,
+            ExtrasCount = extras.Count,
+            ShouldRemoveExtras = decision.ShouldRemoveExtras,
+            ExtraPathsToRemove = extras,
+            ExtraPathsPreview = extras.Take(extraPreviewLimit).ToList(),
+        };
+    }
+
+    private static int UpdateStorageCount(
+        int currentStorageCount,
+        int storageEntriesRead,
+        int removedExtrasCount
+    ) => currentStorageCount + storageEntriesRead - removedExtrasCount;
 }
