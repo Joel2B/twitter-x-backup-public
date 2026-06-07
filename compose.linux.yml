@@ -11,3 +11,8 @@ services:
 
       - "/home/j/twitter-x-backup/data:/app/data"
       - "/home/j/twitter-x-backup/debug:/app/debug"
+
+volumes:
+  twitter_x_backup_sqlite:
+    external: true
+    name: twitter_x_backup_sqlite
