@@ -22,56 +22,66 @@ internal sealed class MediaBackupDirectPathScanCoordinator(
         CancellationToken cancellationToken = default
     )
     {
+        IReadOnlyList<string> normalizedPaths = _directPathQueueService.Normalize(
+            runtime.Context.Paths
+        );
+
+        List<DirectPath> paths = await BuildPaths(runtime, normalizedPaths, cancellationToken);
+
         ParallelOptions options = new()
         {
             MaxDegreeOfParallelism = 64,
             CancellationToken = cancellationToken,
         };
 
-        int total = runtime.Context.Paths.Count;
+        int total = paths.Count;
         int done = 0;
         int lastPercent = -1;
         Stopwatch sw = Stopwatch.StartNew();
 
+        runtime.Logger.LogInfo(
+            "direct path scan: paths={count}, threshold={size}",
+            total,
+            runtime.Config.Chunk.Path.Size
+        );
+
         try
         {
             await Parallel.ForEachAsync(
-                runtime.Context.Paths,
+                paths,
                 options,
-                async (path, ct) =>
+                async (candidate, ct) =>
                 {
                     try
                     {
-                        MediaCacheEntry? cache = await runtime.MediaData.GetCache(path);
-
-                        if (
-                            cache is null
-                            || cache.Size?.File is not long fileSize
-                            || fileSize <= runtime.Config.Chunk.Path.Size
-                        )
-                            return;
-
-                        bool existsSource = await runtime.MediaData.Exists(path);
+                        bool existsSource = await runtime.MediaData.Exists(candidate.OriginalPath);
 
                         if (!existsSource)
                             throw new InvalidOperationException(
-                                $"source media missing for path {path}"
+                                $"source media missing for path {candidate.OriginalPath}"
                             );
 
-                        bool existsTarget = await runtime.MediaBackupData.Exists(path);
+                        bool existsTarget = await runtime.MediaBackupData.Exists(
+                            candidate.OriginalPath
+                        );
 
-                        if (existsTarget || string.IsNullOrWhiteSpace(cache.Path))
+                        if (existsTarget)
                             return;
 
-                        runtime.Context.PathsDirect.Add(cache.Path);
+                        runtime.Context.PathsDirect.Add(candidate.CachePath);
                     }
                     catch (OperationCanceledException)
                     {
-                        runtime.Logger.LogWarning("Canceled {path}", path);
+                        runtime.Logger.LogWarning("Canceled {path}", candidate.OriginalPath);
                     }
                     catch (Exception ex)
                     {
-                        runtime.Logger.LogError(ex, "error in {path}: {error}", path, ex.Message);
+                        runtime.Logger.LogError(
+                            ex,
+                            "error in {path}: {error}",
+                            candidate.OriginalPath,
+                            ex.Message
+                        );
                     }
                     finally
                     {
@@ -106,6 +116,7 @@ internal sealed class MediaBackupDirectPathScanCoordinator(
             .Context.Chunks.Values.SelectMany(chunk => chunk.Data)
             .Select(item => item.Path)
             .ToList();
+
         IReadOnlyList<string> normalizedDirectPaths = _directPathQueueService.Normalize(
             runtime.Context.PathsDirect
         );
@@ -126,9 +137,40 @@ internal sealed class MediaBackupDirectPathScanCoordinator(
         );
     }
 
+    private static async Task<List<DirectPath>> BuildPaths(
+        MediaBackupRuntime runtime,
+        IEnumerable<string> paths,
+        CancellationToken cancellationToken
+    )
+    {
+        List<DirectPath> directPaths = [];
+
+        foreach (string path in paths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            MediaCacheEntry? cache = await runtime.MediaData.GetCache(path);
+
+            if (cache is null || string.IsNullOrWhiteSpace(cache.Path))
+                continue;
+
+            if (cache.Size?.File is not long fileSize)
+                continue;
+
+            if (fileSize <= runtime.Config.Chunk.Path.Size)
+                continue;
+
+            directPaths.Add(new(path, cache.Path));
+        }
+
+        return directPaths;
+    }
+
     private static int CalculateProgressPercent(int current, int total)
     {
         int safeTotal = Math.Max(total, 1);
         return (int)((long)current * 100 / safeTotal);
     }
+
+    private sealed record DirectPath(string OriginalPath, string CachePath);
 }
