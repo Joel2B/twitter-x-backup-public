@@ -14,6 +14,10 @@ Console.Error.WriteLine("[startup] registering services");
 builder.Services.AddRuntimeConfiguration(builder.Configuration);
 builder.Services.AddBackupApiInfrastructure();
 
+builder.Services.AddCors(options =>
+    options.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader())
+);
+
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
@@ -32,6 +36,7 @@ await scope.ServiceProvider.RunBackupInfrastructureSetup();
 
 Console.Error.WriteLine("[startup] configuring middleware and routes");
 app.UseExceptionHandler();
+app.UseCors();
 app.UseApiKeyAuthentication();
 app.UseApiSwagger();
 app.MapControllers();
