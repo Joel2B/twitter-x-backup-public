@@ -16,6 +16,12 @@ public sealed class ApiKeyAuthenticationMiddleware(
 
     public async Task InvokeAsync(HttpContext context)
     {
+        if (HttpMethods.IsOptions(context.Request.Method))
+        {
+            await _next(context);
+            return;
+        }
+
         if (!_options.Enabled)
         {
             await _next(context);
