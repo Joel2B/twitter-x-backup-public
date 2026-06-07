@@ -143,7 +143,6 @@ public partial class LocalPostData
             .ToList();
 
         List<string> mainPaths = [.. GetDataFilePaths()];
-        List<string> mainPathsFormatted = [.. mainPaths.Select(UtilsPath.GetPathFormatted)];
 
         _logger.LogInformation(
             "replicate: starting for {partitionCount} secondary partitions",
@@ -153,21 +152,17 @@ public partial class LocalPostData
         foreach (PartitionConfig partition in partitions)
         {
             List<string> paths = [.. GetDataFilePaths(partition)];
-            List<string> pathsFormatted = [.. paths.Select(UtilsPath.GetPathFormatted)];
+
             IReadOnlyList<PostDataFileReplicationOperation> operations =
                 _historyCoordinator.PlanReplication(mainPaths, paths);
-            IReadOnlyList<PostDataFileReplicationOperation> formattedOperations =
-                _historyCoordinator.PlanReplication(mainPathsFormatted, pathsFormatted);
 
             _logger.LogInformation(
-                "replicate: partition {partitionId}, files={operationCount}, formattedFiles={formattedOperationCount}",
+                "replicate: partition {partitionId}, files={operationCount}",
                 partition.Id,
-                operations.Count,
-                formattedOperations.Count
+                operations.Count
             );
 
             ApplyReplicationOperations(operations);
-            ApplyReplicationOperations(formattedOperations);
         }
 
         _logger.LogInformation("replicate: completed");
