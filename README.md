@@ -38,6 +38,11 @@ Media cache backend:
 - `Data.Media[].CacheBackend.Type` defaults to `json` (or omit `CacheBackend` entirely).
 - `redis` and `postgres` are reserved for future implementation and currently fail fast on startup.
 
+Post store backends:
+- `Data.Post[].Type` supports `local`, `sqlite`, and `postgres`.
+- For `postgres`, set `Data.Post[].ConnectionString` to a valid PostgreSQL connection string.
+- The post parity check compares all enabled post stores, so you can run JSON + SQLite + PostgreSQL together.
+
 ## Run Locally
 
 ```bash

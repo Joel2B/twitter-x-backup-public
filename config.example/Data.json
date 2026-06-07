@@ -135,6 +135,26 @@
         "Verify": true,
         "Fix": false
       }
+    },
+    {
+      "Id": "nas post postgres",
+      "Type": "postgres",
+      "Default": false,
+      "Enabled": false,
+      "ConnectionString": "Host=localhost;Port=5432;Database=twitter_x_backup;Username=postgres;Password={REPLACE_THIS}",
+      "Paths": {
+        "Paths": ["data"],
+        "Post": {
+          "Paths": ["post", "postgres"],
+          "File": "unused"
+        }
+      },
+      "Partitions": [6],
+      "Tasks": {
+        "Prune": true,
+        "Verify": true,
+        "Fix": false
+      }
     }
   ],
   "Dump": [

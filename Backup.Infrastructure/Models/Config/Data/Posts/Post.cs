@@ -4,6 +4,7 @@ namespace Backup.Infrastructure.Models.Config.Data.Posts;
 
 public class StoragePost : Storage
 {
+    public string? ConnectionString { get; set; }
     public required Paths Paths { get; set; }
 }
 

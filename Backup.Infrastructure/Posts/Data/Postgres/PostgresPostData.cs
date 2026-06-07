@@ -1,0 +1,94 @@
+using Backup.Application.Core;
+using Backup.Application.Posts;
+using Backup.Infrastructure.Core.Abstractions.Partition;
+using Backup.Infrastructure.Core.Abstractions.Setup;
+using Backup.Infrastructure.Models.Config.Data;
+using Backup.Infrastructure.Models.Config.Data.Posts;
+using Backup.Infrastructure.Posts.Abstractions.Data;
+using Backup.Infrastructure.Posts.Models.Stored;
+using Microsoft.Extensions.Logging;
+
+namespace Backup.Infrastructure.Posts.Data.Postgres;
+
+// Facade for PostgreSQL-backed post storage. Keep external semantics stable while
+// delegating reading/writing/merge details to internal partial components.
+public partial class PostgresPostData(
+    ILogger<PostgresPostData> logger,
+    StoragePost config,
+    IPartition partition,
+    IPostStoreMergeMutationService postStoreMergeMutationService,
+    IPostSoftDeleteExecutionService postSoftDeleteExecutionService,
+    IPostSnapshotNormalizationService postSnapshotNormalizationService,
+    IPostMediaInputsCompositionService postMediaInputsCompositionService,
+    IPostHashingService postHashingService,
+    IPostChangeComputationService postChangeComputationService,
+    IPostChangeReadModelProjectionService postChangeReadModelProjectionService,
+    IPostIdentifierFilterService postIdentifierFilterService,
+    IDateTimeProvider dateTimeProvider
+) : IPostDataStore, ISetup, IAsyncDisposable
+{
+    public string? Id { get; set; }
+    public bool IsDefault { get; set; }
+
+    private readonly ILogger<PostgresPostData> _logger = logger;
+    private readonly StoragePost _config = config;
+    private readonly IPartition _partition = partition;
+    private readonly IPostStoreMergeMutationService _postStoreMergeMutationService =
+        postStoreMergeMutationService;
+    private readonly IPostSoftDeleteExecutionService _postSoftDeleteExecutionService =
+        postSoftDeleteExecutionService;
+    private readonly IPostSnapshotNormalizationService _postSnapshotNormalizationService =
+        postSnapshotNormalizationService;
+    private readonly IPostMediaInputsCompositionService _postMediaInputsCompositionService =
+        postMediaInputsCompositionService;
+    private readonly IPostHashingService _postHashingService = postHashingService;
+    private readonly IPostChangeComputationService _postChangeComputationService =
+        postChangeComputationService;
+    private readonly IPostChangeReadModelProjectionService _postChangeReadModelProjectionService =
+        postChangeReadModelProjectionService;
+    private readonly IPostIdentifierFilterService _postIdentifierFilterService =
+        postIdentifierFilterService;
+    private readonly IDateTimeProvider _dateTimeProvider = dateTimeProvider;
+    private PostsDbContext? _db;
+    private const int SqlInChunkSize = 5000;
+
+    public async Task Setup()
+    {
+        await EnsureSchema();
+    }
+
+    public async Task AddPosts(
+        string userId,
+        string origin,
+        List<Post> incoming,
+        MergeOptions? options = null
+    ) => await AddPostsInternal(userId, origin, incoming, options ?? new());
+
+    public async Task<int> MarkDeletedExcept(
+        string userId,
+        string origin,
+        IReadOnlyCollection<string> keepPostIds
+    ) => await MarkDeletedExceptInternal(userId, origin, keepPostIds);
+
+    public Task Reset(List<Post> posts)
+    {
+        return ResetInternal(posts);
+    }
+
+    public async Task UpsertPosts(List<Post> posts) => await UpsertPostsInternal(posts);
+
+    public async Task Save() => await SaveInternal();
+
+    public Task Prune() => PruneInternal();
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_db is not null)
+        {
+            await _db.DisposeAsync();
+            _db = null;
+        }
+
+        GC.SuppressFinalize(this);
+    }
+}

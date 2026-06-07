@@ -32,7 +32,7 @@ WORKDIR /app
 COPY --from=publish /app/publish .
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends tzdata \
+    && apt-get install -y --no-install-recommends tzdata libgssapi-krb5-2 \
     && rm -rf /var/lib/apt/lists/*
 
 ENV TZ=America/Mazatlan

@@ -9,6 +9,7 @@ using Backup.Infrastructure.Models.Config;
 using Backup.Infrastructure.Models.Config.Data.Posts;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Data.Json;
+using Backup.Infrastructure.Posts.Data.Postgres;
 using Backup.Infrastructure.Posts.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -55,6 +56,7 @@ public static partial class PostDataInfrastructureServiceCollectionExtensions
         Dictionary<string, Type> types = new()
         {
             ["local"] = typeof(LocalPostData),
+            ["postgres"] = typeof(PostgresPostData),
             ["sqlite"] = typeof(SqlitePostData),
         };
 
