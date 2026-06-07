@@ -16,7 +16,7 @@ public static class LoggingExtensions
         Microsoft.Extensions.Logging.LoggerExtensions.LogInformation(logger, message, args);
     }
 
-    public static void LogInformation(
+    private static void LogInformation(
         this Microsoft.Extensions.Logging.ILogger logger,
         string? id,
         string? message,
