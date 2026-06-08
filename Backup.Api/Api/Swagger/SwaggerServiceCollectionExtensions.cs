@@ -29,6 +29,7 @@ public static class SwaggerServiceCollectionExtensions
 
         options.SupportNonNullableReferenceTypes();
         options.OperationFilter<PostsApiExamplesOperationFilter>();
+        options.OperationFilter<OperationsApiExamplesOperationFilter>();
 
         string xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
         string xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);

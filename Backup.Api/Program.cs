@@ -22,6 +22,7 @@ builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddPostIngestionApi();
+builder.Services.AddOperationsApi();
 builder.Services.AddApiSwagger();
 builder.Services.AddApiKeyAuthentication(builder.Configuration);
 

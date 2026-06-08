@@ -14,13 +14,19 @@ public class PostsApiExamplesOperationFilter : IOperationFilter
         if (!string.Equals(method, "POST", StringComparison.OrdinalIgnoreCase))
             return;
 
-        if (string.Equals(relativePath, "api/posts/processed", StringComparison.OrdinalIgnoreCase))
+        if (
+            string.Equals(
+                relativePath,
+                "api/v1/posts/processed",
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
         {
             ApplyProcessedExamples(operation);
             return;
         }
 
-        if (string.Equals(relativePath, "api/posts/raw", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(relativePath, "api/v1/posts/raw", StringComparison.OrdinalIgnoreCase))
             ApplyRawExamples(operation);
     }
 

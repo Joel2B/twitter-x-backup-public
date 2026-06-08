@@ -9,7 +9,7 @@ namespace Backup.Tests;
 public class InfrastructureCompositionSmokeTests
 {
     [Fact]
-    public void AddBackupApiInfrastructure_ResolvesCriticalServices()
+    public async Task AddBackupApiInfrastructure_ResolvesCriticalServices()
     {
         using TestConfigScope _ = TestConfigScope.Create();
 
@@ -21,7 +21,7 @@ public class InfrastructureCompositionSmokeTests
             descriptor => descriptor.ServiceType == typeof(IPostRuntimeService)
         );
 
-        using ServiceProvider provider = services.BuildServiceProvider(
+        await using ServiceProvider provider = services.BuildServiceProvider(
             new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true }
         );
 
@@ -29,17 +29,17 @@ public class InfrastructureCompositionSmokeTests
     }
 
     [Fact]
-    public void AddBackupCliInfrastructure_ResolvesRunner()
+    public async Task AddBackupCliInfrastructure_ResolvesRunner()
     {
         using TestConfigScope _ = TestConfigScope.Create();
 
         ServiceCollection services = new();
         services.AddBackupCliInfrastructure();
 
-        using ServiceProvider provider = services.BuildServiceProvider(
+        await using ServiceProvider provider = services.BuildServiceProvider(
             new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true }
         );
-        using IServiceScope scope = provider.CreateScope();
+        await using AsyncServiceScope scope = provider.CreateAsyncScope();
 
         Assert.NotNull(scope.ServiceProvider.GetRequiredService<BackupCliRunner>());
     }

@@ -38,7 +38,7 @@ public partial class PostsApiIntegrationTests
         };
 
         HttpResponseMessage response = await host.Client.PostAsJsonAsync(
-            "/api/posts/processed?userId=123&origin=extension-search-timeline",
+            "/api/v1/posts/processed?userId=123&origin=extension-search-timeline",
             payload
         );
 
@@ -77,7 +77,7 @@ public partial class PostsApiIntegrationTests
 
         HttpRequestMessage request = new(
             HttpMethod.Post,
-            "/api/posts/processed?userId=123&origin=extension-search-timeline"
+            "/api/v1/posts/processed?userId=123&origin=extension-search-timeline"
         )
         {
             Content = JsonContent.Create(payload),
@@ -133,7 +133,7 @@ public partial class PostsApiIntegrationTests
         };
 
         HttpResponseMessage response = await host.Client.PostAsJsonAsync(
-            "/api/posts/processed?userId=123&origin=extension-search-timeline",
+            "/api/v1/posts/processed?userId=123&origin=extension-search-timeline",
             payload
         );
 
@@ -175,7 +175,7 @@ public partial class PostsApiIntegrationTests
         };
 
         HttpResponseMessage response = await host.Client.PostAsJsonAsync(
-            "/api/posts/processed?userId=123&origin=extension-search-timeline",
+            "/api/v1/posts/processed?userId=123&origin=extension-search-timeline",
             payload
         );
 
@@ -199,7 +199,7 @@ public partial class PostsApiIntegrationTests
         await using TestApiHost host = await TestApiHost.StartAsync(fakePostData, fakeParser);
 
         HttpResponseMessage response = await host.Client.PostAsJsonAsync(
-            "/api/posts/raw?userId=42&origin=extension-search-timeline",
+            "/api/v1/posts/raw?userId=42&origin=extension-search-timeline",
             new { data = new { timeline = new { instructions = Array.Empty<object>() } } }
         );
 
@@ -230,7 +230,7 @@ public partial class PostsApiIntegrationTests
         );
 
         HttpResponseMessage response = await host.Client.PostAsJsonAsync(
-            "/api/posts/raw?origin=extension-search-timeline",
+            "/api/v1/posts/raw?origin=extension-search-timeline",
             new { data = new { } }
         );
 
