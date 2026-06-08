@@ -12,6 +12,11 @@ public sealed class LocalMediaCachePersistenceIOService(
     private readonly IMediaCacheJsonSnapshotService _mediaCacheJsonSnapshotService =
         mediaCacheJsonSnapshotService;
 
+    public Task<bool> PrimarySnapshotExists(
+        string file,
+        CancellationToken cancellationToken = default
+    ) => Task.FromResult(File.Exists(file));
+
     public async Task<IReadOnlyList<MediaCacheEntry>> LoadIncrementalSnapshots(
         string directory,
         CancellationToken cancellationToken = default

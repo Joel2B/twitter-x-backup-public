@@ -5,27 +5,30 @@ namespace Backup.Infrastructure.DependencyInjection.Features.Media;
 
 public static partial class MediaDataInfrastructureServiceCollectionExtensions
 {
+    internal enum MediaCacheType
+    {
+        Json = 1,
+        Sqlite = 2,
+        Postgres = 3,
+    }
+
     public static IServiceCollection AddMediaDataInfrastructure(this IServiceCollection services)
     {
         services.RegisterMediaDataStores();
         return services;
     }
 
-    internal static Type ResolveCacheType(string? cacheType)
+    internal static MediaCacheType ResolveCacheType(string? cacheType)
     {
         string normalized = (cacheType ?? "json").Trim().ToLowerInvariant();
 
         return normalized switch
         {
-            "json" or "local" or "file" => typeof(LocalMediaCache),
-            "redis" => throw new NotSupportedException(
-                "Media cache backend 'redis' is planned but not enabled yet. Use 'json' for now."
-            ),
-            "postgres" or "postgresql" => throw new NotSupportedException(
-                "Media cache backend 'postgres' is planned but not enabled yet. Use 'json' for now."
-            ),
+            "json" or "local" or "file" => MediaCacheType.Json,
+            "sqlite" => MediaCacheType.Sqlite,
+            "postgres" or "postgresql" => MediaCacheType.Postgres,
             _ => throw new InvalidOperationException(
-                $"Unknown media cache backend type '{cacheType}'. Allowed: json, redis, postgres."
+                $"Unknown media cache backend type '{cacheType}'. Allowed: json, sqlite, postgres."
             ),
         };
     }

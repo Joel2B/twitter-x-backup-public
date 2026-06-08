@@ -67,9 +67,28 @@ public class MediaReplication(
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 using Stream read = await source.Read(action.Path);
-                using Stream write = await target.Write(action.Path);
+                Stream? staged = null;
 
-                await read.CopyToAsync(write, cancellationToken);
+                try
+                {
+                    Stream input = read;
+
+                    if (!read.CanSeek)
+                    {
+                        staged = target.GetTempStream();
+                        await read.CopyToAsync(staged, cancellationToken);
+                        staged.Position = 0;
+                        input = staged;
+                    }
+                    else
+                        read.Position = 0;
+
+                    await target.Save(input, action.Path, cancellationToken);
+                }
+                finally
+                {
+                    staged?.Dispose();
+                }
 
                 _logger.LogInformation(
                     "target={TargetId} id={Id} url={Url} path={Path}",

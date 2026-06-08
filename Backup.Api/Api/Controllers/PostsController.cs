@@ -12,29 +12,25 @@ namespace Backup.Api.Controllers;
 [Route(ApiRoutes.Root + "/posts")]
 [Consumes("application/json")]
 [Produces("application/json")]
-public class PostsController(
-    IPostIngestionService postIngestionService,
-    PostOperationsService operationsService,
-    PostQueryService queryService
-) : ControllerBase
+public class PostsController(IPostIngestionService postIngestionService) : ControllerBase
 {
     private readonly IPostIngestionService _postIngestionService = postIngestionService;
-    private readonly PostOperationsService _operationsService = operationsService;
-    private readonly PostQueryService _queryService = queryService;
 
     [HttpGet]
     [ProducesResponseType(typeof(PagedResponse<PostSummary>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResponse<PostSummary>>> GetPosts(
         [FromQuery] PostListQuery request,
+        [FromServices] PostQueryService queryService,
         CancellationToken cancellationToken
-    ) => Ok(await _queryService.GetPosts(request, cancellationToken));
+    ) => Ok(await queryService.GetPosts(request, cancellationToken));
 
     [HttpGet("{postId}")]
     [ProducesResponseType(typeof(PostDetail), StatusCodes.Status200OK)]
     public async Task<ActionResult<PostDetail>> GetPost(
         string postId,
+        [FromServices] PostQueryService queryService,
         CancellationToken cancellationToken
-    ) => Ok(await _queryService.GetPost(postId, cancellationToken));
+    ) => Ok(await queryService.GetPost(postId, cancellationToken));
 
     /// <summary>
     /// Parses and stores posts from a raw GraphQL timeline response.
@@ -126,13 +122,14 @@ public class PostsController(
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<OperationResult>> Download(
         [FromBody] PostDownloadRequest request,
+        [FromServices] PostOperationsService operationsService,
         CancellationToken cancellationToken
     )
     {
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
 
-        return Ok(await _operationsService.Download(request, cancellationToken));
+        return Ok(await operationsService.Download(request, cancellationToken));
     }
 
     [HttpPost("recovery")]
@@ -140,30 +137,34 @@ public class PostsController(
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<OperationResult>> Recovery(
         [FromBody] PostRecoveryRequest request,
+        [FromServices] PostOperationsService operationsService,
         CancellationToken cancellationToken
     )
     {
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
 
-        return Ok(await _operationsService.Recovery(request, cancellationToken));
+        return Ok(await operationsService.Recovery(request, cancellationToken));
     }
 
     [HttpGet("parity")]
     [ProducesResponseType(typeof(PostStoreParityResponse), StatusCodes.Status200OK)]
     public async Task<ActionResult<PostStoreParityResponse>> GetParity(
+        [FromServices] PostOperationsService operationsService,
         CancellationToken cancellationToken
-    ) => Ok(await _operationsService.GetParity(cancellationToken));
+    ) => Ok(await operationsService.GetParity(cancellationToken));
 
     [HttpGet("counts")]
     [ProducesResponseType(typeof(PostCountsResponse), StatusCodes.Status200OK)]
-    public async Task<ActionResult<PostCountsResponse>> GetCounts() =>
-        Ok(await _operationsService.GetCounts());
+    public async Task<ActionResult<PostCountsResponse>> GetCounts(
+        [FromServices] PostOperationsService operationsService
+    ) => Ok(await operationsService.GetCounts());
 
     [HttpGet("stores")]
     [ProducesResponseType(typeof(IReadOnlyList<PostStoreSummary>), StatusCodes.Status200OK)]
-    public ActionResult<IReadOnlyList<PostStoreSummary>> GetStores() =>
-        Ok(_operationsService.GetStores());
+    public ActionResult<IReadOnlyList<PostStoreSummary>> GetStores(
+        [FromServices] PostOperationsService operationsService
+    ) => Ok(operationsService.GetStores());
 
     [HttpPost("by-ids")]
     [ProducesResponseType(
@@ -173,12 +174,15 @@ public class PostsController(
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<
         ActionResult<IReadOnlyList<Backup.Infrastructure.Posts.Models.Stored.Post>>
-    > GetByIds([FromBody] PostIdsRequest request)
+    > GetByIds(
+        [FromBody] PostIdsRequest request,
+        [FromServices] PostOperationsService operationsService
+    )
     {
         if (!ModelState.IsValid)
             return ValidationProblem(ModelState);
 
-        return Ok(await _operationsService.GetByIds(request));
+        return Ok(await operationsService.GetByIds(request));
     }
 
     [HttpGet("media-inputs")]
@@ -188,19 +192,24 @@ public class PostsController(
     )]
     public async Task<
         ActionResult<IReadOnlyList<Backup.Infrastructure.Posts.Models.Stored.MediaInput>>
-    > GetMediaInputs() => Ok(await _operationsService.GetMediaInputs());
+    > GetMediaInputs([FromServices] PostOperationsService operationsService) =>
+        Ok(await operationsService.GetMediaInputs());
 
     [HttpPost("save")]
     [ProducesResponseType(typeof(OperationResult), StatusCodes.Status200OK)]
-    public async Task<ActionResult<OperationResult>> Save() => Ok(await _operationsService.Save());
+    public async Task<ActionResult<OperationResult>> Save(
+        [FromServices] PostOperationsService operationsService
+    ) => Ok(await operationsService.Save());
 
     [HttpPost("prune")]
     [ProducesResponseType(typeof(OperationResult), StatusCodes.Status200OK)]
-    public async Task<ActionResult<OperationResult>> Prune() =>
-        Ok(await _operationsService.Prune());
+    public async Task<ActionResult<OperationResult>> Prune(
+        [FromServices] PostOperationsService operationsService
+    ) => Ok(await operationsService.Prune());
 
     [HttpPost("replication")]
     [ProducesResponseType(typeof(OperationResult), StatusCodes.Status200OK)]
-    public async Task<ActionResult<OperationResult>> Replicate() =>
-        Ok(await _operationsService.Replicate());
+    public async Task<ActionResult<OperationResult>> Replicate(
+        [FromServices] PostOperationsService operationsService
+    ) => Ok(await operationsService.Replicate());
 }

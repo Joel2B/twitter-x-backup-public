@@ -203,6 +203,64 @@ public sealed class MediaOrchestrationCommandAdapter(
         );
     }
 
+    public async Task VerifyCacheParity(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        List<string> storageIds = _resourceCatalog.GetStorageIds().ToList();
+        List<(string StorageId, int Count)> snapshots = [];
+
+        foreach (string storageId in storageIds)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            IMediaDataMaintenance? maintenance = _resourceCatalog.GetMaintenance(storageId);
+
+            if (maintenance is null)
+                continue;
+
+            int count = await maintenance.GetCacheCount(cancellationToken);
+            snapshots.Add((storageId, count));
+
+            _logger.LogInformation(
+                "media cache count [{StorageId}] entries={EntryCount}",
+                storageId,
+                count
+            );
+        }
+
+        if (snapshots.Count <= 1)
+        {
+            _logger.LogInformation(
+                "media cache parity skipped: only {Count} cache-enabled storage",
+                snapshots.Count
+            );
+            return;
+        }
+
+        (string StorageId, int Count) = snapshots[0];
+
+        foreach ((string StorageId, int Count) secondary in snapshots.Skip(1))
+        {
+            if (secondary.Count == Count)
+            {
+                _logger.LogInformation(
+                    "media cache parity OK: primary={Primary} secondary={Secondary} count={Count}",
+                    StorageId,
+                    secondary.StorageId,
+                    Count
+                );
+                continue;
+            }
+
+            _logger.LogWarning(
+                "media cache parity MISMATCH: primary={Primary} secondary={Secondary} primaryCount={PrimaryCount} secondaryCount={SecondaryCount}",
+                StorageId,
+                secondary.StorageId,
+                Count,
+                secondary.Count
+            );
+        }
+    }
+
     public async Task RunBackups(
         List<MediaDownload> downloads,
         CancellationToken cancellationToken = default

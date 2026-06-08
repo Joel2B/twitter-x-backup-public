@@ -211,19 +211,40 @@
       "Default": true,
       "Enabled": true,
       "SizeHeavy": 10485760,
-      "CacheBackend": {
-        "Type": "json",
-        "ConnectionString": null,
-        "KeyPrefix": "backup:media-cache",
-        "Database": 0
-      },
+      "Cache": [
+        {
+          "Id": "primary",
+          "Default": true,
+          "Enabled": true,
+          "Type": "json",
+          "ConnectionString": null,
+          "Path": {
+            "Paths": ["data", "cache"],
+            "File": "media.cache.json"
+          }
+        },
+        {
+          "Id": "sqlite",
+          "Default": false,
+          "Enabled": false,
+          "Type": "sqlite",
+          "ConnectionString": null,
+          "Path": {
+            "Paths": ["data", "cache"],
+            "File": "media.cache.sqlite"
+          }
+        },
+        {
+          "Id": "postgres",
+          "Default": false,
+          "Enabled": false,
+          "Type": "postgres",
+          "ConnectionString": "Host=127.0.0.1;Port=5432;Database=twitter_x_backup;Username=backup;Password={REPLACE_THIS}"
+        }
+      ],
       "Paths": {
         "Media": {
           "Paths": ["media"]
-        },
-        "Cache": {
-          "Paths": ["data", "cache"],
-          "File": "media.cache.json"
         },
         "Tmp": {
           "Paths": ["data", "cache", "tmp"],

@@ -40,6 +40,7 @@ public interface IMediaOrchestrationCommand
         List<MediaDownload> downloads,
         CancellationToken cancellationToken = default
     );
+    Task VerifyCacheParity(CancellationToken cancellationToken = default);
 
     Task RunBackups(List<MediaDownload> downloads, CancellationToken cancellationToken = default);
 }

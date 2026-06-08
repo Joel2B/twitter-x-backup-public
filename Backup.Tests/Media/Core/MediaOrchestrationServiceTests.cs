@@ -43,6 +43,7 @@ public class MediaOrchestrationServiceTests
         Assert.True(command.FilterCalls >= 2);
         Assert.Equal(1, command.DownloadCalls);
         Assert.Equal(1, command.ReplicationCalls);
+        Assert.Equal(1, command.VerifyCacheParityCalls);
         Assert.Equal(1, command.BackupCalls);
     }
 
@@ -79,6 +80,7 @@ public class MediaOrchestrationServiceTests
         public int FilterCalls { get; private set; }
         public int DownloadCalls { get; private set; }
         public int ReplicationCalls { get; private set; }
+        public int VerifyCacheParityCalls { get; private set; }
         public int BackupCalls { get; private set; }
 
         public Task<IReadOnlyList<MediaInput>> GetMediaInputs(
@@ -152,6 +154,12 @@ public class MediaOrchestrationServiceTests
         )
         {
             ReplicationCalls++;
+            return Task.CompletedTask;
+        }
+
+        public Task VerifyCacheParity(CancellationToken cancellationToken = default)
+        {
+            VerifyCacheParityCalls++;
             return Task.CompletedTask;
         }
 

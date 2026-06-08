@@ -47,6 +47,9 @@ public class LocalMediaDataMaintenance(
     private readonly IMediaMaintenancePrunePathSelectionService _mediaMaintenancePrunePathSelectionService =
         mediaMaintenancePrunePathSelectionService;
 
+    public Task<int> GetCacheCount(CancellationToken cancellationToken = default) =>
+        Task.FromResult(_mediaCache.Count);
+
     public async Task CheckData(
         List<Download> downloads,
         CancellationToken cancellationToken = default
@@ -196,6 +199,7 @@ public class LocalMediaDataMaintenance(
     public async Task Prune(List<Download> downloads, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
         if (!_config.Tasks.Prune)
             return;
 

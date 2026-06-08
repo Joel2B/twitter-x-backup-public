@@ -3,6 +3,7 @@ using Backup.Application.Media.Maintenance;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
+using Backup.Infrastructure.Models.Config.Downloads;
 
 namespace Backup.Infrastructure.Media.Data;
 
@@ -21,10 +22,18 @@ internal sealed class LocalMediaCachePathLayout(
 
     public void EnsureDirectories()
     {
+        List<PathConfig> cachePaths = _config
+            .Cache.Where(cache => cache.Enabled && cache.Path is not null)
+            .Select(cache => cache.Path!)
+            .ToList();
+
         foreach (PartitionConfig item in _partition.GetPartitions())
         {
             if (_mediaCacheDirectoryPolicyService.ShouldCreateCacheDirectory(item.Type, item.Tags))
-                Directory.CreateDirectory(GetCachePath(item));
+            {
+                foreach (PathConfig cachePath in cachePaths)
+                    Directory.CreateDirectory(GetCachePath(item, cachePath));
+            }
 
             if (_mediaCacheDirectoryPolicyService.ShouldCreateMediaDirectory(item.Type))
                 Directory.CreateDirectory(GetMediaPath(item));
@@ -36,22 +45,37 @@ internal sealed class LocalMediaCachePathLayout(
     public string GetMediaPath(PartitionConfig partition) =>
         Path.Combine([.. partition.Paths, .. _config.Paths.Media.Paths]);
 
-    public string GetCachePath(PartitionConfig partition) =>
-        Path.Combine([.. partition.Paths, .. _config.Paths.Cache.Paths]);
+    public string GetCachePath(PartitionConfig partition, PathConfig pathConfig) =>
+        Path.Combine([.. partition.Paths, .. pathConfig.Paths]);
 
     public string GetCacheDownloadPath(PartitionConfig partition) =>
         Path.Combine(
             [.. partition.Paths, .. _config.Paths.Tmp.Paths, .. _config.Paths.Tmp.Downloaded.Paths]
         );
 
-    public string GetCacheFilePath(PartitionConfig partition)
+    public string GetCacheFilePath(PartitionConfig partition, PathConfig pathConfig)
     {
-        string fileName = _dataStoreGuardService.RequireConfiguredFileName(
-            _config.Paths.Cache.File
-        );
+        string fileName = _dataStoreGuardService.RequireConfiguredFileName(pathConfig.File);
 
-        return Path.Combine(GetCachePath(partition), fileName);
+        return Path.Combine(GetCachePath(partition, pathConfig), fileName);
     }
 
-    public string GetPrimaryCacheFilePath() => GetCacheFilePath(_partition.GetPrimary());
+    public string GetPrimaryCacheFilePath(PathConfig pathConfig) =>
+        GetCacheFilePath(_partition.GetPrimary(), pathConfig);
+
+    public string GetIncrementalCacheDirectory(PartitionConfig partition, string cacheKey) =>
+        Path.Combine(GetCacheDownloadPath(partition), "cache", SanitizeKey(cacheKey));
+
+    public string GetVirtualPrimaryCacheFilePath(PartitionConfig partition, string cacheKey) =>
+        Path.Combine(GetIncrementalCacheDirectory(partition, cacheKey), "primary.cache");
+
+    private static string SanitizeKey(string value)
+    {
+        char[] invalidChars = Path.GetInvalidFileNameChars();
+        char[] buffer = value
+            .Select(ch => invalidChars.Contains(ch) ? '_' : char.ToLowerInvariant(ch))
+            .ToArray();
+
+        return new string(buffer);
+    }
 }

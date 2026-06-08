@@ -35,8 +35,14 @@ Configuration directory resolution order:
 Note: runtime config files are intended for local/deployment use and should not be committed.
 
 Media cache backend:
-- `Data.Media[].CacheBackend.Type` defaults to `json` (or omit `CacheBackend` entirely).
-- `redis` and `postgres` are reserved for future implementation and currently fail fast on startup.
+- `Data.Media[].Cache` is an array.
+- Each cache entry supports `Id`, `Default`, `Enabled`, `Type`, `ConnectionString`, and `Path`.
+- Supported `Type` values are `json`, `sqlite`, and `postgres`.
+- One enabled cache can be marked `Default`; otherwise the first enabled cache is used as primary.
+- Replica caches receive the same snapshot and incremental cache writes as the primary cache.
+- For file-based cache entries, configure `Path`.
+- For `sqlite`, the cache uses the configured `Path.File` as the primary snapshot file and stores incremental snapshots in SQLite under the media cache temp/downloaded path.
+- For `postgres`, set `ConnectionString`. The cache namespace is derived automatically from the media store `Id` plus the cache `Id`.
 
 Post store backends:
 - `Data.Post[].Type` supports `local`, `sqlite`, and `postgres`.

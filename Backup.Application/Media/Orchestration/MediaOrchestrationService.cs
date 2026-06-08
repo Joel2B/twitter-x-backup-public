@@ -146,6 +146,8 @@ public sealed class MediaOrchestrationService(ILogger<MediaOrchestrationService>
         }
 
         cancellationToken.ThrowIfCancellationRequested();
+        _logger.LogInformation("media orchestration: verifying media cache parity");
+        await command.VerifyCacheParity(cancellationToken);
 
         _logger.LogInformation(
             "media orchestration: running backups for {DownloadCount} downloads",

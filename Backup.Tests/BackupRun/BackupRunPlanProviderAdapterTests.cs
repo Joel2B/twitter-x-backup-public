@@ -250,11 +250,25 @@ public class BackupRunPlanProviderAdapterTests
                     Enabled = true,
                     Partitions = [],
                     Tasks = new Backup.Infrastructure.Models.Config.Data.Tasks { Prune = true },
+                    Cache =
+                    [
+                        new MediaCacheConfig
+                        {
+                            Id = "primary",
+                            Default = true,
+                            Enabled = true,
+                            Type = "json",
+                            Path = new PathConfig
+                            {
+                                Paths = ["./media/cache"],
+                                File = "media.cache.json",
+                            },
+                        },
+                    ],
                     Paths = new Backup.Infrastructure.Models.Config.Data.Media.Paths
                     {
                         Paths = ["./media"],
                         Media = new PathConfig { Paths = ["./media/files"] },
-                        Cache = new PathConfig { Paths = ["./media/cache"] },
                         Tmp = new Tmp
                         {
                             Paths = ["./media/tmp"],

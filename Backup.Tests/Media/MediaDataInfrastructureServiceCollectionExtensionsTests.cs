@@ -1,33 +1,58 @@
 using Backup.Infrastructure.DependencyInjection.Features.Media;
-using Backup.Infrastructure.Media.Data;
 
 namespace Backup.Tests;
 
 public class MediaDataInfrastructureServiceCollectionExtensionsTests
 {
     [Fact]
-    public void ResolveCacheType_UsesLocal_WhenCacheBackendMissing()
+    public void ResolveCacheType_UsesJson_WhenMissing()
     {
-        Type type = MediaDataInfrastructureServiceCollectionExtensions.ResolveCacheType(null);
+        MediaDataInfrastructureServiceCollectionExtensions.MediaCacheType type =
+            MediaDataInfrastructureServiceCollectionExtensions.ResolveCacheType(null);
 
-        Assert.Equal(typeof(LocalMediaCache), type);
+        Assert.Equal(MediaDataInfrastructureServiceCollectionExtensions.MediaCacheType.Json, type);
     }
 
     [Fact]
-    public void ResolveCacheType_UsesLocal_WhenCacheBackendJson()
+    public void ResolveCacheType_UsesJson_WhenJson()
     {
-        Type type = MediaDataInfrastructureServiceCollectionExtensions.ResolveCacheType("json");
+        MediaDataInfrastructureServiceCollectionExtensions.MediaCacheType type =
+            MediaDataInfrastructureServiceCollectionExtensions.ResolveCacheType("json");
 
-        Assert.Equal(typeof(LocalMediaCache), type);
+        Assert.Equal(MediaDataInfrastructureServiceCollectionExtensions.MediaCacheType.Json, type);
     }
 
     [Fact]
-    public void ResolveCacheType_Throws_WhenCacheBackendRedis()
+    public void ResolveCacheType_UsesSqlite_WhenSqlite()
     {
-        NotSupportedException ex = Assert.Throws<NotSupportedException>(
-            () => MediaDataInfrastructureServiceCollectionExtensions.ResolveCacheType("redis")
+        MediaDataInfrastructureServiceCollectionExtensions.MediaCacheType type =
+            MediaDataInfrastructureServiceCollectionExtensions.ResolveCacheType("sqlite");
+
+        Assert.Equal(
+            MediaDataInfrastructureServiceCollectionExtensions.MediaCacheType.Sqlite,
+            type
+        );
+    }
+
+    [Fact]
+    public void ResolveCacheType_UsesPostgres_WhenPostgres()
+    {
+        MediaDataInfrastructureServiceCollectionExtensions.MediaCacheType type =
+            MediaDataInfrastructureServiceCollectionExtensions.ResolveCacheType("postgres");
+
+        Assert.Equal(
+            MediaDataInfrastructureServiceCollectionExtensions.MediaCacheType.Postgres,
+            type
+        );
+    }
+
+    [Fact]
+    public void ResolveCacheType_Throws_WhenUnknown()
+    {
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+            () => MediaDataInfrastructureServiceCollectionExtensions.ResolveCacheType("invalid")
         );
 
-        Assert.Contains("planned but not enabled yet", ex.Message);
+        Assert.Contains("Allowed: json, sqlite, postgres.", ex.Message);
     }
 }

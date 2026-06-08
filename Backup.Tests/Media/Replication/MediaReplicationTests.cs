@@ -35,6 +35,34 @@ public class MediaReplicationTests
         );
     }
 
+    [Fact]
+    public async Task Replicate_UsesSaveOnTarget_ToPreserveCacheUpdates()
+    {
+        MediaReplication sut = new(
+            new NullLogger<MediaReplication>(),
+            new FakePlanningService(),
+            new FakeDownloadModelMapper()
+        );
+
+        List<Download> downloads =
+        [
+            new Download
+            {
+                Id = "d1",
+                Data = [new DataDownload { Url = "https://x/media.jpg", Path = "media/1.jpg" }],
+            },
+        ];
+
+        TrackingSourceStorage source = new() { Id = "source" };
+        TrackingTargetStorage target = new() { Id = "target" };
+
+        await sut.Replicate(downloads, [source], target, CancellationToken.None);
+
+        Assert.Equal(1, target.SaveCalls);
+        Assert.Equal(0, target.WriteCalls);
+        Assert.Equal("media/1.jpg", target.SavedPaths.Single());
+    }
+
     private sealed class FakePlanningService : IMediaReplicationPlanningService
     {
         public IReadOnlyList<MediaReplicationCopyAction> SelectCopyActions(
@@ -115,6 +143,59 @@ public class MediaReplicationTests
         public Task<Stream> Read(string path) => Task.FromResult<Stream>(new MemoryStream());
 
         public Task<Stream> Write(string path) => Task.FromResult<Stream>(new MemoryStream());
+
+        public Task<string?> GetHash(string path) => Task.FromResult<string?>(null);
+
+        public Task<MediaCacheEntry?> GetCache(string path) =>
+            Task.FromResult<MediaCacheEntry?>(null);
+
+        public Stream GetTempStream() => new MemoryStream();
+    }
+
+    private sealed class TrackingSourceStorage : IMediaStorage
+    {
+        public string? Id { get; set; }
+
+        public Task Save(Stream stream, string path, CancellationToken token) => Task.CompletedTask;
+
+        public Task<bool> Exists(string path) => Task.FromResult(true);
+
+        public Task<Stream> Read(string path) =>
+            Task.FromResult<Stream>(new MemoryStream([1, 2, 3, 4]));
+
+        public Task<Stream> Write(string path) => Task.FromResult<Stream>(new MemoryStream());
+
+        public Task<string?> GetHash(string path) => Task.FromResult<string?>(null);
+
+        public Task<MediaCacheEntry?> GetCache(string path) =>
+            Task.FromResult<MediaCacheEntry?>(null);
+
+        public Stream GetTempStream() => new MemoryStream();
+    }
+
+    private sealed class TrackingTargetStorage : IMediaStorage
+    {
+        public string? Id { get; set; }
+        public int SaveCalls { get; private set; }
+        public int WriteCalls { get; private set; }
+        public List<string> SavedPaths { get; } = [];
+
+        public Task Save(Stream stream, string path, CancellationToken token)
+        {
+            SaveCalls++;
+            SavedPaths.Add(path);
+            return Task.CompletedTask;
+        }
+
+        public Task<bool> Exists(string path) => Task.FromResult(false);
+
+        public Task<Stream> Read(string path) => Task.FromResult<Stream>(new MemoryStream());
+
+        public Task<Stream> Write(string path)
+        {
+            WriteCalls++;
+            return Task.FromResult<Stream>(new MemoryStream());
+        }
 
         public Task<string?> GetHash(string path) => Task.FromResult<string?>(null);
 

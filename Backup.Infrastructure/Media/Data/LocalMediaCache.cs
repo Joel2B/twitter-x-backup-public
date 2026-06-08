@@ -38,6 +38,8 @@ public class LocalMediaCache : IMediaCache
         _writeCoordinator = writeCoordinator;
     }
 
+    public int Count => _cache.Count;
+
     public Task Setup()
     {
         _pathLayout.EnsureDirectories();

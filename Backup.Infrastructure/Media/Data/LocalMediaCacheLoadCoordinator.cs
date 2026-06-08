@@ -45,8 +45,11 @@ internal sealed class LocalMediaCacheLoadCoordinator(
         _logger.LogInformation("cache-load: primary snapshot replication completed");
 
         string file = _snapshotCoordinator.GetPrimaryFilePath();
+        bool primarySnapshotExists = await _snapshotCoordinator.PrimarySnapshotExists(
+            cancellationToken
+        );
 
-        if (File.Exists(file))
+        if (primarySnapshotExists)
         {
             if (cache.IsEmpty)
             {
@@ -68,7 +71,7 @@ internal sealed class LocalMediaCacheLoadCoordinator(
             _logger.LogWarning("cache: {count}", cache.Count);
         }
         else
-            _logger.LogWarning("cache file not exist, {path}", file);
+            _logger.LogWarning("cache primary snapshot not found, locator {path}", file);
 
         IReadOnlyList<MediaCacheStoredEntry> storedEntries = cache
             .Values.Select(LocalMediaCacheEntryMapper.ToStoredEntry)

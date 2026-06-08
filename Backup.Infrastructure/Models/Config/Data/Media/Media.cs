@@ -6,20 +6,21 @@ public class StorageMedia : Storage
 {
     public required Paths Paths { get; set; }
     public long SizeHeavy { get; set; }
-    public MediaCacheBackend? CacheBackend { get; set; }
+    public List<MediaCacheConfig> Cache { get; set; } = [];
 }
 
 public class Paths : PathConfig
 {
     public required PathConfig Media { get; set; }
-    public required PathConfig Cache { get; set; }
     public required Tmp Tmp { get; set; }
 }
 
-public class MediaCacheBackend
+public class MediaCacheConfig
 {
+    public string? Id { get; set; }
+    public bool Default { get; set; } = false;
+    public bool Enabled { get; set; } = true;
     public string Type { get; set; } = "json";
     public string? ConnectionString { get; set; }
-    public string? KeyPrefix { get; set; }
-    public int? Database { get; set; }
+    public PathConfig? Path { get; set; }
 }

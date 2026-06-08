@@ -4,6 +4,8 @@ namespace Backup.Infrastructure.Media.Abstractions.Services;
 
 public interface IMediaCachePersistenceIOService
 {
+    Task<bool> PrimarySnapshotExists(string file, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<MediaCacheEntry>> LoadIncrementalSnapshots(
         string directory,
         CancellationToken cancellationToken = default

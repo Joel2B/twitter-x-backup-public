@@ -1,3 +1,4 @@
+using Backup.Application.Core;
 using Backup.Application.IO;
 using Backup.Application.Media.Maintenance;
 using Backup.Infrastructure.Core.Abstractions.Partition;
@@ -33,7 +34,6 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
             StorageMedia storage = registration.Storage;
             string key = registration.Key;
             Type type = registration.ImplementationType;
-            Type cacheType = ResolveCacheType(storage.CacheBackend?.Type);
 
             services.AddKeyedScoped(
                 key,
@@ -51,15 +51,18 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
                         sp.GetRequiredService<IMediaCacheDirectoryPolicyService>()
                     )
             );
+            services.AddKeyedScoped(key, (sp, _) => CreateMediaCacheTargets(sp, storage));
             services.AddKeyedScoped(
                 key,
                 (sp, _) =>
                     new LocalMediaCacheSnapshotCoordinator(
-                        sp.GetRequiredService<IMediaCachePersistenceIOService>(),
+                        sp.GetRequiredKeyedService<IReadOnlyList<MediaCacheTargetRuntime>>(key),
+                        sp.GetRequiredService<IPrimarySelectionService>(),
                         sp.GetRequiredService<IMediaCacheEntryPathPolicyService>(),
                         sp.GetRequiredService<IMediaCacheReplicationPathService>(),
                         sp.GetRequiredKeyedService<IPartition>(key),
-                        sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key)
+                        sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key),
+                        sp.GetRequiredService<ILogger<LocalMediaCacheSnapshotCoordinator>>()
                     )
             );
             services.AddKeyedScoped(
@@ -99,36 +102,17 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
                     )
             );
 
-            services.AddKeyedScoped(
+            services.AddKeyedScoped<IMediaCache>(
                 key,
                 (sp, _) =>
-                {
-                    IMediaCache instance =
-                        cacheType == typeof(LocalMediaCache)
-                            ? new LocalMediaCache(
-                                sp.GetRequiredService<IMediaCacheEntryPathPolicyService>(),
-                                sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key),
-                                sp.GetRequiredKeyedService<LocalMediaCacheSnapshotCoordinator>(key),
-                                sp.GetRequiredKeyedService<LocalMediaCacheMutationApplier>(key),
-                                sp.GetRequiredKeyedService<LocalMediaCacheLoadCoordinator>(key),
-                                sp.GetRequiredKeyedService<LocalMediaCacheWriteCoordinator>(key)
-                            )
-                            : (IMediaCache)
-                                ActivatorUtilities.CreateInstance(
-                                    sp,
-                                    cacheType,
-                                    sp.GetRequiredService<IMediaCacheEntryPathPolicyService>(),
-                                    sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key),
-                                    sp.GetRequiredKeyedService<LocalMediaCacheSnapshotCoordinator>(
-                                        key
-                                    ),
-                                    sp.GetRequiredKeyedService<LocalMediaCacheMutationApplier>(key),
-                                    sp.GetRequiredKeyedService<LocalMediaCacheLoadCoordinator>(key),
-                                    sp.GetRequiredKeyedService<LocalMediaCacheWriteCoordinator>(key)
-                                );
-
-                    return instance;
-                }
+                    new LocalMediaCache(
+                        sp.GetRequiredService<IMediaCacheEntryPathPolicyService>(),
+                        sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key),
+                        sp.GetRequiredKeyedService<LocalMediaCacheSnapshotCoordinator>(key),
+                        sp.GetRequiredKeyedService<LocalMediaCacheMutationApplier>(key),
+                        sp.GetRequiredKeyedService<LocalMediaCacheLoadCoordinator>(key),
+                        sp.GetRequiredKeyedService<LocalMediaCacheWriteCoordinator>(key)
+                    )
             );
 
             services.AddKeyedScoped(
@@ -185,4 +169,74 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
 
         return services;
     }
+
+    private static IReadOnlyList<MediaCacheTargetRuntime> CreateMediaCacheTargets(
+        IServiceProvider sp,
+        StorageMedia storage
+    )
+    {
+        List<MediaCacheConfig> enabledCaches = storage.Cache.Where(cache => cache.Enabled).ToList();
+
+        if (enabledCaches.Count == 0)
+        {
+            throw new InvalidOperationException(
+                $"No enabled media caches are configured for store '{storage.Id ?? "unknown"}'."
+            );
+        }
+
+        return enabledCaches
+            .Select(
+                (cache, index) =>
+                {
+                    string cacheKey = !string.IsNullOrWhiteSpace(cache.Id)
+                        ? cache.Id!
+                        : $"{cache.Type}-{index + 1}";
+
+                    MediaCacheType cacheType = ResolveCacheType(cache.Type);
+
+                    if (cache.Path is null && string.IsNullOrWhiteSpace(cache.ConnectionString))
+                    {
+                        throw new InvalidOperationException(
+                            $"Media cache '{cacheKey}' for store '{storage.Id ?? "unknown"}' must configure Path or ConnectionString."
+                        );
+                    }
+
+                    return new MediaCacheTargetRuntime(
+                        key: cacheKey,
+                        label: $"{storage.Id ?? "media"}:{cacheKey}",
+                        isDefault: cache.Default,
+                        type: cacheType,
+                        path: cache.Path,
+                        persistence: CreateMediaCachePersistenceService(
+                            sp,
+                            storage,
+                            cache,
+                            cacheType
+                        )
+                    );
+                }
+            )
+            .ToList();
+    }
+
+    private static IMediaCachePersistenceIOService CreateMediaCachePersistenceService(
+        IServiceProvider sp,
+        StorageMedia storage,
+        MediaCacheConfig cache,
+        MediaCacheType cacheType
+    ) =>
+        cacheType switch
+        {
+            MediaCacheType.Json => new LocalMediaCachePersistenceIOService(
+                sp.GetRequiredService<IMediaCacheJsonSnapshotService>()
+            ),
+            MediaCacheType.Sqlite => new SqliteMediaCachePersistenceIOService(),
+            MediaCacheType.Postgres => new PostgresMediaCachePersistenceIOService(
+                storage.Id ?? "unknown",
+                cache
+            ),
+            _ => throw new InvalidOperationException(
+                $"Unsupported media cache type '{cacheType}'."
+            ),
+        };
 }
