@@ -12,16 +12,26 @@ import type {
   UploadNotificationsStore
 } from "./post-capture-types.js";
 import {
-  CAPTURED_POSTS_STORAGE_KEY,
+  CAPTURED_POSTS_UPDATE_SIGNAL_STORAGE_KEY,
   DEFAULT_UPLOAD_API_BASE_URL,
   DEFAULT_UPLOAD_ORIGIN,
   UPLOAD_NOTIFICATIONS_STORAGE_KEY,
   UPLOAD_NOTIFICATION_EXPIRE_AFTER_MS,
   UPLOAD_REQUEST_TIMEOUT_MS
 } from "./constants.js";
+import {
+  deleteCapturedPostItems,
+  getAllCapturedPostItems,
+  getCapturedPostItemsByIds,
+  getCapturedPostsMetaRecord,
+  putCapturedPostsData,
+  putCapturedPostsMetaRecord,
+  type CapturedPostsMetaRecord
+} from "./captured-posts-db.js";
 import { isPlainObject, nowIso } from "./utils.js";
 
 const UPLOAD_NOTIFICATIONS_LIMIT = 200;
+const CAPTURED_POSTS_META_KEY = "store";
 
 export function normalizeApiBaseUrl(value: unknown): string {
   if (typeof value !== "string") {
@@ -315,54 +325,121 @@ function defaultCapturedPostsStore(): CapturedPostsStore {
   };
 }
 
-export async function getCapturedPostsStore(): Promise<CapturedPostsStore> {
-  const raw = await chrome.storage.local.get(CAPTURED_POSTS_STORAGE_KEY);
-  const source = raw?.[CAPTURED_POSTS_STORAGE_KEY];
+type CapturedPostsMeta = Omit<CapturedPostsStore, "items">;
 
-  if (!isPlainObject(source)) {
-    return defaultCapturedPostsStore();
-  }
+function defaultCapturedPostsMeta(): CapturedPostsMeta {
+  const store = defaultCapturedPostsStore();
 
-  const itemsSource = isPlainObject(source.items) ? source.items : {};
-  const items: Record<string, CapturedPostItem> = {};
+  return {
+    updatedAt: store.updatedAt,
+    apiBaseUrl: store.apiBaseUrl,
+    uploadUserId: store.uploadUserId,
+    uploadOrigin: store.uploadOrigin,
+    captureHashtags: store.captureHashtags
+  };
+}
 
-  for (const [id, itemRaw] of Object.entries(itemsSource)) {
-    const item = normalizeCapturedPostItem(itemRaw);
-
-    if (!item) {
-      continue;
-    }
-
-    items[id] = item;
-  }
+function normalizeCapturedPostsMeta(source: unknown): CapturedPostsMeta {
+  if (!isPlainObject(source))
+    return defaultCapturedPostsMeta();
 
   return {
     updatedAt: typeof source.updatedAt === "string" ? source.updatedAt : nowIso(),
     apiBaseUrl: normalizeApiBaseUrl(source.apiBaseUrl),
     uploadUserId: normalizeUploadUserId(source.uploadUserId),
     uploadOrigin: normalizeUploadOrigin(source.uploadOrigin),
-    captureHashtags: normalizeCaptureHashtags(source.captureHashtags),
-    items
+    captureHashtags: normalizeCaptureHashtags(source.captureHashtags)
   };
 }
 
-export async function saveCapturedPostsStore(
-  store: CapturedPostsStore
-): Promise<CapturedPostsStore> {
-  const normalized: CapturedPostsStore = {
-    ...store,
+function toCapturedPostsMetaRecord(meta: CapturedPostsMeta): CapturedPostsMetaRecord {
+  return {
+    key: CAPTURED_POSTS_META_KEY,
     updatedAt: nowIso(),
-    apiBaseUrl: normalizeApiBaseUrl(store.apiBaseUrl),
-    uploadUserId: normalizeUploadUserId(store.uploadUserId),
-    uploadOrigin: normalizeUploadOrigin(store.uploadOrigin),
-    captureHashtags: normalizeCaptureHashtags(store.captureHashtags)
+    apiBaseUrl: normalizeApiBaseUrl(meta.apiBaseUrl),
+    uploadUserId: normalizeUploadUserId(meta.uploadUserId),
+    uploadOrigin: normalizeUploadOrigin(meta.uploadOrigin),
+    captureHashtags: normalizeCaptureHashtags(meta.captureHashtags)
   };
+}
 
+function buildCapturedPostsStore(
+  meta: CapturedPostsMeta,
+  items: CapturedPostItem[]
+): CapturedPostsStore {
+  return {
+    ...meta,
+    items: Object.fromEntries(items.map((item) => [item.id, item]))
+  };
+}
+
+async function notifyCapturedPostsUpdated(): Promise<void> {
   await chrome.storage.local.set({
-    [CAPTURED_POSTS_STORAGE_KEY]: normalized
+    [CAPTURED_POSTS_UPDATE_SIGNAL_STORAGE_KEY]: nowIso()
+  });
+}
+
+async function getCapturedPostsMeta(): Promise<CapturedPostsMeta> {
+  const record = await getCapturedPostsMetaRecord();
+  return record ? normalizeCapturedPostsMeta(record) : defaultCapturedPostsMeta();
+}
+
+export async function getCapturedPostsMetadata(): Promise<CapturedPostsMeta> {
+  return getCapturedPostsMeta();
+}
+
+export async function getCapturedPostsStore(): Promise<CapturedPostsStore> {
+  const [meta, items] = await Promise.all([getCapturedPostsMeta(), getAllCapturedPostItems()]);
+  return buildCapturedPostsStore(meta, items);
+}
+
+export async function getCapturedPostsItemsMapByIds(
+  ids: string[]
+): Promise<Record<string, CapturedPostItem>> {
+  return getCapturedPostItemsByIds(ids);
+}
+
+export async function upsertCapturedPosts(
+  items: CapturedPostItem[],
+  metaPatch?: Partial<Pick<CapturedPostsMeta, "uploadUserId">>
+): Promise<void> {
+  if (items.length === 0 && !metaPatch)
+    return;
+
+  const currentMeta = await getCapturedPostsMeta();
+  const nextMeta = toCapturedPostsMetaRecord({
+    ...currentMeta,
+    uploadUserId:
+      typeof metaPatch?.uploadUserId === "string"
+        ? normalizeUploadUserId(metaPatch.uploadUserId)
+        : currentMeta.uploadUserId
   });
 
-  return normalized;
+  await putCapturedPostsData(nextMeta, items);
+  await notifyCapturedPostsUpdated();
+}
+
+export async function markCapturedPostsUploaded(
+  ids: string[],
+  uploadedAt: string
+): Promise<void> {
+  const itemMap = await getCapturedPostItemsByIds(ids);
+  const changedItems = Object.values(itemMap).map((item) => ({
+    ...item,
+    uploadedAt
+  }));
+
+  if (changedItems.length === 0)
+    return;
+
+  const currentMeta = await getCapturedPostsMeta();
+  await putCapturedPostsData(toCapturedPostsMetaRecord(currentMeta), changedItems);
+  await notifyCapturedPostsUpdated();
+}
+
+async function updateCapturedPostsMeta(meta: CapturedPostsMeta): Promise<void> {
+  await putCapturedPostsMetaRecord(toCapturedPostsMetaRecord(meta));
+  await notifyCapturedPostsUpdated();
 }
 
 function defaultUploadNotificationsStore(): UploadNotificationsStore {
@@ -583,63 +660,61 @@ export async function setUploadTarget(input: {
   uploadOrigin?: string;
   captureHashtags?: string[];
 }): Promise<CapturedPostsStore> {
-  const store = await getCapturedPostsStore();
-
-  const next: CapturedPostsStore = {
-    ...store,
+  const currentMeta = await getCapturedPostsMeta();
+  const nextMeta: CapturedPostsMeta = {
+    ...currentMeta,
     apiBaseUrl:
       typeof input.apiBaseUrl === "string"
         ? normalizeApiBaseUrl(input.apiBaseUrl)
-        : store.apiBaseUrl,
+        : currentMeta.apiBaseUrl,
     uploadUserId:
       typeof input.uploadUserId === "string"
         ? normalizeUploadUserId(input.uploadUserId)
-        : store.uploadUserId,
+        : currentMeta.uploadUserId,
     uploadOrigin:
       typeof input.uploadOrigin === "string"
         ? normalizeUploadOrigin(input.uploadOrigin)
-        : store.uploadOrigin,
+        : currentMeta.uploadOrigin,
     captureHashtags: Array.isArray(input.captureHashtags)
       ? normalizeCaptureHashtags(input.captureHashtags)
-      : store.captureHashtags
+      : currentMeta.captureHashtags
   };
 
-  return saveCapturedPostsStore(next);
+  await updateCapturedPostsMeta(nextMeta);
+  return getCapturedPostsStore();
 }
 
 export async function clearUploadedCapturedPosts(): Promise<CapturedPostsStore> {
-  const store = await getCapturedPostsStore();
-  const items: Record<string, CapturedPostItem> = {};
+  const [meta, items] = await Promise.all([getCapturedPostsMeta(), getAllCapturedPostItems()]);
+  const uploadedIds = items.filter((item) => Boolean(item.uploadedAt)).map((item) => item.id);
 
-  for (const [id, item] of Object.entries(store.items)) {
-    if (item.uploadedAt) {
-      continue;
-    }
+  if (uploadedIds.length === 0)
+    return buildCapturedPostsStore(meta, items);
 
-    items[id] = item;
-  }
+  await putCapturedPostsMetaRecord(toCapturedPostsMetaRecord(meta));
+  await deleteCapturedPostItems(uploadedIds);
+  await notifyCapturedPostsUpdated();
 
-  return saveCapturedPostsStore({
-    ...store,
-    items
-  });
+  return buildCapturedPostsStore(
+    { ...meta, updatedAt: nowIso() },
+    items.filter((item) => !item.uploadedAt)
+  );
 }
 
 export async function resetCapturedPostsUploadStatus(): Promise<CapturedPostsStore> {
-  const store = await getCapturedPostsStore();
-  const items: Record<string, CapturedPostItem> = {};
+  const [meta, items] = await Promise.all([getCapturedPostsMeta(), getAllCapturedPostItems()]);
+  const changedItems = items.map((item) => ({
+    ...item,
+    uploadedAt: null
+  }));
 
-  for (const [id, item] of Object.entries(store.items)) {
-    items[id] = {
-      ...item,
-      uploadedAt: null
-    };
-  }
+  await putCapturedPostsData(toCapturedPostsMetaRecord(meta), changedItems);
+  await notifyCapturedPostsUpdated();
 
-  return saveCapturedPostsStore({
-    ...store,
-    items
-  });
+  return buildCapturedPostsStore(
+    { ...meta, updatedAt: nowIso() },
+    changedItems
+  );
 }
 
 function parseIsoTime(value: string | null | undefined): number {
@@ -682,32 +757,32 @@ function extractImportedItems(payload: unknown): CapturedPostItem[] {
 
 export async function importCapturedPosts(payload: unknown): Promise<CapturedPostsStore> {
   const importedItems = extractImportedItems(payload);
-  const current = await getCapturedPostsStore();
+  const currentMeta = await getCapturedPostsMeta();
 
   if (importedItems.length === 0) {
-    return current;
+    return getCapturedPostsStore();
   }
 
-  const nextItems: Record<string, CapturedPostItem> = { ...current.items };
+  const existingItems = await getCapturedPostItemsByIds(importedItems.map((item) => item.id));
+  const mergedItems: CapturedPostItem[] = [];
 
   for (const item of importedItems) {
-    const existing = nextItems[item.id];
+    const existing = existingItems[item.id];
 
     if (!existing) {
-      nextItems[item.id] = item;
+      mergedItems.push(item);
       continue;
     }
 
-    nextItems[item.id] = {
+    mergedItems.push({
       ...item,
       capturedAt: takeLatestIso(existing.capturedAt, item.capturedAt),
       lastSeenAt: takeLatestIso(existing.lastSeenAt, item.lastSeenAt),
       uploadedAt: existing.uploadedAt || item.uploadedAt || null
-    };
+    });
   }
 
-  return saveCapturedPostsStore({
-    ...current,
-    items: nextItems
-  });
+  await putCapturedPostsData(toCapturedPostsMetaRecord(currentMeta), mergedItems);
+  await notifyCapturedPostsUpdated();
+  return getCapturedPostsStore();
 }

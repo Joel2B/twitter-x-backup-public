@@ -8,15 +8,18 @@ import {
   clearUploadNotifications,
   clearUploadedCapturedPosts,
   createUploadNotification,
+  getCapturedPostsItemsMapByIds,
+  getCapturedPostsMetadata,
   getCapturedPostsStore,
   getUploadNotificationsStore,
   importCapturedPosts,
+  markCapturedPostsUploaded,
   normalizeApiBaseUrl,
   normalizeCaptureHashtags,
   parseUploadApiResponse,
   patchUploadNotification,
   resetCapturedPostsUploadStatus,
-  saveCapturedPostsStore,
+  upsertCapturedPosts,
   setUploadTarget
 } from "./post-capture-storage.js";
 import { postMatchesCaptureHashtags, parseCapturedPosts } from "./post-capture-parser.js";
@@ -48,25 +51,25 @@ export async function capturePostsFromGraphqlResponseBody(payload: CaptureRespon
       console.info("[XCC] skip operation:", operation);
     }
 
-    return getCapturedPostsStore();
+    return;
   }
 
   const operationName = operation as string;
 
   if (!payload.body || payload.body.length === 0) {
     console.info("[XCC] empty response body for operation:", operation);
-    return getCapturedPostsStore();
+    return;
   }
 
   const parsedItems = parseCapturedPosts(operationName, payload.body);
-  const store = await getCapturedPostsStore();
+  const meta = await getCapturedPostsMetadata();
 
   if (parsedItems.length === 0) {
     console.info("[XCC] parsed 0 posts from operation:", operationName, payload.url);
-    return store;
+    return;
   }
 
-  const captureHashtags = new Set(normalizeCaptureHashtags(store.captureHashtags));
+  const captureHashtags = new Set(normalizeCaptureHashtags(meta.captureHashtags));
   const filteredItems = parsedItems.filter((item) =>
     postMatchesCaptureHashtags(item, captureHashtags)
   );
@@ -78,25 +81,26 @@ export async function capturePostsFromGraphqlResponseBody(payload: CaptureRespon
       "operation:",
       operationName
     );
-    return store;
+    return;
   }
 
-  const nextItems = { ...store.items };
+  const existingItems = await getCapturedPostsItemsMapByIds(filteredItems.map((item) => item.id));
+  const mergedItems = [];
   const seenAt =
     typeof payload.capturedAt === "string" && payload.capturedAt ? payload.capturedAt : nowIso();
 
   for (const parsed of filteredItems) {
-    const existing = nextItems[parsed.id];
+    const existing = existingItems[parsed.id];
 
-    nextItems[parsed.id] = {
+    mergedItems.push({
       ...parsed,
       capturedAt: existing?.capturedAt || parsed.capturedAt,
       lastSeenAt: seenAt,
       uploadedAt: existing?.uploadedAt || null
-    };
+    });
   }
 
-  const autoUserId = store.uploadUserId || filteredItems[0]?.authorId || "";
+  const autoUserId = meta.uploadUserId || filteredItems[0]?.authorId || "";
   console.info(
     "[XCC] parsed posts (matched):",
     filteredItems.length,
@@ -104,43 +108,41 @@ export async function capturePostsFromGraphqlResponseBody(payload: CaptureRespon
     parsedItems.length,
     "operation:",
     operationName,
-    "store total after merge:",
-    Object.keys(nextItems).length
+    "new items in batch:",
+    mergedItems.filter((item) => !existingItems[item.id]).length
   );
 
-  return saveCapturedPostsStore({
-    ...store,
-    uploadUserId: autoUserId,
-    items: nextItems
-  });
+  await upsertCapturedPosts(mergedItems, { uploadUserId: autoUserId });
 }
 
 export async function uploadCapturedPosts(
   ids: string[]
 ): Promise<UploadCapturedPostsMessageResponse> {
-  const store = await getCapturedPostsStore();
+  const meta = await getCapturedPostsMetadata();
   const uniqueIds = [...new Set(ids.filter((id) => typeof id === "string" && id.trim()))];
+  const itemMap = await getCapturedPostsItemsMapByIds(uniqueIds);
   const candidates = uniqueIds
-    .map((id) => store.items[id])
+    .map((id) => itemMap[id])
     .filter((item) => Boolean(item && !item.uploadedAt));
 
   if (candidates.length === 0) {
+    const store = await getCapturedPostsStore();
     return { ok: true, store, uploaded: [], failed: [], uploadSummary: null };
   }
 
-  if (!store.uploadUserId) {
+  if (!meta.uploadUserId) {
     return { ok: false, error: "Upload userId is required." };
   }
 
   const endpointUrl =
-    `${normalizeApiBaseUrl(store.apiBaseUrl)}/api/v1/posts/processed` +
-    `?userId=${encodeURIComponent(store.uploadUserId)}` +
-    `&origin=${encodeURIComponent(store.uploadOrigin)}`;
+    `${normalizeApiBaseUrl(meta.apiBaseUrl)}/api/v1/posts/processed` +
+    `?userId=${encodeURIComponent(meta.uploadUserId)}` +
+    `&origin=${encodeURIComponent(meta.uploadOrigin)}`;
   const notification = await createUploadNotification({
     attemptedPosts: candidates.length,
-    apiBaseUrl: store.apiBaseUrl,
-    uploadUserId: store.uploadUserId,
-    uploadOrigin: store.uploadOrigin
+    apiBaseUrl: meta.apiBaseUrl,
+    uploadUserId: meta.uploadUserId,
+    uploadOrigin: meta.uploadOrigin
   });
   const startedAtEpoch = Date.now();
   const timeoutMessage = `Upload expired after ${UPLOAD_REQUEST_TIMEOUT_MS} ms waiting for API response.`;
@@ -213,25 +215,11 @@ export async function uploadCapturedPosts(
   const apiResult = parseUploadApiResponse(apiPayload);
   const uploadSummary = buildUploadSummary(candidates.length, apiResult);
   const uploadedAt = nowIso();
-  const nextStore = {
-    ...store,
-    items: { ...store.items }
-  };
-
-  for (const item of candidates) {
-    const current = nextStore.items[item.id];
-
-    if (!current) {
-      continue;
-    }
-
-    nextStore.items[item.id] = {
-      ...current,
-      uploadedAt
-    };
-  }
-
-  const savedStore = await saveCapturedPostsStore(nextStore);
+  await markCapturedPostsUploaded(
+    candidates.map((item) => item.id),
+    uploadedAt
+  );
+  const savedStore = await getCapturedPostsStore();
   const finishedAt = nowIso();
   const durationMs = Date.now() - startedAtEpoch;
   const finalSummary = uploadSummary

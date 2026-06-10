@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import {
-  CAPTURED_POSTS_STORAGE_KEY,
+  CAPTURED_POSTS_UPDATE_SIGNAL_STORAGE_KEY,
   CAPTURE_STATE_STORAGE_KEY,
   DEFAULT_PROFILE_ID,
   ENDPOINTS,
@@ -357,11 +357,10 @@ export function useCredentialCapturer(): UseCredentialCapturerResult {
         runAsync(() => handleProfilesStorageChange(profilesChange.newValue));
       }
 
-      const capturedPostsChange = changes?.[CAPTURED_POSTS_STORAGE_KEY];
+      const capturedPostsChange = changes?.[CAPTURED_POSTS_UPDATE_SIGNAL_STORAGE_KEY];
 
-      if (capturedPostsChange && typeof capturedPostsChange.newValue !== "undefined") {
-        applyCapturedPostsStore(capturedPostsChange.newValue as CapturedPostsStore);
-      }
+      if (capturedPostsChange && typeof capturedPostsChange.newValue !== "undefined")
+        runAsync(loadCapturedPosts);
 
       const uploadNotificationsChange = changes?.[UPLOAD_NOTIFICATIONS_STORAGE_KEY];
 
