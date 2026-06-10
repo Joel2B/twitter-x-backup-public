@@ -218,6 +218,7 @@
           "Enabled": true,
           "Type": "json",
           "ConnectionString": null,
+          "Partitions": [0, 7],
           "Path": {
             "Paths": ["data", "cache"],
             "File": "media.cache.json"
@@ -229,6 +230,7 @@
           "Enabled": false,
           "Type": "sqlite",
           "ConnectionString": null,
+          "Partitions": [0, 7],
           "Path": {
             "Paths": ["data", "cache"],
             "File": "media.cache.sqlite"
@@ -239,7 +241,8 @@
           "Default": false,
           "Enabled": false,
           "Type": "postgres",
-          "ConnectionString": "Host=127.0.0.1;Port=5432;Database=twitter_x_backup;Username=backup;Password={REPLACE_THIS}"
+          "ConnectionString": "Host=127.0.0.1;Port=5432;Database=twitter_x_backup;Username=backup;Password={REPLACE_THIS}",
+          "Partitions": [0, 7]
         }
       ],
       "Paths": {

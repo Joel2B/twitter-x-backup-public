@@ -128,12 +128,6 @@ public sealed class MediaOrchestrationService(ILogger<MediaOrchestrationService>
 
             await command.CheckStorageData(storageId, filteredCloned, cancellationToken);
             _logger.LogInformation(
-                "media orchestration: {StorageId} replicate from storage",
-                storageId
-            );
-
-            await command.ReplicateFromStorage(storageId, filteredCloned, cancellationToken);
-            _logger.LogInformation(
                 "media orchestration: {StorageId} refresh filtered set",
                 storageId
             );

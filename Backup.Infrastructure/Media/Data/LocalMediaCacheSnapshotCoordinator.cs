@@ -14,7 +14,7 @@ internal sealed class LocalMediaCacheSnapshotCoordinator(
     IPrimarySelectionService primarySelectionService,
     IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
     IMediaCacheReplicationPathService mediaCacheReplicationPathService,
-    IPartition partition,
+    LocalMediaCachePersistenceIOService incrementalPersistence,
     LocalMediaCachePathLayout pathLayout,
     ILogger<LocalMediaCacheSnapshotCoordinator> logger
 )
@@ -25,7 +25,8 @@ internal sealed class LocalMediaCacheSnapshotCoordinator(
         mediaCacheEntryPathPolicyService;
     private readonly IMediaCacheReplicationPathService _mediaCacheReplicationPathService =
         mediaCacheReplicationPathService;
-    private readonly IPartition _partition = partition;
+    private readonly LocalMediaCachePersistenceIOService _incrementalPersistence =
+        incrementalPersistence;
     private readonly LocalMediaCachePathLayout _pathLayout = pathLayout;
     private readonly ILogger<LocalMediaCacheSnapshotCoordinator> _logger = logger;
 
@@ -41,10 +42,9 @@ internal sealed class LocalMediaCacheSnapshotCoordinator(
     )
     {
         MediaCacheTargetRuntime primaryTarget = GetPrimaryTarget();
-        PartitionConfig primary = _partition.GetPrimary();
-        string directory = GetIncrementalDirectory(primaryTarget, primary);
+        string directory = GetIncrementalDirectory(primaryTarget);
         IReadOnlyList<MediaCacheEntry> snapshots =
-            await primaryTarget.Persistence.LoadIncrementalSnapshots(directory, cancellationToken);
+            await _incrementalPersistence.LoadIncrementalSnapshots(directory, cancellationToken);
 
         foreach (MediaCacheEntry entry in snapshots)
             cache.TryAdd(entry.Path, entry);
@@ -101,8 +101,6 @@ internal sealed class LocalMediaCacheSnapshotCoordinator(
 
     public async Task ReplicatePrimarySnapshot(CancellationToken cancellationToken = default)
     {
-        List<PartitionConfig> partitions = _partition.GetCache();
-
         foreach (MediaCacheTargetRuntime target in _cacheTargets)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
@@ -111,7 +109,7 @@ internal sealed class LocalMediaCacheSnapshotCoordinator(
             [
                 .. _mediaCacheReplicationPathService.GetReplicaPaths(
                     primaryFilePath,
-                    partitions.Select(partition => GetCacheFilePath(target, partition))
+                    target.ReplicaPartitions.Select(partition => GetCacheFilePath(target, partition))
                 ),
             ];
 
@@ -174,31 +172,24 @@ internal sealed class LocalMediaCacheSnapshotCoordinator(
         CancellationToken cancellationToken = default
     )
     {
-        PartitionConfig primary = _partition.GetPrimary();
+        MediaCacheTargetRuntime primaryTarget = GetPrimaryTarget();
         string fileName = _mediaCacheEntryPathPolicyService.BuildCacheSnapshotFileName(
             entry.Path,
             entry.PartitionId
         );
 
-        foreach (MediaCacheTargetRuntime target in _cacheTargets)
-        {
-            await target.Persistence.SaveIncrementalSnapshot(
-                GetIncrementalDirectory(target, primary),
-                entry,
-                fileName,
-                cancellationToken
-            );
-        }
+        await _incrementalPersistence.SaveIncrementalSnapshot(
+            GetIncrementalDirectory(primaryTarget),
+            entry,
+            fileName,
+            cancellationToken
+        );
     }
 
     public void ResetIncrementalSnapshots()
     {
-        PartitionConfig primary = _partition.GetPrimary();
-
-        foreach (MediaCacheTargetRuntime target in _cacheTargets)
-            target.Persistence.ResetIncrementalSnapshotDirectory(
-                GetIncrementalDirectory(target, primary)
-            );
+        MediaCacheTargetRuntime primaryTarget = GetPrimaryTarget();
+        _incrementalPersistence.ResetIncrementalSnapshotDirectory(GetIncrementalDirectory(primaryTarget));
     }
 
     private MediaCacheTargetRuntime GetPrimaryTarget() =>
@@ -210,18 +201,13 @@ internal sealed class LocalMediaCacheSnapshotCoordinator(
         );
 
     private string GetPrimaryFilePath(MediaCacheTargetRuntime target)
-    {
-        PartitionConfig primary = _partition.GetPrimary();
-        return GetCacheFilePath(target, primary);
-    }
+        => GetCacheFilePath(target, target.PrimaryPartition);
 
     private string GetCacheFilePath(MediaCacheTargetRuntime target, PartitionConfig partition) =>
         target.Path is not null
             ? _pathLayout.GetCacheFilePath(partition, target.Path)
             : _pathLayout.GetVirtualPrimaryCacheFilePath(partition, target.Key);
 
-    private string GetIncrementalDirectory(
-        MediaCacheTargetRuntime target,
-        PartitionConfig partition
-    ) => _pathLayout.GetIncrementalCacheDirectory(partition, target.Key);
+    private string GetIncrementalDirectory(MediaCacheTargetRuntime target) =>
+        _pathLayout.GetIncrementalCacheDirectory(target.PrimaryPartition, target.Key);
 }

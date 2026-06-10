@@ -53,17 +53,17 @@ internal sealed class LocalMediaCacheLoadCoordinator(
         {
             if (cache.IsEmpty)
             {
-                _logger.LogInformation("cache-load: loading incremental snapshots");
-                await _snapshotCoordinator.LoadIncrementalSnapshotsInto(cache, cancellationToken);
-                _logger.LogInformation(
-                    "cache-load: incremental snapshots loaded, cache count {Count}",
-                    cache.Count
-                );
-
                 _logger.LogInformation("cache-load: loading primary snapshot");
                 await _snapshotCoordinator.LoadPrimarySnapshotInto(cache, cancellationToken);
                 _logger.LogInformation(
                     "cache-load: primary snapshot loaded, cache count {Count}",
+                    cache.Count
+                );
+
+                _logger.LogInformation("cache-load: loading incremental snapshots");
+                await _snapshotCoordinator.LoadIncrementalSnapshotsInto(cache, cancellationToken);
+                _logger.LogInformation(
+                    "cache-load: incremental snapshots loaded, cache count {Count}",
                     cache.Count
                 );
             }

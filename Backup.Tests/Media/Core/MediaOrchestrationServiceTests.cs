@@ -42,7 +42,7 @@ public class MediaOrchestrationServiceTests
         Assert.Equal(1, command.PruneCalls);
         Assert.True(command.FilterCalls >= 2);
         Assert.Equal(1, command.DownloadCalls);
-        Assert.Equal(1, command.ReplicationCalls);
+        Assert.Equal(0, command.ReplicationCalls);
         Assert.Equal(1, command.VerifyCacheParityCalls);
         Assert.Equal(1, command.BackupCalls);
     }

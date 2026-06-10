@@ -1,5 +1,6 @@
 using Backup.Infrastructure.Media.Data;
 using Backup.Infrastructure.Media.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Backup.Tests;
 
@@ -8,7 +9,9 @@ public class SqliteMediaCachePersistenceIOServiceTests
     [Fact]
     public async Task SaveAndLoadPrimarySnapshot_RoundTripsEntries()
     {
-        SqliteMediaCachePersistenceIOService sut = new();
+        SqliteMediaCachePersistenceIOService sut = new(
+            NullLogger<SqliteMediaCachePersistenceIOService>.Instance
+        );
         string root = CreateRoot();
 
         try
@@ -36,7 +39,9 @@ public class SqliteMediaCachePersistenceIOServiceTests
     [Fact]
     public async Task SaveIncrementalSnapshot_UpsertsByFileName()
     {
-        SqliteMediaCachePersistenceIOService sut = new();
+        SqliteMediaCachePersistenceIOService sut = new(
+            NullLogger<SqliteMediaCachePersistenceIOService>.Instance
+        );
         string root = CreateRoot();
 
         try

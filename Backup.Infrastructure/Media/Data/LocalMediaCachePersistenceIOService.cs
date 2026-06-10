@@ -86,6 +86,7 @@ public sealed class LocalMediaCachePersistenceIOService(
     )
     {
         cancellationToken.ThrowIfCancellationRequested();
+        Directory.CreateDirectory(directory);
         string path = Path.Combine(directory, fileName);
         string json = JsonConvert.SerializeObject(entry);
 
@@ -128,10 +129,9 @@ public sealed class LocalMediaCachePersistenceIOService(
 
     public void ResetIncrementalSnapshotDirectory(string directory)
     {
-        if (!Directory.Exists(directory))
-            return;
+        if (Directory.Exists(directory))
+            Directory.Delete(directory, recursive: true);
 
-        Directory.Delete(directory, recursive: true);
         Directory.CreateDirectory(directory);
     }
 }

@@ -23,4 +23,5 @@ public class MediaCacheConfig
     public string Type { get; set; } = "json";
     public string? ConnectionString { get; set; }
     public PathConfig? Path { get; set; }
+    public List<int> Partitions { get; set; } = [];
 }

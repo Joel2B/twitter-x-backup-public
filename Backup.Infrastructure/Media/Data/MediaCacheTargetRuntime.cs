@@ -1,5 +1,6 @@
 using Backup.Infrastructure.DependencyInjection.Features.Media;
 using Backup.Infrastructure.Media.Abstractions.Services;
+using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
 using Backup.Infrastructure.Models.Config.Downloads;
 
@@ -11,6 +12,9 @@ internal sealed class MediaCacheTargetRuntime(
     bool isDefault,
     MediaDataInfrastructureServiceCollectionExtensions.MediaCacheType type,
     PathConfig? path,
+    IReadOnlyList<PartitionConfig> partitions,
+    PartitionConfig primaryPartition,
+    IReadOnlyList<PartitionConfig> replicaPartitions,
     IMediaCachePersistenceIOService persistence
 )
 {
@@ -19,5 +23,8 @@ internal sealed class MediaCacheTargetRuntime(
     public bool IsDefault { get; } = isDefault;
     public MediaDataInfrastructureServiceCollectionExtensions.MediaCacheType Type { get; } = type;
     public PathConfig? Path { get; } = path;
+    public IReadOnlyList<PartitionConfig> Partitions { get; } = partitions;
+    public PartitionConfig PrimaryPartition { get; } = primaryPartition;
+    public IReadOnlyList<PartitionConfig> ReplicaPartitions { get; } = replicaPartitions;
     public IMediaCachePersistenceIOService Persistence { get; } = persistence;
 }

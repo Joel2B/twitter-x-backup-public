@@ -1,13 +1,20 @@
+using System.Diagnostics;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
 using Microsoft.Data.Sqlite;
+using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Data;
 
-public sealed class SqliteMediaCachePersistenceIOService : IMediaCachePersistenceIOService
+public sealed class SqliteMediaCachePersistenceIOService(
+    ILogger<SqliteMediaCachePersistenceIOService> logger
+) : IMediaCachePersistenceIOService
 {
     private const string PrimaryTableName = "media_cache_primary_entries";
     private const string IncrementalTableName = "media_cache_incremental_entries";
+    private const int ProgressLogInterval = 100_000;
+
+    private readonly ILogger<SqliteMediaCachePersistenceIOService> _logger = logger;
 
     public Task<bool> PrimarySnapshotExists(
         string file,
@@ -64,6 +71,9 @@ public sealed class SqliteMediaCachePersistenceIOService : IMediaCachePersistenc
         CancellationToken cancellationToken = default
     )
     {
+        int totalEntries = entries.Count;
+        int processedEntries = 0;
+        Stopwatch stopwatch = Stopwatch.StartNew();
         EnsureDirectory(file);
 
         await using SqliteConnection connection = OpenConnection(file);
@@ -86,6 +96,21 @@ public sealed class SqliteMediaCachePersistenceIOService : IMediaCachePersistenc
                 null,
                 cancellationToken
             );
+
+            processedEntries++;
+
+            if (
+                processedEntries % ProgressLogInterval == 0
+                || processedEntries == totalEntries
+            )
+                _logger.LogInformation(
+                    "media cache sqlite save progress: target={targetPath}, processed={processed}/{total} ({percent:0.##}%), elapsed={elapsed}",
+                    file,
+                    processedEntries,
+                    totalEntries,
+                    totalEntries == 0 ? 100d : (double)processedEntries / totalEntries * 100d,
+                    stopwatch.Elapsed
+                );
         }
 
         await transaction.CommitAsync(cancellationToken);

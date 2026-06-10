@@ -9,37 +9,44 @@ namespace Backup.Infrastructure.Media.Data;
 
 internal sealed class LocalMediaCachePathLayout(
     StorageMedia config,
-    IPartition partition,
+    IPartition storagePartition,
+    IReadOnlyList<MediaCacheTargetRuntime> cacheTargets,
     IDataStoreGuardService dataStoreGuardService,
     IMediaCacheDirectoryPolicyService mediaCacheDirectoryPolicyService
 )
 {
     private readonly StorageMedia _config = config;
-    private readonly IPartition _partition = partition;
+    private readonly IPartition _storagePartition = storagePartition;
+    private readonly IReadOnlyList<MediaCacheTargetRuntime> _cacheTargets = cacheTargets;
     private readonly IDataStoreGuardService _dataStoreGuardService = dataStoreGuardService;
     private readonly IMediaCacheDirectoryPolicyService _mediaCacheDirectoryPolicyService =
         mediaCacheDirectoryPolicyService;
 
     public void EnsureDirectories()
     {
-        List<PathConfig> cachePaths = _config
-            .Cache.Where(cache => cache.Enabled && cache.Path is not null)
-            .Select(cache => cache.Path!)
-            .ToList();
-
-        foreach (PartitionConfig item in _partition.GetPartitions())
-        {
-            if (_mediaCacheDirectoryPolicyService.ShouldCreateCacheDirectory(item.Type, item.Tags))
-            {
-                foreach (PathConfig cachePath in cachePaths)
-                    Directory.CreateDirectory(GetCachePath(item, cachePath));
-            }
-
+        foreach (PartitionConfig item in _storagePartition.GetPartitions())
             if (_mediaCacheDirectoryPolicyService.ShouldCreateMediaDirectory(item.Type))
                 Directory.CreateDirectory(GetMediaPath(item));
-        }
 
-        Directory.CreateDirectory(GetCacheDownloadPath(_partition.GetPrimary()));
+        foreach (MediaCacheTargetRuntime target in _cacheTargets)
+        {
+            foreach (PartitionConfig partition in target.Partitions)
+            {
+                if (
+                    target.Path is not null
+                    && _mediaCacheDirectoryPolicyService.ShouldCreateCacheDirectory(
+                        partition.Type,
+                        partition.Tags
+                    )
+                )
+                    Directory.CreateDirectory(GetCachePath(partition, target.Path));
+            }
+
+            Directory.CreateDirectory(GetCacheDownloadPath(target.PrimaryPartition));
+            Directory.CreateDirectory(
+                GetIncrementalCacheDirectory(target.PrimaryPartition, target.Key)
+            );
+        }
     }
 
     public string GetMediaPath(PartitionConfig partition) =>
@@ -59,9 +66,6 @@ internal sealed class LocalMediaCachePathLayout(
 
         return Path.Combine(GetCachePath(partition, pathConfig), fileName);
     }
-
-    public string GetPrimaryCacheFilePath(PathConfig pathConfig) =>
-        GetCacheFilePath(_partition.GetPrimary(), pathConfig);
 
     public string GetIncrementalCacheDirectory(PartitionConfig partition, string cacheKey) =>
         Path.Combine(GetCacheDownloadPath(partition), "cache", SanitizeKey(cacheKey));
