@@ -36,7 +36,7 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 ENV TZ=America/Mazatlan
-ENV ASPNETCORE_URLS=http://+:8080
-EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8081
+EXPOSE 8081
 
 ENTRYPOINT ["dotnet", "Backup.Api.dll"]

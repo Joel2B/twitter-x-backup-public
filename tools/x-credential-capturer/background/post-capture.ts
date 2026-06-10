@@ -133,7 +133,7 @@ export async function uploadCapturedPosts(
   }
 
   const endpointUrl =
-    `${normalizeApiBaseUrl(store.apiBaseUrl)}/api/posts/processed` +
+    `${normalizeApiBaseUrl(store.apiBaseUrl)}/api/v1/posts/processed` +
     `?userId=${encodeURIComponent(store.uploadUserId)}` +
     `&origin=${encodeURIComponent(store.uploadOrigin)}`;
   const notification = await createUploadNotification({
