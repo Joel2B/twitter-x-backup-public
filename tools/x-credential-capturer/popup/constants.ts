@@ -81,7 +81,7 @@ export const REQUIRED_HEADERS: RequiredHeaderKey[] = [
 
 export const GRID_COLUMN_COUNT = 5;
 export const CAPTURE_STATE_STORAGE_KEY = "captureStateV1";
-export const CAPTURED_POSTS_UPDATE_SIGNAL_STORAGE_KEY = "capturedPostsSignalV1";
+export const CAPTURED_POSTS_UPDATE_SIGNAL_STORAGE_KEY = "capturedPostsSignal";
 export const UPLOAD_NOTIFICATIONS_STORAGE_KEY = "uploadNotificationsV1";
 export const SETTINGS_STORAGE_KEY = "captureSettingsV1";
 export const PROFILES_STORAGE_KEY = "captureProfilesV1";
