@@ -5,6 +5,7 @@ using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Models.Config.Data;
 using Backup.Infrastructure.Models.Config.Data.Media;
+using Microsoft.Extensions.Logging;
 
 namespace Backup.Infrastructure.Media.Data;
 
@@ -15,7 +16,8 @@ internal sealed class LocalMediaCacheWriteCoordinator(
     IMediaCacheWritePolicyService mediaCacheWritePolicyService,
     IMediaCacheConflictResolutionService mediaCacheConflictResolutionService,
     LocalMediaCachePathLayout pathLayout,
-    LocalMediaCacheSnapshotCoordinator snapshotCoordinator
+    LocalMediaCacheSnapshotCoordinator snapshotCoordinator,
+    ILogger<LocalMediaCacheWriteCoordinator> logger
 )
 {
     private readonly StorageMedia _config = config;
@@ -28,6 +30,7 @@ internal sealed class LocalMediaCacheWriteCoordinator(
         mediaCacheConflictResolutionService;
     private readonly LocalMediaCachePathLayout _pathLayout = pathLayout;
     private readonly LocalMediaCacheSnapshotCoordinator _snapshotCoordinator = snapshotCoordinator;
+    private readonly ILogger<LocalMediaCacheWriteCoordinator> _logger = logger;
 
     public async Task<string> GetPath(
         ConcurrentDictionary<string, MediaCacheEntry> cache,
@@ -46,8 +49,20 @@ internal sealed class LocalMediaCacheWriteCoordinator(
             ? _partition.GetHeavy()
             : _partition.GetPath(selection.PreferredPartitionId, selection.RequestedSizeBytes);
 
+        string fullPath = Path.Combine([_pathLayout.GetMediaPath(partition), path]);
+
         if (size > 0)
         {
+            _logger.LogInformation(
+                "media save target selected: partitionId={PartitionId}, partition={PartitionName}, path={Path}, size={Size}, existingPartitionId={ExistingPartitionId}, fullPath={FullPath}",
+                partition.Id,
+                partition.Name,
+                path,
+                size,
+                existing?.PartitionId,
+                fullPath
+            );
+
             MediaCacheWritePlan writePlan = _mediaCacheWritePolicyService.BuildWritePlan(
                 path,
                 partition.Id,
@@ -75,6 +90,6 @@ internal sealed class LocalMediaCacheWriteCoordinator(
             await _snapshotCoordinator.SaveIncrementalSnapshot(newCache, cancellationToken);
         }
 
-        return Path.Combine([_pathLayout.GetMediaPath(partition), path]);
+        return fullPath;
     }
 }

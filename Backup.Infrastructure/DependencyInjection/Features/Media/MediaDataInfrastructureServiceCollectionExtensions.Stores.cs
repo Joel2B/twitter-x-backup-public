@@ -1,8 +1,8 @@
 using Backup.Application.Core;
 using Backup.Application.IO;
+using Backup.Application.Media.Maintenance;
 using Backup.Application.Partition;
 using Backup.Application.Partition.Models;
-using Backup.Application.Media.Maintenance;
 using Backup.Infrastructure.Core.Abstractions.Partition;
 using Backup.Infrastructure.Core.Abstractions.Setup;
 using Backup.Infrastructure.Data.Partition;
@@ -105,7 +105,8 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
                         sp.GetRequiredService<IMediaCacheWritePolicyService>(),
                         sp.GetRequiredService<IMediaCacheConflictResolutionService>(),
                         sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key),
-                        sp.GetRequiredKeyedService<LocalMediaCacheSnapshotCoordinator>(key)
+                        sp.GetRequiredKeyedService<LocalMediaCacheSnapshotCoordinator>(key),
+                        sp.GetRequiredService<ILogger<LocalMediaCacheWriteCoordinator>>()
                     )
             );
 
