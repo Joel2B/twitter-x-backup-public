@@ -18,7 +18,19 @@ CONTROL_FLOW_RE = re.compile(
     r"|fixed\s*\("
     r")"
 )
-DISCARD_ASSIGNMENT_RE = re.compile(r"^(?P<indent>\s*)_\s*=(?!>)\s*(?P<expr>.+)\s*$")
+UNBRACED_HEADER_RE = re.compile(
+    r"^\s*(?:"
+    r"if\s*\("
+    r"|(?:await\s+)?foreach\s*\("
+    r"|for\s*\("
+    r"|while\s*\("
+    r"|(?:await\s+)?using\s*\("
+    r"|lock\s*\("
+    r"|fixed\s*\("
+    r"|else\b"
+    r"|do\b"
+    r")"
+)
 SKIP_DIRS = {
     ".git",
     ".vs",
@@ -31,6 +43,35 @@ SKIP_DIRS = {
 
 def should_skip(path: Path) -> bool:
     return any(part in SKIP_DIRS for part in path.parts)
+
+
+def indentation(line: str) -> int:
+    return len(line) - len(line.lstrip())
+
+
+def unbraced_header_indent(lines: list[str], index: int) -> int | None:
+    line = lines[index]
+    stripped = line.strip()
+    match = UNBRACED_HEADER_RE.match(line)
+    if match and (
+        stripped.startswith(("else", "do")) or re.search(r"\)\s*(?://.*)?$", stripped)
+    ):
+        return indentation(line)
+
+    if not re.fullmatch(r"\)\s*(?://.*)?", stripped):
+        return None
+
+    # CSharpier puts a multiline header's closing parenthesis on its own line.
+    for header_index in range(index - 1, -1, -1):
+        header_line = lines[header_index]
+        if not header_line.strip():
+            break
+        if UNBRACED_HEADER_RE.match(header_line):
+            return indentation(header_line)
+        if header_line.strip() in {"{", "}"} or header_line.rstrip().endswith(";"):
+            break
+
+    return None
 
 
 def needs_blank_line_before_control_flow(lines: list[str], index: int) -> bool:
@@ -50,14 +91,17 @@ def needs_blank_line_before_control_flow(lines: list[str], index: int) -> bool:
 
     previous_non_empty = lines[previous_non_empty_index].strip()
 
-    # Stay conservative: do not force a blank line immediately after an opening brace,
-    # label, attribute, or preprocessor directive.
     if (
         previous_non_empty == "{"
         or previous_non_empty.endswith(":")
         or previous_non_empty.startswith("[")
         or previous_non_empty.startswith("#")
+        or previous_non_empty.startswith(("//", "/*", "*", "*/"))
     ):
+        return False
+
+    header_indent = unbraced_header_indent(lines, previous_non_empty_index)
+    if header_indent is not None and header_indent < indentation(lines[index]):
         return False
 
     return True
@@ -75,33 +119,6 @@ def normalize_text(text: str) -> tuple[str, bool]:
         if CONTROL_FLOW_RE.match(line) and needs_blank_line_before_control_flow(lines, index):
             output.append("")
             changed = True
-
-        discard_match = DISCARD_ASSIGNMENT_RE.match(line)
-        if discard_match:
-            expr = discard_match.group("expr").rstrip()
-
-            # Entire discarded object creations are useless if their value is never used.
-            # Drop the whole statement, including multiline object initializers.
-            if expr.startswith("new ") or expr.startswith("new("):
-                changed = True
-                index += 1
-
-                if expr.endswith(";"):
-                    continue
-
-                while index < len(lines):
-                    changed = True
-                    if lines[index].strip().endswith(";"):
-                        index += 1
-                        break
-                    index += 1
-
-                continue
-
-            output.append(f"{discard_match.group('indent')}{expr}")
-            changed = True
-            index += 1
-            continue
 
         output.append(line)
         index += 1
@@ -130,14 +147,6 @@ def process_file(path: Path, check_only: bool) -> bool:
                 column = len(line) - len(line.lstrip()) + 1
                 print(f"missing blank line before control flow: {path}:{index + 1}:{column}")
 
-            discard_match = DISCARD_ASSIGNMENT_RE.match(line)
-            if discard_match:
-                column = len(discard_match.group("indent")) + 1
-                expr = discard_match.group("expr").rstrip()
-                if expr.startswith("new ") or expr.startswith("new("):
-                    print(f"redundant discarded object creation: {path}:{index + 1}:{column}")
-                else:
-                    print(f"redundant discard assignment: {path}:{index + 1}:{column}")
             index += 1
         return True
 
