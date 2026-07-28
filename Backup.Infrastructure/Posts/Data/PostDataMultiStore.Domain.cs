@@ -34,6 +34,8 @@ public partial class PostDataMultiStore : IPostDomainData
         return posts.Select(PostReplicationMapper.ToDomain).ToList();
     }
 
+    Task IPostDomainData.DeletePosts(IReadOnlyCollection<string> ids) => DeletePosts(ids);
+
     Task<Dictionary<string, int>> IPostDomainData.GetPostCountsByProfileIds(
         IReadOnlyCollection<string> profileIds
     ) => GetPostCountsByProfileIds(profileIds);

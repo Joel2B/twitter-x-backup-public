@@ -77,6 +77,36 @@ public partial class PostgresPostData(
 
     public async Task UpsertPosts(List<Post> posts) => await UpsertPostsInternal(posts);
 
+    public async Task DeletePosts(IReadOnlyCollection<string> ids)
+    {
+        if (ids.Count == 0)
+            return;
+
+        PostsDbContext db = await GetDbContext();
+
+        if (db.ChangeTracker.HasChanges())
+            throw new InvalidOperationException(
+                "Cannot delete replicated posts while the PostgreSQL store has pending changes."
+            );
+
+        DetachTrackedPostGraphByIds(db, ids);
+        await using var tx = await db.Database.BeginTransactionAsync();
+
+        try
+        {
+            await DeletePostGraphByIds(db, ids);
+            await DeleteOrphanProfiles(db);
+            await tx.CommitAsync();
+            db.ChangeTracker.Clear();
+        }
+        catch
+        {
+            await tx.RollbackAsync();
+            db.ChangeTracker.Clear();
+            throw;
+        }
+    }
+
     public async Task Save() => await SaveInternal();
 
     public Task Prune() => PruneInternal();

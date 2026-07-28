@@ -27,6 +27,8 @@ public partial class PostgresPostData : IPostDomainDataStore
         return posts.Select(PostReplicationMapper.ToDomain).ToList();
     }
 
+    Task IPostDomainData.DeletePosts(IReadOnlyCollection<string> ids) => DeletePosts(ids);
+
     Task IPostDomainData.AddPosts(
         string userId,
         string origin,

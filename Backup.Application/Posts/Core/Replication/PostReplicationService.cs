@@ -48,36 +48,17 @@ public class PostReplicationService(ILogger<PostReplicationService> logger)
             _logger.LogInformation("post replication target started: target={targetId}", target.Id);
 
             Dictionary<string, string> targetHashes = await target.GetHashesById();
-            bool hasExtraIds = targetHashes.Keys.Any(id => !sourceHashes.ContainsKey(id));
+            List<string> extraIds = targetHashes
+                .Keys.Where(id => !sourceHashes.ContainsKey(id))
+                .ToList();
 
-            if (hasExtraIds)
-            {
+            if (extraIds.Count > 0)
                 _logger.LogInformation(
-                    "post replication target requires full reset: target={targetId}, targetHashes={targetHashCount}, sourceHashes={sourceHashCount}",
+                    "post replication target has extra posts: target={targetId}, extraPosts={extraCount}, sample=[{extraSample}]",
                     target.Id,
-                    targetHashes.Count,
-                    sourceHashes.Count
+                    extraIds.Count,
+                    string.Join(", ", extraIds.Take(10))
                 );
-
-                List<Backup.Domain.Posts.Post>? allPosts = await source.GetAll();
-
-                if (allPosts is null)
-                    throw new InvalidOperationException(
-                        "Replication source returned no posts for full reset."
-                    );
-
-                await target.Reset(allPosts);
-                await target.Save();
-                await target.Prune();
-
-                _logger.LogInformation(
-                    "post replication target full reset completed: target={targetId}, posts={postCount}",
-                    target.Id,
-                    allPosts.Count
-                );
-
-                continue;
-            }
 
             List<string> changedIds = sourceHashes
                 .Where(entry =>
@@ -89,6 +70,23 @@ public class PostReplicationService(ILogger<PostReplicationService> logger)
 
             if (changedIds.Count == 0)
             {
+                if (extraIds.Count > 0)
+                {
+                    foreach (List<string> chunk in Chunk(extraIds, ReplicationChunkSize))
+                        await target.DeletePosts(chunk);
+
+                    await target.Save();
+                    await target.Prune();
+
+                    _logger.LogInformation(
+                        "post replication target completed: target={targetId}, changedPosts=0, removedPosts={removedCount}",
+                        target.Id,
+                        extraIds.Count
+                    );
+
+                    continue;
+                }
+
                 _logger.LogInformation(
                     "post replication target skipped: target={targetId}, no changes detected",
                     target.Id
@@ -119,17 +117,7 @@ public class PostReplicationService(ILogger<PostReplicationService> logger)
                 );
 
                 List<Backup.Domain.Posts.Post> changedPosts = await source.GetByIds(chunk);
-
-                if (changedPosts.Count == 0)
-                {
-                    _logger.LogWarning(
-                        "post replication target chunk returned no posts: target={targetId}, chunk={chunkIndex}/{totalChunks}",
-                        target.Id,
-                        chunkIndex,
-                        totalChunks
-                    );
-                    continue;
-                }
+                ValidateSourceChunk(chunk, changedPosts);
 
                 await target.UpsertPosts(changedPosts);
                 await target.Save();
@@ -143,12 +131,19 @@ public class PostReplicationService(ILogger<PostReplicationService> logger)
                 );
             }
 
+            foreach (List<string> chunk in Chunk(extraIds, ReplicationChunkSize))
+                await target.DeletePosts(chunk);
+
+            if (extraIds.Count > 0)
+                await target.Save();
+
             await target.Prune();
 
             _logger.LogInformation(
-                "post replication target completed: target={targetId}, changedPosts={changedCount}",
+                "post replication target completed: target={targetId}, changedPosts={changedCount}, removedPosts={removedCount}",
                 target.Id,
-                changedIds.Count
+                changedIds.Count,
+                extraIds.Count
             );
         }
 
@@ -165,5 +160,19 @@ public class PostReplicationService(ILogger<PostReplicationService> logger)
             int count = Math.Min(size, ids.Count - i);
             yield return ids.GetRange(i, count);
         }
+    }
+
+    private static void ValidateSourceChunk(
+        IReadOnlyCollection<string> requestedIds,
+        IReadOnlyCollection<Backup.Domain.Posts.Post> posts
+    )
+    {
+        HashSet<string> requested = requestedIds.ToHashSet(StringComparer.Ordinal);
+        HashSet<string> returned = posts.Select(post => post.Id).ToHashSet(StringComparer.Ordinal);
+
+        if (posts.Count != requested.Count || !returned.SetEquals(requested))
+            throw new InvalidOperationException(
+                $"Replication source returned an invalid post set: requested={requested.Count}, returned={posts.Count}, uniqueReturned={returned.Count}."
+            );
     }
 }

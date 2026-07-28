@@ -38,6 +38,8 @@ internal sealed class PostDataDomainStoreAdapter(IPostDataStore store) : IPostDo
         return posts.Select(PostReplicationMapper.ToDomain).ToList();
     }
 
+    public Task DeletePosts(IReadOnlyCollection<string> ids) => _store.DeletePosts(ids);
+
     public Task<Dictionary<string, int>> GetPostCountsByProfileIds(
         IReadOnlyCollection<string> profileIds
     ) => _store.GetPostCountsByProfileIds(profileIds);

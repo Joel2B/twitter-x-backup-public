@@ -10,6 +10,7 @@ public interface IPostDomainData
     Task<List<MediaInput>?> GetMediaInputs();
     Task<Dictionary<string, string>> GetHashesById();
     Task<List<Post>> GetByIds(IReadOnlyCollection<string> ids);
+    Task DeletePosts(IReadOnlyCollection<string> ids);
 
     Task<Dictionary<string, int>> GetPostCountsByProfileIds(IReadOnlyCollection<string> profileIds);
 

@@ -9,6 +9,7 @@ public interface IPostReplicationStore
     Task<Dictionary<string, string>> GetHashesById();
     Task<List<Post>?> GetAll();
     Task<List<Post>> GetByIds(IReadOnlyCollection<string> ids);
+    Task DeletePosts(IReadOnlyCollection<string> ids);
     Task UpsertPosts(List<Post> posts);
     Task Reset(List<Post> posts);
     Task Save();

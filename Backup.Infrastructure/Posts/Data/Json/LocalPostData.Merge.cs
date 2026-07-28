@@ -195,6 +195,32 @@ public partial class LocalPostData
         );
     }
 
+    public async Task DeletePosts(IReadOnlyCollection<string> ids)
+    {
+        if (ids.Count == 0)
+            return;
+
+        Dictionary<string, Post>? posts = await GetCache();
+        Dictionary<string, PostMetaRow> postMeta = await GetPostMetaCache();
+
+        if (posts is null)
+            return;
+
+        int removed = 0;
+
+        foreach (string id in ids)
+        {
+            if (posts.Remove(id))
+                removed++;
+
+            postMeta.Remove(id);
+        }
+
+        _postsCache = posts;
+        _postMetaCache = postMeta;
+        _logger.LogInformation("delete-posts: removed={removed}", removed);
+    }
+
     private IReadOnlyList<Post> NormalizePosts(IReadOnlyCollection<Post> posts)
     {
         return _mutationCoordinator.Normalize(posts);

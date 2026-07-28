@@ -48,6 +48,7 @@ public partial class SqlitePostData
 
             await UpsertHashMetaForPosts(db, normalizedPosts);
             await db.SaveChangesAsync();
+            await DeleteOrphanProfiles(db);
             await tx.CommitAsync();
             db.ChangeTracker.Clear();
         }

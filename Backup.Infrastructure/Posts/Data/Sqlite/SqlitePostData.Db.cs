@@ -34,7 +34,7 @@ public partial class SqlitePostData
             try
             {
                 await using PostsDbContext db = CreateDbContext(dbPath);
-                await ApplyConnectionPragmas(db, dbPath);
+                await ApplyConnectionPragmas(db);
                 await db.Database.EnsureCreatedAsync();
                 await db.Database.ExecuteSqlRawAsync(
                     """
@@ -74,19 +74,19 @@ public partial class SqlitePostData
 
     private static bool IsTransientLock(SqliteException ex) => ex.SqliteErrorCode is 5 or 6;
 
-    private static async Task ApplyConnectionPragmas(PostsDbContext db, string dbPath)
+    private static async Task ApplyConnectionPragmas(PostsDbContext db)
     {
         foreach (string pragma in CommonPragmas)
             await db.Database.ExecuteSqlRawAsync(pragma);
 
-        if (!ShouldUseLocalDiskPragmas(dbPath))
+        if (!ShouldUseLocalDiskPragmas())
             return;
 
         foreach (string pragma in LocalDiskPragmas)
             await db.Database.ExecuteSqlRawAsync(pragma);
     }
 
-    private static bool ShouldUseLocalDiskPragmas(string dbPath)
+    private static bool ShouldUseLocalDiskPragmas()
     {
         string? configured = Environment.GetEnvironmentVariable(
             "BACKUP__POSTS__SQLITE__LOCAL_DISK"

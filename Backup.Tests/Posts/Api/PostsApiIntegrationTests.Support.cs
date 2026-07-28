@@ -99,6 +99,8 @@ public partial class PostsApiIntegrationTests
         public Task<List<Post>> GetByIds(IReadOnlyCollection<string> ids) =>
             Task.FromResult(new List<Post>());
 
+        public Task DeletePosts(IReadOnlyCollection<string> ids) => Task.CompletedTask;
+
         public Task<Dictionary<string, int>> GetPostCountsByProfileIds(
             IReadOnlyCollection<string> profileIds
         ) => Task.FromResult(new Dictionary<string, int>());

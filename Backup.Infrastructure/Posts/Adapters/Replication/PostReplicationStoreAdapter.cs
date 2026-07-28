@@ -18,6 +18,8 @@ internal sealed class PostReplicationStoreAdapter(IPostDomainDataStore store)
 
     public Task<List<Post>> GetByIds(IReadOnlyCollection<string> ids) => _store.GetByIds(ids);
 
+    public Task DeletePosts(IReadOnlyCollection<string> ids) => _store.DeletePosts(ids);
+
     public Task Save() => _store.Save();
 
     public Task Prune() => _store.Prune();

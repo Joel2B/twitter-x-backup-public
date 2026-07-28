@@ -96,6 +96,8 @@ public class PostDataDomainAdapterTests
         public Task<List<AppPosts.Post>> GetByIds(IReadOnlyCollection<string> ids) =>
             Task.FromResult(new List<AppPosts.Post>());
 
+        public Task DeletePosts(IReadOnlyCollection<string> ids) => Task.CompletedTask;
+
         public Task<Dictionary<string, int>> GetPostCountsByProfileIds(
             IReadOnlyCollection<string> profileIds
         ) => Task.FromResult(new Dictionary<string, int>());

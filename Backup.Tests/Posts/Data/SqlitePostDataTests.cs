@@ -13,6 +13,62 @@ namespace Backup.Tests;
 public class SqlitePostDataTests
 {
     [Fact]
+    public async Task DeletePosts_RemovesOnlyOrphanProfiles()
+    {
+        (SqlitePostData sut, string root) = CreateSut();
+
+        try
+        {
+            await sut.Setup();
+            await sut.UpsertPosts(
+                [
+                    CreatePost("p1", "shared", "one", "user-1", "posts"),
+                    CreatePost("p2", "shared", "two", "user-1", "posts"),
+                    CreatePost("p3", "orphan", "three", "user-1", "posts"),
+                ]
+            );
+            await sut.Save();
+
+            await sut.DeletePosts(["p1", "p3"]);
+
+            PostStoreCounts counts = await sut.GetStoreCounts();
+            Assert.Equal(1, counts.Posts);
+            Assert.Equal(1, counts.Profiles);
+            Assert.Equal("p2", (await sut.GetByIds(["p1", "p2", "p3"])).Single().Id);
+        }
+        finally
+        {
+            await sut.DisposeAsync();
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task UpsertPosts_RemovesProfileOrphanedByReplacement()
+    {
+        (SqlitePostData sut, string root) = CreateSut();
+
+        try
+        {
+            await sut.Setup();
+            await sut.UpsertPosts([CreatePost("p1", "old-profile", "one", "user-1", "posts")]);
+            await sut.Save();
+
+            await sut.UpsertPosts([CreatePost("p1", "new-profile", "two", "user-1", "posts")]);
+
+            PostStoreCounts counts = await sut.GetStoreCounts();
+            Assert.Equal(1, counts.Posts);
+            Assert.Equal(1, counts.Profiles);
+            Assert.Equal("new-profile", (await sut.GetByIds(["p1"])).Single().Profile.Id);
+        }
+        finally
+        {
+            await sut.DisposeAsync();
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
     public async Task GetHashesById_UsesSyncedMeta_AfterInsertAndUpdate()
     {
         (SqlitePostData sut, string root) = CreateSut();

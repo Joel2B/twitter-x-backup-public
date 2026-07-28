@@ -50,6 +50,8 @@ public partial class PostDataMultiStore(
 
     public Task<List<Post>> GetByIds(IReadOnlyCollection<string> ids) => Primary.GetByIds(ids);
 
+    public Task DeletePosts(IReadOnlyCollection<string> ids) => Primary.DeletePosts(ids);
+
     public Task<Dictionary<string, int>> GetPostCountsByProfileIds(
         IReadOnlyCollection<string> profileIds
     ) => Primary.GetPostCountsByProfileIds(profileIds);

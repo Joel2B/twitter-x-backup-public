@@ -13,7 +13,7 @@ public partial class SqlitePostData
 
         string dbPath = GetDatabasePath();
         _db = CreateDbContext(dbPath);
-        await ApplyConnectionPragmas(_db, dbPath);
+        await ApplyConnectionPragmas(_db);
 
         return _db;
     }
@@ -169,4 +169,9 @@ public partial class SqlitePostData
             await db.PostHashMeta.Where(row => chunk.Contains(row.Id)).ExecuteDeleteAsync();
         }
     }
+
+    private static async Task DeleteOrphanProfiles(PostsDbContext db) =>
+        await db
+            .Profiles.Where(profile => !db.Posts.Any(post => post.ProfileId == profile.Id))
+            .ExecuteDeleteAsync();
 }

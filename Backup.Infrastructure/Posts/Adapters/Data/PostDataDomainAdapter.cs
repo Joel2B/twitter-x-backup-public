@@ -36,6 +36,8 @@ public sealed class PostDataDomainAdapter(IPostData postData) : IPostDomainData
         return posts.Select(PostReplicationMapper.ToDomain).ToList();
     }
 
+    public Task DeletePosts(IReadOnlyCollection<string> ids) => _postData.DeletePosts(ids);
+
     public Task<Dictionary<string, int>> GetPostCountsByProfileIds(
         IReadOnlyCollection<string> profileIds
     ) => _postData.GetPostCountsByProfileIds(profileIds);
