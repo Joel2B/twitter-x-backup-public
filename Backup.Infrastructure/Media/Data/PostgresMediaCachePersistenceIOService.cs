@@ -184,6 +184,9 @@ public sealed class PostgresMediaCachePersistenceIOService(
         CancellationToken cancellationToken = default
     )
     {
+        if (upserts.Count == 0 && removals.Count == 0)
+            return;
+
         await _writeLock.WaitAsync(cancellationToken);
         try
         {
@@ -194,56 +197,144 @@ public sealed class PostgresMediaCachePersistenceIOService(
             await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(
                 cancellationToken
             );
-            HashSet<string> changedPaths = new(StringComparer.OrdinalIgnoreCase);
 
-            foreach (MediaCacheEntry entry in upserts)
+            await using (NpgsqlCommand createChanges = connection.CreateCommand())
             {
-                changedPaths.Add(entry.Path);
-                await DeleteByPath(
-                    connection,
-                    transaction,
-                    PrimaryTableName,
-                    primaryNamespace,
-                    entry.Path,
-                    cancellationToken
-                );
-                await UpsertPrimaryEntry(
-                    connection,
-                    transaction,
-                    primaryNamespace,
-                    entry,
-                    cancellationToken
-                );
+                createChanges.Transaction = transaction;
+                createChanges.CommandText = """
+                    CREATE TEMP TABLE recheck_changes (
+                        normalized_path TEXT PRIMARY KEY,
+                        path TEXT NOT NULL,
+                        stream_size BIGINT NULL,
+                        file_size BIGINT NULL,
+                        partition_id INTEGER NULL,
+                        is_removal BOOLEAN NOT NULL
+                    ) ON COMMIT DROP;
+                    """;
+                await createChanges.ExecuteNonQueryAsync(cancellationToken);
             }
 
-            foreach (string path in removals)
-            {
-                changedPaths.Add(path);
-                await DeleteByPath(
-                    connection,
-                    transaction,
-                    PrimaryTableName,
-                    primaryNamespace,
-                    path,
-                    cancellationToken
-                );
-            }
+            await StageRecheckChanges(
+                connection,
+                transaction,
+                upserts,
+                removals,
+                cancellationToken
+            );
 
-            foreach (string path in changedPaths)
-                await DeleteByPath(
-                    connection,
-                    transaction,
-                    IncrementalTableName,
-                    incrementalNamespace,
-                    path,
-                    cancellationToken
-                );
+            await using (NpgsqlCommand applyChanges = connection.CreateCommand())
+            {
+                applyChanges.Transaction = transaction;
+                applyChanges.CommandText = $"""
+                    ANALYZE recheck_changes;
+
+                    DELETE FROM {PrimaryTableName} AS target
+                    USING recheck_changes AS changes
+                    WHERE target.namespace = @primaryNamespace
+                      AND lower(target.path) = changes.normalized_path;
+
+                    INSERT INTO {PrimaryTableName} (
+                        namespace,
+                        path,
+                        stream_size,
+                        file_size,
+                        partition_id
+                    )
+                    SELECT
+                        @primaryNamespace,
+                        path,
+                        stream_size,
+                        file_size,
+                        partition_id
+                    FROM recheck_changes
+                    WHERE NOT is_removal
+                    ON CONFLICT(namespace, path) DO UPDATE SET
+                        stream_size = EXCLUDED.stream_size,
+                        file_size = EXCLUDED.file_size,
+                        partition_id = EXCLUDED.partition_id;
+
+                    DELETE FROM {IncrementalTableName} AS target
+                    USING recheck_changes AS changes
+                    WHERE target.namespace = @incrementalNamespace
+                      AND lower(target.path) = changes.normalized_path;
+                    """;
+                applyChanges.Parameters.AddWithValue("primaryNamespace", primaryNamespace);
+                applyChanges.Parameters.AddWithValue("incrementalNamespace", incrementalNamespace);
+                await applyChanges.ExecuteNonQueryAsync(cancellationToken);
+            }
 
             await transaction.CommitAsync(cancellationToken);
         }
         finally
         {
             _writeLock.Release();
+        }
+    }
+
+    private static async Task StageRecheckChanges(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        IReadOnlyCollection<MediaCacheEntry> upserts,
+        IReadOnlyCollection<string> removals,
+        CancellationToken cancellationToken
+    )
+    {
+        await using NpgsqlCommand stage = connection.CreateCommand();
+        stage.Transaction = transaction;
+        stage.CommandText = """
+            INSERT INTO recheck_changes (
+                normalized_path,
+                path,
+                stream_size,
+                file_size,
+                partition_id,
+                is_removal
+            )
+            VALUES (lower(@path), @path, @streamSize, @fileSize, @partitionId, @isRemoval)
+            ON CONFLICT(normalized_path) DO UPDATE SET
+                path = EXCLUDED.path,
+                stream_size = EXCLUDED.stream_size,
+                file_size = EXCLUDED.file_size,
+                partition_id = EXCLUDED.partition_id,
+                is_removal = EXCLUDED.is_removal;
+            """;
+        NpgsqlParameter pathParameter = stage.Parameters.Add("path", NpgsqlTypes.NpgsqlDbType.Text);
+        NpgsqlParameter streamSizeParameter = stage.Parameters.Add(
+            "streamSize",
+            NpgsqlTypes.NpgsqlDbType.Bigint
+        );
+        NpgsqlParameter fileSizeParameter = stage.Parameters.Add(
+            "fileSize",
+            NpgsqlTypes.NpgsqlDbType.Bigint
+        );
+        NpgsqlParameter partitionIdParameter = stage.Parameters.Add(
+            "partitionId",
+            NpgsqlTypes.NpgsqlDbType.Integer
+        );
+        NpgsqlParameter isRemovalParameter = stage.Parameters.Add(
+            "isRemoval",
+            NpgsqlTypes.NpgsqlDbType.Boolean
+        );
+        await stage.PrepareAsync(cancellationToken);
+
+        foreach (MediaCacheEntry entry in upserts)
+        {
+            pathParameter.Value = entry.Path;
+            streamSizeParameter.Value = (object?)entry.Size?.Stream ?? DBNull.Value;
+            fileSizeParameter.Value = (object?)entry.Size?.File ?? DBNull.Value;
+            partitionIdParameter.Value = (object?)entry.PartitionId ?? DBNull.Value;
+            isRemovalParameter.Value = false;
+            await stage.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        foreach (string path in removals)
+        {
+            pathParameter.Value = path;
+            streamSizeParameter.Value = DBNull.Value;
+            fileSizeParameter.Value = DBNull.Value;
+            partitionIdParameter.Value = DBNull.Value;
+            isRemovalParameter.Value = true;
+            await stage.ExecuteNonQueryAsync(cancellationToken);
         }
     }
 

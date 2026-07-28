@@ -170,6 +170,9 @@ public sealed class SqliteMediaCachePersistenceIOService(
         CancellationToken cancellationToken = default
     )
     {
+        if (upserts.Count == 0 && removals.Count == 0)
+            return;
+
         await _writeLock.WaitAsync(cancellationToken);
         try
         {
@@ -225,44 +228,107 @@ public sealed class SqliteMediaCachePersistenceIOService(
 
         await using SqliteTransaction transaction = (SqliteTransaction)
             await connection.BeginTransactionAsync(cancellationToken);
-        HashSet<string> changedPaths = new(StringComparer.OrdinalIgnoreCase);
+
+        await using (SqliteCommand createChanges = connection.CreateCommand())
+        {
+            createChanges.Transaction = transaction;
+            createChanges.CommandText = """
+                CREATE TEMP TABLE recheck_changes (
+                    path TEXT COLLATE NOCASE PRIMARY KEY,
+                    stream_size INTEGER NULL,
+                    file_size INTEGER NULL,
+                    partition_id INTEGER NULL,
+                    is_removal INTEGER NOT NULL
+                ) WITHOUT ROWID;
+                """;
+            await createChanges.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await StageRecheckChanges(connection, transaction, upserts, removals, cancellationToken);
+
+        await using (SqliteCommand applyChanges = connection.CreateCommand())
+        {
+            applyChanges.Transaction = transaction;
+            applyChanges.CommandText = $"""
+                DELETE FROM {PrimaryTableName}
+                WHERE path COLLATE NOCASE IN (SELECT path FROM recheck_changes);
+
+                INSERT INTO {PrimaryTableName} (path, stream_size, file_size, partition_id)
+                SELECT path, stream_size, file_size, partition_id
+                FROM recheck_changes
+                WHERE is_removal = 0
+                ON CONFLICT(path) DO UPDATE SET
+                    stream_size = excluded.stream_size,
+                    file_size = excluded.file_size,
+                    partition_id = excluded.partition_id;
+
+                DELETE FROM incremental_cache.{IncrementalTableName}
+                WHERE path COLLATE NOCASE IN (SELECT path FROM recheck_changes);
+                """;
+            await applyChanges.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+    }
+
+    private static async Task StageRecheckChanges(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        IReadOnlyCollection<MediaCacheEntry> upserts,
+        IReadOnlyCollection<string> removals,
+        CancellationToken cancellationToken
+    )
+    {
+        await using SqliteCommand stage = connection.CreateCommand();
+        stage.Transaction = transaction;
+        stage.CommandText = """
+            INSERT INTO recheck_changes (
+                path,
+                stream_size,
+                file_size,
+                partition_id,
+                is_removal
+            )
+            VALUES ($path, $streamSize, $fileSize, $partitionId, $isRemoval)
+            ON CONFLICT(path) DO UPDATE SET
+                path = excluded.path,
+                stream_size = excluded.stream_size,
+                file_size = excluded.file_size,
+                partition_id = excluded.partition_id,
+                is_removal = excluded.is_removal;
+            """;
+        SqliteParameter pathParameter = stage.Parameters.Add("$path", SqliteType.Text);
+        SqliteParameter streamSizeParameter = stage.Parameters.Add(
+            "$streamSize",
+            SqliteType.Integer
+        );
+        SqliteParameter fileSizeParameter = stage.Parameters.Add("$fileSize", SqliteType.Integer);
+        SqliteParameter partitionIdParameter = stage.Parameters.Add(
+            "$partitionId",
+            SqliteType.Integer
+        );
+        SqliteParameter isRemovalParameter = stage.Parameters.Add("$isRemoval", SqliteType.Integer);
+        await stage.PrepareAsync(cancellationToken);
 
         foreach (MediaCacheEntry entry in upserts)
         {
-            changedPaths.Add(entry.Path);
-            await DeleteByPath(
-                connection,
-                transaction,
-                PrimaryTableName,
-                entry.Path,
-                cancellationToken
-            );
-            await UpsertEntry(
-                connection,
-                transaction,
-                PrimaryTableName,
-                entry,
-                null,
-                cancellationToken
-            );
+            pathParameter.Value = entry.Path;
+            streamSizeParameter.Value = (object?)entry.Size?.Stream ?? DBNull.Value;
+            fileSizeParameter.Value = (object?)entry.Size?.File ?? DBNull.Value;
+            partitionIdParameter.Value = (object?)entry.PartitionId ?? DBNull.Value;
+            isRemovalParameter.Value = 0;
+            await stage.ExecuteNonQueryAsync(cancellationToken);
         }
 
         foreach (string path in removals)
         {
-            changedPaths.Add(path);
-            await DeleteByPath(connection, transaction, PrimaryTableName, path, cancellationToken);
+            pathParameter.Value = path;
+            streamSizeParameter.Value = DBNull.Value;
+            fileSizeParameter.Value = DBNull.Value;
+            partitionIdParameter.Value = DBNull.Value;
+            isRemovalParameter.Value = 1;
+            await stage.ExecuteNonQueryAsync(cancellationToken);
         }
-
-        foreach (string path in changedPaths)
-            await DeleteByPath(
-                connection,
-                transaction,
-                $"incremental_cache.{IncrementalTableName}",
-                path,
-                cancellationToken
-            );
-
-        await transaction.CommitAsync(cancellationToken);
     }
 
     public Task ReplicatePrimarySnapshot(
