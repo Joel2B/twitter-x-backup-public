@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Models.Config.Data.Media;
@@ -12,9 +13,14 @@ public sealed class PostgresMediaCachePersistenceIOService(
 {
     private const string PrimaryTableName = "media_cache_primary_entries";
     private const string IncrementalTableName = "media_cache_incremental_entries";
+    private static readonly ConcurrentDictionary<string, SemaphoreSlim> WriteLocks = new();
 
     private readonly string _connectionString = GetConnectionString(storeId, cacheConfig);
     private readonly string _storeNamespace = GetStoreNamespace(storeId, cacheConfig);
+    private readonly SemaphoreSlim _writeLock = WriteLocks.GetOrAdd(
+        $"{GetConnectionString(storeId, cacheConfig)}|{GetStoreNamespace(storeId, cacheConfig)}",
+        _ => new SemaphoreSlim(1, 1)
+    );
     private bool _schemaEnsured;
 
     public async Task<bool> PrimarySnapshotExists(
@@ -108,6 +114,15 @@ public sealed class PostgresMediaCachePersistenceIOService(
         }
 
         foreach (MediaCacheEntry entry in entries)
+        {
+            await DeleteByPath(
+                connection,
+                transaction,
+                PrimaryTableName,
+                cacheNamespace,
+                entry.Path,
+                cancellationToken
+            );
             await UpsertPrimaryEntry(
                 connection,
                 transaction,
@@ -115,6 +130,7 @@ public sealed class PostgresMediaCachePersistenceIOService(
                 entry,
                 cancellationToken
             );
+        }
 
         await transaction.CommitAsync(cancellationToken);
     }
@@ -126,17 +142,109 @@ public sealed class PostgresMediaCachePersistenceIOService(
         CancellationToken cancellationToken = default
     )
     {
-        string cacheNamespace = BuildIncrementalNamespace(directory);
+        await _writeLock.WaitAsync(cancellationToken);
+        try
+        {
+            string cacheNamespace = BuildIncrementalNamespace(directory);
+            await using NpgsqlConnection connection = await OpenConnection(cancellationToken);
+            await EnsureSchema(connection, cancellationToken);
+            await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(
+                cancellationToken
+            );
+            await DeleteByPath(
+                connection,
+                transaction,
+                IncrementalTableName,
+                cacheNamespace,
+                entry.Path,
+                cancellationToken
+            );
+            await UpsertIncrementalEntry(
+                connection,
+                transaction,
+                cacheNamespace,
+                entry,
+                fileName,
+                cancellationToken
+            );
+            await transaction.CommitAsync(cancellationToken);
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
 
-        await using NpgsqlConnection connection = await OpenConnection(cancellationToken);
-        await EnsureSchema(connection, cancellationToken);
-        await UpsertIncrementalEntry(
-            connection,
-            cacheNamespace,
-            entry,
-            fileName,
-            cancellationToken
-        );
+    public async Task ApplyRecheckChanges(
+        string primaryFilePath,
+        string incrementalDirectory,
+        IReadOnlyCollection<MediaCacheEntry> finalEntries,
+        IReadOnlyCollection<MediaCacheEntry> upserts,
+        IReadOnlyCollection<string> removals,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await _writeLock.WaitAsync(cancellationToken);
+        try
+        {
+            string primaryNamespace = BuildPrimaryNamespace(primaryFilePath);
+            string incrementalNamespace = BuildIncrementalNamespace(incrementalDirectory);
+            await using NpgsqlConnection connection = await OpenConnection(cancellationToken);
+            await EnsureSchema(connection, cancellationToken);
+            await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(
+                cancellationToken
+            );
+            HashSet<string> changedPaths = new(StringComparer.OrdinalIgnoreCase);
+
+            foreach (MediaCacheEntry entry in upserts)
+            {
+                changedPaths.Add(entry.Path);
+                await DeleteByPath(
+                    connection,
+                    transaction,
+                    PrimaryTableName,
+                    primaryNamespace,
+                    entry.Path,
+                    cancellationToken
+                );
+                await UpsertPrimaryEntry(
+                    connection,
+                    transaction,
+                    primaryNamespace,
+                    entry,
+                    cancellationToken
+                );
+            }
+
+            foreach (string path in removals)
+            {
+                changedPaths.Add(path);
+                await DeleteByPath(
+                    connection,
+                    transaction,
+                    PrimaryTableName,
+                    primaryNamespace,
+                    path,
+                    cancellationToken
+                );
+            }
+
+            foreach (string path in changedPaths)
+                await DeleteByPath(
+                    connection,
+                    transaction,
+                    IncrementalTableName,
+                    incrementalNamespace,
+                    path,
+                    cancellationToken
+                );
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
     }
 
     public Task ReplicatePrimarySnapshot(
@@ -245,6 +353,7 @@ public sealed class PostgresMediaCachePersistenceIOService(
 
     private static async Task UpsertIncrementalEntry(
         NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
         string cacheNamespace,
         MediaCacheEntry entry,
         string fileName,
@@ -252,6 +361,7 @@ public sealed class PostgresMediaCachePersistenceIOService(
     )
     {
         await using NpgsqlCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = $"""
             INSERT INTO {IncrementalTableName} (
                 namespace,
@@ -271,6 +381,24 @@ public sealed class PostgresMediaCachePersistenceIOService(
         command.Parameters.AddWithValue("fileName", fileName);
         AddCommonParameters(command, cacheNamespace, entry);
 
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static async Task DeleteByPath(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        string tableName,
+        string cacheNamespace,
+        string path,
+        CancellationToken cancellationToken
+    )
+    {
+        await using NpgsqlCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText =
+            $"DELETE FROM {tableName} WHERE namespace = @namespace AND lower(path) = lower(@path)";
+        command.Parameters.AddWithValue("namespace", cacheNamespace);
+        command.Parameters.AddWithValue("path", path);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 

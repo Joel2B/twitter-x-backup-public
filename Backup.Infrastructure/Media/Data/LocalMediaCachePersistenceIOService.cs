@@ -11,6 +11,7 @@ public sealed class LocalMediaCachePersistenceIOService(
 {
     private readonly IMediaCacheJsonSnapshotService _mediaCacheJsonSnapshotService =
         mediaCacheJsonSnapshotService;
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
 
     public Task<bool> PrimarySnapshotExists(
         string file,
@@ -74,8 +75,15 @@ public sealed class LocalMediaCachePersistenceIOService(
         CancellationToken cancellationToken = default
     )
     {
-        cancellationToken.ThrowIfCancellationRequested();
-        await LocalMediaCacheReader.Save(file, [.. entries], _mediaCacheJsonSnapshotService);
+        await _writeLock.WaitAsync(cancellationToken);
+        try
+        {
+            await SavePrimarySnapshotCore(file, entries, cancellationToken);
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
     }
 
     public async Task SaveIncrementalSnapshot(
@@ -85,24 +93,63 @@ public sealed class LocalMediaCachePersistenceIOService(
         CancellationToken cancellationToken = default
     )
     {
+        await _writeLock.WaitAsync(cancellationToken);
+        try
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Directory.CreateDirectory(directory);
+            string path = Path.Combine(directory, fileName);
+            string json = JsonConvert.SerializeObject(entry);
+
+            await using FileStream fs = new(
+                path,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                4096,
+                FileOptions.Asynchronous | FileOptions.WriteThrough
+            );
+
+            await using StreamWriter sw = new(fs);
+            await sw.WriteAsync(json.AsMemory(), cancellationToken);
+            await sw.FlushAsync(cancellationToken);
+            fs.Flush(true);
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
+    public async Task ApplyRecheckChanges(
+        string primaryFilePath,
+        string incrementalDirectory,
+        IReadOnlyCollection<MediaCacheEntry> finalEntries,
+        IReadOnlyCollection<MediaCacheEntry> upserts,
+        IReadOnlyCollection<string> removals,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await _writeLock.WaitAsync(cancellationToken);
+        try
+        {
+            await SavePrimarySnapshotCore(primaryFilePath, finalEntries, cancellationToken);
+            ResetIncrementalSnapshotDirectory(incrementalDirectory);
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
+    private async Task SavePrimarySnapshotCore(
+        string file,
+        IReadOnlyCollection<MediaCacheEntry> entries,
+        CancellationToken cancellationToken
+    )
+    {
         cancellationToken.ThrowIfCancellationRequested();
-        Directory.CreateDirectory(directory);
-        string path = Path.Combine(directory, fileName);
-        string json = JsonConvert.SerializeObject(entry);
-
-        await using FileStream fs = new(
-            path,
-            FileMode.Create,
-            FileAccess.Write,
-            FileShare.None,
-            4096,
-            FileOptions.Asynchronous | FileOptions.WriteThrough
-        );
-
-        await using StreamWriter sw = new(fs);
-        await sw.WriteAsync(json.AsMemory(), cancellationToken);
-        await sw.FlushAsync(cancellationToken);
-        fs.Flush(true);
+        await LocalMediaCacheReader.Save(file, [.. entries], _mediaCacheJsonSnapshotService);
     }
 
     public Task ReplicatePrimarySnapshot(

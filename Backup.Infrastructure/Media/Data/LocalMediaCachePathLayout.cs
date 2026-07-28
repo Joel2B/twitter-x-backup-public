@@ -70,6 +70,9 @@ internal sealed class LocalMediaCachePathLayout(
     public string GetIncrementalCacheDirectory(PartitionConfig partition, string cacheKey) =>
         Path.Combine(GetCacheDownloadPath(partition), "cache", SanitizeKey(cacheKey));
 
+    public string GetLegacyIncrementalCacheDirectory(PartitionConfig partition) =>
+        GetCacheDownloadPath(partition);
+
     public string GetVirtualPrimaryCacheFilePath(PartitionConfig partition, string cacheKey) =>
         Path.Combine(GetIncrementalCacheDirectory(partition, cacheKey), "primary.cache");
 

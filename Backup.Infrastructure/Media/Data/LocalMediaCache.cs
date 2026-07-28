@@ -20,6 +20,7 @@ public class LocalMediaCache : IMediaCache
     private readonly LocalMediaCacheMutationApplier _mutationApplier;
     private readonly LocalMediaCacheLoadCoordinator _loadCoordinator;
     private readonly LocalMediaCacheWriteCoordinator _writeCoordinator;
+    private readonly SemaphoreSlim _operationLock = new(1, 1);
 
     internal LocalMediaCache(
         IMediaCacheEntryPathPolicyService mediaCacheEntryPathPolicyService,
@@ -47,12 +48,31 @@ public class LocalMediaCache : IMediaCache
         return Task.CompletedTask;
     }
 
-    public async Task Load() => await _loadCoordinator.Load(_cache);
+    public async Task Load()
+    {
+        await _operationLock.WaitAsync();
+        try
+        {
+            await _loadCoordinator.Load(_cache);
+        }
+        finally
+        {
+            _operationLock.Release();
+        }
+    }
 
     public async Task<string> GetPath(string path, long size = 0, CancellationToken ct = default)
     {
-        MediaCacheEntry? cache = Get(path);
-        return await _writeCoordinator.GetPath(_cache, cache, path, size, ct);
+        await _operationLock.WaitAsync(ct);
+        try
+        {
+            MediaCacheEntry? cache = Get(path);
+            return await _writeCoordinator.GetPath(_cache, cache, path, size, ct);
+        }
+        finally
+        {
+            _operationLock.Release();
+        }
     }
 
     public MediaCacheEntry? Get(string path)

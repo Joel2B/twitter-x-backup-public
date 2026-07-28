@@ -29,6 +29,15 @@ public interface IMediaCachePersistenceIOService
         CancellationToken cancellationToken = default
     );
 
+    Task ApplyRecheckChanges(
+        string primaryFilePath,
+        string incrementalDirectory,
+        IReadOnlyCollection<MediaCacheEntry> finalEntries,
+        IReadOnlyCollection<MediaCacheEntry> upserts,
+        IReadOnlyCollection<string> removals,
+        CancellationToken cancellationToken = default
+    );
+
     Task ReplicatePrimarySnapshot(
         string primaryFilePath,
         IReadOnlyCollection<string> replicaPaths,

@@ -72,7 +72,7 @@ internal sealed class LocalMediaCacheWriteCoordinator(
                 writePlan.EntryState
             );
 
-            cache.AddOrUpdate(
+            MediaCacheEntry stored = cache.AddOrUpdate(
                 writePlan.CacheKey,
                 _ => newCache,
                 (_, old) =>
@@ -87,7 +87,7 @@ internal sealed class LocalMediaCacheWriteCoordinator(
                 }
             );
 
-            await _snapshotCoordinator.SaveIncrementalSnapshot(newCache, cancellationToken);
+            await _snapshotCoordinator.SaveIncrementalSnapshot(stored, cancellationToken);
         }
 
         return fullPath;

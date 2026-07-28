@@ -48,30 +48,31 @@ internal sealed class LocalMediaCacheLoadCoordinator(
         bool primarySnapshotExists = await _snapshotCoordinator.PrimarySnapshotExists(
             cancellationToken
         );
+        bool shouldLoadSnapshots = cache.IsEmpty;
 
-        if (primarySnapshotExists)
+        if (primarySnapshotExists && shouldLoadSnapshots)
         {
-            if (cache.IsEmpty)
-            {
-                _logger.LogInformation("cache-load: loading primary snapshot");
-                await _snapshotCoordinator.LoadPrimarySnapshotInto(cache, cancellationToken);
-                _logger.LogInformation(
-                    "cache-load: primary snapshot loaded, cache count {Count}",
-                    cache.Count
-                );
-
-                _logger.LogInformation("cache-load: loading incremental snapshots");
-                await _snapshotCoordinator.LoadIncrementalSnapshotsInto(cache, cancellationToken);
-                _logger.LogInformation(
-                    "cache-load: incremental snapshots loaded, cache count {Count}",
-                    cache.Count
-                );
-            }
-
-            _logger.LogWarning("cache: {count}", cache.Count);
+            _logger.LogInformation("cache-load: loading primary snapshot");
+            await _snapshotCoordinator.LoadPrimarySnapshotInto(cache, cancellationToken);
+            _logger.LogInformation(
+                "cache-load: primary snapshot loaded, cache count {Count}",
+                cache.Count
+            );
         }
-        else
+        else if (!primarySnapshotExists)
             _logger.LogWarning("cache primary snapshot not found, locator {path}", file);
+
+        if (shouldLoadSnapshots)
+        {
+            _logger.LogInformation("cache-load: loading incremental snapshots");
+            await _snapshotCoordinator.LoadIncrementalSnapshotsInto(cache, cancellationToken);
+            _logger.LogInformation(
+                "cache-load: incremental snapshots loaded, cache count {Count}",
+                cache.Count
+            );
+        }
+
+        _logger.LogWarning("cache: {count}", cache.Count);
 
         IReadOnlyList<MediaCacheStoredEntry> storedEntries = cache
             .Values.Select(LocalMediaCacheEntryMapper.ToStoredEntry)
@@ -96,7 +97,11 @@ internal sealed class LocalMediaCacheLoadCoordinator(
 
         _logger.LogWarning("recheck: {count}", loadExecution.RecheckPaths.Count);
         _logger.LogInformation("cache-load: applying cache mutations");
-        _mutationApplier.Apply(cache, loadExecution.Mutations);
+
+        MediaCacheRecheckMutationApplySelection applied = _mutationApplier.Apply(
+            cache,
+            loadExecution.Mutations
+        );
 
         _logger.LogInformation(
             "cache-load: cache mutations applied, cache count {Count}",
@@ -107,13 +112,22 @@ internal sealed class LocalMediaCacheLoadCoordinator(
         UpdatePartitionSizes(cache);
         _logger.LogInformation("cache-load: partition sizes updated");
 
-        if (loadExecution.RecheckPaths.Count > 0)
+        if (applied.UpdateExistingEntries.Count > 0 || applied.RemoveExistingPaths.Count > 0)
         {
-            _logger.LogInformation("cache-load: saving primary snapshot after recheck");
-            await _snapshotCoordinator.SavePrimarySnapshot([.. cache.Values], cancellationToken);
-            _logger.LogInformation("cache-load: resetting incremental snapshots");
-            _snapshotCoordinator.ResetIncrementalSnapshots();
+            _logger.LogInformation(
+                "cache-load: applying persisted recheck delta, upserts={UpsertCount}, removals={RemovalCount}",
+                applied.UpdateExistingEntries.Count,
+                applied.RemoveExistingPaths.Count
+            );
+            await _snapshotCoordinator.ApplyRecheckChanges(
+                [.. cache.Values],
+                [.. applied.UpdateExistingEntries.Select(LocalMediaCacheEntryMapper.ToCacheEntry)],
+                applied.RemoveExistingPaths,
+                cancellationToken
+            );
         }
+
+        await _snapshotCoordinator.SavePrimarySnapshot([.. cache.Values], cancellationToken);
 
         _logger.LogInformation("cache-load: completed");
     }

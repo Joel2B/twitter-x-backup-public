@@ -15,7 +15,7 @@ internal sealed class LocalMediaCacheMutationApplier(
     private readonly IMediaCacheRecheckMutationExecutionService _mediaCacheRecheckMutationExecutionService =
         mediaCacheRecheckMutationExecutionService;
 
-    public void Apply(
+    public MediaCacheRecheckMutationApplySelection Apply(
         ConcurrentDictionary<string, MediaCacheEntry> cache,
         IReadOnlyList<MediaCacheRecheckMutation> mutations
     )
@@ -48,5 +48,7 @@ internal sealed class LocalMediaCacheMutationApplier(
 
         foreach (string path in selection.UpdateMissingPaths)
             _logger.LogError("error updating path {path}", path);
+
+        return selection;
     }
 }

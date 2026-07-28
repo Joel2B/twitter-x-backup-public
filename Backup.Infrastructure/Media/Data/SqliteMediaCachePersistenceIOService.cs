@@ -15,6 +15,7 @@ public sealed class SqliteMediaCachePersistenceIOService(
     private const int ProgressLogInterval = 100_000;
 
     private readonly ILogger<SqliteMediaCachePersistenceIOService> _logger = logger;
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
 
     public Task<bool> PrimarySnapshotExists(
         string file,
@@ -88,6 +89,13 @@ public sealed class SqliteMediaCachePersistenceIOService(
 
         foreach (MediaCacheEntry entry in entries)
         {
+            await DeleteByPath(
+                connection,
+                transaction,
+                PrimaryTableName,
+                entry.Path,
+                cancellationToken
+            );
             await UpsertEntry(
                 connection,
                 transaction,
@@ -99,10 +107,7 @@ public sealed class SqliteMediaCachePersistenceIOService(
 
             processedEntries++;
 
-            if (
-                processedEntries % ProgressLogInterval == 0
-                || processedEntries == totalEntries
-            )
+            if (processedEntries % ProgressLogInterval == 0 || processedEntries == totalEntries)
                 _logger.LogInformation(
                     "media cache sqlite save progress: target={targetPath}, processed={processed}/{total} ({percent:0.##}%), elapsed={elapsed}",
                     file,
@@ -123,19 +128,141 @@ public sealed class SqliteMediaCachePersistenceIOService(
         CancellationToken cancellationToken = default
     )
     {
-        string databasePath = GetIncrementalDatabasePath(directory);
-        EnsureDirectory(databasePath);
+        await _writeLock.WaitAsync(cancellationToken);
+        try
+        {
+            string databasePath = GetIncrementalDatabasePath(directory);
+            EnsureDirectory(databasePath);
 
-        await using SqliteConnection connection = OpenConnection(databasePath);
-        await EnsureTable(connection, IncrementalTableName, cancellationToken);
-        await UpsertEntry(
-            connection,
-            transaction: null,
-            IncrementalTableName,
-            entry,
-            fileName,
-            cancellationToken
-        );
+            await using SqliteConnection connection = OpenConnection(databasePath);
+            await EnsureTable(connection, IncrementalTableName, cancellationToken);
+            await using SqliteTransaction transaction = (SqliteTransaction)
+                await connection.BeginTransactionAsync(cancellationToken);
+            await DeleteByPath(
+                connection,
+                transaction,
+                IncrementalTableName,
+                entry.Path,
+                cancellationToken
+            );
+            await UpsertEntry(
+                connection,
+                transaction,
+                IncrementalTableName,
+                entry,
+                fileName,
+                cancellationToken
+            );
+            await transaction.CommitAsync(cancellationToken);
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
+    public async Task ApplyRecheckChanges(
+        string primaryFilePath,
+        string incrementalDirectory,
+        IReadOnlyCollection<MediaCacheEntry> finalEntries,
+        IReadOnlyCollection<MediaCacheEntry> upserts,
+        IReadOnlyCollection<string> removals,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await _writeLock.WaitAsync(cancellationToken);
+        try
+        {
+            await ApplyRecheckChangesCore(
+                primaryFilePath,
+                incrementalDirectory,
+                upserts,
+                removals,
+                cancellationToken
+            );
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
+    private static async Task ApplyRecheckChangesCore(
+        string primaryFilePath,
+        string incrementalDirectory,
+        IReadOnlyCollection<MediaCacheEntry> upserts,
+        IReadOnlyCollection<string> removals,
+        CancellationToken cancellationToken
+    )
+    {
+        string incrementalPath = GetIncrementalDatabasePath(incrementalDirectory);
+        EnsureDirectory(primaryFilePath);
+        EnsureDirectory(incrementalPath);
+
+        await using SqliteConnection connection = OpenConnection(primaryFilePath);
+        await EnsureTable(connection, PrimaryTableName, cancellationToken);
+
+        await using (SqliteCommand attach = connection.CreateCommand())
+        {
+            attach.CommandText = "ATTACH DATABASE $path AS incremental_cache";
+            attach.Parameters.AddWithValue("$path", incrementalPath);
+            await attach.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await using (SqliteCommand ensureIncremental = connection.CreateCommand())
+        {
+            ensureIncremental.CommandText = $"""
+                CREATE TABLE IF NOT EXISTS incremental_cache.{IncrementalTableName} (
+                    file_name TEXT PRIMARY KEY,
+                    path TEXT NOT NULL,
+                    stream_size INTEGER NULL,
+                    file_size INTEGER NULL,
+                    partition_id INTEGER NULL
+                );
+                """;
+            await ensureIncremental.ExecuteNonQueryAsync(cancellationToken);
+        }
+
+        await using SqliteTransaction transaction = (SqliteTransaction)
+            await connection.BeginTransactionAsync(cancellationToken);
+        HashSet<string> changedPaths = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (MediaCacheEntry entry in upserts)
+        {
+            changedPaths.Add(entry.Path);
+            await DeleteByPath(
+                connection,
+                transaction,
+                PrimaryTableName,
+                entry.Path,
+                cancellationToken
+            );
+            await UpsertEntry(
+                connection,
+                transaction,
+                PrimaryTableName,
+                entry,
+                null,
+                cancellationToken
+            );
+        }
+
+        foreach (string path in removals)
+        {
+            changedPaths.Add(path);
+            await DeleteByPath(connection, transaction, PrimaryTableName, path, cancellationToken);
+        }
+
+        foreach (string path in changedPaths)
+            await DeleteByPath(
+                connection,
+                transaction,
+                $"incremental_cache.{IncrementalTableName}",
+                path,
+                cancellationToken
+            );
+
+        await transaction.CommitAsync(cancellationToken);
     }
 
     public Task ReplicatePrimarySnapshot(
@@ -270,6 +397,21 @@ public sealed class SqliteMediaCachePersistenceIOService(
         command.Parameters.AddWithValue("$fileSize", (object?)entry.Size?.File ?? DBNull.Value);
         command.Parameters.AddWithValue("$partitionId", (object?)entry.PartitionId ?? DBNull.Value);
 
+        await command.ExecuteNonQueryAsync(cancellationToken);
+    }
+
+    private static async Task DeleteByPath(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string tableName,
+        string path,
+        CancellationToken cancellationToken
+    )
+    {
+        SqliteCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = $"DELETE FROM {tableName} WHERE path = $path COLLATE NOCASE";
+        command.Parameters.AddWithValue("$path", path);
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 

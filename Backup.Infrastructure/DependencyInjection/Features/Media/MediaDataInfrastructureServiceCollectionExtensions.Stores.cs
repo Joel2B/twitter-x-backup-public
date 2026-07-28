@@ -65,9 +65,7 @@ public static partial class MediaDataInfrastructureServiceCollectionExtensions
                         sp.GetRequiredService<IPrimarySelectionService>(),
                         sp.GetRequiredService<IMediaCacheEntryPathPolicyService>(),
                         sp.GetRequiredService<IMediaCacheReplicationPathService>(),
-                        new LocalMediaCachePersistenceIOService(
-                            sp.GetRequiredService<IMediaCacheJsonSnapshotService>()
-                        ),
+                        sp.GetRequiredService<IMediaCacheJsonSnapshotService>(),
                         sp.GetRequiredKeyedService<LocalMediaCachePathLayout>(key),
                         sp.GetRequiredService<ILogger<LocalMediaCacheSnapshotCoordinator>>()
                     )
