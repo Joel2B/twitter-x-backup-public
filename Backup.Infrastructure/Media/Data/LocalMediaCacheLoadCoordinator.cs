@@ -127,8 +127,6 @@ internal sealed class LocalMediaCacheLoadCoordinator(
             );
         }
 
-        await _snapshotCoordinator.SavePrimarySnapshot([.. cache.Values], cancellationToken);
-
         _logger.LogInformation("cache-load: completed");
     }
 
