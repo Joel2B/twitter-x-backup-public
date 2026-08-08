@@ -73,6 +73,12 @@ public class TipjarSettings
     public string? BitcoinHandle { get; set; }
 }
 
+public class TweetCounts
+{
+    [JsonProperty("media_tweets", NullValueHandling = NullValueHandling.Ignore)]
+    public int? MediaTweets { get; set; }
+}
+
 public class UrlDetails
 {
     [JsonProperty("display_url", NullValueHandling = NullValueHandling.Ignore)]

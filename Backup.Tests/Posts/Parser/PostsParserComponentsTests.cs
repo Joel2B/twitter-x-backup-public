@@ -2,12 +2,88 @@ using Backup.Application.Posts;
 using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Posts.Adapters;
 using Backup.Infrastructure.Posts.Models;
+using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
 
 namespace Backup.Tests;
 
 public class PostsParserComponentsTests
 {
+    [Theory]
+    [InlineData("\"legacy\": { \"media_count\": 14 }")]
+    [InlineData("\"tweet_counts\": { \"media_tweets\": 14 }")]
+    public void ParseUser_ReadsMediaCount_FromSupportedPayloads(string mediaCountProperty)
+    {
+        PostParser parser = CreateParser();
+        string response = $$"""
+            {
+              "data": {
+                "user": {
+                  "result": {
+                    "__typename": "User",
+                    "rest_id": "1974386208126939136",
+                    {{mediaCountProperty}}
+                  }
+                }
+              }
+            }
+            """;
+
+        Domain.Posts.ParseUser result = parser.ParseUser(response);
+
+        Assert.Equal("1974386208126939136", result.User?.Id);
+        Assert.Equal(14, result.User?.MediaCount);
+    }
+
+    [Fact]
+    public void ParseUser_RejectsPayloadWithoutMediaCount()
+    {
+        PostParser parser = CreateParser();
+
+        FormatException error = Assert.Throws<FormatException>(
+            () =>
+                parser.ParseUser(
+                    """
+                    {
+                      "data": {
+                        "user": {
+                          "result": {
+                            "__typename": "User",
+                            "rest_id": "1974386208126939136"
+                          }
+                        }
+                      }
+                    }
+                    """
+                )
+        );
+
+        Assert.Equal("User parse payload is invalid", error.Message);
+    }
+
+    [Fact]
+    public void ParseUser_ReturnsNull_ForUnavailableUser()
+    {
+        PostParser parser = CreateParser();
+
+        Domain.Posts.ParseUser result = parser.ParseUser(
+            """
+            {
+              "data": {
+                "user": {
+                  "result": {
+                    "__typename": "UserUnavailable",
+                    "message": "User not found"
+                  }
+                }
+              }
+            }
+            """
+        );
+
+        Assert.Null(result.User);
+    }
+
     [Fact]
     public void TweetResultResolver_UsesTweetWrapper_WhenPresent()
     {
@@ -186,4 +262,13 @@ public class PostsParserComponentsTests
             FullText = "text",
             CreatedAt = "Sun May 24 04:00:00 +0000 2026",
         };
+
+    private static PostParser CreateParser() =>
+        new(
+            NullLogger<PostParser>.Instance,
+            new PostTimelineExtractor(),
+            new PostUserParsePolicyService(),
+            new PostProjectionParseService(),
+            new PostTokenMaterializer()
+        );
 }

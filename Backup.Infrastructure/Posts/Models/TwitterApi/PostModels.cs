@@ -262,6 +262,9 @@ public class Result
     [JsonProperty("legacy", NullValueHandling = NullValueHandling.Ignore)]
     public Legacy? Legacy { get; set; }
 
+    [JsonProperty("tweet_counts", NullValueHandling = NullValueHandling.Ignore)]
+    public TweetCounts? TweetCounts { get; set; }
+
     [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
     public string? Id { get; set; }
 

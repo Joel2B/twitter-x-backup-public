@@ -77,7 +77,7 @@ public class PostParser(
 
         PostUser? user = _postUserParsePolicyService.CreateUser(
             data.User.Result.RestId,
-            data.User.Result.Legacy?.MediaCount
+            data.User.Result.Legacy?.MediaCount ?? data.User.Result.TweetCounts?.MediaTweets
         );
 
         if (user is null)
