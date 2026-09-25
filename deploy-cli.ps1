@@ -1,6 +1,14 @@
 $ErrorActionPreference = "Stop"
 
-$image = "192.168.2.141:5000/twitter-x-backup-cli:latest"
+$configPath = Join-Path $PSScriptRoot "config.ps1"
+
+if (-not (Test-Path -LiteralPath $configPath)) {
+    throw "Missing config.ps1. Copy config.example.ps1 to config.ps1 and configure DockerRegistry."
+}
+
+. $configPath
+
+$image = "$DockerRegistry/twitter-x-backup-cli:latest"
 
 docker build -f Dockerfile.Cli -t $image .
 
