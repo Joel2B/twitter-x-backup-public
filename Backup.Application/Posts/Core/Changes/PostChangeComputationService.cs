@@ -8,27 +8,6 @@ public sealed class PostChangeComputationService : IPostChangeComputationService
 {
     private static readonly JsonSerializerOptions JsonOptions = new();
 
-    private const string PostPrefix = "post.";
-    private const string ProfilePrefix = "profile.";
-    private const string IndexPrefix = "index.";
-
-    private const string PostId = "post.id";
-    private const string PostDescription = "post.description";
-    private const string PostRetweeted = "post.retweeted";
-    private const string PostFavorited = "post.favorited";
-    private const string PostBookmarked = "post.bookmarked";
-    private const string PostCreatedAt = "post.created_at";
-    private const string PostDeleted = "post.deleted";
-    private const string PostHashtags = "post.hashtags";
-    private const string PostMedias = "post.medias";
-    private const string ProfileId = "profile.id";
-    private const string ProfileUserName = "profile.user_name";
-    private const string ProfileName = "profile.name";
-    private const string ProfileBannerUrl = "profile.banner_url";
-    private const string ProfileImageUrl = "profile.image_url";
-    private const string ProfileFollowing = "profile.following";
-    private const string ProfileCountMedia = "profile.count_media";
-
     public IReadOnlyList<PostComputedChange> Compute(Post post)
     {
         if (post.Changes.Count == 0)
@@ -91,7 +70,7 @@ public sealed class PostChangeComputationService : IPostChangeComputationService
 
             AddFieldIfDifferentAsJson(
                 fields,
-                Index(change.UserId),
+                ChangeFields.Index(change.UserId),
                 NormalizeIndex(change.Index),
                 NormalizeIndex(newIndex)
             );
@@ -135,47 +114,87 @@ public sealed class PostChangeComputationService : IPostChangeComputationService
         PostData newData
     )
     {
-        AddFieldIfDifferent(fields, PostId, oldData.Id, newData.Id);
-        AddFieldIfDifferent(fields, PostDescription, oldData.Description, newData.Description);
-        AddFieldIfDifferent(fields, PostRetweeted, oldData.Retweeted, newData.Retweeted);
-        AddFieldIfDifferent(fields, PostFavorited, oldData.Favorited, newData.Favorited);
-        AddFieldIfDifferent(fields, PostBookmarked, oldData.Bookmarked, newData.Bookmarked);
-        AddFieldIfDifferent(fields, PostCreatedAt, oldData.CreatedAt, newData.CreatedAt);
-        AddFieldIfDifferent(fields, PostDeleted, oldData.Deleted, newData.Deleted);
-        AddFieldIfDifferent(fields, ProfileId, oldData.Profile.Id, newData.Profile.Id);
+        AddFieldIfDifferent(fields, ChangeFields.PostId, oldData.Id, newData.Id);
         AddFieldIfDifferent(
             fields,
-            ProfileUserName,
+            ChangeFields.PostDescription,
+            oldData.Description,
+            newData.Description
+        );
+        AddFieldIfDifferent(
+            fields,
+            ChangeFields.PostRetweeted,
+            oldData.Retweeted,
+            newData.Retweeted
+        );
+        AddFieldIfDifferent(
+            fields,
+            ChangeFields.PostFavorited,
+            oldData.Favorited,
+            newData.Favorited
+        );
+        AddFieldIfDifferent(
+            fields,
+            ChangeFields.PostBookmarked,
+            oldData.Bookmarked,
+            newData.Bookmarked
+        );
+        AddFieldIfDifferent(
+            fields,
+            ChangeFields.PostCreatedAt,
+            oldData.CreatedAt,
+            newData.CreatedAt
+        );
+        AddFieldIfDifferent(fields, ChangeFields.PostDeleted, oldData.Deleted, newData.Deleted);
+        AddFieldIfDifferent(fields, ChangeFields.ProfileId, oldData.Profile.Id, newData.Profile.Id);
+        AddFieldIfDifferent(
+            fields,
+            ChangeFields.ProfileUserName,
             oldData.Profile.UserName,
             newData.Profile.UserName
         );
-        AddFieldIfDifferent(fields, ProfileName, oldData.Profile.Name, newData.Profile.Name);
         AddFieldIfDifferent(
             fields,
-            ProfileBannerUrl,
+            ChangeFields.ProfileName,
+            oldData.Profile.Name,
+            newData.Profile.Name
+        );
+        AddFieldIfDifferent(
+            fields,
+            ChangeFields.ProfileBannerUrl,
             oldData.Profile.BannerUrl,
             newData.Profile.BannerUrl
         );
         AddFieldIfDifferent(
             fields,
-            ProfileImageUrl,
+            ChangeFields.ProfileImageUrl,
             oldData.Profile.ImageUrl,
             newData.Profile.ImageUrl
         );
         AddFieldIfDifferent(
             fields,
-            ProfileFollowing,
+            ChangeFields.ProfileFollowing,
             oldData.Profile.Following,
             newData.Profile.Following
         );
         AddFieldIfDifferent(
             fields,
-            ProfileCountMedia,
+            ChangeFields.ProfileCountMedia,
             oldData.Profile.Count?.Media,
             newData.Profile.Count?.Media
         );
-        AddFieldIfDifferentAsJson(fields, PostHashtags, oldData.Hashtags, newData.Hashtags);
-        AddFieldIfDifferentAsJson(fields, PostMedias, oldData.Medias, newData.Medias);
+        AddFieldIfDifferentAsJson(
+            fields,
+            ChangeFields.PostHashtags,
+            oldData.Hashtags,
+            newData.Hashtags
+        );
+        AddFieldIfDifferentAsJson(
+            fields,
+            ChangeFields.PostMedias,
+            oldData.Medias,
+            newData.Medias
+        );
     }
 
     private static void AddFieldIfDifferent<T>(
@@ -223,8 +242,8 @@ public sealed class PostChangeComputationService : IPostChangeComputationService
 
     private static string GetChangeType(IReadOnlyList<PostComputedChangeField> fields)
     {
-        bool hasData = fields.Any(o => IsPostOrProfile(o.Field));
-        bool hasIndex = fields.Any(o => IsIndex(o.Field));
+        bool hasData = fields.Any(o => ChangeFields.IsPostOrProfile(o.Field));
+        bool hasIndex = fields.Any(o => ChangeFields.IsIndex(o.Field));
 
         if (hasData && hasIndex)
             return "data_index_update";
@@ -237,15 +256,6 @@ public sealed class PostChangeComputationService : IPostChangeComputationService
 
         return "unknown";
     }
-
-    private static bool IsPostOrProfile(string field) =>
-        field.StartsWith(PostPrefix, StringComparison.Ordinal)
-        || field.StartsWith(ProfilePrefix, StringComparison.Ordinal);
-
-    private static bool IsIndex(string field) =>
-        field.StartsWith(IndexPrefix, StringComparison.Ordinal);
-
-    private static string Index(string userId) => $"{IndexPrefix}{userId}";
 
     private static Dictionary<string, IndexData>? NormalizeIndex(
         Dictionary<string, IndexData>? index

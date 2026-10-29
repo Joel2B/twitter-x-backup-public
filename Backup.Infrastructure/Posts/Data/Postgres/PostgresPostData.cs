@@ -55,6 +55,7 @@ public partial class PostgresPostData(
     public async Task Setup()
     {
         await EnsureSchema();
+        await RebuildHashMetadata();
     }
 
     public async Task AddPosts(

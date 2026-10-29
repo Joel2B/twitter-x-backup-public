@@ -58,6 +58,7 @@ public partial class SqlitePostData(
             Directory.CreateDirectory(GetBasePath(p));
 
         await EnsureSchema();
+        await RebuildHashMetadata();
     }
 
     public async Task AddPosts(

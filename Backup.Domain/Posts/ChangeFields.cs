@@ -1,6 +1,6 @@
 namespace Backup.Domain.Posts;
 
-internal static class ChangeFields
+public static class ChangeFields
 {
     private const string PostPrefix = "post.";
     private const string ProfilePrefix = "profile.";

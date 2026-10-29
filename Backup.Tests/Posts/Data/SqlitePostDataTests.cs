@@ -330,6 +330,84 @@ public class SqlitePostDataTests
         }
     }
 
+    [Fact]
+    public async Task Setup_RebuildsLegacyAndMissingHashMetadata_AndRemovesOrphans()
+    {
+        (SqlitePostData sut, string root) = CreateSut();
+
+        try
+        {
+            await sut.Setup();
+            await sut.UpsertPosts(
+                [
+                    CreatePost("p1", "profile-1", "one", "user-1", "posts"),
+                    CreatePost("p2", "profile-1", "two", "user-1", "posts"),
+                ]
+            );
+            await sut.Save();
+
+            string dbPath = Path.Combine(root, "data", "post", "posts.db");
+            await using (SqliteConnection connection = new($"Data Source={dbPath}"))
+            {
+                await connection.OpenAsync();
+                await using SqliteCommand command = connection.CreateCommand();
+                command.CommandText =
+                    "UPDATE post_meta SET hash = 'legacy', deleted = 1 WHERE id = 'p1';"
+                    + "DELETE FROM post_meta WHERE id = 'p2';"
+                    + "INSERT INTO post_meta (id, hash, deleted) VALUES ('orphan', 'legacy', 0);";
+                await command.ExecuteNonQueryAsync();
+            }
+
+            await sut.Setup();
+
+            Dictionary<string, string> hashes = await sut.GetHashesById();
+            Assert.Equal(2, hashes.Count);
+            Assert.All(hashes.Values, hash => Assert.StartsWith("v2:", hash));
+            Assert.True((await sut.GetByIds(["p1"])).Single().Deleted);
+            Assert.False((await sut.GetByIds(["p2"])).Single().Deleted);
+        }
+        finally
+        {
+            await sut.DisposeAsync();
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
+    public async Task History_RoundTrips_AndChangesHash()
+    {
+        (SqlitePostData sut, string root) = CreateSut();
+
+        try
+        {
+            await sut.Setup();
+            await sut.AddPosts(
+                "user-1",
+                "posts",
+                [CreatePost("p1", "profile-1", "old", "user-1", "posts")]
+            );
+            await sut.Save();
+            string oldHash = (await sut.GetHashesById())["p1"];
+
+            await sut.AddPosts(
+                "user-1",
+                "posts",
+                [CreatePost("p1", "profile-1", "new", "user-1", "posts")]
+            );
+            await sut.Save();
+
+            Post stored = (await sut.GetByIds(["p1"])).Single();
+            Change history = Assert.Single(stored.Changes);
+            Assert.Equal("old", history.Data!.Description);
+            Assert.NotEqual(oldHash, (await sut.GetHashesById())["p1"]);
+        }
+        finally
+        {
+            await sut.DisposeAsync();
+            DeleteDirectory(root);
+        }
+    }
+
     private static (SqlitePostData Sut, string Root) CreateSut()
     {
         string root = Path.Combine(
@@ -371,7 +449,7 @@ public class SqlitePostDataTests
             },
         };
 
-        PostHashingService postHashingService = new();
+        PostHashingService postHashingService = new(new PostChangeComputationService());
         PostMergeExecutionService postMergeExecutionService = new(
             new PostMergeResolutionService(new PostMergeService()),
             new PostMergeApplyPlanningService()

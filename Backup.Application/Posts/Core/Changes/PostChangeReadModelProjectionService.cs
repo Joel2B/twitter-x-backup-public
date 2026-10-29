@@ -33,10 +33,10 @@ public sealed class PostChangeReadModelProjectionService : IPostChangeReadModelP
 
             foreach (PostChangeReplayField field in entry.Fields)
             {
-                if (IsPostOrProfileField(field.Field))
+                if (ChangeFields.IsPostOrProfile(field.Field))
                     hasDataFields = true;
 
-                if (IsIndexField(field.Field))
+                if (ChangeFields.IsIndex(field.Field))
                     hasIndexFields = true;
 
                 ApplyReverseDelta(stateData, stateIndex, field);
@@ -63,13 +63,13 @@ public sealed class PostChangeReadModelProjectionService : IPostChangeReadModelP
         PostChangeReplayField field
     )
     {
-        if (IsPostOrProfileField(field.Field))
+        if (ChangeFields.IsPostOrProfile(field.Field))
         {
             ApplyOldDataValue(stateData, field.Field, field.OldValueJson);
             return;
         }
 
-        string? userId = GetIndexUserId(field.Field);
+        string? userId = ChangeFields.GetIndexUserId(field.Field);
         if (userId is null)
             return;
 
@@ -90,64 +90,64 @@ public sealed class PostChangeReadModelProjectionService : IPostChangeReadModelP
     {
         switch (field)
         {
-            case PostId:
+            case ChangeFields.PostId:
                 data.Id = DeserializeJson<string>(oldValueJson) ?? data.Id;
                 break;
-            case PostDescription:
+            case ChangeFields.PostDescription:
                 data.Description = DeserializeJson<string>(oldValueJson) ?? data.Description;
                 break;
-            case PostRetweeted:
+            case ChangeFields.PostRetweeted:
                 data.Retweeted = DeserializeJson<bool>(oldValueJson);
                 break;
-            case PostFavorited:
+            case ChangeFields.PostFavorited:
                 data.Favorited = DeserializeJson<bool>(oldValueJson);
                 break;
-            case PostBookmarked:
+            case ChangeFields.PostBookmarked:
                 data.Bookmarked = DeserializeJson<bool>(oldValueJson);
                 break;
-            case PostCreatedAt:
+            case ChangeFields.PostCreatedAt:
                 data.CreatedAt = DeserializeJson<string>(oldValueJson) ?? data.CreatedAt;
                 break;
-            case PostDeleted:
+            case ChangeFields.PostDeleted:
                 data.Deleted = DeserializeJson<bool>(oldValueJson);
                 break;
-            case ProfileId:
+            case ChangeFields.ProfileId:
                 data.Profile.Id = DeserializeJson<string>(oldValueJson) ?? data.Profile.Id;
                 break;
-            case ProfileUserName:
+            case ChangeFields.ProfileUserName:
                 data.Profile.UserName = DeserializeJson<string?>(oldValueJson);
                 break;
-            case ProfileName:
+            case ChangeFields.ProfileName:
                 data.Profile.Name = DeserializeJson<string?>(oldValueJson);
                 break;
-            case ProfileBannerUrl:
+            case ChangeFields.ProfileBannerUrl:
                 data.Profile.BannerUrl = DeserializeJson<string?>(oldValueJson);
                 break;
-            case ProfileImageUrl:
+            case ChangeFields.ProfileImageUrl:
                 data.Profile.ImageUrl = DeserializeJson<string?>(oldValueJson);
                 break;
-            case ProfileFollowing:
+            case ChangeFields.ProfileFollowing:
                 data.Profile.Following = DeserializeJson<bool?>(oldValueJson);
                 break;
-            case ProfileCountMedia:
-            {
-                int? mediaCount = DeserializeJson<int?>(oldValueJson);
-                if (mediaCount.HasValue)
+            case ChangeFields.ProfileCountMedia:
                 {
-                    data.Profile.Count ??= new();
-                    data.Profile.Count.Media = mediaCount;
-                }
-                else
-                {
-                    data.Profile.Count = null;
-                }
+                    int? mediaCount = DeserializeJson<int?>(oldValueJson);
+                    if (mediaCount.HasValue)
+                    {
+                        data.Profile.Count ??= new();
+                        data.Profile.Count.Media = mediaCount;
+                    }
+                    else
+                    {
+                        data.Profile.Count = null;
+                    }
 
-                break;
-            }
-            case PostHashtags:
+                    break;
+                }
+            case ChangeFields.PostHashtags:
                 data.Hashtags = DeserializeJson<List<string>?>(oldValueJson);
                 break;
-            case PostMedias:
+            case ChangeFields.PostMedias:
                 data.Medias = DeserializeJson<List<PostMedia>?>(oldValueJson);
                 break;
         }
@@ -175,36 +175,4 @@ public sealed class PostChangeReadModelProjectionService : IPostChangeReadModelP
         return JsonSerializer.Deserialize<T>(json, JsonOptions);
     }
 
-    private const string PostId = "post.id";
-    private const string PostDescription = "post.description";
-    private const string PostRetweeted = "post.retweeted";
-    private const string PostFavorited = "post.favorited";
-    private const string PostBookmarked = "post.bookmarked";
-    private const string PostCreatedAt = "post.createdAt";
-    private const string PostDeleted = "post.deleted";
-    private const string ProfileId = "profile.id";
-    private const string ProfileUserName = "profile.userName";
-    private const string ProfileName = "profile.name";
-    private const string ProfileBannerUrl = "profile.bannerUrl";
-    private const string ProfileImageUrl = "profile.imageUrl";
-    private const string ProfileFollowing = "profile.following";
-    private const string ProfileCountMedia = "profile.count.media";
-    private const string PostHashtags = "post.hashtags";
-    private const string PostMedias = "post.medias";
-
-    private static bool IsPostOrProfileField(string field) =>
-        field.StartsWith("post.", StringComparison.Ordinal)
-        || field.StartsWith("profile.", StringComparison.Ordinal);
-
-    private static bool IsIndexField(string field) =>
-        field.StartsWith("index.", StringComparison.Ordinal);
-
-    private static string? GetIndexUserId(string field)
-    {
-        if (!IsIndexField(field))
-            return null;
-
-        string[] parts = field.Split('.', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length >= 2 ? parts[1] : null;
-    }
 }

@@ -2,7 +2,6 @@ using Backup.Application.Posts;
 using Backup.Infrastructure.Posts.Abstractions.Data;
 using Backup.Infrastructure.Posts.Abstractions.Services;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
 
 namespace Backup.Infrastructure.Posts.Adapters;
 
@@ -28,7 +27,8 @@ public class PostReplicationAdapter(
         }
         catch (Exception ex)
         {
-            _logger.LogError("Error: {error}", JsonConvert.SerializeObject(ex));
+            _logger.LogError(ex, "Post replication failed");
+            throw;
         }
     }
 }

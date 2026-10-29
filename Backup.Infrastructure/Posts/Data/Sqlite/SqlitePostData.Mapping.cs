@@ -109,7 +109,7 @@ public partial class SqlitePostData
             {
                 PostId = post.Id,
                 UserId = change.UserId,
-                Date = change.Date,
+                Date = NormalizeUtc(change.Date),
                 ChangeType = change.ChangeType,
             };
 

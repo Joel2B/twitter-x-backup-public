@@ -101,8 +101,8 @@
     {
       "Id": "nas post json",
       "Type": "local",
-      "Default": true,
-      "Enabled": true,
+      "Default": false,
+      "Enabled": false,
       "Paths": {
         "Paths": ["data"],
         "Post": {
@@ -121,7 +121,7 @@
       "Id": "nas post sqlite",
       "Type": "sqlite",
       "Default": false,
-      "Enabled": false,
+      "Enabled": true,
       "Paths": {
         "Paths": ["data"],
         "Post": {
@@ -139,14 +139,13 @@
     {
       "Id": "nas post postgres",
       "Type": "postgres",
-      "Default": false,
-      "Enabled": false,
+      "Default": true,
+      "Enabled": true,
       "ConnectionString": "Host=localhost;Port=5432;Database=twitter_x_backup;Username=postgres;Password={REPLACE_THIS}",
       "Paths": {
         "Paths": ["data"],
         "Post": {
-          "Paths": ["post", "postgres"],
-          "File": "unused"
+          "Paths": ["post", "postgres"]
         }
       },
       "Partitions": [6],
