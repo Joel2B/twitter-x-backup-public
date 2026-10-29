@@ -94,6 +94,113 @@ public sealed class LocalMediaCacheLoadCoordinatorTests
         Assert.Equal(0, persistence.ApplyRecheckChangesCalls);
     }
 
+    [Fact]
+    public async Task SeedMissingTargets_CopiesLoadedCacheOnlyToEmptySecondary()
+    {
+        PartitionConfig partitionConfig = new()
+        {
+            Id = 1,
+            Type = "local",
+            Size = 0,
+            UsableSpace = 0,
+            Paths = [Path.GetTempPath()],
+        };
+        FakePersistence primaryPersistence = new();
+        FakePersistence emptySecondaryPersistence = new() { SnapshotExists = false };
+        FakePersistence populatedSecondaryPersistence = new();
+        MediaCacheTargetRuntime primary = CreateTarget(
+            "primary",
+            true,
+            partitionConfig,
+            primaryPersistence
+        );
+        MediaCacheTargetRuntime emptySecondary = CreateTarget(
+            "empty",
+            false,
+            partitionConfig,
+            emptySecondaryPersistence
+        );
+        MediaCacheTargetRuntime populatedSecondary = CreateTarget(
+            "populated",
+            false,
+            partitionConfig,
+            populatedSecondaryPersistence
+        );
+        LocalMediaCachePathLayout pathLayout = CreatePathLayout(
+            partitionConfig,
+            [primary, emptySecondary, populatedSecondary]
+        );
+        LocalMediaCacheSnapshotCoordinator sut = new(
+            [primary, emptySecondary, populatedSecondary],
+            new Backup.Application.Core.PrimarySelectionService(),
+            new MediaCacheEntryPathPolicyService(),
+            new MediaCacheReplicationPathService(),
+            new MediaCacheJsonSnapshotService(),
+            pathLayout,
+            NullLogger<LocalMediaCacheSnapshotCoordinator>.Instance
+        );
+        MediaCacheEntry entry = new() { Path = "media/item.jpg", PartitionId = 1 };
+
+        await sut.SeedMissingTargets(
+            new Dictionary<string, MediaCacheEntry>(StringComparer.OrdinalIgnoreCase)
+            {
+                [entry.Path] = entry,
+            }
+        );
+
+        Assert.Equal(0, primaryPersistence.SavePrimarySnapshotCalls);
+        Assert.Equal(1, emptySecondaryPersistence.SavePrimarySnapshotCalls);
+        Assert.Equal([entry], emptySecondaryPersistence.SavedEntries);
+        Assert.Equal(0, populatedSecondaryPersistence.SavePrimarySnapshotCalls);
+    }
+
+    private static MediaCacheTargetRuntime CreateTarget(
+        string key,
+        bool isDefault,
+        PartitionConfig partition,
+        IMediaCachePersistenceIOService persistence
+    ) =>
+        new(
+            key,
+            key,
+            isDefault,
+            MediaDataInfrastructureServiceCollectionExtensions.MediaCacheType.Json,
+            new PathConfig { Paths = ["cache", key], File = "media.json" },
+            [partition],
+            partition,
+            [],
+            persistence
+        );
+
+    private static LocalMediaCachePathLayout CreatePathLayout(
+        PartitionConfig partitionConfig,
+        IReadOnlyList<MediaCacheTargetRuntime> targets
+    ) =>
+        new(
+            new StorageMedia
+            {
+                Type = "local",
+                Enabled = true,
+                Partitions = [partitionConfig.Id],
+                Tasks = new Tasks { Prune = false },
+                Paths = new Paths
+                {
+                    Paths = [],
+                    Media = new PathConfig { Paths = ["media"] },
+                    Tmp = new Tmp
+                    {
+                        Paths = ["tmp"],
+                        Downloader = new PathConfig { Paths = [] },
+                        Downloaded = new PathConfig { Paths = ["downloaded"] },
+                    },
+                },
+            },
+            null!,
+            targets,
+            new FakeDataStoreGuardService(),
+            null!
+        );
+
     private sealed class EmptyLoadExecutionService : IMediaCacheLoadExecutionService
     {
         public MediaCacheLoadExecutionResult Execute(
@@ -116,13 +223,15 @@ public sealed class LocalMediaCacheLoadCoordinatorTests
 
     private sealed class FakePersistence : IMediaCachePersistenceIOService
     {
+        public bool SnapshotExists { get; init; } = true;
         public int SavePrimarySnapshotCalls { get; private set; }
         public int ApplyRecheckChangesCalls { get; private set; }
+        public IReadOnlyCollection<MediaCacheEntry> SavedEntries { get; private set; } = [];
 
         public Task<bool> PrimarySnapshotExists(
             string file,
             CancellationToken cancellationToken = default
-        ) => Task.FromResult(true);
+        ) => Task.FromResult(SnapshotExists);
 
         public Task<IReadOnlyList<MediaCacheEntry>> LoadIncrementalSnapshots(
             string directory,
@@ -141,6 +250,7 @@ public sealed class LocalMediaCacheLoadCoordinatorTests
         )
         {
             SavePrimarySnapshotCalls++;
+            SavedEntries = entries;
             return Task.CompletedTask;
         }
 

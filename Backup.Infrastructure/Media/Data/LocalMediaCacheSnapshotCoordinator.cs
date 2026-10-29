@@ -89,6 +89,51 @@ internal sealed class LocalMediaCacheSnapshotCoordinator(
             cache[entry.Path] = entry;
     }
 
+    public async Task SeedMissingTargets(
+        IReadOnlyDictionary<string, MediaCacheEntry> entries,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (entries.Count == 0)
+            return;
+
+        MediaCacheTargetRuntime primaryTarget = GetPrimaryTarget();
+        IReadOnlyCollection<MediaCacheEntry>? snapshot = null;
+
+        foreach (MediaCacheTargetRuntime target in _cacheTargets)
+        {
+            if (ReferenceEquals(target, primaryTarget))
+                continue;
+
+            string primaryFilePath = GetPrimaryFilePath(target);
+
+            if (await target.Persistence.PrimarySnapshotExists(primaryFilePath, cancellationToken))
+                continue;
+
+            snapshot ??= [.. entries.Values];
+
+            _logger.LogInformation(
+                "media cache seed started: source={sourceCache}, target={targetCache}, entries={entryCount}",
+                primaryTarget.Label,
+                target.Label,
+                snapshot.Count
+            );
+
+            await target.Persistence.SavePrimarySnapshot(
+                primaryFilePath,
+                snapshot,
+                cancellationToken
+            );
+
+            _logger.LogInformation(
+                "media cache seed completed: source={sourceCache}, target={targetCache}, entries={entryCount}",
+                primaryTarget.Label,
+                target.Label,
+                snapshot.Count
+            );
+        }
+    }
+
     public async Task SavePrimarySnapshot(
         IReadOnlyCollection<MediaCacheEntry> entries,
         CancellationToken cancellationToken = default

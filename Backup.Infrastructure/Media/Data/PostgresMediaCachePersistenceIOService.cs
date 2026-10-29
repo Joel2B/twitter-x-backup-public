@@ -3,6 +3,7 @@ using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Models;
 using Backup.Infrastructure.Models.Config.Data.Media;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace Backup.Infrastructure.Media.Data;
 
@@ -113,23 +114,38 @@ public sealed class PostgresMediaCachePersistenceIOService(
             await delete.ExecuteNonQueryAsync(cancellationToken);
         }
 
-        foreach (MediaCacheEntry entry in entries)
         {
-            await DeleteByPath(
-                connection,
-                transaction,
-                PrimaryTableName,
-                cacheNamespace,
-                entry.Path,
+            await using NpgsqlBinaryImporter importer = await connection.BeginBinaryImportAsync(
+                $"COPY {PrimaryTableName} (namespace, path, stream_size, file_size, partition_id) FROM STDIN (FORMAT BINARY)",
                 cancellationToken
             );
-            await UpsertPrimaryEntry(
-                connection,
-                transaction,
-                cacheNamespace,
-                entry,
-                cancellationToken
-            );
+
+            foreach (MediaCacheEntry entry in entries)
+            {
+                await importer.StartRowAsync(cancellationToken);
+                await importer.WriteAsync(cacheNamespace, NpgsqlDbType.Text, cancellationToken);
+                await importer.WriteAsync(entry.Path, NpgsqlDbType.Text, cancellationToken);
+                await WriteNullable(
+                    importer,
+                    entry.Size?.Stream,
+                    NpgsqlDbType.Bigint,
+                    cancellationToken
+                );
+                await WriteNullable(
+                    importer,
+                    entry.Size?.File,
+                    NpgsqlDbType.Bigint,
+                    cancellationToken
+                );
+                await WriteNullable(
+                    importer,
+                    entry.PartitionId,
+                    NpgsqlDbType.Integer,
+                    cancellationToken
+                );
+            }
+
+            await importer.CompleteAsync(cancellationToken);
         }
 
         await transaction.CommitAsync(cancellationToken);
@@ -505,6 +521,17 @@ public sealed class PostgresMediaCachePersistenceIOService(
         command.Parameters.AddWithValue("fileSize", (object?)entry.Size?.File ?? DBNull.Value);
         command.Parameters.AddWithValue("partitionId", (object?)entry.PartitionId ?? DBNull.Value);
     }
+
+    private static Task WriteNullable<T>(
+        NpgsqlBinaryImporter importer,
+        T? value,
+        NpgsqlDbType type,
+        CancellationToken cancellationToken
+    )
+        where T : struct =>
+        value.HasValue
+            ? importer.WriteAsync(value.Value, type, cancellationToken)
+            : importer.WriteNullAsync(cancellationToken);
 
     private async Task<NpgsqlConnection> OpenConnection(CancellationToken cancellationToken)
     {

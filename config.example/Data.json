@@ -213,8 +213,8 @@
       "Cache": [
         {
           "Id": "primary",
-          "Default": true,
-          "Enabled": true,
+          "Default": false,
+          "Enabled": false,
           "Type": "json",
           "ConnectionString": null,
           "Partitions": [0, 7],
@@ -237,8 +237,8 @@
         },
         {
           "Id": "postgres",
-          "Default": false,
-          "Enabled": false,
+          "Default": true,
+          "Enabled": true,
           "Type": "postgres",
           "ConnectionString": "Host=127.0.0.1;Port=5432;Database=twitter_x_backup;Username=backup;Password={REPLACE_THIS}",
           "Partitions": [0, 7]

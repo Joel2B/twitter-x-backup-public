@@ -70,6 +70,8 @@ internal sealed class LocalMediaCacheLoadCoordinator(
                 "cache-load: incremental snapshots loaded, cache count {Count}",
                 cache.Count
             );
+
+            await _snapshotCoordinator.SeedMissingTargets(cache, cancellationToken);
         }
 
         _logger.LogWarning("cache: {count}", cache.Count);
