@@ -1,7 +1,7 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Globalization;
 using Backup.Application.Posts.Models;
 using Backup.Domain.Posts;
 
@@ -27,19 +27,22 @@ public sealed class PostHashingService(IPostChangeComputationService postChangeC
     private static object Normalize(Post post, IReadOnlyList<PostComputedChange> computedChanges)
     {
         List<object> changes = computedChanges
-            .Select((change, index) => new
-            {
-                Sequence = index,
-                change.UserId,
-                Date = NormalizeDate(change.Date),
-                change.ChangeType,
-                Fields = change.Fields.Select(field => new
-                {
-                    field.Field,
-                    field.OldValueJson,
-                    field.NewValueJson,
-                }),
-            })
+            .Select(
+                (change, index) =>
+                    new
+                    {
+                        Sequence = index,
+                        change.UserId,
+                        Date = NormalizeDate(change.Date),
+                        change.ChangeType,
+                        Fields = change.Fields.Select(field => new
+                        {
+                            field.Field,
+                            field.OldValueJson,
+                            field.NewValueJson,
+                        }),
+                    }
+            )
             .OrderBy(change => change.Date, StringComparer.Ordinal)
             .ThenBy(change => change.Sequence)
             .Select(change => new

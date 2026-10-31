@@ -130,20 +130,20 @@ public sealed class PostChangeReadModelProjectionService : IPostChangeReadModelP
                 data.Profile.Following = DeserializeJson<bool?>(oldValueJson);
                 break;
             case ChangeFields.ProfileCountMedia:
+            {
+                int? mediaCount = DeserializeJson<int?>(oldValueJson);
+                if (mediaCount.HasValue)
                 {
-                    int? mediaCount = DeserializeJson<int?>(oldValueJson);
-                    if (mediaCount.HasValue)
-                    {
-                        data.Profile.Count ??= new();
-                        data.Profile.Count.Media = mediaCount;
-                    }
-                    else
-                    {
-                        data.Profile.Count = null;
-                    }
-
-                    break;
+                    data.Profile.Count ??= new();
+                    data.Profile.Count.Media = mediaCount;
                 }
+                else
+                {
+                    data.Profile.Count = null;
+                }
+
+                break;
+            }
             case ChangeFields.PostHashtags:
                 data.Hashtags = DeserializeJson<List<string>?>(oldValueJson);
                 break;
@@ -174,5 +174,4 @@ public sealed class PostChangeReadModelProjectionService : IPostChangeReadModelP
 
         return JsonSerializer.Deserialize<T>(json, JsonOptions);
     }
-
 }

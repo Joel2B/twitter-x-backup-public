@@ -347,6 +347,7 @@ public class SqlitePostDataTests
             await sut.Save();
 
             string dbPath = Path.Combine(root, "data", "post", "posts.db");
+
             await using (SqliteConnection connection = new($"Data Source={dbPath}"))
             {
                 await connection.OpenAsync();

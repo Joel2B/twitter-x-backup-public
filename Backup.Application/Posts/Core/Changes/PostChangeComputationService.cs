@@ -189,12 +189,7 @@ public sealed class PostChangeComputationService : IPostChangeComputationService
             oldData.Hashtags,
             newData.Hashtags
         );
-        AddFieldIfDifferentAsJson(
-            fields,
-            ChangeFields.PostMedias,
-            oldData.Medias,
-            newData.Medias
-        );
+        AddFieldIfDifferentAsJson(fields, ChangeFields.PostMedias, oldData.Medias, newData.Medias);
     }
 
     private static void AddFieldIfDifferent<T>(

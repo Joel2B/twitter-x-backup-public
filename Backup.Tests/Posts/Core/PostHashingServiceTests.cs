@@ -104,8 +104,7 @@ public class PostHashingServiceTests
         Post postB = postA.Clone();
         postB.Changes[0].Index = postB
             .Changes[0]
-            .Index!
-            .Reverse()
+            .Index!.Reverse()
             .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
 
         Assert.Equal(_sut.Compute(postA), _sut.Compute(postB));

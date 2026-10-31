@@ -17,7 +17,12 @@ public class PostChangeServicesTests
         oldData.Profile.ImageUrl = "old-image";
         oldData.Profile.Count = new PostCount { Media = 3 };
         post.Changes.Add(
-            new Change { UserId = "user", Date = new DateTime(2026, 1, 1), Data = oldData }
+            new Change
+            {
+                UserId = "user",
+                Date = new DateTime(2026, 1, 1),
+                Data = oldData,
+            }
         );
 
         PostComputedChange change = Assert.Single(new PostChangeComputationService().Compute(post));
@@ -99,10 +104,7 @@ public class PostChangeServicesTests
             Sequence = 1,
             Fields =
             [
-                Field(
-                    $"index.{userId}",
-                    "{\"old\":{\"Previous\":\"old-previous\",\"Next\":null}}"
-                ),
+                Field($"index.{userId}", "{\"old\":{\"Previous\":\"old-previous\",\"Next\":null}}"),
             ],
         };
 

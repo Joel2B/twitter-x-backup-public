@@ -54,9 +54,7 @@ public partial class PostgresPostData
             List<string> ids = await db
                 .Posts.AsNoTracking()
                 .Where(post =>
-                    !db.PostHashMeta.Any(meta =>
-                        meta.Id == post.Id && meta.Hash.StartsWith("v2:")
-                    )
+                    !db.PostHashMeta.Any(meta => meta.Id == post.Id && meta.Hash.StartsWith("v2:"))
                 )
                 .OrderBy(post => post.Id)
                 .Select(post => post.Id)
@@ -74,8 +72,8 @@ public partial class PostgresPostData
 
             foreach (PostEntity entity in entities)
             {
-                bool deleted = metadata.TryGetValue(entity.Id, out PostHashMetaEntity? meta)
-                    && meta.Deleted;
+                bool deleted =
+                    metadata.TryGetValue(entity.Id, out PostHashMetaEntity? meta) && meta.Deleted;
                 Post post = ToModel(entity, deleted);
                 string hash = _postHashingService.Compute(PostReplicationMapper.ToDomain(post));
 
