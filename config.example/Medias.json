@@ -21,7 +21,8 @@
       "Sizes": ["orig", "large", "medium", "small"],
       "Filters": ["jpg:png:*", "png:jpg:orig"]
     },
-    "Types": ["video/mp4"]
+    "Types": ["video/mp4"],
+    "VariantSelection": "highest-resolution"
   },
   "Gif": {
     "Thumb": {

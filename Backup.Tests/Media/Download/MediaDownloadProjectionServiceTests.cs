@@ -226,6 +226,268 @@ public sealed class MediaDownloadProjectionServiceTests
     }
 
     [Fact]
+    public void Project_SelectsHighestResolutionMp4_AndKeepsHls()
+    {
+        MediaInput post = CreatePost(
+            "p1",
+            medias:
+            [
+                new PostMedia
+                {
+                    Id = "video-1",
+                    Type = "video",
+                    Url = "https://pbs.twimg.com/ext_tw_video_thumb/video-thumb.jpg",
+                    VideoInfo = new PostVideoInfo
+                    {
+                        Variants =
+                        [
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Bitrate = 256000,
+                                Url = "https://video.twimg.com/ext_tw_video/320x180/video.mp4",
+                            },
+                            new PostVariant
+                            {
+                                ContentType = "application/x-mpegURL",
+                                Url = "https://video.twimg.com/ext_tw_video/master.m3u8",
+                            },
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Bitrate = 2176000,
+                                Url = "https://video.twimg.com/ext_tw_video/1280x720/video.mp4",
+                            },
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Bitrate = 832000,
+                                Url = "https://video.twimg.com/ext_tw_video/640x360/video.mp4",
+                            },
+                        ],
+                    },
+                },
+            ]
+        );
+
+        MediaProcessingResult result = _sut.Project(
+            [post],
+            CreateConfig(
+                video: new MediaDownloadProjectionVariantConfig
+                {
+                    Thumb = CreateEmptyRuleConfig(),
+                    Types = ["application/x-mpegURL", "video/mp4"],
+                    VariantSelection = "highest-resolution",
+                }
+            )
+        );
+
+        MediaDownload all = Assert.Single(result.All);
+        Assert.Equal(2, all.Data.Count);
+        Assert.Contains(all.Data, item => item.Path.EndsWith("1280x720.mp4"));
+        Assert.Contains(all.Data, item => item.Path.EndsWith("master.m3u8"));
+        Assert.DoesNotContain(all.Data, item => item.Path.EndsWith("320x180.mp4"));
+        Assert.DoesNotContain(all.Data, item => item.Path.EndsWith("640x360.mp4"));
+    }
+
+    [Fact]
+    public void Project_HighestResolutionUsesBitrateToBreakTies()
+    {
+        MediaInput post = CreatePost(
+            "p1",
+            medias:
+            [
+                new PostMedia
+                {
+                    Id = "video-1",
+                    Type = "video",
+                    Url = "https://pbs.twimg.com/ext_tw_video_thumb/video-thumb.jpg",
+                    VideoInfo = new PostVideoInfo
+                    {
+                        Variants =
+                        [
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Bitrate = 832000,
+                                Url = "https://video.twimg.com/a/1280x720/low.mp4",
+                            },
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Bitrate = 2176000,
+                                Url = "https://video.twimg.com/b/1280x720/high.mp4",
+                            },
+                        ],
+                    },
+                },
+            ]
+        );
+
+        MediaProcessingResult result = _sut.Project(
+            [post],
+            CreateConfig(
+                video: new MediaDownloadProjectionVariantConfig
+                {
+                    Thumb = CreateEmptyRuleConfig(),
+                    Types = ["video/mp4"],
+                    VariantSelection = "highest-resolution",
+                }
+            )
+        );
+
+        MediaDownloadData selected = Assert.Single(Assert.Single(result.All).Data);
+        Assert.Equal("https://video.twimg.com/b/1280x720/high.mp4", selected.Url);
+    }
+
+    [Fact]
+    public void Project_HighestResolutionFallsBackToBitrateWhenResolutionIsUnknown()
+    {
+        MediaInput post = CreatePost(
+            "p1",
+            medias:
+            [
+                new PostMedia
+                {
+                    Id = "video-1",
+                    Type = "video",
+                    Url = "https://pbs.twimg.com/ext_tw_video_thumb/video-thumb.jpg",
+                    VideoInfo = new PostVideoInfo
+                    {
+                        Variants =
+                        [
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Bitrate = 832000,
+                                Url = "https://video.twimg.com/a/low.mp4",
+                            },
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Bitrate = 2176000,
+                                Url = "https://video.twimg.com/b/high.mp4",
+                            },
+                        ],
+                    },
+                },
+            ]
+        );
+
+        MediaProcessingResult result = _sut.Project(
+            [post],
+            CreateConfig(
+                video: new MediaDownloadProjectionVariantConfig
+                {
+                    Thumb = CreateEmptyRuleConfig(),
+                    Types = ["video/mp4"],
+                    VariantSelection = "highest-resolution",
+                }
+            )
+        );
+
+        MediaDownloadData selected = Assert.Single(Assert.Single(result.All).Data);
+        Assert.Equal("https://video.twimg.com/b/high.mp4", selected.Url);
+    }
+
+    [Fact]
+    public void Project_HighestResolutionPrefersKnownResolutionOverUnknownVariant()
+    {
+        MediaInput post = CreatePost(
+            "p1",
+            medias:
+            [
+                new PostMedia
+                {
+                    Id = "video-1",
+                    Type = "video",
+                    Url = "https://pbs.twimg.com/ext_tw_video_thumb/video-thumb.jpg",
+                    VideoInfo = new PostVideoInfo
+                    {
+                        Variants =
+                        [
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Bitrate = 2176000,
+                                Url = "https://video.twimg.com/a/unknown.mp4",
+                            },
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Bitrate = 832000,
+                                Url = "https://video.twimg.com/b/640x360/video.mp4",
+                            },
+                        ],
+                    },
+                },
+            ]
+        );
+
+        MediaProcessingResult result = _sut.Project(
+            [post],
+            CreateConfig(
+                video: new MediaDownloadProjectionVariantConfig
+                {
+                    Thumb = CreateEmptyRuleConfig(),
+                    Types = ["video/mp4"],
+                    VariantSelection = "highest-resolution",
+                }
+            )
+        );
+
+        MediaDownloadData selected = Assert.Single(Assert.Single(result.All).Data);
+        Assert.Equal("https://video.twimg.com/b/640x360/video.mp4", selected.Url);
+    }
+
+    [Fact]
+    public void Project_DoesNotApplyVideoVariantSelectionToAnimatedGif()
+    {
+        MediaInput post = CreatePost(
+            "p1",
+            medias:
+            [
+                new PostMedia
+                {
+                    Id = "gif-1",
+                    Type = "animated_gif",
+                    Url = "https://pbs.twimg.com/tweet_video_thumb/thumb-gif.jpg",
+                    VideoInfo = new PostVideoInfo
+                    {
+                        Variants =
+                        [
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Url = "https://video.twimg.com/tweet_video/a.mp4",
+                            },
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Url = "https://video.twimg.com/tweet_video/b.mp4",
+                            },
+                        ],
+                    },
+                },
+            ]
+        );
+
+        MediaProcessingResult result = _sut.Project(
+            [post],
+            CreateConfig(
+                gif: new MediaDownloadProjectionVariantConfig
+                {
+                    Thumb = CreateEmptyRuleConfig(),
+                    Types = ["video/mp4"],
+                    VariantSelection = "highest-resolution",
+                }
+            )
+        );
+
+        Assert.Equal(2, Assert.Single(result.All).Data.Count);
+    }
+
+    [Fact]
     public void Project_BuildsProfileImage_AndBanner()
     {
         MediaInput post = CreatePost(

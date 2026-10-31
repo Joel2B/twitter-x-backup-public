@@ -76,6 +76,7 @@ public class MediaProcessing(
         {
             Thumb = ToRule(config.Thumb),
             Types = config.Types is null ? null : [.. config.Types],
+            VariantSelection = config.VariantSelection,
         };
 
     private static MediaDownloadProjectionVariantConfig ToVariant(GifConfig config) =>

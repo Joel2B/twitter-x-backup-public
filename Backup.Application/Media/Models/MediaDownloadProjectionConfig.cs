@@ -21,4 +21,5 @@ public sealed class MediaDownloadProjectionVariantConfig
 {
     public required MediaDownloadProjectionRuleConfig Thumb { get; init; }
     public List<string>? Types { get; init; }
+    public string? VariantSelection { get; init; }
 }

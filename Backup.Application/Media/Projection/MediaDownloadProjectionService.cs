@@ -142,7 +142,14 @@ public sealed class MediaDownloadProjectionService(
                 filtered
             );
 
-            AddVideoVariantDownloads(post, media, config.Types, all, filtered);
+            AddVideoVariantDownloads(
+                post,
+                media,
+                config.Types,
+                config.VariantSelection,
+                all,
+                filtered
+            );
         }
     }
 
@@ -319,11 +326,58 @@ public sealed class MediaDownloadProjectionService(
         MediaInput post,
         PostMedia media,
         IReadOnlyCollection<string> allowedTypes,
+        string? variantSelection,
         Dictionary<string, MediaDownload> all,
         Dictionary<string, MediaDownload> filtered
     )
     {
-        foreach (PostVariant variant in media.VideoInfo?.Variants ?? [])
+        IEnumerable<PostVariant> variants = media.VideoInfo?.Variants ?? [];
+
+        if (
+            string.Equals(
+                variantSelection,
+                "highest-resolution",
+                StringComparison.OrdinalIgnoreCase
+            )
+        )
+        {
+            List<PostVariant> allowedMp4 = variants
+                .Where(variant =>
+                    variant.ContentType == "video/mp4" && allowedTypes.Contains(variant.ContentType)
+                )
+                .ToList();
+
+            PostVariant? bestMp4 = allowedMp4
+                .Select(variant => new
+                {
+                    Variant = variant,
+                    Resolution = ParseResolution(
+                        _mediaVideoVariantPolicyService.GetResolution(
+                            "mp4",
+                            StripQuery(variant.Url)
+                        )
+                    ),
+                })
+                .Where(item => item.Resolution is not null)
+                .OrderByDescending(item =>
+                    (long)item.Resolution!.Value.Width * item.Resolution.Value.Height
+                )
+                .ThenByDescending(item => item.Resolution!.Value.Width)
+                .ThenByDescending(item => item.Resolution!.Value.Height)
+                .ThenByDescending(item => item.Variant.Bitrate ?? -1)
+                .Select(item => item.Variant)
+                .FirstOrDefault();
+
+            bestMp4 ??= allowedMp4
+                .OrderByDescending(variant => variant.Bitrate ?? -1)
+                .FirstOrDefault();
+
+            variants = variants
+                .Where(variant => variant.ContentType != "video/mp4")
+                .Concat(bestMp4 is null ? [] : [bestMp4]);
+        }
+
+        foreach (PostVariant variant in variants)
         {
             if (!allowedTypes.Contains(variant.ContentType))
                 continue;
@@ -360,6 +414,25 @@ public sealed class MediaDownloadProjectionService(
 
             AddDataDownload(post.Id, built, include: true, all, filtered);
         }
+    }
+
+    private static (int Width, int Height)? ParseResolution(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        string[] parts = value.Split('x');
+
+        if (
+            parts.Length != 2
+            || !int.TryParse(parts[0], out int width)
+            || !int.TryParse(parts[1], out int height)
+        )
+        {
+            return null;
+        }
+
+        return (width, height);
     }
 
     private void ApplyDedup(
