@@ -990,6 +990,7 @@ internal interface IVideoVariantLooseCleanupDatabase
 internal sealed class NpgsqlVideoVariantLooseCleanupDatabase(string connectionString)
     : IVideoVariantLooseCleanupDatabase
 {
+    private readonly string _connectionString = WithKeepAlive(connectionString);
     private NpgsqlConnection? _lockedConnection;
 
     public async Task<VideoVariantLooseCleanupNamespaces> DiscoverNamespacesAsync(
@@ -1345,9 +1346,17 @@ internal sealed class NpgsqlVideoVariantLooseCleanupDatabase(string connectionSt
 
     private async Task<NpgsqlConnection> Open(CancellationToken token)
     {
-        NpgsqlConnection connection = new(connectionString);
+        NpgsqlConnection connection = new(_connectionString);
         await connection.OpenAsync(token);
         return connection;
+    }
+
+    private static string WithKeepAlive(string value)
+    {
+        NpgsqlConnectionStringBuilder builder = new(value);
+        if (builder.KeepAlive == 0)
+            builder.KeepAlive = 30;
+        return builder.ConnectionString;
     }
 
     private NpgsqlConnection LockedConnection() =>
@@ -1430,6 +1439,8 @@ internal sealed class NpgsqlVideoVariantLooseCleanupDatabase(string connectionSt
         {
             try
             {
+                if (connection.State != ConnectionState.Open)
+                    return;
                 await using NpgsqlCommand command = new(
                     "SELECT pg_advisory_unlock(hashtextextended('media-cache:' || @storeNamespace, 0))",
                     connection
