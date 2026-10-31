@@ -185,6 +185,33 @@ public sealed class VideoVariantLooseCleanupApplyServiceTests : IDisposable
             );
     }
 
+    [Fact]
+    public async Task Apply_ParallelPhysicalWorkPreservesTransactionalResult()
+    {
+        Setup setup = CreateSetup(direct: true);
+        FakeDatabase database = new(setup.PrimaryNamespace, Remove);
+        VideoVariantLooseCleanupApplyManifest manifest = ApplyManifest(setup);
+
+        VideoVariantLooseCleanupReceipt receipt = await new VideoVariantLooseCleanupApplyService(
+            database
+        ).ApplyParallelAsync(
+            manifest,
+            manifest.ApprovalHash,
+            setup.Journal,
+            setup.Receipt,
+            batchSize: 1000,
+            resume: false,
+            runtimeStoppedConfirmed: true,
+            physicalParallelism: 4
+        );
+
+        Assert.Equal(1, receipt.Operations);
+        Assert.False(File.Exists(setup.RemovePath));
+        Assert.True(File.Exists(setup.KeepPath));
+        Assert.Empty(database.Rows);
+        Assert.False(File.Exists(setup.Journal));
+    }
+
     [Theory]
     [InlineData("after-direct-move")]
     [InlineData("after-original-move")]

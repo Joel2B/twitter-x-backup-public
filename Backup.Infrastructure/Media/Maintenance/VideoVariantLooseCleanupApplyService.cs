@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Data;
 using System.Security.Cryptography;
 using System.Text;
@@ -28,6 +29,9 @@ public sealed class VideoVariantLooseCleanupApplyService
         WriteIndented = true,
     };
     private readonly IVideoVariantLooseCleanupDatabase? _database;
+    private readonly ConcurrentDictionary<string, Lazy<bool>> _createdDirectories = new(
+        StringComparer.OrdinalIgnoreCase
+    );
 
     public VideoVariantLooseCleanupApplyService() { }
 
@@ -156,7 +160,7 @@ public sealed class VideoVariantLooseCleanupApplyService
         return status;
     }
 
-    public async Task<VideoVariantLooseCleanupReceipt> ApplyAsync(
+    public Task<VideoVariantLooseCleanupReceipt> ApplyAsync(
         VideoVariantLooseCleanupApplyManifest manifest,
         string approval,
         string journalPath,
@@ -166,12 +170,39 @@ public sealed class VideoVariantLooseCleanupApplyService
         bool runtimeStoppedConfirmed = false,
         IProgress<VideoVariantLooseCleanupApplyProgress>? progress = null,
         CancellationToken token = default
+    ) =>
+        ApplyParallelAsync(
+            manifest,
+            approval,
+            journalPath,
+            receiptPath,
+            batchSize,
+            resume,
+            runtimeStoppedConfirmed,
+            1,
+            progress,
+            token
+        );
+
+    public async Task<VideoVariantLooseCleanupReceipt> ApplyParallelAsync(
+        VideoVariantLooseCleanupApplyManifest manifest,
+        string approval,
+        string journalPath,
+        string receiptPath,
+        int batchSize,
+        bool resume,
+        bool runtimeStoppedConfirmed,
+        int physicalParallelism,
+        IProgress<VideoVariantLooseCleanupApplyProgress>? progress = null,
+        CancellationToken token = default
     )
     {
         if (!runtimeStoppedConfirmed)
             throw new InvalidOperationException("Runtime stopped confirmation is required.");
         if (batchSize <= 0)
             throw new ArgumentOutOfRangeException(nameof(batchSize));
+        if (physicalParallelism <= 0)
+            throw new ArgumentOutOfRangeException(nameof(physicalParallelism));
         ValidateApproval(manifest, approval);
         ResolvedConfig config = ValidateCurrentConfig(manifest);
         ValidateManifest(manifest, config.MediaRoots, verifyHash: true);
@@ -241,6 +272,7 @@ public sealed class VideoVariantLooseCleanupApplyService
                     .ToArray();
                 if (state.State == "verified")
                     continue;
+                bool resumedBatch = state.State != "pending";
 
                 token.ThrowIfCancellationRequested();
                 if (state.State is "pending" or "moving")
@@ -248,30 +280,23 @@ public sealed class VideoVariantLooseCleanupApplyService
                     state.State = "moving";
                     WriteJsonAtomic(fullJournalPath, journal);
 
-                    foreach (ApplyWork work in batch)
-                    {
-                        token.ThrowIfCancellationRequested();
-                        RequireFile(work.KeepPath, null, null, "Keep file");
-                        if (work.Operation.DirectPresent)
+                    CheckKeepFiles(batch, physicalParallelism, token);
+                    if (physicalParallelism == 1)
+                        foreach (ApplyWork work in batch)
                         {
-                            MoveOrInfer(
-                                work.DirectPath,
-                                work.DirectQuarantinePath,
-                                work.Operation.DirectSize,
-                                work.Operation.DirectLastWriteUtcTicks,
-                                "Direct file"
-                            );
-                            FaultInjection?.Invoke("after-direct-move");
+                            token.ThrowIfCancellationRequested();
+                            MoveWork(work, resumedBatch);
                         }
-                        MoveOrInfer(
-                            work.OriginalPath,
-                            work.OriginalQuarantinePath,
-                            work.Operation.OriginalSize,
-                            work.Operation.OriginalLastWriteUtcTicks,
-                            "Original file"
+                    else
+                        Parallel.ForEach(
+                            batch,
+                            new ParallelOptions
+                            {
+                                MaxDegreeOfParallelism = physicalParallelism,
+                                CancellationToken = token,
+                            },
+                            work => MoveWork(work, resumedBatch)
                         );
-                        FaultInjection?.Invoke("after-original-move");
-                    }
                     state.State = "quarantined";
                     state.OriginalsQuarantined = batch.Count;
                     state.DirectQuarantined = batch.Count(value => value.Operation.DirectPresent);
@@ -319,7 +344,10 @@ public sealed class VideoVariantLooseCleanupApplyService
 
                 if (state.State == "db-committed")
                 {
-                    VerifyBatchFiles(batch);
+                    if (resumedBatch)
+                        VerifyBatchFiles(batch, physicalParallelism, token);
+                    else
+                        VerifySameRunDirectFiles(batch, physicalParallelism, token);
                     if (
                         !await database.AreRowsAbsentAsync(
                             manifest.PrimaryNamespace,
@@ -803,25 +831,29 @@ public sealed class VideoVariantLooseCleanupApplyService
         return journal;
     }
 
-    private static void MoveOrInfer(
+    private void Move(
         string source,
         string destination,
         long size,
         long ticks,
-        string label
+        string label,
+        bool inferState
     )
     {
-        bool sourceExists = File.Exists(source);
-        bool destinationExists = File.Exists(destination);
-        if (sourceExists == destinationExists)
-            throw new InvalidOperationException($"{label} move state is ambiguous: {source}");
-        if (destinationExists)
+        if (inferState)
         {
-            RequireFile(destination, size, ticks, $"Quarantined {label.ToLowerInvariant()}");
-            return;
+            bool sourceExists = File.Exists(source);
+            bool destinationExists = File.Exists(destination);
+            if (sourceExists == destinationExists)
+                throw new InvalidOperationException($"{label} move state is ambiguous: {source}");
+            if (destinationExists)
+            {
+                RequireFile(destination, size, ticks, $"Quarantined {label.ToLowerInvariant()}");
+                return;
+            }
         }
         RequireFile(source, size, ticks, label);
-        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        EnsureDirectory(Path.GetDirectoryName(destination)!);
 
         for (int attempt = 0; ; attempt++)
         {
@@ -832,8 +864,42 @@ public sealed class VideoVariantLooseCleanupApplyService
             }
             catch (IOException) when (attempt < 3)
             {
+                if (!File.Exists(source) && File.Exists(destination))
+                {
+                    RequireFile(
+                        destination,
+                        size,
+                        ticks,
+                        $"Quarantined {label.ToLowerInvariant()}"
+                    );
+                    return;
+                }
                 Thread.Sleep(100 * (attempt + 1));
             }
+        }
+    }
+
+    private void EnsureDirectory(string path)
+    {
+        Lazy<bool> created = _createdDirectories.GetOrAdd(
+            path,
+            value => new Lazy<bool>(
+                () =>
+                {
+                    Directory.CreateDirectory(value);
+                    return true;
+                },
+                LazyThreadSafetyMode.ExecutionAndPublication
+            )
+        );
+        try
+        {
+            _ = created.Value;
+        }
+        catch
+        {
+            _createdDirectories.TryRemove(new KeyValuePair<string, Lazy<bool>>(path, created));
+            throw;
         }
     }
 
@@ -848,10 +914,130 @@ public sealed class VideoVariantLooseCleanupApplyService
             throw new InvalidOperationException($"{label} timestamp changed: {path}");
     }
 
-    private static void VerifyBatchFiles(IEnumerable<ApplyWork> batch)
+    private static void CheckKeepFiles(
+        IEnumerable<ApplyWork> batch,
+        int physicalParallelism,
+        CancellationToken token
+    )
     {
-        foreach (ApplyWork work in batch)
-            VerifyWorkFiles(work);
+        string[] paths = batch
+            .Select(work => work.KeepPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (physicalParallelism == 1)
+        {
+            foreach (string path in paths)
+            {
+                token.ThrowIfCancellationRequested();
+                RequireFile(path, null, null, "Keep file");
+            }
+            return;
+        }
+        Parallel.ForEach(
+            paths,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = physicalParallelism,
+                CancellationToken = token,
+            },
+            path => RequireFile(path, null, null, "Keep file")
+        );
+    }
+
+    private void MoveWork(ApplyWork work, bool inferState)
+    {
+        if (work.Operation.DirectPresent)
+        {
+            Move(
+                work.DirectPath,
+                work.DirectQuarantinePath,
+                work.Operation.DirectSize,
+                work.Operation.DirectLastWriteUtcTicks,
+                "Direct file",
+                inferState
+            );
+            InvokeFault("after-direct-move");
+        }
+        Move(
+            work.OriginalPath,
+            work.OriginalQuarantinePath,
+            work.Operation.OriginalSize,
+            work.Operation.OriginalLastWriteUtcTicks,
+            "Original file",
+            inferState
+        );
+        InvokeFault("after-original-move");
+    }
+
+    private void InvokeFault(string stage)
+    {
+        Action<string>? fault = FaultInjection;
+        if (fault is null)
+            return;
+
+        lock (fault)
+            fault(stage);
+    }
+
+    private static void VerifyBatchFiles(
+        IEnumerable<ApplyWork> batch,
+        int physicalParallelism,
+        CancellationToken token
+    )
+    {
+        if (physicalParallelism == 1)
+        {
+            foreach (ApplyWork work in batch)
+            {
+                token.ThrowIfCancellationRequested();
+                VerifyWorkFiles(work);
+            }
+            return;
+        }
+        Parallel.ForEach(
+            batch,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = physicalParallelism,
+                CancellationToken = token,
+            },
+            VerifyWorkFiles
+        );
+    }
+
+    private static void VerifySameRunDirectFiles(
+        IEnumerable<ApplyWork> batch,
+        int physicalParallelism,
+        CancellationToken token
+    )
+    {
+        ApplyWork[] eligible = batch
+            .Where(work =>
+                work.Operation.DirectPresent
+                || work.Operation.OriginalSize
+                    > VideoVariantLooseCleanupPreviewService.DirectMinimumOriginalSize
+            )
+            .ToArray();
+        if (eligible.Length == 0)
+            return;
+
+        Parallel.ForEach(
+            eligible,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = physicalParallelism,
+                CancellationToken = token,
+            },
+            work =>
+            {
+                if (work.Operation.DirectPresent)
+                    VerifyDirectFiles(work);
+                else if (File.Exists(work.DirectPath) || File.Exists(work.DirectQuarantinePath))
+                    throw new InvalidOperationException(
+                        $"Unexpected direct file: {work.LogicalPath}"
+                    );
+            }
+        );
     }
 
     private static void VerifyWorkFiles(ApplyWork work)

@@ -325,7 +325,7 @@ static async Task RunVideoVariantLooseMaintenance(string operation, string[] opt
             });
             if (operation == "apply-loose-v2")
             {
-                VideoVariantLooseCleanupReceipt receipt = await applyService.ApplyAsync(
+                VideoVariantLooseCleanupReceipt receipt = await applyService.ApplyParallelAsync(
                     manifest,
                     GetRequiredOption(options, "--approval"),
                     GetRequiredOption(options, "--journal"),
@@ -333,6 +333,7 @@ static async Task RunVideoVariantLooseMaintenance(string operation, string[] opt
                     int.Parse(GetOption(options, "--batch-size") ?? "1000"),
                     HasFlag(options, "--resume"),
                     HasFlag(options, "--runtime-stopped-confirmed"),
+                    int.Parse(GetOption(options, "--physical-parallel") ?? "1"),
                     applyProgress,
                     cts.Token
                 );
