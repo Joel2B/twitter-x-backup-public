@@ -105,6 +105,7 @@ public sealed class PostgresMediaCachePersistenceIOService(
         await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(
             cancellationToken
         );
+        await AcquireMutationLock(connection, transaction, _storeNamespace, cancellationToken);
 
         await using (NpgsqlCommand delete = connection.CreateCommand())
         {
@@ -167,6 +168,7 @@ public sealed class PostgresMediaCachePersistenceIOService(
             await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(
                 cancellationToken
             );
+            await AcquireMutationLock(connection, transaction, _storeNamespace, cancellationToken);
             await DeleteByPath(
                 connection,
                 transaction,
@@ -213,6 +215,7 @@ public sealed class PostgresMediaCachePersistenceIOService(
             await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(
                 cancellationToken
             );
+            await AcquireMutationLock(connection, transaction, _storeNamespace, cancellationToken);
 
             await using (NpgsqlCommand createChanges = connection.CreateCommand())
             {
@@ -367,11 +370,34 @@ public sealed class PostgresMediaCachePersistenceIOService(
         using NpgsqlConnection connection = new(_connectionString);
         connection.Open();
         EnsureSchema(connection, CancellationToken.None).GetAwaiter().GetResult();
+        using NpgsqlTransaction transaction = connection.BeginTransaction();
+        AcquireMutationLock(connection, transaction, _storeNamespace, CancellationToken.None)
+            .GetAwaiter()
+            .GetResult();
 
         using NpgsqlCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
         command.CommandText = $"DELETE FROM {IncrementalTableName} WHERE namespace = @namespace";
         command.Parameters.AddWithValue("namespace", cacheNamespace);
         command.ExecuteNonQuery();
+        transaction.Commit();
+    }
+
+    internal const string MutationLockSql =
+        "SELECT pg_advisory_xact_lock(hashtextextended('media-cache:' || @storeNamespace, 0))";
+
+    private static async Task AcquireMutationLock(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        string storeNamespace,
+        CancellationToken cancellationToken
+    )
+    {
+        await using NpgsqlCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = MutationLockSql;
+        command.Parameters.AddWithValue("storeNamespace", storeNamespace);
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     private async Task EnsureSchema(
