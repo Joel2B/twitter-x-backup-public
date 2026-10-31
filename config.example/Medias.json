@@ -27,9 +27,9 @@
   "Gif": {
     "Thumb": {
       "Types": ["jpg", "png"],
-      "Dimensions": ["360x360", "240x240", "120x120"],
-      "Sizes": ["orig", "large", "medium", "small"],
-      "Filters": ["jpg:png:*", "png:jpg:orig"]
+      "Dimensions": [],
+      "Sizes": ["orig", "large"],
+      "Filters": ["jpg:png:*", "jpg:jpg:large", "png:jpg:orig", "png:png:large"]
     },
     "Types": ["video/mp4"]
   }

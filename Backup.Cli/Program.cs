@@ -201,6 +201,7 @@ static async Task RunVideoVariantLooseMaintenance(string operation, string[] opt
                 fileParallelism,
                 fileLimit,
                 dbOnly: HasFlag(options, "--db-only"),
+                selectionKind: GetOption(options, "--selection") ?? "video-variants",
                 progress: progress,
                 token: cts.Token
             );
@@ -209,6 +210,9 @@ static async Task RunVideoVariantLooseMaintenance(string operation, string[] opt
             Console.WriteLine($"approval: {manifest.ApprovalHash}");
             Console.WriteLine($"cache rows: {manifest.CacheRowsScanned}");
             Console.WriteLine($"videos: {manifest.VideoEntries}");
+            Console.WriteLine(
+                $"selection: {GetOption(options, "--selection") ?? "video-variants"}"
+            );
             Console.WriteLine($"file parallelism: {manifest.FileParallelism}");
             Console.WriteLine($"physical checked: {manifest.PhysicalChecked}");
             Console.WriteLine($"selection limit: {manifest.SelectionLimit?.ToString() ?? "none"}");

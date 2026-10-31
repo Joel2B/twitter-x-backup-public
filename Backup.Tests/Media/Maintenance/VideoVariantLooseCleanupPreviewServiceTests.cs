@@ -98,6 +98,85 @@ public sealed class VideoVariantLooseCleanupPreviewServiceTests : IDisposable
     }
 
     [Fact]
+    public void SelectGifThumbCandidates_JpgKeepsOnlyOrig()
+    {
+        const string root = "post/gif/media/thumb/thumb";
+        VideoVariantLooseCacheRow[] rows =
+        [
+            Row($"{root}/jpg/dimension/120x120.jpg"),
+            Row($"{root}/jpg/dimension/240x240.jpg"),
+            Row($"{root}/jpg/dimension/360x360.jpg"),
+            Row($"{root}/jpg/size/large.jpg"),
+            Row($"{root}/jpg/size/medium.jpg"),
+            Row($"{root}/jpg/size/orig.jpg"),
+            Row($"{root}/jpg/size/small.jpg"),
+        ];
+        List<VideoVariantLooseCleanupIssue> issues = [];
+
+        List<VideoVariantLooseSelection> result =
+            VideoVariantLooseCleanupPreviewService.SelectGifThumbCandidates(rows, issues);
+
+        Assert.Equal(6, result.Count);
+        Assert.All(result, item => Assert.Equal($"{root}/jpg/size/orig.jpg", item.Keep.Path));
+        Assert.DoesNotContain(result, item => item.Remove.Path.EndsWith("/orig.jpg"));
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void SelectGifThumbCandidates_PngKeepsPngOrigAndJpgLarge()
+    {
+        const string root = "post/gif/media/thumb/thumb";
+        VideoVariantLooseCacheRow[] rows =
+        [
+            Row($"{root}/png/size/orig.png"),
+            Row($"{root}/png/size/large.png"),
+            Row($"{root}/jpg/size/orig.jpg"),
+            Row($"{root}/jpg/size/large.jpg"),
+            Row($"{root}/jpg/size/small.jpg"),
+        ];
+        List<VideoVariantLooseCleanupIssue> issues = [];
+
+        List<VideoVariantLooseSelection> result =
+            VideoVariantLooseCleanupPreviewService.SelectGifThumbCandidates(rows, issues);
+
+        Assert.Equal(3, result.Count);
+        Assert.DoesNotContain(result, item => item.Remove.Path == $"{root}/png/size/orig.png");
+        Assert.DoesNotContain(result, item => item.Remove.Path == $"{root}/jpg/size/large.jpg");
+        Assert.Contains(result, item => item.Keep.Path == $"{root}/png/size/orig.png");
+        Assert.Contains(result, item => item.Keep.Path == $"{root}/jpg/size/large.jpg");
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void SelectGifThumbCandidates_MissingOrDuplicateKeepBlocksGroup()
+    {
+        const string root = "post/gif/media/thumb/thumb";
+        List<VideoVariantLooseCleanupIssue> issues = [];
+
+        List<VideoVariantLooseSelection> result =
+            VideoVariantLooseCleanupPreviewService.SelectGifThumbCandidates(
+                [Row($"{root}/jpg/size/large.jpg"), Row($"{root}/jpg/size/small.jpg")],
+                issues
+            );
+
+        Assert.Empty(result);
+        Assert.Contains(issues, issue => issue.Code == "keep-set-invalid");
+    }
+
+    [Fact]
+    public void GifThumbRowsSql_IsReadOnlyAndNamespaceScoped()
+    {
+        string sql = VideoVariantLooseCleanupPreviewService.GifThumbRowsSql;
+
+        Assert.Contains("/gif/", sql, StringComparison.Ordinal);
+        Assert.Contains("namespace = @namespace", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("DELETE", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("UPDATE", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("INSERT", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("CREATE", sql, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void PartitionAliasAndContainment_ResolveWithoutGuessing()
     {
         string? root = VideoVariantLooseCleanupPreviewService.ResolvePartitionRoot(
@@ -558,6 +637,70 @@ public sealed class VideoVariantLooseCleanupPreviewServiceTests : IDisposable
         );
     }
 
+    [Fact]
+    public async Task PhysicalBuilder_GifThumbsEnumeratesGroupAndRetainsFingerprints()
+    {
+        const string keep = "post/gif/media/thumb/source/jpg/size/orig.jpg";
+        const string remove = "post/gif/media/thumb/source/jpg/size/small.jpg";
+        const string stale = "post/gif/media/thumb/source/jpg/dimension/120x120.jpg";
+        Directory.CreateDirectory(_root);
+        string mediaRoot = Path.Combine(_root, "media");
+        WriteMedia(mediaRoot, keep, 5);
+        WriteMedia(mediaRoot, remove, 3);
+        VideoVariantLooseCleanupManifest source = SourceManifest(
+            Path.Combine(_root, "direct"),
+            [(remove, keep, 1, 3), (stale, keep, 1, 2)]
+        ) with
+        {
+            FileParallelism = 4,
+        };
+
+        VideoVariantLooseCleanupPreflightResult result =
+            await VideoVariantLooseCleanupPreviewService.BuildPhysicalManifestAsync(
+                source,
+                new Dictionary<int, string> { [1] = mediaRoot },
+                Rows((keep, 1))
+            );
+
+        Assert.True(result.IsValid);
+        VideoVariantLooseCleanupOperation operation = Assert.Single(
+            result.PhysicalManifest!.Operations
+        );
+        Assert.Equal(remove, result.PhysicalManifest.Paths[operation.RemovePathIndex]);
+        Assert.Equal(3, operation.OriginalSize);
+        Assert.True(operation.OriginalLastWriteUtcTicks > 0);
+        Assert.Contains(
+            result.PhysicalManifest.Issues,
+            issue => issue.Path == stale && issue.Code == "cache-stale"
+        );
+    }
+
+    [Fact]
+    public async Task PhysicalBuilder_GifThumbsMatchesWindowsPathsIgnoringCase()
+    {
+        const string keep = "post/GIF/media/THUMB/source/JPG/SIZE/ORIG.JPG";
+        const string remove = "post/GIF/media/THUMB/source/JPG/SIZE/SMALL.JPG";
+        Directory.CreateDirectory(_root);
+        string mediaRoot = Path.Combine(_root, "media");
+        WriteMedia(mediaRoot, keep.ToLowerInvariant(), 5);
+        WriteMedia(mediaRoot, remove.ToLowerInvariant(), 3);
+        VideoVariantLooseCleanupManifest source = SourceManifest(
+            Path.Combine(_root, "direct"),
+            [(remove, keep, 1, 3)]
+        );
+
+        VideoVariantLooseCleanupPreflightResult result =
+            await VideoVariantLooseCleanupPreviewService.BuildPhysicalManifestAsync(
+                source,
+                new Dictionary<int, string> { [1] = mediaRoot },
+                Rows((keep, 1))
+            );
+
+        Assert.True(result.IsValid);
+        Assert.Single(result.PhysicalManifest!.Operations);
+        Assert.Empty(result.PhysicalManifest.Issues);
+    }
+
     private VideoVariantLooseCleanupManifest Build(
         ResolvedConfig config,
         VideoVariantLooseCacheRow[] rows,
@@ -618,6 +761,8 @@ public sealed class VideoVariantLooseCleanupPreviewServiceTests : IDisposable
             row => new VideoVariantLooseCacheRow(row.Path, 1, 1, row.Partition),
             StringComparer.Ordinal
         );
+
+    private static VideoVariantLooseCacheRow Row(string path) => new(path, 1, 1, 1);
 
     private static void WriteMedia(string root, string path, long size)
     {

@@ -1058,9 +1058,7 @@ internal sealed class NpgsqlVideoVariantLooseCleanupDatabase(string connectionSt
 
         await using (
             NpgsqlCommand command = new(
-                "WITH "
-                    + VideoVariantLooseCleanupPreviewService.ParsedVideoCteSql
-                    + " SELECT path, partition_id FROM parsed",
+                "SELECT lower(replace(path, chr(92), '/')), partition_id FROM media_cache_primary_entries WHERE namespace = @namespace AND lower(replace(path, chr(92), '/')) = ANY(@paths)",
                 connection,
                 transaction
             )
@@ -1068,6 +1066,7 @@ internal sealed class NpgsqlVideoVariantLooseCleanupDatabase(string connectionSt
         {
             command.CommandTimeout = 0;
             command.Parameters.AddWithValue("namespace", primaryNamespace);
+            command.Parameters.AddWithValue("paths", requested.ToArray());
             await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(
                 CommandBehavior.SequentialAccess,
                 token

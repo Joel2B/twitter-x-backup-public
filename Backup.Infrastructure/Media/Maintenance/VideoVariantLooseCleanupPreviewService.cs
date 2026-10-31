@@ -94,8 +94,32 @@ public sealed class VideoVariantLooseCleanupPreviewService
             ORDER BY path
             """;
 
+    internal const string ParsedGifThumbCteSql = """
+        normalized AS (
+            SELECT replace(path, chr(92), '/') AS normalized_path,
+                   stream_size, file_size, partition_id
+            FROM media_cache_primary_entries
+            WHERE namespace = @namespace
+        ),
+        parsed AS (
+            SELECT n.normalized_path AS path,
+                   n.stream_size, n.file_size, n.partition_id
+            FROM normalized n
+            WHERE n.normalized_path ~* '^[^/]+/gif/[^/]+/thumb/[^/]+/(jpg|png)/(dimension|size)/[^/]+\.(jpg|png)$'
+        )
+        """;
+
+    internal const string GifThumbRowsSql =
+        "WITH "
+        + ParsedGifThumbCteSql
+        + " SELECT path, stream_size, file_size, partition_id FROM parsed ORDER BY path";
+
     private static readonly Regex VideoPathPattern = new(
         @"^(?<post>[^/]+)/video/(?<media>[^/]+)/mp4/(?<video>[^/]+)/(?<width>[1-9]\d*)x(?<height>[1-9]\d*)\.mp4$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase
+    );
+    private static readonly Regex GifThumbPathPattern = new(
+        @"^(?<post>[^/]+)/gif/(?<media>[^/]+)/thumb/(?<thumb>[^/]+)/(?<format>jpg|png)/(?<resolutionType>dimension|size)/(?<name>[^/]+)\.(?<extension>jpg|png)$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase
     );
 
@@ -114,6 +138,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
         int? fileLimit = null,
         int dbCommandTimeoutSeconds = 600,
         bool dbOnly = false,
+        string selectionKind = "video-variants",
         IProgress<VideoVariantLooseCleanupProgress>? progress = null,
         CancellationToken token = default
     )
@@ -121,6 +146,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
         Stopwatch stopwatch = Stopwatch.StartNew();
         ValidateTimeout(dbCommandTimeoutSeconds);
         ValidateFileOptions(fileParallelism, fileLimit);
+        ValidateSelectionKind(selectionKind);
         ResolvedConfig config = LoadConfig(dataConfigPath, mediaStoreId, cacheId);
         string fullDirectRoot = RequireAbsoluteWindowsPath(directRoot, nameof(directRoot));
 
@@ -141,6 +167,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
         );
         long scanned;
         long videos;
+        string parsedCte = selectionKind == "gif-thumbs" ? ParsedGifThumbCteSql : ParsedVideoCteSql;
 
         await using (NpgsqlCommand command = connection.CreateCommand())
         {
@@ -148,7 +175,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
             command.CommandTimeout = dbCommandTimeoutSeconds;
             command.CommandText =
                 "WITH "
-                + ParsedVideoCteSql
+                + parsedCte
                 + """
                     SELECT
                         (SELECT count(*) FROM media_cache_primary_entries WHERE namespace = @namespace),
@@ -168,8 +195,9 @@ public sealed class VideoVariantLooseCleanupPreviewService
 
         List<VideoVariantLooseCleanupIssue> selectionIssues = [];
 
-        await using (NpgsqlCommand command = connection.CreateCommand())
+        if (selectionKind == "video-variants")
         {
+            await using NpgsqlCommand command = connection.CreateCommand();
             command.Transaction = transaction;
             command.CommandTimeout = dbCommandTimeoutSeconds;
             command.CommandText = CollisionSql;
@@ -192,10 +220,41 @@ public sealed class VideoVariantLooseCleanupPreviewService
         }
 
         List<VideoVariantLooseSelection> selections = [];
+        List<VideoVariantLooseCacheRow>? gifRows = null;
         long selectionsRead = 0;
 
-        await using (NpgsqlCommand command = connection.CreateCommand())
+        if (selectionKind == "gif-thumbs")
         {
+            gifRows = [];
+            await using NpgsqlCommand command = connection.CreateCommand();
+            command.Transaction = transaction;
+            command.CommandTimeout = dbCommandTimeoutSeconds;
+            command.CommandText = GifThumbRowsSql;
+            command.Parameters.AddWithValue("namespace", cacheNamespace);
+            await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(
+                CommandBehavior.SequentialAccess,
+                token
+            );
+
+            while (await reader.ReadAsync(token))
+            {
+                gifRows.Add(
+                    new(
+                        reader.GetString(0),
+                        NullableInt64(reader, 1),
+                        NullableInt64(reader, 2),
+                        NullableInt32(reader, 3)
+                    )
+                );
+            }
+            selections = SelectGifThumbCandidates(gifRows, selectionIssues);
+            selectionsRead = selections.Count;
+            if (fileLimit.HasValue)
+                selections = selections.Take(fileLimit.Value).ToList();
+        }
+        else
+        {
+            await using NpgsqlCommand command = connection.CreateCommand();
             command.Transaction = transaction;
             command.CommandTimeout = dbCommandTimeoutSeconds;
             command.CommandText = SelectionSql;
@@ -265,11 +324,30 @@ public sealed class VideoVariantLooseCleanupPreviewService
             videos,
             fileParallelism,
             fileLimit,
-            dbOnly: dbOnly,
+            dbOnly: dbOnly || selectionKind == "gif-thumbs",
             progress: progress,
             elapsed: () => stopwatch.Elapsed,
             token: token
         );
+        if (selectionKind == "gif-thumbs" && !dbOnly)
+        {
+            Dictionary<string, VideoVariantLooseCacheRow> exactRows = gifRows!
+                .GroupBy(row => row.Path.Replace('\\', '/'), StringComparer.Ordinal)
+                .Where(group => group.Count() == 1)
+                .ToDictionary(group => group.Key, group => group.Single(), StringComparer.Ordinal);
+            VideoVariantLooseCleanupPreflightResult physical = await BuildPhysicalManifestAsync(
+                manifest,
+                config.MediaRoots,
+                exactRows,
+                progress,
+                token
+            );
+            if (!physical.IsValid || physical.PhysicalManifest is null)
+                throw new InvalidOperationException(
+                    $"GIF thumbnail physical preview failed: {string.Join("; ", physical.Errors.Take(10))}"
+                );
+            manifest = physical.PhysicalManifest;
+        }
         progress?.Report(
             new(
                 "done",
@@ -387,7 +465,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
         {
             command.Transaction = transaction;
             command.CommandTimeout = dbCommandTimeoutSeconds;
-            command.CommandText = PreflightRowsSql;
+            command.CommandText = IsGifThumbManifest(manifest) ? GifThumbRowsSql : PreflightRowsSql;
             command.Parameters.AddWithValue("namespace", manifest.CacheNamespace);
             await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(
                 CommandBehavior.SequentialAccess,
@@ -657,6 +735,12 @@ public sealed class VideoVariantLooseCleanupPreviewService
         CancellationToken token
     )
     {
+        if (
+            work.Keeps.All(item => IsGifThumbPath(item.Path))
+            && work.Removes.All(item => IsGifThumbPath(item.Path))
+        )
+            return CheckGifThumbRoot(work, manifest, progress, token);
+
         List<KeepFileCheck> keeps = [];
         List<FileCheck> removes = [];
         int checkedItems = 0;
@@ -704,6 +788,131 @@ public sealed class VideoVariantLooseCleanupPreviewService
                     )
                 );
         }
+    }
+
+    private static RootResult CheckGifThumbRoot(
+        RootWork work,
+        VideoVariantLooseCleanupManifest manifest,
+        IProgress<VideoVariantLooseCleanupProgress>? progress,
+        CancellationToken token
+    )
+    {
+        Dictionary<string, List<KeepCheck>> keepsByDirectory = work
+            .Keeps.GroupBy(
+                item => GetGifThumbDirectory(item.Path),
+                StringComparer.OrdinalIgnoreCase
+            )
+            .ToDictionary(
+                group => group.Key,
+                group => group.ToList(),
+                StringComparer.OrdinalIgnoreCase
+            );
+        Dictionary<string, List<RemoveCheck>> removesByDirectory = work
+            .Removes.GroupBy(
+                item => GetGifThumbDirectory(item.Path),
+                StringComparer.OrdinalIgnoreCase
+            )
+            .ToDictionary(
+                group => group.Key,
+                group => group.ToList(),
+                StringComparer.OrdinalIgnoreCase
+            );
+        string[] directories = keepsByDirectory
+            .Keys.Concat(removesByDirectory.Keys)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        KeepFileCheck[] keepResults = new KeepFileCheck[work.Keeps.Count];
+        FileCheck[] removeResults = new FileCheck[work.Removes.Count];
+        Dictionary<string, int> keepIndices = work
+            .Keeps.Select((item, index) => (item.Path, index))
+            .ToDictionary(item => item.Path, item => item.index, StringComparer.Ordinal);
+        Dictionary<int, int> removeIndices = work
+            .Removes.Select((item, index) => (item.Index, index))
+            .ToDictionary(item => item.Index, item => item.index);
+        int checkedItems = 0;
+        int total = work.Keeps.Count + work.Removes.Count;
+
+        Parallel.ForEach(
+            directories,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = manifest.FileParallelism,
+                CancellationToken = token,
+            },
+            directory =>
+            {
+                string fullDirectory = ResolveContainedPath(work.Key, directory);
+                Dictionary<string, FileInfo> files = Directory.Exists(fullDirectory)
+                    ? Directory
+                        .EnumerateFiles(fullDirectory, "*", SearchOption.AllDirectories)
+                        .Select(path => new FileInfo(path))
+                        .ToDictionary(
+                            info =>
+                                Path.GetRelativePath(work.Key, info.FullName).Replace('\\', '/'),
+                            StringComparer.OrdinalIgnoreCase
+                        )
+                    : new(StringComparer.OrdinalIgnoreCase);
+
+                foreach (KeepCheck keep in keepsByDirectory.GetValueOrDefault(directory, []))
+                {
+                    keepResults[keepIndices[keep.Path]] = new(
+                        keep.Path,
+                        files.ContainsKey(keep.Path)
+                    );
+                    Report();
+                }
+
+                foreach (RemoveCheck remove in removesByDirectory.GetValueOrDefault(directory, []))
+                {
+                    FileInfo? info = files.GetValueOrDefault(remove.Path);
+                    removeResults[removeIndices[remove.Index]] = new(
+                        remove.Index,
+                        info is not null,
+                        info?.Length ?? 0,
+                        info?.LastWriteTimeUtc.Ticks ?? 0
+                    );
+                    Report();
+                }
+            }
+        );
+
+        return new(work.Key, [.. keepResults], [.. removeResults]);
+
+        void Report()
+        {
+            int completed = Interlocked.Increment(ref checkedItems);
+            if (completed % 1_000 == 0 || completed == total)
+                progress?.Report(
+                    new(
+                        "preflight-root",
+                        manifest.CacheRowsScanned,
+                        manifest.VideoEntries,
+                        completed,
+                        total,
+                        0,
+                        RootLabel: work.Label,
+                        RootChecked: completed,
+                        RootTotal: total
+                    )
+                );
+        }
+    }
+
+    private static bool IsGifThumbPath(string path) =>
+        path.Replace('\\', '/').Contains("/gif/", StringComparison.OrdinalIgnoreCase)
+        && path.Replace('\\', '/').Contains("/thumb/", StringComparison.OrdinalIgnoreCase);
+
+    private static string GetGifThumbDirectory(string path)
+    {
+        string[] parts = path.Replace('\\', '/').Split('/');
+        if (
+            parts.Length < 5
+            || !parts[1].Equals("gif", StringComparison.OrdinalIgnoreCase)
+            || !parts[3].Equals("thumb", StringComparison.OrdinalIgnoreCase)
+        )
+            throw new InvalidOperationException($"Invalid GIF thumbnail path: {path}");
+        return string.Join('/', parts.Take(5));
     }
 
     private static DirectResult CheckDirect(
@@ -880,6 +1089,145 @@ public sealed class VideoVariantLooseCleanupPreviewService
             .OrderBy(item => item.Remove.Path, StringComparer.Ordinal)
             .ThenBy(item => item.Keep.Path, StringComparer.Ordinal)
             .ToList();
+    }
+
+    internal static List<VideoVariantLooseSelection> SelectGifThumbCandidates(
+        IEnumerable<VideoVariantLooseCacheRow> rows,
+        List<VideoVariantLooseCleanupIssue> issues
+    )
+    {
+        List<ParsedGifThumbRow> parsed = [];
+
+        foreach (VideoVariantLooseCacheRow row in rows)
+        {
+            string path = row.Path.Replace('\\', '/');
+            Match match = GifThumbPathPattern.Match(path);
+            if (!match.Success)
+                continue;
+            if (
+                !match
+                    .Groups["format"]
+                    .Value.Equals(
+                        match.Groups["extension"].Value,
+                        StringComparison.OrdinalIgnoreCase
+                    )
+            )
+            {
+                issues.Add(
+                    new(path, "format-extension-mismatch", "Thumbnail format and extension differ.")
+                );
+                continue;
+            }
+
+            parsed.Add(
+                new(
+                    row with
+                    {
+                        Path = path,
+                    },
+                    $"{match.Groups["post"].Value}/{match.Groups["media"].Value}/{match.Groups["thumb"].Value}",
+                    match.Groups["format"].Value.ToLowerInvariant(),
+                    match.Groups["resolutionType"].Value.ToLowerInvariant(),
+                    match.Groups["name"].Value.ToLowerInvariant()
+                )
+            );
+        }
+
+        HashSet<string> invalidPaths = AddPathCollisionIssues(
+            parsed.Select(item => item.Row),
+            issues
+        );
+        List<VideoVariantLooseSelection> result = [];
+
+        foreach (
+            IGrouping<string, ParsedGifThumbRow> group in parsed
+                .Where(item => !invalidPaths.Contains(item.Row.Path))
+                .GroupBy(item => item.Group, StringComparer.OrdinalIgnoreCase)
+        )
+        {
+            List<ParsedGifThumbRow> pngOrig = group
+                .Where(item =>
+                    item.Format == "png" && item.ResolutionType == "size" && item.Name == "orig"
+                )
+                .ToList();
+            List<ParsedGifThumbRow> jpgOrig = group
+                .Where(item =>
+                    item.Format == "jpg" && item.ResolutionType == "size" && item.Name == "orig"
+                )
+                .ToList();
+            List<ParsedGifThumbRow> jpgLarge = group
+                .Where(item =>
+                    item.Format == "jpg" && item.ResolutionType == "size" && item.Name == "large"
+                )
+                .ToList();
+            List<ParsedGifThumbRow> keeps =
+                pngOrig.Count > 0
+                    ? pngOrig.Count == 1 && jpgLarge.Count == 1
+                        ? [pngOrig[0], jpgLarge[0]]
+                        : []
+                    : jpgOrig.Count == 1
+                        ? [jpgOrig[0]]
+                        : [];
+
+            if (keeps.Count == 0)
+            {
+                issues.Add(
+                    new(
+                        group.First().Row.Path,
+                        "keep-set-invalid",
+                        "GIF thumbnail group lacks one unambiguous keep set."
+                    )
+                );
+                continue;
+            }
+
+            HashSet<string> keepPaths = keeps
+                .Select(item => item.Row.Path)
+                .ToHashSet(StringComparer.Ordinal);
+            int keepIndex = 0;
+            result.AddRange(
+                group
+                    .Where(item => !keepPaths.Contains(item.Row.Path))
+                    .Select(item => new VideoVariantLooseSelection(
+                        item.Row,
+                        keeps[keepIndex++ % keeps.Count].Row
+                    ))
+            );
+        }
+
+        return result.OrderBy(item => item.Remove.Path, StringComparer.Ordinal).ToList();
+    }
+
+    private static HashSet<string> AddPathCollisionIssues(
+        IEnumerable<VideoVariantLooseCacheRow> rows,
+        List<VideoVariantLooseCleanupIssue> issues
+    )
+    {
+        HashSet<string> invalid = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (
+            IGrouping<string, VideoVariantLooseCacheRow> group in rows.GroupBy(
+                item => item.Path,
+                StringComparer.OrdinalIgnoreCase
+            )
+        )
+        {
+            if (group.Count() <= 1)
+                continue;
+            int exact = group.Select(item => item.Path).Distinct(StringComparer.Ordinal).Count();
+            issues.Add(
+                new(
+                    group.First().Path,
+                    exact == 1 ? "duplicate-path" : "case-collision",
+                    "Cache contains duplicate semantic paths."
+                )
+            );
+
+            foreach (VideoVariantLooseCacheRow row in group)
+                invalid.Add(row.Path);
+        }
+
+        return invalid;
     }
 
     internal static string? ResolvePartitionRoot(
@@ -1678,11 +2026,38 @@ public sealed class VideoVariantLooseCleanupPreviewService
             throw new ArgumentOutOfRangeException(nameof(fileLimit));
     }
 
+    private static void ValidateSelectionKind(string value)
+    {
+        if (value is not ("video-variants" or "gif-thumbs"))
+            throw new ArgumentException($"Unknown loose cleanup selection: {value}");
+    }
+
+    private static bool IsGifThumbManifest(VideoVariantLooseCleanupManifest manifest) =>
+        manifest.Operations.Count > 0
+        && manifest.Operations.All(operation =>
+            manifest
+                .Paths[operation.RemovePathIndex]
+                .Replace('\\', '/')
+                .Contains("/gif/", StringComparison.OrdinalIgnoreCase)
+            && manifest
+                .Paths[operation.KeepPathIndex]
+                .Replace('\\', '/')
+                .Contains("/gif/", StringComparison.OrdinalIgnoreCase)
+        );
+
     private sealed record ParsedRow(
         VideoVariantLooseCacheRow Row,
         string Group,
         int Width,
         int Height
+    );
+
+    private sealed record ParsedGifThumbRow(
+        VideoVariantLooseCacheRow Row,
+        string Group,
+        string Format,
+        string ResolutionType,
+        string Name
     );
 
     private sealed record ParsedPartition(bool Enabled, List<string> Paths);
