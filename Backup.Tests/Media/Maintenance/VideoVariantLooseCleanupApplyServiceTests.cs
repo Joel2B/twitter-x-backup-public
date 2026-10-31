@@ -118,6 +118,34 @@ public sealed class VideoVariantLooseCleanupApplyServiceTests : IDisposable
         Assert.True(File.Exists(setup.KeepPath));
     }
 
+    [Fact]
+    public async Task Prepare_AllowsOnlyUnreferencedInvalidThumbnailGroups()
+    {
+        Setup setup = CreateSetup(direct: false);
+        FakeDatabase database = new(setup.PrimaryNamespace);
+        VideoVariantLooseCleanupApplyService service = new(database);
+        VideoVariantLooseCleanupManifest valid = Source(setup);
+        const string skipped = "other/video/media/thumb/source/jpg/size/small.jpg";
+
+        VideoVariantLooseCleanupApplyManifest prepared = await service.PrepareAsync(
+            Sign(valid with { Issues = [new(skipped, "keep-set-invalid", "incomplete")] })
+        );
+        Assert.Single(prepared.Operations);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                service.PrepareAsync(
+                    Sign(valid with { Issues = [new(skipped, "cache-stale", "fatal")] })
+                )
+        );
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                service.PrepareAsync(
+                    Sign(valid with { Issues = [new(Remove, "keep-set-invalid", "not a thumb")] })
+                )
+        );
+    }
+
     [Theory]
     [InlineData(false)]
     [InlineData(true)]

@@ -484,8 +484,7 @@ public sealed class VideoVariantLooseCleanupApplyService
             throw new InvalidOperationException("Source manifest must be physical version 1.");
         if (source.SelectionLimit is not null)
             throw new InvalidOperationException("Source manifest selection limit must be null.");
-        if (source.Issues.Count != 0)
-            throw new InvalidOperationException("Source manifest must contain no issues.");
+        ValidateSourceIssues(source);
         if (
             VideoVariantLooseCleanupPreviewService.CalculateApprovalHash(source)
             != source.ApprovalHash
@@ -495,6 +494,54 @@ public sealed class VideoVariantLooseCleanupApplyService
             source.Paths,
             source.Operations.Select(value => (value.RemovePathIndex, value.KeepPathIndex))
         );
+    }
+
+    private static void ValidateSourceIssues(VideoVariantLooseCleanupManifest source)
+    {
+        if (source.Issues.Count == 0)
+            return;
+
+        HashSet<string> operationGroups = source
+            .Operations.SelectMany(operation =>
+                new[]
+                {
+                    source.Paths[operation.RemovePathIndex],
+                    source.Paths[operation.KeepPathIndex],
+                }
+            )
+            .Where(IsThumbPath)
+            .Select(GetThumbGroup)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        HashSet<string> issueGroups = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (VideoVariantLooseCleanupIssue issue in source.Issues)
+        {
+            if (issue.Code != "keep-set-invalid")
+                throw new InvalidOperationException("Source manifest contains a fatal issue.");
+            string group = GetThumbGroup(issue.Path);
+            if (!issueGroups.Add(group))
+                throw new InvalidOperationException(
+                    "Source manifest contains duplicate issue groups."
+                );
+            if (operationGroups.Contains(group))
+                throw new InvalidOperationException(
+                    "Source manifest operates on an invalid thumbnail group."
+                );
+        }
+    }
+
+    private static string GetThumbGroup(string path)
+    {
+        string[] parts = NormalizePath(path).Split('/');
+        if (parts.Length < 5 || !(parts[1] is "gif" or "video") || parts[3] != "thumb")
+            throw new InvalidOperationException("Issue path is not a thumbnail path.");
+        return string.Join('/', parts.Take(5));
+    }
+
+    private static bool IsThumbPath(string path)
+    {
+        string[] parts = NormalizePath(path).Split('/');
+        return parts.Length >= 5 && parts[1] is "gif" or "video" && parts[3] == "thumb";
     }
 
     private static void ValidateManifestStructure(

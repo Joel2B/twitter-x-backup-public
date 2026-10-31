@@ -177,6 +177,109 @@ public sealed class VideoVariantLooseCleanupPreviewServiceTests : IDisposable
     }
 
     [Fact]
+    public void SelectVideoThumbCandidates_JpgKeepsOnlyOrig()
+    {
+        const string root = "post/video/media/thumb/thumb";
+        VideoVariantLooseCacheRow[] rows =
+        [
+            Row($"{root}/jpg/dimension/120x120.jpg"),
+            Row($"{root}/jpg/dimension/240x240.jpg"),
+            Row($"{root}/jpg/dimension/360x360.jpg"),
+            Row($"{root}/jpg/size/large.jpg"),
+            Row($"{root}/jpg/size/medium.jpg"),
+            Row($"{root}/jpg/size/orig.jpg"),
+            Row($"{root}/jpg/size/small.jpg"),
+        ];
+        List<VideoVariantLooseCleanupIssue> issues = [];
+
+        List<VideoVariantLooseSelection> result =
+            VideoVariantLooseCleanupPreviewService.SelectVideoThumbCandidates(rows, issues);
+
+        Assert.Equal(6, result.Count);
+        Assert.All(result, item => Assert.Equal($"{root}/jpg/size/orig.jpg", item.Keep.Path));
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void SelectVideoThumbCandidates_PngKeepsPngOrigAndJpgLarge()
+    {
+        const string root = "post/video/media/thumb/thumb";
+        List<VideoVariantLooseCleanupIssue> issues = [];
+
+        List<VideoVariantLooseSelection> result =
+            VideoVariantLooseCleanupPreviewService.SelectVideoThumbCandidates(
+                [
+                    Row($"{root}/png/size/orig.png"),
+                    Row($"{root}/png/size/large.png"),
+                    Row($"{root}/jpg/size/orig.jpg"),
+                    Row($"{root}/jpg/size/large.jpg"),
+                    Row($"{root}/jpg/size/small.jpg"),
+                ],
+                issues
+            );
+
+        Assert.Equal(3, result.Count);
+        Assert.DoesNotContain(result, item => item.Remove.Path == $"{root}/png/size/orig.png");
+        Assert.DoesNotContain(result, item => item.Remove.Path == $"{root}/jpg/size/large.jpg");
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void SelectVideoThumbCandidates_IncompletePngIsNotReclassifiedAsJpg()
+    {
+        const string root = "post/video/media/thumb/thumb";
+        List<VideoVariantLooseCleanupIssue> issues = [];
+
+        List<VideoVariantLooseSelection> result =
+            VideoVariantLooseCleanupPreviewService.SelectVideoThumbCandidates(
+                [
+                    Row($"{root}/png/size/large.png"),
+                    Row($"{root}/jpg/size/orig.jpg"),
+                    Row($"{root}/jpg/size/large.jpg"),
+                ],
+                issues
+            );
+
+        Assert.Empty(result);
+        Assert.Single(issues, issue => issue.Code == "keep-set-invalid");
+    }
+
+    [Fact]
+    public void SelectVideoThumbCandidates_UnexpectedPathInvalidatesWholeGroup()
+    {
+        const string root = "post/video/media/thumb/thumb";
+        List<VideoVariantLooseCleanupIssue> issues = [];
+
+        List<VideoVariantLooseSelection> result =
+            VideoVariantLooseCleanupPreviewService.SelectVideoThumbCandidates(
+                [
+                    Row($"{root}/png/size/orig.jpeg"),
+                    Row($"{root}/jpg/size/orig.jpg"),
+                    Row($"{root}/jpg/size/large.jpg"),
+                    Row($"{root}/jpg/size/small.jpg"),
+                ],
+                issues
+            );
+
+        Assert.Empty(result);
+        Assert.Contains(issues, issue => issue.Code == "unexpected-thumbnail-path");
+    }
+
+    [Fact]
+    public void VideoThumbRowsSql_IsReadOnlyAndNamespaceScoped()
+    {
+        string sql = VideoVariantLooseCleanupPreviewService.VideoThumbRowsSql;
+
+        Assert.Contains("/video/", sql, StringComparison.Ordinal);
+        Assert.Contains("/thumb/", sql, StringComparison.Ordinal);
+        Assert.Contains("namespace = @namespace", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("DELETE", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("UPDATE", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("INSERT", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("CREATE", sql, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void PartitionAliasAndContainment_ResolveWithoutGuessing()
     {
         string? root = VideoVariantLooseCleanupPreviewService.ResolvePartitionRoot(
@@ -663,12 +766,7 @@ public sealed class VideoVariantLooseCleanupPreviewServiceTests : IDisposable
             );
 
         Assert.True(result.IsValid);
-        VideoVariantLooseCleanupOperation operation = Assert.Single(
-            result.PhysicalManifest!.Operations
-        );
-        Assert.Equal(remove, result.PhysicalManifest.Paths[operation.RemovePathIndex]);
-        Assert.Equal(3, operation.OriginalSize);
-        Assert.True(operation.OriginalLastWriteUtcTicks > 0);
+        Assert.Empty(result.PhysicalManifest!.Operations);
         Assert.Contains(
             result.PhysicalManifest.Issues,
             issue => issue.Path == stale && issue.Code == "cache-stale"
