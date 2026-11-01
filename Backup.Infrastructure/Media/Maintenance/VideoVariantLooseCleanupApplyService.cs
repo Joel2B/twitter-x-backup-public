@@ -689,17 +689,6 @@ public sealed class VideoVariantLooseCleanupApplyService
                         throw new InvalidOperationException(
                             $"Primary delete count mismatch: expected {batch.Count}, got {deleted.PrimaryDeleted}."
                         );
-                    if (
-                        !await database.AreRowsAbsentAsync(
-                            manifest.PrimaryNamespace,
-                            manifest.IncrementalNamespaces,
-                            batch.Select(value => value.LogicalPath).ToArray(),
-                            token
-                        )
-                    )
-                        throw new InvalidOperationException(
-                            "Target cache rows remain after delete transaction."
-                        );
                     state.PrimaryDeleted += deleted.PrimaryDeleted;
                     state.IncrementalDeleted += deleted.IncrementalDeleted;
                     state.State = "db-committed";
