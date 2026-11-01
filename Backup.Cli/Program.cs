@@ -61,6 +61,7 @@ static async Task RunVideoVariantMaintenance(string operation, string[] options)
             or "prepare-direct-delete-loose-v1"
             or "apply-direct-delete-loose-v1"
             or "verify-direct-delete-loose-v1"
+            or "reconcile-apply-loose-v1"
             or "plan-purge-loose-v2"
             or "purge-loose-v2"
     )
@@ -307,6 +308,39 @@ static async Task RunVideoVariantLooseMaintenance(string operation, string[] opt
             Console.WriteLine($"operations: {receipt.Operations}");
             Console.WriteLine($"files deleted: {receipt.FilesDeleted}");
             Console.WriteLine($"bytes deleted: {receipt.BytesDeleted}");
+            Console.WriteLine($"receipt hash: {receipt.ReceiptHash}");
+            return;
+        }
+
+        if (operation == "reconcile-apply-loose-v1")
+        {
+            VideoVariantLooseCleanupApplyManifest manifest = applyService.LoadManifest(
+                GetRequiredOption(options, "--manifest")
+            );
+            Progress<VideoVariantLooseCleanupApplyProgress> reconcileProgress = new(value =>
+            {
+                Console.Error.WriteLine(
+                    $"batches: {value.CompletedBatches}/{value.TotalBatches}, batch operations: {value.BatchOperations}, total operations: {value.TotalOperations}"
+                );
+                Console.Error.Flush();
+            });
+            VideoVariantLooseCleanupReceipt receipt =
+                await applyService.ReconcileLegacyJournalAsync(
+                    manifest,
+                    GetRequiredOption(options, "--source-journal"),
+                    GetRequiredOption(options, "--approval"),
+                    GetRequiredOption(options, "--journal"),
+                    GetRequiredOption(options, "--receipt"),
+                    HasFlag(options, "--resume"),
+                    HasFlag(options, "--runtime-stopped-confirmed"),
+                    int.Parse(GetRequiredOption(options, "--physical-parallel")),
+                    reconcileProgress,
+                    cts.Token
+                );
+            Console.WriteLine($"operations: {receipt.Operations}");
+            Console.WriteLine($"originals quarantined: {receipt.OriginalsQuarantined}");
+            Console.WriteLine($"direct quarantined: {receipt.DirectQuarantined}");
+            Console.WriteLine($"bytes quarantined: {receipt.BytesQuarantined}");
             Console.WriteLine($"receipt hash: {receipt.ReceiptHash}");
             return;
         }

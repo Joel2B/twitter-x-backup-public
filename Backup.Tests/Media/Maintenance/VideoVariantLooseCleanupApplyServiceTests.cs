@@ -9,6 +9,8 @@ public sealed class VideoVariantLooseCleanupApplyServiceTests : IDisposable
 {
     private const string Remove = "post/video/media/mp4/low/320x180.mp4";
     private const string Keep = "post/video/media/mp4/high/1280x720.mp4";
+    private const string Remove2 = "post/video/media/mp4/low/640x360.mp4";
+    private const string Keep2 = "post/video/media/mp4/high/1920x1080.mp4";
     private readonly string _root = Path.Combine(
         Path.GetTempPath(),
         $"loose-apply-{Guid.NewGuid():N}"
@@ -830,6 +832,190 @@ public sealed class VideoVariantLooseCleanupApplyServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Reconcile_SelectsOnlyNonPendingDeletesQuarantinedRowsAndSupportsPartialPurge()
+    {
+        Setup setup = CreateSetup(direct: true);
+        VideoVariantLooseCleanupApplyManifest manifest = AddSecondOperation(setup);
+        string eligiblePath = Resolve(setup.MediaRoot, Remove2);
+        string eligibleQuarantine = QuarantinePath(setup.MediaRoot, manifest, 1, Remove2);
+        Directory.CreateDirectory(Path.GetDirectoryName(eligibleQuarantine)!);
+        File.Move(eligiblePath, eligibleQuarantine);
+        File.Delete(setup.RemovePath);
+        File.Delete(setup.DirectPath!);
+        FakeDatabase database = new(setup.PrimaryNamespace, Remove2);
+        string sourceJournal = WriteSourceJournal(manifest, "pending", "quarantined");
+        byte[] frozen = File.ReadAllBytes(sourceJournal);
+        VideoVariantLooseCleanupApplyService service = new(database);
+
+        VideoVariantLooseCleanupReceipt receipt = await service.ReconcileLegacyJournalAsync(
+            manifest,
+            sourceJournal,
+            manifest.ApprovalHash,
+            setup.Journal,
+            setup.Receipt,
+            false,
+            true,
+            2
+        );
+
+        Assert.Equal([1], receipt.OperationIndices);
+        Assert.Equal(1, receipt.Operations);
+        Assert.Equal(1, receipt.PrimaryDeleted);
+        Assert.Equal(frozen, File.ReadAllBytes(sourceJournal));
+        Assert.DoesNotContain(Remove, database.RowCountPaths);
+        Assert.Contains(Remove2, database.RowCountPaths);
+        database.Rows.Add(Remove);
+        await service.VerifyAsync(manifest, setup.Receipt);
+
+        string pendingQuarantine = QuarantinePath(setup.MediaRoot, manifest, 1, Remove);
+        Directory.CreateDirectory(Path.GetDirectoryName(pendingQuarantine)!);
+        File.WriteAllText(pendingQuarantine, "original");
+        string drive = Path.GetPathRoot(setup.MediaRoot)![0].ToString();
+        VideoVariantLooseCleanupPurgeService purge = new();
+        VideoVariantLooseCleanupPurgePlan plan = purge.Plan(manifest, setup.Receipt, drive);
+        Assert.Equal(1, plan.Files);
+        await purge.PurgeAsync(
+            manifest,
+            setup.Receipt,
+            drive,
+            receipt.ReceiptHash,
+            Path.Combine(_root, "partial-purge.journal.json"),
+            Path.Combine(_root, "partial-purge.receipt.json"),
+            runtimeStoppedConfirmed: true
+        );
+        Assert.False(File.Exists(eligibleQuarantine));
+        Assert.True(File.Exists(pendingQuarantine));
+    }
+
+    [Fact]
+    public void PhysicalPathComparer_IsOrdinalOnLinuxAndIgnoreCaseOnWindows()
+    {
+        Assert.False(PhysicalPathSemantics.ComparerFor(windows: false).Equals("/mnt/A", "/mnt/a"));
+        Assert.True(PhysicalPathSemantics.ComparerFor(windows: true).Equals("C:\\A", "c:\\a"));
+        Assert.Equal(StringComparison.Ordinal, PhysicalPathSemantics.ComparisonFor(false));
+        Assert.Equal(StringComparison.OrdinalIgnoreCase, PhysicalPathSemantics.ComparisonFor(true));
+    }
+
+    [Fact]
+    public void PurgeSelector_ResolvesLinuxRootExactlyAndRejectsAmbiguousMount()
+    {
+        string[] roots =
+        [
+            "/mnt/l/.video-variant-loose-quarantine/approval",
+            "/mnt/j/.video-variant-loose-quarantine/approval",
+        ];
+
+        Assert.Equal(
+            roots[0],
+            VideoVariantLooseCleanupPurgeService.SelectQuarantineRoot("/mnt/l", roots, false)
+        );
+        Assert.Equal(
+            "/mnt/l",
+            VideoVariantLooseCleanupPurgeService.NormalizeSelector("/mnt/l/", false)
+        );
+        Assert.Throws<InvalidOperationException>(
+            () => VideoVariantLooseCleanupPurgeService.SelectQuarantineRoot("/mnt", roots, false)
+        );
+        Assert.Throws<InvalidOperationException>(
+            () => VideoVariantLooseCleanupPurgeService.SelectQuarantineRoot("/mnt/L", roots, false)
+        );
+        Assert.Equal("L", VideoVariantLooseCleanupPurgeService.NormalizeSelector("l", true));
+    }
+
+    [Fact]
+    public async Task Reconcile_MovingInfersMoveAndVerifiedRequiresRowsAbsent()
+    {
+        Setup moving = CreateSetup(direct: false);
+        VideoVariantLooseCleanupApplyManifest movingManifest = ApplyManifest(moving);
+        string movingSource = WriteSourceJournal(movingManifest, "moving");
+        FakeDatabase movingDatabase = new(moving.PrimaryNamespace, Remove);
+        VideoVariantLooseCleanupReceipt receipt = await new VideoVariantLooseCleanupApplyService(
+            movingDatabase
+        ).ReconcileLegacyJournalAsync(
+            movingManifest,
+            movingSource,
+            movingManifest.ApprovalHash,
+            moving.Journal,
+            moving.Receipt,
+            false,
+            true,
+            1
+        );
+        Assert.Equal([0], receipt.OperationIndices);
+        Assert.False(File.Exists(moving.RemovePath));
+        Assert.Empty(movingDatabase.Rows);
+
+        Dispose();
+        Setup verified = CreateSetup(direct: false);
+        VideoVariantLooseCleanupApplyManifest verifiedManifest = ApplyManifest(verified);
+        string quarantine = QuarantinePath(verified.MediaRoot, verifiedManifest, 1, Remove);
+        Directory.CreateDirectory(Path.GetDirectoryName(quarantine)!);
+        File.Move(verified.RemovePath, quarantine);
+        string verifiedSource = WriteSourceJournal(verifiedManifest, "verified");
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                new VideoVariantLooseCleanupApplyService(
+                    new FakeDatabase(verified.PrimaryNamespace, Remove)
+                ).ReconcileLegacyJournalAsync(
+                    verifiedManifest,
+                    verifiedSource,
+                    verifiedManifest.ApprovalHash,
+                    verified.Journal,
+                    verified.Receipt,
+                    false,
+                    true,
+                    1
+                )
+        );
+    }
+
+    [Fact]
+    public async Task Reconcile_RejectsTamperedReceiptAndLegacyReceiptOmitsPartialFields()
+    {
+        Setup setup = CreateSetup(direct: false);
+        VideoVariantLooseCleanupApplyManifest manifest = ApplyManifest(setup);
+        string quarantine = QuarantinePath(setup.MediaRoot, manifest, 1, Remove);
+        Directory.CreateDirectory(Path.GetDirectoryName(quarantine)!);
+        File.Move(setup.RemovePath, quarantine);
+        string source = WriteSourceJournal(manifest, "verified");
+        VideoVariantLooseCleanupApplyService service = new(
+            new FakeDatabase(setup.PrimaryNamespace)
+        );
+        await service.ReconcileLegacyJournalAsync(
+            manifest,
+            source,
+            manifest.ApprovalHash,
+            setup.Journal,
+            setup.Receipt,
+            false,
+            true,
+            1
+        );
+        File.WriteAllText(
+            setup.Receipt,
+            File.ReadAllText(setup.Receipt)
+                .Replace("\"OperationIndices\": [", "\"OperationIndices\": [ 99,")
+        );
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                service.ReconcileLegacyJournalAsync(
+                    manifest,
+                    source,
+                    manifest.ApprovalHash,
+                    setup.Journal,
+                    setup.Receipt,
+                    false,
+                    true,
+                    1
+                )
+        );
+
+        string legacyJson = JsonSerializer.Serialize(new VideoVariantLooseCleanupReceipt());
+        Assert.DoesNotContain("SourceJournalSha256", legacyJson);
+        Assert.DoesNotContain("OperationIndices", legacyJson);
+    }
+
+    [Fact]
     public async Task Purge_PlansAndDeletesOnlySignedQuarantineFiles()
     {
         Setup setup = CreateSetup(direct: false);
@@ -1143,6 +1329,100 @@ public sealed class VideoVariantLooseCleanupApplyServiceTests : IDisposable
         return path;
     }
 
+    private string WriteSourceJournal(
+        VideoVariantLooseCleanupApplyManifest manifest,
+        params string[] states
+    )
+    {
+        string path = Path.Combine(_root, $"source-journal-{Guid.NewGuid():N}.json");
+        File.WriteAllText(
+            path,
+            JsonSerializer.Serialize(
+                new
+                {
+                    manifest.ApprovalHash,
+                    manifest.OperationSetHash,
+                    RunId = Guid.NewGuid(),
+                    StartedUtc = DateTimeOffset.UtcNow,
+                    BatchSize = 1,
+                    Batches = states.Select(
+                        (state, index) =>
+                        {
+                            VideoVariantLooseCleanupApplyOperation operation = manifest.Operations[
+                                index
+                            ];
+                            bool quarantined =
+                                state is "quarantined" or "db-committed" or "verified";
+                            return new
+                            {
+                                Index = index,
+                                State = state,
+                                OriginalsQuarantined = quarantined ? 1 : 0,
+                                DirectQuarantined = quarantined && operation.DirectPresent ? 1 : 0,
+                                BytesQuarantined = quarantined
+                                    ? operation.OriginalSize
+                                        + (operation.DirectPresent ? operation.DirectSize : 0)
+                                    : 0,
+                                PrimaryDeleted = 0,
+                                IncrementalDeleted = 0,
+                            };
+                        }
+                    ),
+                }
+            )
+        );
+        return path;
+    }
+
+    private static VideoVariantLooseCleanupApplyManifest AddSecondOperation(Setup setup)
+    {
+        string remove = Write(setup.MediaRoot, Remove2, "eligible");
+        string keep = Write(setup.MediaRoot, Keep2, "keep-two");
+        FileInfo removeInfo = new(remove);
+        VideoVariantLooseCleanupApplyManifest first = ApplyManifest(setup);
+        first.Paths.Add(Remove2);
+        first.Paths.Add(Keep2);
+        first.Operations.Add(
+            new()
+            {
+                RemovePathIndex = 2,
+                KeepPathIndex = 3,
+                PartitionId = 1,
+                KeepPartitionId = 1,
+                OriginalSize = removeInfo.Length,
+                OriginalLastWriteUtcTicks = removeInfo.LastWriteTimeUtc.Ticks,
+            }
+        );
+        first.OperationSetHash = VideoVariantLooseCleanupApplyService.CalculateOperationSetHash(
+            first
+        );
+        first.ApprovalHash = VideoVariantLooseCleanupApplyService.CalculateApprovalHash(first);
+        Assert.True(File.Exists(keep));
+        return first;
+    }
+
+    private static string QuarantinePath(
+        string root,
+        VideoVariantLooseCleanupApplyManifest manifest,
+        int partitionId,
+        string logical
+    )
+    {
+        string hash = Sha256($"original\n{partitionId}\n{logical}");
+        return Path.Combine(
+            root,
+            ".video-variant-loose-quarantine",
+            manifest.ApprovalHash,
+            "original",
+            partitionId.ToString(),
+            hash[..2],
+            hash + ".bin"
+        );
+    }
+
+    private static string Resolve(string root, string logical) =>
+        Path.Combine(root, logical.Replace('/', Path.DirectorySeparatorChar));
+
     private static VideoVariantLooseCleanupOperation Clone(
         VideoVariantLooseCleanupOperation value,
         int? removeIndex = null,
@@ -1224,6 +1504,7 @@ public sealed class VideoVariantLooseCleanupApplyServiceTests : IDisposable
         public int DuplicateRows { get; set; }
         public Dictionary<string, int> PartitionIds { get; } =
             new(StringComparer.Ordinal) { [Keep] = 1 };
+        public List<string> RowCountPaths { get; } = [];
 
         public Task<VideoVariantLooseCleanupNamespaces> DiscoverNamespacesAsync(
             string storeNamespace,
@@ -1291,14 +1572,17 @@ public sealed class VideoVariantLooseCleanupApplyServiceTests : IDisposable
             IReadOnlyList<string> incrementalNamespaces,
             IReadOnlyList<string> normalizedPaths,
             CancellationToken token
-        ) =>
-            Task.FromResult<IReadOnlyDictionary<string, int>>(
+        )
+        {
+            RowCountPaths.AddRange(normalizedPaths);
+            return Task.FromResult<IReadOnlyDictionary<string, int>>(
                 normalizedPaths.ToDictionary(
                     path => path,
                     path => Rows.Contains(path) ? 1 + DuplicateRows : 0,
                     StringComparer.Ordinal
                 )
             );
+        }
 
         private sealed class Lease : IAsyncDisposable
         {

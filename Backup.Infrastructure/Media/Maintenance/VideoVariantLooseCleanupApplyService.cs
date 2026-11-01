@@ -3,6 +3,7 @@ using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Npgsql;
 using NpgsqlTypes;
 
@@ -30,7 +31,7 @@ public sealed class VideoVariantLooseCleanupApplyService
     };
     private readonly IVideoVariantLooseCleanupDatabase? _database;
     private readonly ConcurrentDictionary<string, Lazy<bool>> _createdDirectories = new(
-        StringComparer.OrdinalIgnoreCase
+        PhysicalPathSemantics.Comparer
     );
 
     public VideoVariantLooseCleanupApplyService() { }
@@ -150,7 +151,7 @@ public sealed class VideoVariantLooseCleanupApplyService
         VideoVariantLooseCleanupJournal sourceJournal = LoadAndValidateSourceJournal(
             manifest,
             journalBytes,
-            ordered.Count
+            ordered
         );
         int[] selectedIndices = sourceJournal
             .Batches.Where(batch => batch.State == "pending")
@@ -177,8 +178,8 @@ public sealed class VideoVariantLooseCleanupApplyService
         );
         List<VideoVariantLooseCleanupDirectDeleteKeep> keeps = selected
             .Select(work => work.KeepPath)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.Ordinal)
+            .Distinct(PhysicalPathSemantics.Comparer)
+            .Order(PhysicalPathSemantics.Comparer)
             .Select(path =>
             {
                 FileInfo info = new(path);
@@ -267,7 +268,7 @@ public sealed class VideoVariantLooseCleanupApplyService
         ResolvedConfig config = ValidateCurrentConfig(manifest);
         byte[] sourceJournalBytes = await File.ReadAllBytesAsync(sourceJournalPath, token);
         List<ApplyWork> allWork = BuildWork(manifest, config.MediaRoots);
-        ValidateDirectDeleteSourceJournal(manifest, plan, sourceJournalBytes, allWork.Count);
+        ValidateDirectDeleteSourceJournal(manifest, plan, sourceJournalBytes, allWork);
         ApplyWork[] selected = plan.OperationIndices.Select(index => allWork[index]).ToArray();
         if (
             selected.Length != plan.Operations
@@ -484,7 +485,7 @@ public sealed class VideoVariantLooseCleanupApplyService
         ResolvedConfig config = ValidateCurrentConfig(manifest);
         byte[] sourceJournalBytes = await File.ReadAllBytesAsync(sourceJournalPath, token);
         List<ApplyWork> allWork = BuildWork(manifest, config.MediaRoots);
-        ValidateDirectDeleteSourceJournal(manifest, plan, sourceJournalBytes, allWork.Count);
+        ValidateDirectDeleteSourceJournal(manifest, plan, sourceJournalBytes, allWork);
         VideoVariantLooseCleanupDirectDeleteReceipt receipt = LoadDirectDeleteReceipt(receiptPath);
         ValidateDirectDeleteReceipt(manifest, plan, receipt);
         ApplyWork[] selected = plan.OperationIndices.Select(index => allWork[index]).ToArray();
@@ -755,11 +756,265 @@ public sealed class VideoVariantLooseCleanupApplyService
                             : [Path.GetDirectoryName(value.OriginalQuarantinePath)!]
                     )
                     .Select(value => FindQuarantineRoot(value, manifest.ApprovalHash))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Order(StringComparer.OrdinalIgnoreCase)
+                    .Distinct(PhysicalPathSemantics.Comparer)
+                    .Order(PhysicalPathSemantics.Comparer)
                     .ToList(),
                 Batches = batchCount,
             };
+            receipt.ReceiptHash = CalculateReceiptHash(receipt);
+            WriteJsonAtomic(fullReceiptPath, receipt);
+            File.Delete(fullJournalPath);
+            return receipt;
+        }
+        finally
+        {
+            DisposeLocks(fileLocks);
+        }
+    }
+
+    public async Task<VideoVariantLooseCleanupReceipt> ReconcileLegacyJournalAsync(
+        VideoVariantLooseCleanupApplyManifest manifest,
+        string sourceJournalPath,
+        string approval,
+        string journalPath,
+        string receiptPath,
+        bool resume,
+        bool runtimeStoppedConfirmed,
+        int physicalParallelism,
+        IProgress<VideoVariantLooseCleanupApplyProgress>? progress = null,
+        CancellationToken token = default
+    )
+    {
+        if (!runtimeStoppedConfirmed)
+            throw new InvalidOperationException("Runtime stopped confirmation is required.");
+        if (physicalParallelism <= 0)
+            throw new ArgumentOutOfRangeException(nameof(physicalParallelism));
+        ValidateApproval(manifest, approval);
+        ResolvedConfig config = ValidateCurrentConfig(manifest);
+        List<ApplyWork> allWork = BuildWork(manifest, config.MediaRoots);
+        byte[] sourceBytes = await File.ReadAllBytesAsync(sourceJournalPath, token);
+        VideoVariantLooseCleanupJournal source = LoadAndValidateSourceJournal(
+            manifest,
+            sourceBytes,
+            allWork
+        );
+        string sourceSha256 = Sha256(sourceBytes);
+        VideoVariantLooseCleanupJournalBatch[] eligibleBatches = source
+            .Batches.Where(batch => batch.State != "pending")
+            .ToArray();
+        if (eligibleBatches.Length == 0)
+            throw new InvalidOperationException("Source apply journal has no non-pending batches.");
+        List<int> workIndices = eligibleBatches
+            .SelectMany(batch =>
+                Enumerable.Range(
+                    batch.Index * source.BatchSize,
+                    Math.Min(source.BatchSize, allWork.Count - batch.Index * source.BatchSize)
+                )
+            )
+            .Order()
+            .ToList();
+        ApplyWork[] eligibleWork = workIndices.Select(index => allWork[index]).ToArray();
+        Dictionary<string, int> manifestIndices = manifest
+            .Operations.Select((operation, index) => (operation, index))
+            .ToDictionary(
+                value => NormalizePath(manifest.Paths[value.operation.RemovePathIndex]),
+                value => value.index,
+                StringComparer.Ordinal
+            );
+        List<int> operationIndices = eligibleWork
+            .Select(work => manifestIndices[NormalizePath(work.LogicalPath)])
+            .Order()
+            .ToList();
+        string fullJournalPath = RequireLocalOutputPath(journalPath, nameof(journalPath));
+        string fullReceiptPath = RequireLocalOutputPath(receiptPath, nameof(receiptPath));
+        IVideoVariantLooseCleanupDatabase database = Database(config.ConnectionString);
+        ValidateNamespaces(
+            manifest,
+            await database.DiscoverNamespacesAsync(
+                StoreNamespace(manifest.MediaStoreId, manifest.CacheId),
+                token
+            )
+        );
+        if (!(await database.CheckIndexesAsync(token)).IsValid)
+            throw new InvalidOperationException(
+                "Required normalized path indexes are missing or invalid."
+            );
+
+        List<FileStream> fileLocks = AcquireFileLocks(
+            config.MediaRoots.Values.Append(manifest.DirectRoot)
+        );
+        try
+        {
+            await using IAsyncDisposable? advisoryLock = await database.TryAcquireLockAsync(
+                StoreNamespace(manifest.MediaStoreId, manifest.CacheId),
+                token
+            );
+            if (advisoryLock is null)
+                throw new InvalidOperationException("Media cache advisory lock is unavailable.");
+            ValidateNamespaces(
+                manifest,
+                await database.DiscoverNamespacesAsync(
+                    StoreNamespace(manifest.MediaStoreId, manifest.CacheId),
+                    token
+                )
+            );
+            if (File.Exists(fullReceiptPath))
+            {
+                VideoVariantLooseCleanupReceipt completed = LoadReceipt(fullReceiptPath);
+                ValidateReconciliationReceipt(manifest, completed, sourceSha256, operationIndices);
+                return completed;
+            }
+
+            VideoVariantLooseCleanupReconciliationJournal journal =
+                LoadOrCreateReconciliationJournal(
+                    manifest,
+                    source,
+                    sourceSha256,
+                    eligibleBatches,
+                    fullJournalPath,
+                    resume
+                );
+
+            for (int index = 0; index < journal.Batches.Count; index++)
+            {
+                VideoVariantLooseCleanupReconciliationBatch state = journal.Batches[index];
+                ApplyWork[] batch = allWork
+                    .Skip(state.StartOperationIndex)
+                    .Take(state.OperationCount)
+                    .ToArray();
+                token.ThrowIfCancellationRequested();
+                if (state.State == "pending")
+                {
+                    if (state.SourceState == "moving")
+                    {
+                        CheckKeepFiles(batch, physicalParallelism, token);
+                        RunPhysical(
+                            batch,
+                            physicalParallelism,
+                            token,
+                            work => MoveWork(work, true)
+                        );
+                        FaultInjection?.Invoke("after-reconcile-moves");
+                    }
+                    VerifyBatchFiles(batch, physicalParallelism, token);
+                    state.State = "quarantined";
+                    WriteReconciliationJournal(fullJournalPath, journal);
+                }
+                if (state.State == "quarantined")
+                {
+                    VerifyBatchFiles(batch, physicalParallelism, token);
+                    IReadOnlyDictionary<string, int> counts = await LoadRowCounts(
+                        database,
+                        manifest,
+                        batch,
+                        token
+                    );
+                    bool committed = state.SourceState is "db-committed" or "verified";
+                    if (counts.Values.All(count => count == 1) && !committed)
+                    {
+                        VideoVariantLooseCleanupDeleteResult deleted =
+                            await database.DeleteBatchAsync(
+                                manifest.PrimaryNamespace,
+                                manifest.IncrementalNamespaces,
+                                batch.Select(work => NormalizePath(work.LogicalPath)).ToArray(),
+                                token
+                            );
+                        if (deleted.PrimaryDeleted + deleted.IncrementalDeleted != batch.Length)
+                            throw new InvalidOperationException(
+                                "Reconciliation database delete count mismatch."
+                            );
+                        state.PrimaryDeleted = deleted.PrimaryDeleted;
+                        state.IncrementalDeleted = deleted.IncrementalDeleted;
+                    }
+                    else if (!counts.Values.All(count => count == 0))
+                        throw new InvalidOperationException(
+                            committed
+                                ? "Committed source batch still has cache rows."
+                                : "Reconciliation database state is partial or duplicated."
+                        );
+                    if (
+                        !await database.AreRowsAbsentAsync(
+                            manifest.PrimaryNamespace,
+                            manifest.IncrementalNamespaces,
+                            batch.Select(work => NormalizePath(work.LogicalPath)).ToArray(),
+                            token
+                        )
+                    )
+                        throw new InvalidOperationException(
+                            "Target cache rows remain after reconciliation."
+                        );
+                    state.State = "db-committed";
+                    WriteReconciliationJournal(fullJournalPath, journal);
+                    FaultInjection?.Invoke("after-reconcile-db-commit");
+                }
+                if (state.State == "db-committed")
+                {
+                    VerifyBatchFiles(batch, physicalParallelism, token);
+                    await RequireExactRowCounts(database, manifest, batch, 0, token);
+                    state.State = "verified";
+                    WriteReconciliationJournal(fullJournalPath, journal);
+                }
+                progress?.Report(
+                    new(index + 1, journal.Batches.Count, batch.Length, eligibleWork.Length)
+                );
+            }
+
+            VideoVariantLooseCleanupReceipt receipt = new()
+            {
+                Version = 1,
+                ApprovalHash = manifest.ApprovalHash,
+                OperationSetHash = manifest.OperationSetHash,
+                SourceJournalSha256 = sourceSha256,
+                OperationIndices = operationIndices,
+                Host = Environment.MachineName,
+                ProcessId = Environment.ProcessId,
+                RunId = journal.RunId,
+                StartedUtc = journal.StartedUtc,
+                CompletedUtc = DateTimeOffset.UtcNow,
+                Operations = eligibleWork.Length,
+                OriginalsQuarantined = eligibleWork.Length,
+                DirectQuarantined = eligibleWork.Count(work => work.Operation.DirectPresent),
+                BytesQuarantined = eligibleWork.Sum(work =>
+                    work.Operation.OriginalSize
+                    + (work.Operation.DirectPresent ? work.Operation.DirectSize : 0)
+                ),
+                PrimaryDeleted = journal.Batches.Sum(batch =>
+                    batch.SourcePrimaryDeleted + batch.PrimaryDeleted
+                ),
+                IncrementalDeleted = journal.Batches.Sum(batch =>
+                    batch.SourceIncrementalDeleted + batch.IncrementalDeleted
+                ),
+                PrimaryNamespace = manifest.PrimaryNamespace,
+                IncrementalNamespaces = [.. manifest.IncrementalNamespaces],
+                QuarantineRoots = eligibleWork
+                    .SelectMany(work =>
+                        work.Operation.DirectPresent
+                            ? new[]
+                            {
+                                FindQuarantineRoot(
+                                    work.OriginalQuarantinePath,
+                                    manifest.ApprovalHash
+                                ),
+                                FindQuarantineRoot(
+                                    work.DirectQuarantinePath,
+                                    manifest.ApprovalHash
+                                ),
+                            }
+                            :
+                            [
+                                FindQuarantineRoot(
+                                    work.OriginalQuarantinePath,
+                                    manifest.ApprovalHash
+                                ),
+                            ]
+                    )
+                    .Distinct(PhysicalPathSemantics.Comparer)
+                    .Order(PhysicalPathSemantics.Comparer)
+                    .ToList(),
+                Batches = journal.Batches.Count,
+            };
+            if (Sha256(await File.ReadAllBytesAsync(sourceJournalPath, token)) != sourceSha256)
+                throw new InvalidOperationException("Frozen source apply journal changed.");
             receipt.ReceiptHash = CalculateReceiptHash(receipt);
             WriteJsonAtomic(fullReceiptPath, receipt);
             File.Delete(fullJournalPath);
@@ -785,9 +1040,14 @@ public sealed class VideoVariantLooseCleanupApplyService
             || receipt.OperationSetHash != manifest.OperationSetHash
         )
             throw new InvalidOperationException("Receipt does not match manifest.");
-        List<ApplyWork> work = BuildWork(manifest, config.MediaRoots);
+        List<ApplyWork> allWork = BuildWork(manifest, config.MediaRoots);
+        IReadOnlyList<int> operationIndices = ValidateReceiptOperationIndices(
+            receipt,
+            allWork.Count
+        );
+        ApplyWork[] work = operationIndices.Select(index => allWork[index]).ToArray();
         ApplyWork[] directWork = work.Where(value => value.Operation.DirectPresent).ToArray();
-        int total = work.Count + directWork.Length;
+        int total = work.Length + directWork.Length;
         int completed = 0;
         List<ApplyWork[]> driveWork = work.GroupBy(value => value.Operation.PartitionId)
             .Select(group => group.ToArray())
@@ -829,6 +1089,24 @@ public sealed class VideoVariantLooseCleanupApplyService
             )
         )
             throw new InvalidOperationException("Target cache rows remain.");
+    }
+
+    internal static IReadOnlyList<int> ValidateReceiptOperationIndices(
+        VideoVariantLooseCleanupReceipt receipt,
+        int operationCount
+    )
+    {
+        IReadOnlyList<int> indices =
+            receipt.OperationIndices
+            ?? (IReadOnlyList<int>)Enumerable.Range(0, operationCount).ToArray();
+        if (
+            indices.Count != receipt.Operations
+            || indices.Any(index => index < 0 || index >= operationCount)
+            || !indices.SequenceEqual(indices.Order())
+            || indices.Distinct().Count() != indices.Count
+        )
+            throw new InvalidOperationException("Apply receipt operation indices are invalid.");
+        return indices;
     }
 
     internal static string CalculateOperationSetHash(VideoVariantLooseCleanupApplyManifest manifest)
@@ -1172,7 +1450,7 @@ public sealed class VideoVariantLooseCleanupApplyService
                     }
                     : [FindQuarantineRoot(value.OriginalQuarantinePath, manifest.ApprovalHash)]
             )
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(PhysicalPathSemantics.Comparer)
             .ToArray();
         if (quarantineRoots.Any(Directory.Exists))
             throw new InvalidOperationException("Quarantine root exists without journal.");
@@ -1283,7 +1561,7 @@ public sealed class VideoVariantLooseCleanupApplyService
     {
         string[] paths = batch
             .Select(work => work.KeepPath)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(PhysicalPathSemantics.Comparer)
             .ToArray();
         if (physicalParallelism == 1)
         {
@@ -1444,7 +1722,7 @@ public sealed class VideoVariantLooseCleanupApplyService
             foreach (
                 string root in roots
                     .Select(Path.GetFullPath)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .Distinct(PhysicalPathSemantics.Comparer)
             )
             {
                 if (!Directory.Exists(root))
@@ -1483,6 +1761,174 @@ public sealed class VideoVariantLooseCleanupApplyService
         if (CalculateReceiptHash(receipt) != receipt.ReceiptHash)
             throw new InvalidOperationException("Receipt hash is invalid.");
         return receipt;
+    }
+
+    internal static string CalculateReconciliationJournalHash(
+        VideoVariantLooseCleanupReconciliationJournal journal
+    ) =>
+        Sha256(
+            JsonSerializer.SerializeToUtf8Bytes(
+                journal with
+                {
+                    JournalHash = string.Empty,
+                },
+                JsonOptions
+            )
+        );
+
+    private static VideoVariantLooseCleanupReconciliationJournal LoadOrCreateReconciliationJournal(
+        VideoVariantLooseCleanupApplyManifest manifest,
+        VideoVariantLooseCleanupJournal source,
+        string sourceSha256,
+        IReadOnlyList<VideoVariantLooseCleanupJournalBatch> eligible,
+        string path,
+        bool resume
+    )
+    {
+        if (File.Exists(path))
+        {
+            if (!resume)
+                throw new InvalidOperationException(
+                    "Existing reconciliation journal requires --resume."
+                );
+            VideoVariantLooseCleanupReconciliationJournal existing =
+                JsonSerializer.Deserialize<VideoVariantLooseCleanupReconciliationJournal>(
+                    File.ReadAllBytes(path),
+                    JsonOptions
+                ) ?? throw new InvalidOperationException("Invalid reconciliation journal.");
+            ValidateReconciliationJournal(existing, manifest, source, sourceSha256, eligible);
+            return existing;
+        }
+        if (resume)
+            throw new InvalidOperationException(
+                "Resume requested but reconciliation journal does not exist."
+            );
+        VideoVariantLooseCleanupReconciliationJournal journal = new()
+        {
+            Version = 1,
+            Mode = "reconcile-apply-loose-v1",
+            ManifestApprovalHash = manifest.ApprovalHash,
+            OperationSetHash = manifest.OperationSetHash,
+            SourceJournalSha256 = sourceSha256,
+            SourceJournalRunId = source.RunId,
+            RunId = Guid.NewGuid(),
+            StartedUtc = DateTimeOffset.UtcNow,
+            Batches = eligible
+                .Select(batch => new VideoVariantLooseCleanupReconciliationBatch
+                {
+                    SourceBatchIndex = batch.Index,
+                    SourceState = batch.State,
+                    SourceOriginalsQuarantined = batch.OriginalsQuarantined,
+                    SourceDirectQuarantined = batch.DirectQuarantined,
+                    SourceBytesQuarantined = batch.BytesQuarantined,
+                    SourcePrimaryDeleted = batch.PrimaryDeleted,
+                    SourceIncrementalDeleted = batch.IncrementalDeleted,
+                    StartOperationIndex = batch.Index * source.BatchSize,
+                    OperationCount = Math.Min(
+                        source.BatchSize,
+                        manifest.Operations.Count - batch.Index * source.BatchSize
+                    ),
+                })
+                .ToList(),
+        };
+        WriteReconciliationJournal(path, journal);
+        return journal;
+    }
+
+    private static void WriteReconciliationJournal(
+        string path,
+        VideoVariantLooseCleanupReconciliationJournal journal
+    )
+    {
+        ValidateReconciliationJournalState(journal);
+        journal.JournalHash = CalculateReconciliationJournalHash(journal);
+        WriteJsonAtomic(path, journal);
+    }
+
+    private static void ValidateReconciliationJournal(
+        VideoVariantLooseCleanupReconciliationJournal journal,
+        VideoVariantLooseCleanupApplyManifest manifest,
+        VideoVariantLooseCleanupJournal source,
+        string sourceSha256,
+        IReadOnlyList<VideoVariantLooseCleanupJournalBatch> eligible
+    )
+    {
+        if (
+            journal.Version != 1
+            || journal.Mode != "reconcile-apply-loose-v1"
+            || journal.ManifestApprovalHash != manifest.ApprovalHash
+            || journal.OperationSetHash != manifest.OperationSetHash
+            || journal.SourceJournalSha256 != sourceSha256
+            || journal.SourceJournalRunId != source.RunId
+            || journal.Batches.Count != eligible.Count
+            || CalculateReconciliationJournalHash(journal) != journal.JournalHash
+        )
+            throw new InvalidOperationException("Reconciliation journal does not match source.");
+
+        for (int index = 0; index < eligible.Count; index++)
+        {
+            VideoVariantLooseCleanupJournalBatch sourceBatch = eligible[index];
+            VideoVariantLooseCleanupReconciliationBatch batch = journal.Batches[index];
+            if (
+                batch.SourceBatchIndex != sourceBatch.Index
+                || batch.SourceState != sourceBatch.State
+                || batch.SourceOriginalsQuarantined != sourceBatch.OriginalsQuarantined
+                || batch.SourceDirectQuarantined != sourceBatch.DirectQuarantined
+                || batch.SourceBytesQuarantined != sourceBatch.BytesQuarantined
+                || batch.SourcePrimaryDeleted != sourceBatch.PrimaryDeleted
+                || batch.SourceIncrementalDeleted != sourceBatch.IncrementalDeleted
+                || batch.StartOperationIndex != sourceBatch.Index * source.BatchSize
+                || batch.OperationCount
+                    != Math.Min(
+                        source.BatchSize,
+                        manifest.Operations.Count - sourceBatch.Index * source.BatchSize
+                    )
+            )
+                throw new InvalidOperationException(
+                    "Reconciliation journal batch metadata changed."
+                );
+        }
+        ValidateReconciliationJournalState(journal);
+    }
+
+    private static void ValidateReconciliationJournalState(
+        VideoVariantLooseCleanupReconciliationJournal journal
+    )
+    {
+        if (
+            journal.Batches.Any(batch =>
+                batch.SourceState is not ("moving" or "quarantined" or "db-committed" or "verified")
+                || batch.State is not ("pending" or "quarantined" or "db-committed" or "verified")
+                || batch.StartOperationIndex < 0
+                || batch.OperationCount <= 0
+                || batch.PrimaryDeleted < 0
+                || batch.IncrementalDeleted < 0
+                || batch.PrimaryDeleted + batch.IncrementalDeleted > batch.OperationCount
+                || (
+                    batch.State is "pending" or "quarantined"
+                    && (batch.PrimaryDeleted != 0 || batch.IncrementalDeleted != 0)
+                )
+            )
+        )
+            throw new InvalidOperationException("Reconciliation journal state is invalid.");
+    }
+
+    private static void ValidateReconciliationReceipt(
+        VideoVariantLooseCleanupApplyManifest manifest,
+        VideoVariantLooseCleanupReceipt receipt,
+        string sourceSha256,
+        IReadOnlyList<int> operationIndices
+    )
+    {
+        if (
+            receipt.ApprovalHash != manifest.ApprovalHash
+            || receipt.OperationSetHash != manifest.OperationSetHash
+            || receipt.SourceJournalSha256 != sourceSha256
+            || receipt.OperationIndices is null
+            || !receipt.OperationIndices.SequenceEqual(operationIndices)
+            || receipt.Operations != operationIndices.Count
+        )
+            throw new InvalidOperationException("Reconciliation receipt does not match source.");
     }
 
     internal static string CalculateDirectDeletePlanHash(
@@ -1553,9 +1999,8 @@ public sealed class VideoVariantLooseCleanupApplyService
             || plan.Keeps.Any(keep =>
                 string.IsNullOrWhiteSpace(keep.Path) || keep.Size < 0 || keep.LastWriteUtcTicks <= 0
             )
-            || plan.Keeps.Select(keep => keep.Path)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Count() != plan.Keeps.Count
+            || plan.Keeps.Select(keep => keep.Path).Distinct(PhysicalPathSemantics.Comparer).Count()
+                != plan.Keeps.Count
         )
             throw new InvalidOperationException("Direct-delete plan structure is invalid.");
         if (CalculateDirectDeletePlanHash(plan) != plan.ApprovalHash)
@@ -1584,7 +2029,7 @@ public sealed class VideoVariantLooseCleanupApplyService
     private static VideoVariantLooseCleanupJournal LoadAndValidateSourceJournal(
         VideoVariantLooseCleanupApplyManifest manifest,
         byte[] bytes,
-        int operationCount
+        IReadOnlyList<ApplyWork> work
     )
     {
         VideoVariantLooseCleanupJournal journal =
@@ -1592,7 +2037,7 @@ public sealed class VideoVariantLooseCleanupApplyService
             ?? throw new InvalidOperationException("Invalid source apply journal.");
         if (journal.BatchSize <= 0)
             throw new InvalidOperationException("Source apply journal batch size is invalid.");
-        int expectedBatches = (operationCount + journal.BatchSize - 1) / journal.BatchSize;
+        int expectedBatches = (work.Count + journal.BatchSize - 1) / journal.BatchSize;
         if (
             journal.ApprovalHash != manifest.ApprovalHash
             || journal.OperationSetHash != manifest.OperationSetHash
@@ -1606,6 +2051,35 @@ public sealed class VideoVariantLooseCleanupApplyService
             )
         )
             throw new InvalidOperationException("Source apply journal is invalid or mismatched.");
+
+        foreach (VideoVariantLooseCleanupJournalBatch batch in journal.Batches)
+        {
+            ApplyWork[] batchWork = work.Skip(batch.Index * journal.BatchSize)
+                .Take(journal.BatchSize)
+                .ToArray();
+            bool quarantined = batch.State is "quarantined" or "db-committed" or "verified";
+            int originals = quarantined ? batchWork.Length : 0;
+            int direct = quarantined ? batchWork.Count(item => item.Operation.DirectPresent) : 0;
+            long bytesQuarantined = quarantined
+                ? batchWork.Sum(item =>
+                    item.Operation.OriginalSize
+                    + (item.Operation.DirectPresent ? item.Operation.DirectSize : 0)
+                )
+                : 0;
+            bool databaseCommitted = batch.State is "db-committed" or "verified";
+            if (
+                batch.OriginalsQuarantined != originals
+                || batch.DirectQuarantined != direct
+                || batch.BytesQuarantined != bytesQuarantined
+                || batch.PrimaryDeleted < 0
+                || batch.IncrementalDeleted < 0
+                || (
+                    !databaseCommitted
+                    && (batch.PrimaryDeleted != 0 || batch.IncrementalDeleted != 0)
+                )
+            )
+                throw new InvalidOperationException("Source apply journal counters are invalid.");
+        }
         return journal;
     }
 
@@ -1613,13 +2087,13 @@ public sealed class VideoVariantLooseCleanupApplyService
         VideoVariantLooseCleanupApplyManifest manifest,
         VideoVariantLooseCleanupDirectDeletePlan plan,
         byte[] bytes,
-        int operationCount
+        IReadOnlyList<ApplyWork> work
     )
     {
         VideoVariantLooseCleanupJournal journal = LoadAndValidateSourceJournal(
             manifest,
             bytes,
-            operationCount
+            work
         );
         if (
             Sha256(bytes) != plan.SourceJournalSha256
@@ -1633,7 +2107,7 @@ public sealed class VideoVariantLooseCleanupApplyService
             .SelectMany(batch =>
                 Enumerable.Range(
                     batch.Index * journal.BatchSize,
-                    Math.Min(journal.BatchSize, operationCount - batch.Index * journal.BatchSize)
+                    Math.Min(journal.BatchSize, work.Count - batch.Index * journal.BatchSize)
                 )
             )
             .ToHashSet();
@@ -2025,7 +2499,7 @@ public sealed class VideoVariantLooseCleanupApplyService
             !string.Equals(
                 Path.GetPathRoot(source),
                 Path.GetPathRoot(destination),
-                StringComparison.OrdinalIgnoreCase
+                PhysicalPathSemantics.Comparison
             )
         )
             throw new InvalidOperationException(
@@ -2036,7 +2510,7 @@ public sealed class VideoVariantLooseCleanupApplyService
     private static string FindQuarantineRoot(string path, string approval)
     {
         string suffix = Path.Combine(QuarantineDirectory, approval);
-        int index = path.IndexOf(suffix, StringComparison.OrdinalIgnoreCase);
+        int index = path.IndexOf(suffix, PhysicalPathSemantics.Comparison);
         return index < 0 ? path : path[..(index + suffix.Length)];
     }
 
@@ -2685,6 +3159,12 @@ public sealed record VideoVariantLooseCleanupReceipt
     public int Version { get; init; }
     public string ApprovalHash { get; init; } = string.Empty;
     public string OperationSetHash { get; init; } = string.Empty;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? SourceJournalSha256 { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? OperationIndices { get; init; }
     public string Host { get; init; } = string.Empty;
     public int ProcessId { get; init; }
     public Guid RunId { get; init; }
@@ -2722,6 +3202,48 @@ internal sealed class VideoVariantLooseCleanupJournalBatch
     public long BytesQuarantined { get; set; }
     public int PrimaryDeleted { get; set; }
     public int IncrementalDeleted { get; set; }
+}
+
+internal sealed record VideoVariantLooseCleanupReconciliationJournal
+{
+    public int Version { get; init; }
+    public string Mode { get; init; } = string.Empty;
+    public string ManifestApprovalHash { get; init; } = string.Empty;
+    public string OperationSetHash { get; init; } = string.Empty;
+    public string SourceJournalSha256 { get; init; } = string.Empty;
+    public Guid SourceJournalRunId { get; init; }
+    public Guid RunId { get; init; }
+    public DateTimeOffset StartedUtc { get; init; }
+    public List<VideoVariantLooseCleanupReconciliationBatch> Batches { get; init; } = [];
+    public string JournalHash { get; set; } = string.Empty;
+}
+
+internal sealed class VideoVariantLooseCleanupReconciliationBatch
+{
+    public int SourceBatchIndex { get; init; }
+    public string SourceState { get; init; } = string.Empty;
+    public int SourceOriginalsQuarantined { get; init; }
+    public int SourceDirectQuarantined { get; init; }
+    public long SourceBytesQuarantined { get; init; }
+    public int SourcePrimaryDeleted { get; init; }
+    public int SourceIncrementalDeleted { get; init; }
+    public int StartOperationIndex { get; init; }
+    public int OperationCount { get; init; }
+    public string State { get; set; } = "pending";
+    public int PrimaryDeleted { get; set; }
+    public int IncrementalDeleted { get; set; }
+}
+
+internal static class PhysicalPathSemantics
+{
+    internal static StringComparer Comparer => ComparerFor(OperatingSystem.IsWindows());
+    internal static StringComparison Comparison => ComparisonFor(OperatingSystem.IsWindows());
+
+    internal static StringComparer ComparerFor(bool windows) =>
+        windows ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+
+    internal static StringComparison ComparisonFor(bool windows) =>
+        windows ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
 }
 
 public sealed record VideoVariantLooseCleanupDirectDeletePlan

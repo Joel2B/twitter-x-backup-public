@@ -22,10 +22,10 @@ public sealed class VideoVariantLooseCleanupPurgeService
         string drive
     )
     {
-        (VideoVariantLooseCleanupReceipt receipt, List<PurgeWork> work, string root) =
+        (VideoVariantLooseCleanupReceipt receipt, List<PurgeWork> work, string root, _) =
             ValidateAndBuild(manifest, receiptPath, drive);
         return new(
-            drive.ToUpperInvariant(),
+            NormalizeSelector(drive),
             root,
             work.Count,
             work.Sum(value => value.Size),
@@ -50,8 +50,13 @@ public sealed class VideoVariantLooseCleanupPurgeService
         if (!runtimeStoppedConfirmed)
             throw new InvalidOperationException("Runtime stopped confirmation is required.");
         ArgumentOutOfRangeException.ThrowIfLessThan(batchSize, 1);
-        (VideoVariantLooseCleanupReceipt applyReceipt, List<PurgeWork> work, string root) =
-            ValidateAndBuild(manifest, applyReceiptPath, drive);
+        (
+            VideoVariantLooseCleanupReceipt applyReceipt,
+            List<PurgeWork> work,
+            string root,
+            string mediaRoot
+        ) = ValidateAndBuild(manifest, applyReceiptPath, drive);
+        string selector = NormalizeSelector(drive);
         if (!approval.Equals(applyReceipt.ReceiptHash, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Approval hash does not match apply receipt.");
 
@@ -62,7 +67,7 @@ public sealed class VideoVariantLooseCleanupPurgeService
             VideoVariantLooseCleanupPurgeReceipt completed = LoadPurgeReceipt(fullReceiptPath);
             if (
                 completed.ApplyReceiptHash == applyReceipt.ReceiptHash
-                && completed.Drive.Equals(drive, StringComparison.OrdinalIgnoreCase)
+                && PhysicalPathSemantics.Comparer.Equals(completed.Drive, selector)
             )
                 return completed;
             throw new InvalidOperationException(
@@ -74,21 +79,13 @@ public sealed class VideoVariantLooseCleanupPurgeService
         VideoVariantLooseCleanupPurgeJournal journal = LoadOrCreateJournal(
             manifest,
             applyReceipt,
-            drive,
+            selector,
             fullJournalPath,
             batchSize,
             batchCount,
             resume
         );
         DateTimeOffset startedUtc = journal.StartedUtc;
-        string mediaRoot = Path.GetDirectoryName(Path.GetDirectoryName(root)!)!;
-        if (
-            drive.Equals(
-                Path.GetPathRoot(manifest.DirectRoot)?.TrimEnd('\\'),
-                StringComparison.OrdinalIgnoreCase
-            )
-        )
-            mediaRoot = manifest.DirectRoot;
         await using FileStream fileLock = new(
             Path.Combine(mediaRoot, LockFileName),
             FileMode.OpenOrCreate,
@@ -154,7 +151,7 @@ public sealed class VideoVariantLooseCleanupPurgeService
             Version = 1,
             ApplyReceiptHash = applyReceipt.ReceiptHash,
             OperationSetHash = manifest.OperationSetHash,
-            Drive = drive.ToUpperInvariant(),
+            Drive = selector,
             QuarantineRoot = root,
             Host = Environment.MachineName,
             ProcessId = Environment.ProcessId,
@@ -174,16 +171,15 @@ public sealed class VideoVariantLooseCleanupPurgeService
     private static (
         VideoVariantLooseCleanupReceipt Receipt,
         List<PurgeWork> Work,
-        string Root
+        string Root,
+        string MediaRoot
     ) ValidateAndBuild(
         VideoVariantLooseCleanupApplyManifest manifest,
         string receiptPath,
         string drive
     )
     {
-        if (drive.Length != 1 || !char.IsLetter(drive[0]))
-            throw new ArgumentException("Drive must be one letter.", nameof(drive));
-        drive = drive.ToUpperInvariant();
+        string selector = NormalizeSelector(drive);
         if (
             VideoVariantLooseCleanupApplyService.CalculateOperationSetHash(manifest)
                 != manifest.OperationSetHash
@@ -210,26 +206,41 @@ public sealed class VideoVariantLooseCleanupPurgeService
             || receipt.OperationSetHash != manifest.OperationSetHash
         )
             throw new InvalidOperationException("Receipt does not match manifest.");
-        string rootPrefix = drive + ":\\";
-        string root =
-            receipt.QuarantineRoots.SingleOrDefault(value =>
-                value.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase)
+        string root = SelectQuarantineRoot(
+            selector,
+            receipt.QuarantineRoots,
+            OperatingSystem.IsWindows()
+        );
+        string[] mediaRoots = config
+            .MediaRoots.Values.Append(manifest.DirectRoot)
+            .Distinct(PhysicalPathSemantics.Comparer)
+            .Where(candidate =>
+                PhysicalPathSemantics.Comparer.Equals(
+                    Path.Combine(candidate, QuarantineDirectory, manifest.ApprovalHash),
+                    root
+                )
             )
-            ?? throw new InvalidOperationException(
-                $"Apply receipt has no quarantine root for {drive}:."
+            .ToArray();
+        if (mediaRoots.Length != 1)
+            throw new InvalidOperationException(
+                "Selected quarantine root does not map to exactly one media root."
             );
+        string mediaRoot = mediaRoots[0];
 
         List<PurgeWork> work = [];
 
-        foreach (VideoVariantLooseCleanupApplyOperation operation in manifest.Operations)
+        IReadOnlyList<int> operationIndices =
+            VideoVariantLooseCleanupApplyService.ValidateReceiptOperationIndices(
+                receipt,
+                manifest.Operations.Count
+            );
+
+        foreach (int operationIndex in operationIndices)
         {
+            VideoVariantLooseCleanupApplyOperation operation = manifest.Operations[operationIndex];
             string logical = manifest.Paths[operation.RemovePathIndex];
             string originalRoot = config.MediaRoots[operation.PartitionId];
-            if (
-                Path.GetPathRoot(originalRoot)
-                    ?.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase)
-                is true
-            )
+            if (PhysicalPathSemantics.Comparer.Equals(originalRoot, mediaRoot))
             {
                 string hash = Sha256(
                     Encoding.UTF8.GetBytes($"original\n{operation.PartitionId}\n{logical}")
@@ -252,9 +263,7 @@ public sealed class VideoVariantLooseCleanupPurgeService
             }
             if (
                 operation.DirectPresent
-                && Path.GetPathRoot(manifest.DirectRoot)
-                    ?.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase)
-                    is true
+                && PhysicalPathSemantics.Comparer.Equals(manifest.DirectRoot, mediaRoot)
             )
             {
                 string hash = Sha256(
@@ -277,12 +286,66 @@ public sealed class VideoVariantLooseCleanupPurgeService
             }
         }
         if (work.Count == 0)
-            throw new InvalidOperationException($"Manifest has no purge files for {drive}:.");
+            throw new InvalidOperationException($"Manifest has no purge files for {selector}.");
         if (work.Any(value => !IsWithinRoot(value.Path, root)))
             throw new InvalidOperationException(
                 "Derived purge path escapes receipt quarantine root."
             );
-        return (receipt, work.OrderBy(value => value.Path, StringComparer.Ordinal).ToList(), root);
+        return (
+            receipt,
+            work.OrderBy(value => value.Path, PhysicalPathSemantics.Comparer).ToList(),
+            root,
+            mediaRoot
+        );
+    }
+
+    internal static string SelectQuarantineRoot(
+        string selector,
+        IReadOnlyList<string> quarantineRoots,
+        bool windows
+    )
+    {
+        string normalizedSelector = NormalizeSelector(selector, windows);
+        StringComparer comparer = PhysicalPathSemantics.ComparerFor(windows);
+        string[] matches = quarantineRoots
+            .Where(root =>
+                windows && normalizedSelector.Length == 1
+                    ? root.Length >= 3
+                        && char.ToUpperInvariant(root[0]) == normalizedSelector[0]
+                        && root[1] == ':'
+                        && (root[2] == '\\' || root[2] == '/')
+                    : IsPortableWithin(root, normalizedSelector, windows)
+            )
+            .Distinct(comparer)
+            .ToArray();
+        if (matches.Length != 1)
+            throw new InvalidOperationException(
+                "Purge selector must resolve exactly one receipt quarantine root."
+            );
+        return matches[0];
+    }
+
+    internal static string NormalizeSelector(string selector, bool? windows = null)
+    {
+        bool useWindows = windows ?? OperatingSystem.IsWindows();
+        if (useWindows && selector.Length == 1 && char.IsLetter(selector[0]))
+            return selector.ToUpperInvariant();
+        if (useWindows || selector.Length == 0 || selector[0] != '/')
+            throw new ArgumentException(
+                "Drive must be one Windows drive letter or an absolute Linux path.",
+                nameof(selector)
+            );
+        return selector.Length == 1 ? selector : selector.TrimEnd('/');
+    }
+
+    private static bool IsPortableWithin(string path, string root, bool windows)
+    {
+        char separator = windows ? '\\' : '/';
+        string normalizedPath = path.Replace(windows ? '/' : '\\', separator).TrimEnd(separator);
+        string normalizedRoot = root.Replace(windows ? '/' : '\\', separator).TrimEnd(separator);
+        StringComparison comparison = PhysicalPathSemantics.ComparisonFor(windows);
+        return normalizedPath.Equals(normalizedRoot, comparison)
+            || normalizedPath.StartsWith(normalizedRoot + separator, comparison);
     }
 
     private static VideoVariantLooseCleanupPurgeJournal LoadOrCreateJournal(
@@ -307,7 +370,7 @@ public sealed class VideoVariantLooseCleanupPurgeService
             if (
                 existing.ApplyReceiptHash != receipt.ReceiptHash
                 || existing.OperationSetHash != manifest.OperationSetHash
-                || !existing.Drive.Equals(drive, StringComparison.OrdinalIgnoreCase)
+                || !PhysicalPathSemantics.Comparer.Equals(existing.Drive, drive)
                 || existing.BatchSize != batchSize
                 || existing.Batches.Count != batchCount
             )
@@ -322,7 +385,7 @@ public sealed class VideoVariantLooseCleanupPurgeService
         {
             ApplyReceiptHash = receipt.ReceiptHash,
             OperationSetHash = manifest.OperationSetHash,
-            Drive = drive.ToUpperInvariant(),
+            Drive = drive,
             RunId = Guid.NewGuid(),
             StartedUtc = DateTimeOffset.UtcNow,
             BatchSize = batchSize,
@@ -379,7 +442,7 @@ public sealed class VideoVariantLooseCleanupPurgeService
     {
         string prefix =
             Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)) + Path.DirectorySeparatorChar;
-        return Path.GetFullPath(path).StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+        return Path.GetFullPath(path).StartsWith(prefix, PhysicalPathSemantics.Comparison);
     }
 
     private static string RequireLocalOutputPath(string path, string name)

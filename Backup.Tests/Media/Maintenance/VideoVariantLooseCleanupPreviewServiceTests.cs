@@ -282,12 +282,16 @@ public sealed class VideoVariantLooseCleanupPreviewServiceTests : IDisposable
     [Fact]
     public void PartitionAliasAndContainment_ResolveWithoutGuessing()
     {
+        string aliasRoot = OperatingSystem.IsWindows() ? "L:" : "/mnt/l";
         string? root = VideoVariantLooseCleanupPreviewService.ResolvePartitionRoot(
             ["@L", "apps"],
-            new Dictionary<string, string> { ["L"] = "L:" }
+            new Dictionary<string, string> { ["L"] = aliasRoot }
         );
 
-        Assert.Equal(Path.GetFullPath("L:\\apps"), root);
+        string expectedRoot = OperatingSystem.IsWindows()
+            ? Path.GetFullPath("L:\\apps")
+            : Path.GetFullPath("/mnt/l/apps");
+        Assert.Equal(expectedRoot, root);
         Assert.Null(
             VideoVariantLooseCleanupPreviewService.ResolvePartitionRoot(
                 ["data"],
@@ -297,9 +301,30 @@ public sealed class VideoVariantLooseCleanupPreviewServiceTests : IDisposable
         Assert.Throws<InvalidOperationException>(
             () =>
                 VideoVariantLooseCleanupPreviewService.ResolveContainedPath(
-                    "L:\\media",
+                    Path.Combine(Path.GetPathRoot(_root)!, "media"),
                     "../escape.mp4"
                 )
+        );
+    }
+
+    [Theory]
+    [InlineData(@"L:\apps\twitter-x-backup", true, true)]
+    [InlineData(@"\\server\backup\direct", true, true)]
+    [InlineData("/mnt/l/apps/twitter-x-backup", false, true)]
+    [InlineData("/mnt/s/backup/direct", false, true)]
+    [InlineData("/mnt/l", true, false)]
+    [InlineData(@"L:\apps", false, false)]
+    [InlineData("relative/path", true, false)]
+    [InlineData("relative/path", false, false)]
+    public void IsFullyQualifiedPath_UsesSelectedPlatformSyntax(
+        string path,
+        bool windows,
+        bool expected
+    )
+    {
+        Assert.Equal(
+            expected,
+            VideoVariantLooseCleanupPreviewService.IsFullyQualifiedPath(path, windows)
         );
     }
 
@@ -354,8 +379,13 @@ public sealed class VideoVariantLooseCleanupPreviewServiceTests : IDisposable
         Assert.Equal(info.Length, config.DataConfigLength);
         Assert.Equal(info.LastWriteTimeUtc.Ticks, config.DataConfigLastWriteUtcTicks);
         Assert.Equal("Host=localhost;Database=test", config.ConnectionString);
-        Assert.Equal(Path.GetFullPath("D:\\archive\\media"), config.MediaRoots[7]);
-        Assert.Empty(config.Issues);
+        if (OperatingSystem.IsWindows())
+        {
+            Assert.Equal(Path.GetFullPath("D:\\archive\\media"), config.MediaRoots[7]);
+            Assert.Empty(config.Issues);
+        }
+        else
+            Assert.Contains(config.Issues, issue => issue.Code == "partition-unresolved");
     }
 
     [Fact]
@@ -776,6 +806,8 @@ public sealed class VideoVariantLooseCleanupPreviewServiceTests : IDisposable
     [Fact]
     public async Task PhysicalBuilder_GifThumbsMatchesWindowsPathsIgnoringCase()
     {
+        if (!OperatingSystem.IsWindows())
+            return;
         const string keep = "post/GIF/media/THUMB/source/JPG/SIZE/ORIG.JPG";
         const string remove = "post/GIF/media/THUMB/source/JPG/SIZE/SMALL.JPG";
         Directory.CreateDirectory(_root);

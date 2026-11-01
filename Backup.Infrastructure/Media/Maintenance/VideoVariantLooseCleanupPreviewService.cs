@@ -172,7 +172,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
         ValidateFileOptions(fileParallelism, fileLimit);
         ValidateSelectionKind(selectionKind);
         ResolvedConfig config = LoadConfig(dataConfigPath, mediaStoreId, cacheId);
-        string fullDirectRoot = RequireAbsoluteWindowsPath(directRoot, nameof(directRoot));
+        string fullDirectRoot = RequireAbsolutePath(directRoot, nameof(directRoot));
 
         await using NpgsqlConnection connection = new(config.ConnectionString);
         await connection.OpenAsync(token);
@@ -594,7 +594,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
         List<string> errors = [];
         List<VideoVariantLooseCleanupIssue> setupIssues = [];
         HashSet<(string Path, string Code)> fatalKeys = [];
-        Dictionary<string, RootWork> rootWork = new(StringComparer.OrdinalIgnoreCase);
+        Dictionary<string, RootWork> rootWork = new(PathComparer);
         Dictionary<string, KeepCheck> keeps = new(StringComparer.Ordinal);
         List<RemoveCheck> removes = [];
 
@@ -643,7 +643,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
         }
 
         Task<RootResult>[] rootTasks = rootWork
-            .Values.OrderBy(work => work.Key, StringComparer.OrdinalIgnoreCase)
+            .Values.OrderBy(work => work.Key, PathComparer)
             .Select(work => Task.Run(() => CheckRoot(work, manifest, progress, token), token))
             .ToArray();
         Task<DirectResult> directTask = Task.Run(
@@ -1364,7 +1364,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
         if (Regex.IsMatch(first, @"^[A-Za-z]:$", RegexOptions.CultureInvariant))
             first += Path.DirectorySeparatorChar;
 
-        if (!IsFullyQualifiedWindowsPath(first))
+        if (!IsFullyQualifiedPath(first))
             return null;
         return Path.GetFullPath(Path.Combine([first, .. segments.Skip(1)]));
     }
@@ -1372,11 +1372,16 @@ public sealed class VideoVariantLooseCleanupPreviewService
     internal static string ResolveContainedPath(string root, string logicalPath)
     {
         string fullRoot = Path.GetFullPath(root);
-        string fullPath = Path.GetFullPath(
-            Path.Combine(fullRoot, logicalPath.Replace('/', Path.DirectorySeparatorChar))
-        );
-        string prefix = Path.TrimEndingDirectorySeparator(fullRoot) + Path.DirectorySeparatorChar;
-        if (!fullPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        string relativePath = logicalPath
+            .Replace('/', Path.DirectorySeparatorChar)
+            .Replace('\\', Path.DirectorySeparatorChar);
+        string fullPath = Path.GetFullPath(Path.Combine(fullRoot, relativePath));
+        string relative = Path.GetRelativePath(fullRoot, fullPath);
+        if (
+            relative == ".."
+            || relative.StartsWith($"..{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
+            || Path.IsPathRooted(relative)
+        )
             throw new InvalidOperationException($"Path escapes root: {logicalPath}");
         return fullPath;
     }
@@ -1756,9 +1761,11 @@ public sealed class VideoVariantLooseCleanupPreviewService
             RequireProperty(cache, "Type", $"Media cache '{cacheId}'"),
             $"Media cache '{cacheId}'.Type"
         );
-        string connectionString = RequireString(
-            RequireProperty(cache, "ConnectionString", $"Media cache '{cacheId}'"),
-            $"Media cache '{cacheId}'.ConnectionString"
+        string connectionString = ResolveEnvironmentValue(
+            RequireString(
+                RequireProperty(cache, "ConnectionString", $"Media cache '{cacheId}'"),
+                $"Media cache '{cacheId}'.ConnectionString"
+            )
         );
         if (
             !cacheEnabled
@@ -1822,6 +1829,18 @@ public sealed class VideoVariantLooseCleanupPreviewService
             roots,
             issues
         );
+    }
+
+    private static string ResolveEnvironmentValue(string value)
+    {
+        const string prefix = "env:";
+        if (!value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            return value;
+        string name = value[prefix.Length..];
+        if (string.IsNullOrWhiteSpace(name))
+            throw new InvalidOperationException("Environment variable name is missing.");
+        return Environment.GetEnvironmentVariable(name)
+            ?? throw new InvalidOperationException($"Environment variable is missing: {name}");
     }
 
     private static JsonElement SelectById(
@@ -2028,9 +2047,17 @@ public sealed class VideoVariantLooseCleanupPreviewService
         return true;
     }
 
-    private static bool IsFullyQualifiedWindowsPath(string path) =>
-        Regex.IsMatch(path, @"^[A-Za-z]:[\\/]", RegexOptions.CultureInvariant)
-        || path.StartsWith("\\\\", StringComparison.Ordinal);
+    private static StringComparer PathComparer =>
+        OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+
+    private static StringComparison PathComparison =>
+        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
+    internal static bool IsFullyQualifiedPath(string path, bool? windows = null) =>
+        (windows ?? OperatingSystem.IsWindows())
+            ? Regex.IsMatch(path, @"^[A-Za-z]:[\\/]", RegexOptions.CultureInvariant)
+                || path.StartsWith("\\\\", StringComparison.Ordinal)
+            : path.StartsWith("/", StringComparison.Ordinal);
 
     private static string EscapeLike(string value) =>
         value
@@ -2038,10 +2065,10 @@ public sealed class VideoVariantLooseCleanupPreviewService
             .Replace("%", "\\%", StringComparison.Ordinal)
             .Replace("_", "\\_", StringComparison.Ordinal);
 
-    private static string RequireAbsoluteWindowsPath(string path, string name)
+    private static string RequireAbsolutePath(string path, string name)
     {
-        if (!IsFullyQualifiedWindowsPath(path))
-            throw new ArgumentException("Path must be fully qualified Windows path.", name);
+        if (!IsFullyQualifiedPath(path))
+            throw new ArgumentException("Path must be fully qualified.", name);
         return Path.GetFullPath(path);
     }
 
@@ -2106,8 +2133,8 @@ public sealed class VideoVariantLooseCleanupPreviewService
         if (manifest.Version != 1)
             throw new InvalidOperationException("Loose cleanup manifest version must be 1.");
         ValidateFileOptions(manifest.FileParallelism, manifest.SelectionLimit);
-        RequireAbsoluteWindowsPath(manifest.DataConfigPath, nameof(manifest.DataConfigPath));
-        RequireAbsoluteWindowsPath(manifest.DirectRoot, nameof(manifest.DirectRoot));
+        RequireAbsolutePath(manifest.DataConfigPath, nameof(manifest.DataConfigPath));
+        RequireAbsolutePath(manifest.DirectRoot, nameof(manifest.DirectRoot));
         if (manifest.Paths.Count != manifest.Paths.Distinct(StringComparer.Ordinal).Count())
             throw new InvalidOperationException("Manifest path table contains duplicates.");
 

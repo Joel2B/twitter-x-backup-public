@@ -1,6 +1,6 @@
 services:
   twitter-x-backup-cli:
-    image: 192.168.2.141:5000/twitter-x-backup-cli:latest
+    image: 192.168.2.140:5000/twitter-x-backup-cli:latest
     pull_policy: always
     container_name: twitter-x-backup-cli
     env_file:

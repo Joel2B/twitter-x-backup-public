@@ -11,6 +11,8 @@ services:
 
       - "/home/j/twitter-x-backup/data:/app/data"
       - "/home/j/twitter-x-backup/debug:/app/debug"
+      - "/home/j/twitter-x-backup/config:/app/config:ro"
+      - "/home/j/twitter-x-backup/maintenance:/maintenance"
 
 volumes:
   twitter_x_backup_sqlite:
