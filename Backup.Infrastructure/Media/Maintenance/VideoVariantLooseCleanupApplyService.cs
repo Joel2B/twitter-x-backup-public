@@ -135,6 +135,371 @@ public sealed class VideoVariantLooseCleanupApplyService
         WriteJsonAtomic(path, manifest);
     }
 
+    public async Task<VideoVariantLooseCleanupDirectDeletePlan> PrepareDirectDeleteAsync(
+        VideoVariantLooseCleanupApplyManifest manifest,
+        string sourceJournalPath,
+        int maxOperations,
+        CancellationToken token = default
+    )
+    {
+        if (maxOperations <= 0 || maxOperations > 10_000)
+            throw new ArgumentOutOfRangeException(nameof(maxOperations));
+        ResolvedConfig config = ValidateCurrentConfig(manifest);
+        List<ApplyWork> ordered = BuildWork(manifest, config.MediaRoots);
+        byte[] journalBytes = await File.ReadAllBytesAsync(sourceJournalPath, token);
+        VideoVariantLooseCleanupJournal sourceJournal = LoadAndValidateSourceJournal(
+            manifest,
+            journalBytes,
+            ordered.Count
+        );
+        int[] selectedIndices = sourceJournal
+            .Batches.Where(batch => batch.State == "pending")
+            .SelectMany(batch =>
+                Enumerable.Range(
+                    batch.Index * sourceJournal.BatchSize,
+                    Math.Min(
+                        sourceJournal.BatchSize,
+                        ordered.Count - batch.Index * sourceJournal.BatchSize
+                    )
+                )
+            )
+            .Take(maxOperations)
+            .ToArray();
+        if (selectedIndices.Length == 0)
+            throw new InvalidOperationException("Source journal has no pending operations.");
+
+        ApplyWork[] selected = selectedIndices.Select(index => ordered[index]).ToArray();
+        ValidateDirectDeleteFiles(
+            selected,
+            requireActiveFiles: true,
+            physicalParallelism: 1,
+            token
+        );
+        List<VideoVariantLooseCleanupDirectDeleteKeep> keeps = selected
+            .Select(work => work.KeepPath)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.Ordinal)
+            .Select(path =>
+            {
+                FileInfo info = new(path);
+                if (!info.Exists)
+                    throw new InvalidOperationException($"Keep file is absent: {path}");
+                return new VideoVariantLooseCleanupDirectDeleteKeep
+                {
+                    Path = path,
+                    Size = info.Length,
+                    LastWriteUtcTicks = info.LastWriteTimeUtc.Ticks,
+                };
+            })
+            .ToList();
+        IVideoVariantLooseCleanupDatabase database = Database(config.ConnectionString);
+        VideoVariantLooseCleanupNamespaces currentNamespaces =
+            await database.DiscoverNamespacesAsync(
+                StoreNamespace(manifest.MediaStoreId, manifest.CacheId),
+                token
+            );
+        ValidateNamespaces(manifest, currentNamespaces);
+        await RequireExactRowCounts(database, manifest, selected, expected: 1, token);
+
+        VideoVariantLooseCleanupDirectDeletePlan plan = new()
+        {
+            Version = 1,
+            CreatedUtc = DateTimeOffset.UtcNow,
+            SourceManifestApprovalHash = manifest.ApprovalHash,
+            SourceOperationSetHash = manifest.OperationSetHash,
+            SourceJournalSha256 = Sha256(journalBytes),
+            SourceJournalRunId = sourceJournal.RunId,
+            SourceJournalBatchSize = sourceJournal.BatchSize,
+            SourceJournalBatchCount = sourceJournal.Batches.Count,
+            DataConfigSha256 = manifest.DataConfigSha256,
+            OperationIndices = [.. selectedIndices],
+            Keeps = keeps,
+            Operations = selected.Length,
+            Files = selected.Sum(work => 1 + (work.Operation.DirectPresent ? 1 : 0)),
+            Bytes = selected.Sum(work =>
+                work.Operation.OriginalSize
+                + (work.Operation.DirectPresent ? work.Operation.DirectSize : 0)
+            ),
+        };
+        plan.ApprovalHash = CalculateDirectDeletePlanHash(plan);
+        return plan;
+    }
+
+    public void SaveDirectDeletePlan(VideoVariantLooseCleanupDirectDeletePlan plan, string path)
+    {
+        ValidateDirectDeletePlanStructure(plan);
+        WriteJsonAtomic(path, plan);
+    }
+
+    public VideoVariantLooseCleanupDirectDeletePlan LoadDirectDeletePlan(string path)
+    {
+        VideoVariantLooseCleanupDirectDeletePlan plan =
+            JsonSerializer.Deserialize<VideoVariantLooseCleanupDirectDeletePlan>(
+                File.ReadAllBytes(path),
+                JsonOptions
+            ) ?? throw new InvalidOperationException("Invalid direct-delete plan.");
+        ValidateDirectDeletePlanStructure(plan);
+        return plan;
+    }
+
+    public async Task<VideoVariantLooseCleanupDirectDeleteReceipt> ApplyDirectDeleteAsync(
+        VideoVariantLooseCleanupApplyManifest manifest,
+        string sourceJournalPath,
+        VideoVariantLooseCleanupDirectDeletePlan plan,
+        string approval,
+        string journalPath,
+        string receiptPath,
+        int batchSize,
+        bool resume,
+        bool runtimeStoppedConfirmed,
+        int physicalParallelism,
+        IProgress<VideoVariantLooseCleanupApplyProgress>? progress = null,
+        CancellationToken token = default
+    )
+    {
+        if (!runtimeStoppedConfirmed)
+            throw new InvalidOperationException("Runtime stopped confirmation is required.");
+        if (batchSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(batchSize));
+        if (physicalParallelism <= 0)
+            throw new ArgumentOutOfRangeException(nameof(physicalParallelism));
+        ValidateDirectDeletePlan(manifest, plan, approval);
+        ResolvedConfig config = ValidateCurrentConfig(manifest);
+        byte[] sourceJournalBytes = await File.ReadAllBytesAsync(sourceJournalPath, token);
+        List<ApplyWork> allWork = BuildWork(manifest, config.MediaRoots);
+        ValidateDirectDeleteSourceJournal(manifest, plan, sourceJournalBytes, allWork.Count);
+        ApplyWork[] selected = plan.OperationIndices.Select(index => allWork[index]).ToArray();
+        if (
+            selected.Length != plan.Operations
+            || selected.Sum(work => 1 + (work.Operation.DirectPresent ? 1 : 0)) != plan.Files
+            || selected.Sum(work =>
+                work.Operation.OriginalSize
+                + (work.Operation.DirectPresent ? work.Operation.DirectSize : 0)
+            ) != plan.Bytes
+        )
+            throw new InvalidOperationException("Direct-delete plan operation totals are invalid.");
+        string fullJournalPath = RequireLocalOutputPath(journalPath, nameof(journalPath));
+        string fullReceiptPath = RequireLocalOutputPath(receiptPath, nameof(receiptPath));
+
+        IVideoVariantLooseCleanupDatabase database = Database(config.ConnectionString);
+        VideoVariantLooseCleanupNamespaces currentNamespaces =
+            await database.DiscoverNamespacesAsync(
+                StoreNamespace(manifest.MediaStoreId, manifest.CacheId),
+                token
+            );
+        ValidateNamespaces(manifest, currentNamespaces);
+        if (!(await database.CheckIndexesAsync(token)).IsValid)
+            throw new InvalidOperationException(
+                "Required normalized path indexes are missing or invalid."
+            );
+
+        List<FileStream> fileLocks = AcquireFileLocks(
+            config.MediaRoots.Values.Append(manifest.DirectRoot)
+        );
+        try
+        {
+            await using IAsyncDisposable? advisoryLock = await database.TryAcquireLockAsync(
+                StoreNamespace(manifest.MediaStoreId, manifest.CacheId),
+                token
+            );
+            if (advisoryLock is null)
+                throw new InvalidOperationException("Media cache advisory lock is unavailable.");
+            VideoVariantLooseCleanupNamespaces lockedNamespaces =
+                await database.DiscoverNamespacesAsync(
+                    StoreNamespace(manifest.MediaStoreId, manifest.CacheId),
+                    token
+                );
+            ValidateNamespaces(manifest, lockedNamespaces);
+            ValidateDirectDeleteKeeps(plan, token);
+            if (File.Exists(fullReceiptPath))
+            {
+                VideoVariantLooseCleanupDirectDeleteReceipt completed = LoadDirectDeleteReceipt(
+                    fullReceiptPath
+                );
+                ValidateDirectDeleteReceipt(manifest, plan, completed);
+                await VerifyDirectDeleteAsync(
+                    manifest,
+                    sourceJournalPath,
+                    plan,
+                    fullReceiptPath,
+                    token
+                );
+                return completed;
+            }
+            int batchCount = (selected.Length + batchSize - 1) / batchSize;
+            VideoVariantLooseCleanupDirectDeleteJournal journal = LoadOrCreateDirectDeleteJournal(
+                plan,
+                fullJournalPath,
+                batchSize,
+                batchCount,
+                resume,
+                selected
+            );
+
+            for (int batchIndex = 0; batchIndex < batchCount; batchIndex++)
+            {
+                VideoVariantLooseCleanupDirectDeleteJournalBatch state = journal.Batches[
+                    batchIndex
+                ];
+                ApplyWork[] batch = selected.Skip(batchIndex * batchSize).Take(batchSize).ToArray();
+                if (state.State == "verified")
+                {
+                    VerifyDirectDeleteFiles(batch, physicalParallelism, token);
+                    await RequireExactRowCounts(database, manifest, batch, expected: 0, token);
+                    continue;
+                }
+                token.ThrowIfCancellationRequested();
+
+                if (state.State == "pending")
+                {
+                    ValidateDirectDeleteFiles(
+                        batch,
+                        requireActiveFiles: true,
+                        physicalParallelism,
+                        token
+                    );
+                    await RequireExactRowCounts(database, manifest, batch, expected: 1, token);
+                    state.State = "deleting-files";
+                    WriteDirectDeleteJournal(fullJournalPath, journal, selected);
+                }
+                if (state.State == "deleting-files")
+                {
+                    ValidateDirectDeleteFiles(
+                        batch,
+                        requireActiveFiles: false,
+                        physicalParallelism,
+                        token
+                    );
+                    await RequireExactRowCounts(database, manifest, batch, expected: 1, token);
+                    DeleteDirectDeleteFiles(batch, physicalParallelism, token);
+                    FaultInjection?.Invoke("after-direct-delete-files");
+                    state.State = "files-absent";
+                    state.FilesDeleted = batch.Sum(work =>
+                        1 + (work.Operation.DirectPresent ? 1 : 0)
+                    );
+                    state.BytesDeleted = batch.Sum(work =>
+                        work.Operation.OriginalSize
+                        + (work.Operation.DirectPresent ? work.Operation.DirectSize : 0)
+                    );
+                    WriteDirectDeleteJournal(fullJournalPath, journal, selected);
+                }
+                if (state.State == "files-absent")
+                {
+                    VerifyDirectDeleteFiles(batch, physicalParallelism, token);
+                    await RequireExactRowCounts(database, manifest, batch, expected: 1, token);
+                    state.State = "db-deleting";
+                    WriteDirectDeleteJournal(fullJournalPath, journal, selected);
+                }
+                if (state.State == "db-deleting")
+                {
+                    VerifyDirectDeleteFiles(batch, physicalParallelism, token);
+                    IReadOnlyDictionary<string, int> counts = await LoadRowCounts(
+                        database,
+                        manifest,
+                        batch,
+                        token
+                    );
+                    if (counts.Values.All(count => count == 1))
+                    {
+                        VideoVariantLooseCleanupDeleteResult deleted =
+                            await database.DeleteBatchAsync(
+                                manifest.PrimaryNamespace,
+                                manifest.IncrementalNamespaces,
+                                batch.Select(work => NormalizePath(work.LogicalPath)).ToArray(),
+                                token
+                            );
+                        if (deleted.PrimaryDeleted + deleted.IncrementalDeleted != batch.Length)
+                            throw new InvalidOperationException(
+                                "Direct-delete database delete count mismatch."
+                            );
+                        state.RowsDeleted = batch.Length;
+                    }
+                    else if (!counts.Values.All(count => count == 0))
+                        throw new InvalidOperationException(
+                            "Direct-delete database state is partial or duplicated."
+                        );
+                    if (
+                        !await database.AreRowsAbsentAsync(
+                            manifest.PrimaryNamespace,
+                            manifest.IncrementalNamespaces,
+                            batch.Select(work => NormalizePath(work.LogicalPath)).ToArray(),
+                            token
+                        )
+                    )
+                        throw new InvalidOperationException(
+                            "Target cache rows remain after delete."
+                        );
+                    state.State = "db-committed";
+                    WriteDirectDeleteJournal(fullJournalPath, journal, selected);
+                    FaultInjection?.Invoke("after-direct-delete-db-commit");
+                }
+                if (state.State == "db-committed")
+                {
+                    VerifyDirectDeleteFiles(batch, physicalParallelism, token);
+                    await RequireExactRowCounts(database, manifest, batch, expected: 0, token);
+                    state.State = "verified";
+                    WriteDirectDeleteJournal(fullJournalPath, journal, selected);
+                }
+                progress?.Report(new(batchIndex + 1, batchCount, batch.Length, selected.Length));
+            }
+
+            VideoVariantLooseCleanupDirectDeleteReceipt receipt = new()
+            {
+                Version = 1,
+                PlanApprovalHash = plan.ApprovalHash,
+                SourceManifestApprovalHash = manifest.ApprovalHash,
+                SourceOperationSetHash = manifest.OperationSetHash,
+                SourceJournalSha256 = plan.SourceJournalSha256,
+                SourceJournalRunId = plan.SourceJournalRunId,
+                SourceJournalBatchSize = plan.SourceJournalBatchSize,
+                SourceJournalBatchCount = plan.SourceJournalBatchCount,
+                RunId = journal.RunId,
+                StartedUtc = journal.StartedUtc,
+                CompletedUtc = DateTimeOffset.UtcNow,
+                Operations = plan.Operations,
+                FilesDeleted = plan.Files,
+                BytesDeleted = plan.Bytes,
+                RowsDeleted = plan.Operations,
+                Batches = batchCount,
+            };
+            receipt.ReceiptHash = CalculateDirectDeleteReceiptHash(receipt);
+            WriteJsonAtomic(fullReceiptPath, receipt);
+            return receipt;
+        }
+        finally
+        {
+            DisposeLocks(fileLocks);
+        }
+    }
+
+    public async Task VerifyDirectDeleteAsync(
+        VideoVariantLooseCleanupApplyManifest manifest,
+        string sourceJournalPath,
+        VideoVariantLooseCleanupDirectDeletePlan plan,
+        string receiptPath,
+        CancellationToken token = default
+    )
+    {
+        ValidateDirectDeletePlan(manifest, plan, plan.ApprovalHash);
+        ResolvedConfig config = ValidateCurrentConfig(manifest);
+        byte[] sourceJournalBytes = await File.ReadAllBytesAsync(sourceJournalPath, token);
+        List<ApplyWork> allWork = BuildWork(manifest, config.MediaRoots);
+        ValidateDirectDeleteSourceJournal(manifest, plan, sourceJournalBytes, allWork.Count);
+        VideoVariantLooseCleanupDirectDeleteReceipt receipt = LoadDirectDeleteReceipt(receiptPath);
+        ValidateDirectDeleteReceipt(manifest, plan, receipt);
+        ApplyWork[] selected = plan.OperationIndices.Select(index => allWork[index]).ToArray();
+        ValidateDirectDeleteKeeps(plan, token);
+        VerifyDirectDeleteFiles(selected, 1, token);
+        IVideoVariantLooseCleanupDatabase database = Database(config.ConnectionString);
+        VideoVariantLooseCleanupNamespaces currentNamespaces =
+            await database.DiscoverNamespacesAsync(
+                StoreNamespace(manifest.MediaStoreId, manifest.CacheId),
+                token
+            );
+        ValidateNamespaces(manifest, currentNamespaces);
+        await RequireExactRowCounts(database, manifest, selected, 0, token);
+    }
+
     public async Task<VideoVariantLooseCleanupIndexStatus> CheckIndexesAsync(
         VideoVariantLooseCleanupApplyManifest manifest,
         CancellationToken token = default
@@ -273,7 +638,6 @@ public sealed class VideoVariantLooseCleanupApplyService
                 if (state.State == "verified")
                     continue;
                 bool resumedBatch = state.State != "pending";
-
                 token.ThrowIfCancellationRequested();
                 if (state.State is "pending" or "moving")
                 {
@@ -344,10 +708,7 @@ public sealed class VideoVariantLooseCleanupApplyService
 
                 if (state.State == "db-committed")
                 {
-                    if (resumedBatch)
-                        VerifyBatchFiles(batch, physicalParallelism, token);
-                    else
-                        VerifySameRunDirectFiles(batch, physicalParallelism, token);
+                    VerifyBatchFiles(batch, physicalParallelism, token);
                     if (
                         !await database.AreRowsAbsentAsync(
                             manifest.PrimaryNamespace,
@@ -1124,6 +1485,525 @@ public sealed class VideoVariantLooseCleanupApplyService
         return receipt;
     }
 
+    internal static string CalculateDirectDeletePlanHash(
+        VideoVariantLooseCleanupDirectDeletePlan plan
+    ) =>
+        Sha256(
+            JsonSerializer.SerializeToUtf8Bytes(
+                plan with
+                {
+                    ApprovalHash = string.Empty,
+                },
+                JsonOptions
+            )
+        );
+
+    internal static string CalculateDirectDeleteReceiptHash(
+        VideoVariantLooseCleanupDirectDeleteReceipt receipt
+    ) =>
+        Sha256(
+            JsonSerializer.SerializeToUtf8Bytes(
+                receipt with
+                {
+                    ReceiptHash = string.Empty,
+                },
+                JsonOptions
+            )
+        );
+
+    internal static string CalculateDirectDeleteJournalHash(
+        VideoVariantLooseCleanupDirectDeleteJournal journal
+    ) =>
+        Sha256(
+            JsonSerializer.SerializeToUtf8Bytes(
+                new
+                {
+                    journal.Version,
+                    journal.Mode,
+                    journal.PlanApprovalHash,
+                    journal.RunId,
+                    journal.StartedUtc,
+                    journal.BatchSize,
+                    journal.Batches,
+                    JournalHash = string.Empty,
+                },
+                JsonOptions
+            )
+        );
+
+    private static void ValidateDirectDeletePlanStructure(
+        VideoVariantLooseCleanupDirectDeletePlan plan
+    )
+    {
+        if (plan.Version != 1)
+            throw new InvalidOperationException("Direct-delete plan version must be 1.");
+        if (
+            plan.Operations <= 0
+            || plan.Operations > 10_000
+            || plan.Operations != plan.OperationIndices.Count
+            || plan.Files < plan.Operations
+            || plan.Files > plan.Operations * 2
+            || plan.Bytes < 0
+            || plan.SourceJournalBatchSize <= 0
+            || plan.SourceJournalBatchCount <= 0
+            || plan.OperationIndices.Any(index => index < 0)
+            || !plan.OperationIndices.SequenceEqual(plan.OperationIndices.Order())
+            || plan.OperationIndices.Distinct().Count() != plan.OperationIndices.Count
+            || plan.Keeps.Count == 0
+            || plan.Keeps.Any(keep =>
+                string.IsNullOrWhiteSpace(keep.Path) || keep.Size < 0 || keep.LastWriteUtcTicks <= 0
+            )
+            || plan.Keeps.Select(keep => keep.Path)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count() != plan.Keeps.Count
+        )
+            throw new InvalidOperationException("Direct-delete plan structure is invalid.");
+        if (CalculateDirectDeletePlanHash(plan) != plan.ApprovalHash)
+            throw new InvalidOperationException("Direct-delete plan approval hash is invalid.");
+    }
+
+    private static void ValidateDirectDeletePlan(
+        VideoVariantLooseCleanupApplyManifest manifest,
+        VideoVariantLooseCleanupDirectDeletePlan plan,
+        string approval
+    )
+    {
+        ValidateManifestStructure(manifest, verifyHash: true);
+        ValidateDirectDeletePlanStructure(plan);
+        if (!approval.Equals(plan.ApprovalHash, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Approval hash does not match direct-delete plan.");
+        if (
+            plan.SourceManifestApprovalHash != manifest.ApprovalHash
+            || plan.SourceOperationSetHash != manifest.OperationSetHash
+            || plan.DataConfigSha256 != manifest.DataConfigSha256
+            || plan.OperationIndices.Any(index => index >= manifest.Operations.Count)
+        )
+            throw new InvalidOperationException("Direct-delete plan does not match manifest.");
+    }
+
+    private static VideoVariantLooseCleanupJournal LoadAndValidateSourceJournal(
+        VideoVariantLooseCleanupApplyManifest manifest,
+        byte[] bytes,
+        int operationCount
+    )
+    {
+        VideoVariantLooseCleanupJournal journal =
+            JsonSerializer.Deserialize<VideoVariantLooseCleanupJournal>(bytes, JsonOptions)
+            ?? throw new InvalidOperationException("Invalid source apply journal.");
+        if (journal.BatchSize <= 0)
+            throw new InvalidOperationException("Source apply journal batch size is invalid.");
+        int expectedBatches = (operationCount + journal.BatchSize - 1) / journal.BatchSize;
+        if (
+            journal.ApprovalHash != manifest.ApprovalHash
+            || journal.OperationSetHash != manifest.OperationSetHash
+            || journal.Batches.Count != expectedBatches
+            || !journal
+                .Batches.Select(batch => batch.Index)
+                .SequenceEqual(Enumerable.Range(0, expectedBatches))
+            || journal.Batches.Any(batch =>
+                batch.State
+                    is not ("pending" or "moving" or "quarantined" or "db-committed" or "verified")
+            )
+        )
+            throw new InvalidOperationException("Source apply journal is invalid or mismatched.");
+        return journal;
+    }
+
+    private static void ValidateDirectDeleteSourceJournal(
+        VideoVariantLooseCleanupApplyManifest manifest,
+        VideoVariantLooseCleanupDirectDeletePlan plan,
+        byte[] bytes,
+        int operationCount
+    )
+    {
+        VideoVariantLooseCleanupJournal journal = LoadAndValidateSourceJournal(
+            manifest,
+            bytes,
+            operationCount
+        );
+        if (
+            Sha256(bytes) != plan.SourceJournalSha256
+            || journal.RunId != plan.SourceJournalRunId
+            || journal.BatchSize != plan.SourceJournalBatchSize
+            || journal.Batches.Count != plan.SourceJournalBatchCount
+        )
+            throw new InvalidOperationException("Frozen source apply journal changed.");
+        HashSet<int> pending = journal
+            .Batches.Where(batch => batch.State == "pending")
+            .SelectMany(batch =>
+                Enumerable.Range(
+                    batch.Index * journal.BatchSize,
+                    Math.Min(journal.BatchSize, operationCount - batch.Index * journal.BatchSize)
+                )
+            )
+            .ToHashSet();
+        if (plan.OperationIndices.Any(index => !pending.Contains(index)))
+            throw new InvalidOperationException("Plan contains non-pending source operations.");
+    }
+
+    private static VideoVariantLooseCleanupDirectDeleteJournal LoadOrCreateDirectDeleteJournal(
+        VideoVariantLooseCleanupDirectDeletePlan plan,
+        string path,
+        int batchSize,
+        int batchCount,
+        bool resume,
+        IReadOnlyList<ApplyWork> work
+    )
+    {
+        if (File.Exists(path))
+        {
+            if (!resume)
+                throw new InvalidOperationException("Existing journal requires --resume.");
+            VideoVariantLooseCleanupDirectDeleteJournal existing =
+                JsonSerializer.Deserialize<VideoVariantLooseCleanupDirectDeleteJournal>(
+                    File.ReadAllBytes(path),
+                    JsonOptions
+                ) ?? throw new InvalidOperationException("Invalid direct-delete journal.");
+            if (
+                existing.Version != 1
+                || existing.Mode != "direct-delete-loose-v1"
+                || existing.PlanApprovalHash != plan.ApprovalHash
+                || existing.BatchSize != batchSize
+                || existing.Batches.Count != batchCount
+                || !existing
+                    .Batches.Select(batch => batch.Index)
+                    .SequenceEqual(Enumerable.Range(0, batchCount))
+                || CalculateDirectDeleteJournalHash(existing) != existing.JournalHash
+            )
+                throw new InvalidOperationException("Direct-delete journal does not match plan.");
+            ValidateDirectDeleteJournal(existing, work);
+            return existing;
+        }
+        if (resume)
+            throw new InvalidOperationException("Resume requested but journal does not exist.");
+        VideoVariantLooseCleanupDirectDeleteJournal journal = new()
+        {
+            Version = 1,
+            Mode = "direct-delete-loose-v1",
+            PlanApprovalHash = plan.ApprovalHash,
+            RunId = Guid.NewGuid(),
+            StartedUtc = DateTimeOffset.UtcNow,
+            BatchSize = batchSize,
+            Batches = Enumerable
+                .Range(0, batchCount)
+                .Select(index => new VideoVariantLooseCleanupDirectDeleteJournalBatch
+                {
+                    Index = index,
+                })
+                .ToList(),
+        };
+        WriteDirectDeleteJournal(path, journal, work);
+        return journal;
+    }
+
+    private static void WriteDirectDeleteJournal(
+        string path,
+        VideoVariantLooseCleanupDirectDeleteJournal journal,
+        IReadOnlyList<ApplyWork> work
+    )
+    {
+        ValidateDirectDeleteJournal(journal, work);
+        journal.JournalHash = CalculateDirectDeleteJournalHash(journal);
+        WriteJsonAtomic(path, journal);
+    }
+
+    private static void ValidateDirectDeleteJournal(
+        VideoVariantLooseCleanupDirectDeleteJournal journal,
+        IReadOnlyList<ApplyWork> work
+    )
+    {
+        int previousRank = int.MaxValue;
+
+        for (int index = 0; index < journal.Batches.Count; index++)
+        {
+            VideoVariantLooseCleanupDirectDeleteJournalBatch batch = journal.Batches[index];
+            int rank = batch.State switch
+            {
+                "pending" => 0,
+                "deleting-files" => 1,
+                "files-absent" => 2,
+                "db-deleting" => 3,
+                "db-committed" => 4,
+                "verified" => 5,
+                _ => throw new InvalidOperationException("Direct-delete journal state is invalid."),
+            };
+            if (rank > previousRank)
+                throw new InvalidOperationException(
+                    "Direct-delete journal state order is invalid."
+                );
+            previousRank = rank;
+            ApplyWork[] batchWork = work.Skip(index * journal.BatchSize)
+                .Take(journal.BatchSize)
+                .ToArray();
+            int files = batchWork.Sum(item => 1 + (item.Operation.DirectPresent ? 1 : 0));
+            long bytes = batchWork.Sum(item =>
+                item.Operation.OriginalSize
+                + (item.Operation.DirectPresent ? item.Operation.DirectSize : 0)
+            );
+            bool filesRecorded = rank >= 2;
+            if (
+                batch.Index != index
+                || batch.FilesDeleted != (filesRecorded ? files : 0)
+                || batch.BytesDeleted != (filesRecorded ? bytes : 0)
+                || batch.RowsDeleted < 0
+                || batch.RowsDeleted > batchWork.Length
+                || (rank < 4 && batch.RowsDeleted != 0)
+                || (
+                    rank >= 4 && batch.RowsDeleted is not 0 && batch.RowsDeleted != batchWork.Length
+                )
+            )
+                throw new InvalidOperationException("Direct-delete journal counters are invalid.");
+        }
+    }
+
+    private static void ValidateDirectDeleteFiles(
+        IEnumerable<ApplyWork> work,
+        bool requireActiveFiles,
+        int physicalParallelism,
+        CancellationToken token
+    ) =>
+        RunPhysical(
+            work,
+            physicalParallelism,
+            token,
+            item =>
+            {
+                if (File.Exists(item.OriginalQuarantinePath))
+                    throw new InvalidOperationException(
+                        $"Quarantine destination exists: {item.OriginalQuarantinePath}"
+                    );
+                if (requireActiveFiles)
+                    RequireFile(
+                        item.OriginalPath,
+                        item.Operation.OriginalSize,
+                        item.Operation.OriginalLastWriteUtcTicks,
+                        "Original file"
+                    );
+                else if (File.Exists(item.OriginalPath))
+                    RequireFile(
+                        item.OriginalPath,
+                        item.Operation.OriginalSize,
+                        item.Operation.OriginalLastWriteUtcTicks,
+                        "Original file"
+                    );
+                if (File.Exists(item.DirectQuarantinePath))
+                    throw new InvalidOperationException(
+                        $"Quarantine destination exists: {item.DirectQuarantinePath}"
+                    );
+                if (item.Operation.DirectPresent)
+                {
+                    if (requireActiveFiles)
+                        RequireFile(
+                            item.DirectPath,
+                            item.Operation.DirectSize,
+                            item.Operation.DirectLastWriteUtcTicks,
+                            "Direct file"
+                        );
+                    else if (File.Exists(item.DirectPath))
+                        RequireFile(
+                            item.DirectPath,
+                            item.Operation.DirectSize,
+                            item.Operation.DirectLastWriteUtcTicks,
+                            "Direct file"
+                        );
+                }
+                else if (File.Exists(item.DirectPath))
+                    throw new InvalidOperationException(
+                        $"Unexpected direct file: {item.LogicalPath}"
+                    );
+            }
+        );
+
+    private static void DeleteDirectDeleteFiles(
+        IEnumerable<ApplyWork> work,
+        int physicalParallelism,
+        CancellationToken token
+    ) =>
+        RunPhysical(
+            work,
+            physicalParallelism,
+            token,
+            item =>
+            {
+                if (File.Exists(item.OriginalQuarantinePath))
+                    throw new InvalidOperationException(
+                        $"Quarantine destination exists: {item.OriginalQuarantinePath}"
+                    );
+                if (File.Exists(item.DirectQuarantinePath))
+                    throw new InvalidOperationException(
+                        $"Quarantine destination exists: {item.DirectQuarantinePath}"
+                    );
+                if (!item.Operation.DirectPresent && File.Exists(item.DirectPath))
+                    throw new InvalidOperationException(
+                        $"Unexpected direct file: {item.LogicalPath}"
+                    );
+                DeleteIfMatching(
+                    item.OriginalPath,
+                    item.Operation.OriginalSize,
+                    item.Operation.OriginalLastWriteUtcTicks,
+                    "Original file"
+                );
+                if (item.Operation.DirectPresent)
+                    DeleteIfMatching(
+                        item.DirectPath,
+                        item.Operation.DirectSize,
+                        item.Operation.DirectLastWriteUtcTicks,
+                        "Direct file"
+                    );
+            }
+        );
+
+    private static void DeleteIfMatching(string path, long size, long ticks, string label)
+    {
+        if (!File.Exists(path))
+            return;
+        RequireFile(path, size, ticks, label);
+        File.Delete(path);
+    }
+
+    private static void VerifyDirectDeleteFiles(
+        IEnumerable<ApplyWork> work,
+        int physicalParallelism,
+        CancellationToken token
+    ) =>
+        RunPhysical(
+            work,
+            physicalParallelism,
+            token,
+            item =>
+            {
+                if (File.Exists(item.OriginalPath) || File.Exists(item.OriginalQuarantinePath))
+                    throw new InvalidOperationException(
+                        $"Original or quarantine file remains: {item.LogicalPath}"
+                    );
+                if (File.Exists(item.DirectPath) || File.Exists(item.DirectQuarantinePath))
+                    throw new InvalidOperationException(
+                        $"Direct or quarantine file remains: {item.LogicalPath}"
+                    );
+            }
+        );
+
+    private static void ValidateDirectDeleteKeeps(
+        VideoVariantLooseCleanupDirectDeletePlan plan,
+        CancellationToken token
+    )
+    {
+        foreach (VideoVariantLooseCleanupDirectDeleteKeep keep in plan.Keeps)
+        {
+            token.ThrowIfCancellationRequested();
+            RequireFile(keep.Path, keep.Size, keep.LastWriteUtcTicks, "Keep file");
+        }
+    }
+
+    private static void RunPhysical(
+        IEnumerable<ApplyWork> work,
+        int physicalParallelism,
+        CancellationToken token,
+        Action<ApplyWork> action
+    )
+    {
+        if (physicalParallelism == 1)
+        {
+            foreach (ApplyWork item in work)
+            {
+                token.ThrowIfCancellationRequested();
+                action(item);
+            }
+            return;
+        }
+        Parallel.ForEach(
+            work,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = physicalParallelism,
+                CancellationToken = token,
+            },
+            action
+        );
+    }
+
+    private static async Task<IReadOnlyDictionary<string, int>> LoadRowCounts(
+        IVideoVariantLooseCleanupDatabase database,
+        VideoVariantLooseCleanupApplyManifest manifest,
+        IEnumerable<ApplyWork> work,
+        CancellationToken token
+    )
+    {
+        string[] paths = work.Select(item => NormalizePath(item.LogicalPath)).ToArray();
+        IReadOnlyDictionary<string, int> counts = await database.LoadRowCountsAsync(
+            manifest.PrimaryNamespace,
+            manifest.IncrementalNamespaces,
+            paths,
+            token
+        );
+        if (
+            counts.Count != paths.Length
+            || paths.Any(path => !counts.ContainsKey(path))
+            || counts.Any(value => value.Value < 0)
+        )
+            throw new InvalidOperationException(
+                "Database returned invalid direct-delete row counts."
+            );
+        return counts;
+    }
+
+    private static async Task RequireExactRowCounts(
+        IVideoVariantLooseCleanupDatabase database,
+        VideoVariantLooseCleanupApplyManifest manifest,
+        IEnumerable<ApplyWork> work,
+        int expected,
+        CancellationToken token
+    )
+    {
+        IReadOnlyDictionary<string, int> counts = await LoadRowCounts(
+            database,
+            manifest,
+            work,
+            token
+        );
+        string? invalid = counts.FirstOrDefault(value => value.Value != expected).Key;
+        if (invalid is not null)
+            throw new InvalidOperationException(
+                $"Expected {expected} cache row(s) for direct-delete path: {invalid}"
+            );
+    }
+
+    private VideoVariantLooseCleanupDirectDeleteReceipt LoadDirectDeleteReceipt(string path)
+    {
+        VideoVariantLooseCleanupDirectDeleteReceipt receipt =
+            JsonSerializer.Deserialize<VideoVariantLooseCleanupDirectDeleteReceipt>(
+                File.ReadAllBytes(path),
+                JsonOptions
+            ) ?? throw new InvalidOperationException("Invalid direct-delete receipt.");
+        if (CalculateDirectDeleteReceiptHash(receipt) != receipt.ReceiptHash)
+            throw new InvalidOperationException("Direct-delete receipt hash is invalid.");
+        return receipt;
+    }
+
+    private static void ValidateDirectDeleteReceipt(
+        VideoVariantLooseCleanupApplyManifest manifest,
+        VideoVariantLooseCleanupDirectDeletePlan plan,
+        VideoVariantLooseCleanupDirectDeleteReceipt receipt
+    )
+    {
+        if (
+            receipt.Version != 1
+            || receipt.PlanApprovalHash != plan.ApprovalHash
+            || receipt.SourceManifestApprovalHash != manifest.ApprovalHash
+            || receipt.SourceOperationSetHash != manifest.OperationSetHash
+            || receipt.SourceJournalSha256 != plan.SourceJournalSha256
+            || receipt.SourceJournalRunId != plan.SourceJournalRunId
+            || receipt.SourceJournalBatchSize != plan.SourceJournalBatchSize
+            || receipt.SourceJournalBatchCount != plan.SourceJournalBatchCount
+            || receipt.Operations != plan.Operations
+            || receipt.BytesDeleted != plan.Bytes
+            || receipt.RowsDeleted != plan.Operations
+            || receipt.FilesDeleted != plan.Files
+            || receipt.Batches <= 0
+        )
+            throw new InvalidOperationException("Direct-delete receipt does not match plan.");
+    }
+
     private IVideoVariantLooseCleanupDatabase Database(string connectionString) =>
         _database ?? new NpgsqlVideoVariantLooseCleanupDatabase(connectionString);
 
@@ -1213,6 +2093,12 @@ internal interface IVideoVariantLooseCleanupDatabase
         CancellationToken token
     );
     Task<bool> AreRowsAbsentAsync(
+        string primaryNamespace,
+        IReadOnlyList<string> incrementalNamespaces,
+        IReadOnlyList<string> normalizedPaths,
+        CancellationToken token
+    );
+    Task<IReadOnlyDictionary<string, int>> LoadRowCountsAsync(
         string primaryNamespace,
         IReadOnlyList<string> incrementalNamespaces,
         IReadOnlyList<string> normalizedPaths,
@@ -1577,6 +2463,55 @@ internal sealed class NpgsqlVideoVariantLooseCleanupDatabase(string connectionSt
         }
     }
 
+    public async Task<IReadOnlyDictionary<string, int>> LoadRowCountsAsync(
+        string primaryNamespace,
+        IReadOnlyList<string> incrementalNamespaces,
+        IReadOnlyList<string> normalizedPaths,
+        CancellationToken token
+    )
+    {
+        string[] paths = normalizedPaths
+            .Select(NormalizePath)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        NpgsqlConnection connection = _lockedConnection ?? await Open(token);
+        try
+        {
+            const string sql = """
+                SELECT normalized_path, count(*)::int
+                FROM (
+                    SELECT lower(replace(path, chr(92), '/')) AS normalized_path
+                    FROM media_cache_primary_entries
+                    WHERE namespace = @primary AND lower(replace(path, chr(92), '/')) = ANY(@paths)
+                    UNION ALL
+                    SELECT lower(replace(path, chr(92), '/')) AS normalized_path
+                    FROM media_cache_incremental_entries
+                    WHERE namespace = ANY(@incrementals) AND lower(replace(path, chr(92), '/')) = ANY(@paths)
+                ) rows
+                GROUP BY normalized_path
+                """;
+            await using NpgsqlCommand command = new(sql, connection);
+            command.Parameters.AddWithValue("primary", primaryNamespace);
+            command.Parameters.AddWithValue("incrementals", incrementalNamespaces.ToArray());
+            command.Parameters.AddWithValue("paths", paths);
+            Dictionary<string, int> counts = paths.ToDictionary(
+                path => path,
+                _ => 0,
+                StringComparer.Ordinal
+            );
+            await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(token);
+
+            while (await reader.ReadAsync(token))
+                counts[reader.GetString(0)] = reader.GetInt32(1);
+            return counts;
+        }
+        finally
+        {
+            if (_lockedConnection is null)
+                await connection.DisposeAsync();
+        }
+    }
+
     private async Task<NpgsqlConnection> Open(CancellationToken token)
     {
         NpgsqlConnection connection = new(_connectionString);
@@ -1787,4 +2722,72 @@ internal sealed class VideoVariantLooseCleanupJournalBatch
     public long BytesQuarantined { get; set; }
     public int PrimaryDeleted { get; set; }
     public int IncrementalDeleted { get; set; }
+}
+
+public sealed record VideoVariantLooseCleanupDirectDeletePlan
+{
+    public int Version { get; init; }
+    public DateTimeOffset CreatedUtc { get; init; }
+    public string SourceManifestApprovalHash { get; init; } = string.Empty;
+    public string SourceOperationSetHash { get; init; } = string.Empty;
+    public string SourceJournalSha256 { get; init; } = string.Empty;
+    public Guid SourceJournalRunId { get; init; }
+    public int SourceJournalBatchSize { get; init; }
+    public int SourceJournalBatchCount { get; init; }
+    public string DataConfigSha256 { get; init; } = string.Empty;
+    public List<int> OperationIndices { get; init; } = [];
+    public List<VideoVariantLooseCleanupDirectDeleteKeep> Keeps { get; init; } = [];
+    public int Operations { get; init; }
+    public int Files { get; init; }
+    public long Bytes { get; init; }
+    public string ApprovalHash { get; set; } = string.Empty;
+}
+
+public sealed record VideoVariantLooseCleanupDirectDeleteKeep
+{
+    public string Path { get; init; } = string.Empty;
+    public long Size { get; init; }
+    public long LastWriteUtcTicks { get; init; }
+}
+
+public sealed record VideoVariantLooseCleanupDirectDeleteReceipt
+{
+    public int Version { get; init; }
+    public string PlanApprovalHash { get; init; } = string.Empty;
+    public string SourceManifestApprovalHash { get; init; } = string.Empty;
+    public string SourceOperationSetHash { get; init; } = string.Empty;
+    public string SourceJournalSha256 { get; init; } = string.Empty;
+    public Guid SourceJournalRunId { get; init; }
+    public int SourceJournalBatchSize { get; init; }
+    public int SourceJournalBatchCount { get; init; }
+    public Guid RunId { get; init; }
+    public DateTimeOffset StartedUtc { get; init; }
+    public DateTimeOffset CompletedUtc { get; init; }
+    public int Operations { get; init; }
+    public int FilesDeleted { get; init; }
+    public long BytesDeleted { get; init; }
+    public int RowsDeleted { get; init; }
+    public int Batches { get; init; }
+    public string ReceiptHash { get; set; } = string.Empty;
+}
+
+internal sealed class VideoVariantLooseCleanupDirectDeleteJournal
+{
+    public int Version { get; init; }
+    public string Mode { get; init; } = string.Empty;
+    public string PlanApprovalHash { get; init; } = string.Empty;
+    public Guid RunId { get; init; }
+    public DateTimeOffset StartedUtc { get; init; }
+    public int BatchSize { get; init; }
+    public List<VideoVariantLooseCleanupDirectDeleteJournalBatch> Batches { get; init; } = [];
+    public string JournalHash { get; set; } = string.Empty;
+}
+
+internal sealed class VideoVariantLooseCleanupDirectDeleteJournalBatch
+{
+    public int Index { get; init; }
+    public string State { get; set; } = "pending";
+    public int FilesDeleted { get; set; }
+    public long BytesDeleted { get; set; }
+    public int RowsDeleted { get; set; }
 }

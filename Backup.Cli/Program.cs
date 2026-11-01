@@ -58,6 +58,9 @@ static async Task RunVideoVariantMaintenance(string operation, string[] options)
             or "create-loose-indexes-v2"
             or "apply-loose-v2"
             or "verify-loose-v2"
+            or "prepare-direct-delete-loose-v1"
+            or "apply-direct-delete-loose-v1"
+            or "verify-direct-delete-loose-v1"
             or "plan-purge-loose-v2"
             or "purge-loose-v2"
     )
@@ -234,6 +237,77 @@ static async Task RunVideoVariantLooseMaintenance(string operation, string[] opt
             Console.WriteLine($"operation set: {manifest.OperationSetHash}");
             Console.WriteLine($"operations: {manifest.Operations.Count}");
             Console.WriteLine($"incremental namespaces: {manifest.IncrementalNamespaces.Count}");
+            return;
+        }
+
+        if (operation == "prepare-direct-delete-loose-v1")
+        {
+            VideoVariantLooseCleanupApplyManifest manifest = applyService.LoadManifest(
+                GetRequiredOption(options, "--manifest")
+            );
+            VideoVariantLooseCleanupDirectDeletePlan plan =
+                await applyService.PrepareDirectDeleteAsync(
+                    manifest,
+                    GetRequiredOption(options, "--source-journal"),
+                    int.Parse(GetRequiredOption(options, "--max-operations")),
+                    cts.Token
+                );
+            string output = GetRequiredOption(options, "--output");
+            applyService.SaveDirectDeletePlan(plan, output);
+            Console.WriteLine($"plan: {Path.GetFullPath(output)}");
+            Console.WriteLine($"approval: {plan.ApprovalHash}");
+            Console.WriteLine($"operations: {plan.Operations}");
+            Console.WriteLine($"bytes: {plan.Bytes}");
+            return;
+        }
+
+        if (operation is "apply-direct-delete-loose-v1" or "verify-direct-delete-loose-v1")
+        {
+            VideoVariantLooseCleanupApplyManifest manifest = applyService.LoadManifest(
+                GetRequiredOption(options, "--manifest")
+            );
+            string sourceJournal = GetRequiredOption(options, "--source-journal");
+            VideoVariantLooseCleanupDirectDeletePlan plan = applyService.LoadDirectDeletePlan(
+                GetRequiredOption(options, "--plan")
+            );
+            if (operation == "verify-direct-delete-loose-v1")
+            {
+                await applyService.VerifyDirectDeleteAsync(
+                    manifest,
+                    sourceJournal,
+                    plan,
+                    GetRequiredOption(options, "--receipt"),
+                    cts.Token
+                );
+                Console.WriteLine("verified: true");
+                return;
+            }
+            Progress<VideoVariantLooseCleanupApplyProgress> directProgress = new(value =>
+            {
+                Console.Error.WriteLine(
+                    $"batches: {value.CompletedBatches}/{value.TotalBatches}, batch operations: {value.BatchOperations}, total operations: {value.TotalOperations}"
+                );
+                Console.Error.Flush();
+            });
+            VideoVariantLooseCleanupDirectDeleteReceipt receipt =
+                await applyService.ApplyDirectDeleteAsync(
+                    manifest,
+                    sourceJournal,
+                    plan,
+                    GetRequiredOption(options, "--approval"),
+                    GetRequiredOption(options, "--journal"),
+                    GetRequiredOption(options, "--receipt"),
+                    int.Parse(GetRequiredOption(options, "--batch-size")),
+                    HasFlag(options, "--resume"),
+                    HasFlag(options, "--runtime-stopped-confirmed"),
+                    int.Parse(GetRequiredOption(options, "--physical-parallel")),
+                    directProgress,
+                    cts.Token
+                );
+            Console.WriteLine($"operations: {receipt.Operations}");
+            Console.WriteLine($"files deleted: {receipt.FilesDeleted}");
+            Console.WriteLine($"bytes deleted: {receipt.BytesDeleted}");
+            Console.WriteLine($"receipt hash: {receipt.ReceiptHash}");
             return;
         }
 

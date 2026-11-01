@@ -403,6 +403,433 @@ public sealed class VideoVariantLooseCleanupApplyServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DirectDelete_DeletesPhysicalThenDatabaseAndVerifies()
+    {
+        Setup setup = CreateSetup(direct: true);
+        FakeDatabase database = new(setup.PrimaryNamespace, Remove);
+        VideoVariantLooseCleanupApplyManifest manifest = ApplyManifest(setup);
+        string sourceJournal = WriteSourceJournal(manifest);
+        VideoVariantLooseCleanupApplyService service = new(database);
+        VideoVariantLooseCleanupDirectDeletePlan plan = await service.PrepareDirectDeleteAsync(
+            manifest,
+            sourceJournal,
+            1
+        );
+
+        VideoVariantLooseCleanupDirectDeleteReceipt receipt = await service.ApplyDirectDeleteAsync(
+            manifest,
+            sourceJournal,
+            plan,
+            plan.ApprovalHash,
+            setup.Journal,
+            setup.Receipt,
+            1,
+            false,
+            true,
+            2
+        );
+        await service.VerifyDirectDeleteAsync(manifest, sourceJournal, plan, setup.Receipt);
+
+        Assert.Equal(1, receipt.Operations);
+        Assert.False(File.Exists(setup.RemovePath));
+        Assert.False(File.Exists(setup.DirectPath));
+        Assert.True(File.Exists(setup.KeepPath));
+        Assert.Empty(database.Rows);
+        Assert.Equal(1, database.DeleteCalls);
+    }
+
+    [Fact]
+    public async Task DirectDelete_CrashAfterFilesResumesDatabaseDelete()
+    {
+        Setup setup = CreateSetup(direct: false);
+        FakeDatabase database = new(setup.PrimaryNamespace, Remove);
+        VideoVariantLooseCleanupApplyManifest manifest = ApplyManifest(setup);
+        string sourceJournal = WriteSourceJournal(manifest);
+        VideoVariantLooseCleanupDirectDeletePlan plan =
+            await new VideoVariantLooseCleanupApplyService(database).PrepareDirectDeleteAsync(
+                manifest,
+                sourceJournal,
+                1
+            );
+        VideoVariantLooseCleanupApplyService crashing = new(database)
+        {
+            FaultInjection = stage =>
+            {
+                if (stage == "after-direct-delete-files")
+                    throw new TestCrashException();
+            },
+        };
+        await Assert.ThrowsAsync<TestCrashException>(
+            () =>
+                crashing.ApplyDirectDeleteAsync(
+                    manifest,
+                    sourceJournal,
+                    plan,
+                    plan.ApprovalHash,
+                    setup.Journal,
+                    setup.Receipt,
+                    1,
+                    false,
+                    true,
+                    1
+                )
+        );
+        Assert.False(File.Exists(setup.RemovePath));
+        Assert.Contains(Remove, database.Rows);
+
+        await new VideoVariantLooseCleanupApplyService(database).ApplyDirectDeleteAsync(
+            manifest,
+            sourceJournal,
+            plan,
+            plan.ApprovalHash,
+            setup.Journal,
+            setup.Receipt,
+            1,
+            true,
+            true,
+            1
+        );
+        Assert.Empty(database.Rows);
+    }
+
+    [Fact]
+    public async Task DirectDelete_PrepareRejectsUnsafeFilesAndRowCounts()
+    {
+        Setup changed = CreateSetup(direct: false);
+        VideoVariantLooseCleanupApplyManifest changedManifest = ApplyManifest(changed);
+        string changedJournal = WriteSourceJournal(changedManifest);
+        File.AppendAllText(changed.RemovePath, "changed");
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                new VideoVariantLooseCleanupApplyService(
+                    new FakeDatabase(changed.PrimaryNamespace, Remove)
+                ).PrepareDirectDeleteAsync(changedManifest, changedJournal, 1)
+        );
+
+        Dispose();
+        Setup missingKeep = CreateSetup(direct: false);
+        VideoVariantLooseCleanupApplyManifest missingKeepManifest = ApplyManifest(missingKeep);
+        string missingKeepJournal = WriteSourceJournal(missingKeepManifest);
+        File.Delete(missingKeep.KeepPath);
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                new VideoVariantLooseCleanupApplyService(
+                    new FakeDatabase(missingKeep.PrimaryNamespace, Remove)
+                ).PrepareDirectDeleteAsync(missingKeepManifest, missingKeepJournal, 1)
+        );
+
+        Dispose();
+        Setup rows = CreateSetup(direct: false);
+        VideoVariantLooseCleanupApplyManifest rowsManifest = ApplyManifest(rows);
+        string rowsJournal = WriteSourceJournal(rowsManifest);
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                new VideoVariantLooseCleanupApplyService(
+                    new FakeDatabase(rows.PrimaryNamespace)
+                ).PrepareDirectDeleteAsync(rowsManifest, rowsJournal, 1)
+        );
+        FakeDatabase duplicate = new(rows.PrimaryNamespace, Remove) { DuplicateRows = 1 };
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                new VideoVariantLooseCleanupApplyService(duplicate).PrepareDirectDeleteAsync(
+                    rowsManifest,
+                    rowsJournal,
+                    1
+                )
+        );
+    }
+
+    [Fact]
+    public async Task DirectDelete_RejectsTamperedPlanAndReceipt()
+    {
+        Setup setup = CreateSetup(direct: false);
+        FakeDatabase database = new(setup.PrimaryNamespace, Remove);
+        VideoVariantLooseCleanupApplyManifest manifest = ApplyManifest(setup);
+        string sourceJournal = WriteSourceJournal(manifest);
+        VideoVariantLooseCleanupApplyService service = new(database);
+        VideoVariantLooseCleanupDirectDeletePlan plan = await service.PrepareDirectDeleteAsync(
+            manifest,
+            sourceJournal,
+            1
+        );
+        Assert.Throws<InvalidOperationException>(
+            () =>
+                service.SaveDirectDeletePlan(
+                    plan with
+                    {
+                        Bytes = plan.Bytes + 1,
+                    },
+                    Path.Combine(_root, "tampered-plan.json")
+                )
+        );
+        await service.ApplyDirectDeleteAsync(
+            manifest,
+            sourceJournal,
+            plan,
+            plan.ApprovalHash,
+            setup.Journal,
+            setup.Receipt,
+            1,
+            false,
+            true,
+            1
+        );
+        File.WriteAllText(
+            setup.Receipt,
+            File.ReadAllText(setup.Receipt).Replace("\"Operations\": 1", "\"Operations\": 2")
+        );
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.VerifyDirectDeleteAsync(manifest, sourceJournal, plan, setup.Receipt)
+        );
+    }
+
+    [Fact]
+    public async Task DirectDelete_RejectsTamperedAndForgedJournalState()
+    {
+        Setup setup = CreateSetup(direct: false);
+        FakeDatabase database = new(setup.PrimaryNamespace, Remove);
+        VideoVariantLooseCleanupApplyManifest manifest = ApplyManifest(setup);
+        string sourceJournal = WriteSourceJournal(manifest);
+        VideoVariantLooseCleanupDirectDeletePlan plan =
+            await new VideoVariantLooseCleanupApplyService(database).PrepareDirectDeleteAsync(
+                manifest,
+                sourceJournal,
+                1
+            );
+        VideoVariantLooseCleanupApplyService crashing = new(database)
+        {
+            FaultInjection = stage =>
+            {
+                if (stage == "after-direct-delete-files")
+                    throw new TestCrashException();
+            },
+        };
+        await Assert.ThrowsAsync<TestCrashException>(
+            () =>
+                crashing.ApplyDirectDeleteAsync(
+                    manifest,
+                    sourceJournal,
+                    plan,
+                    plan.ApprovalHash,
+                    setup.Journal,
+                    setup.Receipt,
+                    1,
+                    false,
+                    true,
+                    1
+                )
+        );
+
+        string originalJournal = File.ReadAllText(setup.Journal);
+        File.WriteAllText(
+            setup.Journal,
+            originalJournal.Replace("\"deleting-files\"", "\"db-committed\"")
+        );
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                new VideoVariantLooseCleanupApplyService(database).ApplyDirectDeleteAsync(
+                    manifest,
+                    sourceJournal,
+                    plan,
+                    plan.ApprovalHash,
+                    setup.Journal,
+                    setup.Receipt,
+                    1,
+                    true,
+                    true,
+                    1
+                )
+        );
+
+        VideoVariantLooseCleanupDirectDeleteJournal forged =
+            JsonSerializer.Deserialize<VideoVariantLooseCleanupDirectDeleteJournal>(
+                originalJournal
+            )!;
+        forged.Batches[0].State = "db-committed";
+        forged.Batches[0].FilesDeleted = plan.Files;
+        forged.Batches[0].BytesDeleted = plan.Bytes;
+        forged.JournalHash = VideoVariantLooseCleanupApplyService.CalculateDirectDeleteJournalHash(
+            forged
+        );
+        File.WriteAllText(setup.Journal, JsonSerializer.Serialize(forged));
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                new VideoVariantLooseCleanupApplyService(database).ApplyDirectDeleteAsync(
+                    manifest,
+                    sourceJournal,
+                    plan,
+                    plan.ApprovalHash,
+                    setup.Journal,
+                    setup.Receipt,
+                    1,
+                    true,
+                    true,
+                    1
+                )
+        );
+        Assert.Contains(Remove, database.Rows);
+    }
+
+    [Fact]
+    public async Task DirectDelete_ExistingReceiptRejectsRecreatedFileOrRow()
+    {
+        Setup setup = CreateSetup(direct: false);
+        FakeDatabase database = new(setup.PrimaryNamespace, Remove);
+        VideoVariantLooseCleanupApplyManifest manifest = ApplyManifest(setup);
+        string sourceJournal = WriteSourceJournal(manifest);
+        VideoVariantLooseCleanupApplyService service = new(database);
+        VideoVariantLooseCleanupDirectDeletePlan plan = await service.PrepareDirectDeleteAsync(
+            manifest,
+            sourceJournal,
+            1
+        );
+        await service.ApplyDirectDeleteAsync(
+            manifest,
+            sourceJournal,
+            plan,
+            plan.ApprovalHash,
+            setup.Journal,
+            setup.Receipt,
+            1,
+            false,
+            true,
+            1
+        );
+
+        Write(setup.MediaRoot, Remove, "recreated");
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                service.ApplyDirectDeleteAsync(
+                    manifest,
+                    sourceJournal,
+                    plan,
+                    plan.ApprovalHash,
+                    setup.Journal,
+                    setup.Receipt,
+                    1,
+                    false,
+                    true,
+                    1
+                )
+        );
+        File.Delete(setup.RemovePath);
+        database.Rows.Add(Remove);
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                service.ApplyDirectDeleteAsync(
+                    manifest,
+                    sourceJournal,
+                    plan,
+                    plan.ApprovalHash,
+                    setup.Journal,
+                    setup.Receipt,
+                    1,
+                    false,
+                    true,
+                    1
+                )
+        );
+    }
+
+    [Fact]
+    public async Task DirectDelete_RejectsSmallUnexpectedDirectBeforeDelete()
+    {
+        Setup setup = CreateSetup(direct: false);
+        FakeDatabase database = new(setup.PrimaryNamespace, Remove);
+        VideoVariantLooseCleanupApplyManifest manifest = ApplyManifest(setup);
+        string sourceJournal = WriteSourceJournal(manifest);
+        Write(setup.DirectRoot, Remove, "unexpected");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                new VideoVariantLooseCleanupApplyService(database).PrepareDirectDeleteAsync(
+                    manifest,
+                    sourceJournal,
+                    1
+                )
+        );
+        Assert.True(File.Exists(setup.RemovePath));
+        Assert.Equal(0, database.DeleteCalls);
+    }
+
+    [Fact]
+    public async Task DirectDelete_VerifyRejectsNamespaceDrift()
+    {
+        Setup setup = CreateSetup(direct: false);
+        FakeDatabase database = new(setup.PrimaryNamespace, Remove);
+        VideoVariantLooseCleanupApplyManifest manifest = ApplyManifest(setup);
+        string sourceJournal = WriteSourceJournal(manifest);
+        VideoVariantLooseCleanupApplyService service = new(database);
+        VideoVariantLooseCleanupDirectDeletePlan plan = await service.PrepareDirectDeleteAsync(
+            manifest,
+            sourceJournal,
+            1
+        );
+        await service.ApplyDirectDeleteAsync(
+            manifest,
+            sourceJournal,
+            plan,
+            plan.ApprovalHash,
+            setup.Journal,
+            setup.Receipt,
+            1,
+            false,
+            true,
+            1
+        );
+        database.Namespaces = new(
+            setup.PrimaryNamespace,
+            ["backup:media-cache:store:cache|incremental|changed"]
+        );
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.VerifyDirectDeleteAsync(manifest, sourceJournal, plan, setup.Receipt)
+        );
+    }
+
+    [Fact]
+    public async Task Apply_SameRunResumeRejectsMissingQuarantine()
+    {
+        Setup setup = CreateSetup(direct: false);
+        FakeDatabase database = new(setup.PrimaryNamespace, Remove);
+        VideoVariantLooseCleanupApplyManifest manifest = ApplyManifest(setup);
+        VideoVariantLooseCleanupApplyService crashing = new(database)
+        {
+            FaultInjection = stage =>
+            {
+                if (stage == "after-db-commit")
+                    throw new TestCrashException();
+            },
+        };
+        await Assert.ThrowsAsync<TestCrashException>(
+            () =>
+                crashing.ApplyAsync(
+                    manifest,
+                    manifest.ApprovalHash,
+                    setup.Journal,
+                    setup.Receipt,
+                    runtimeStoppedConfirmed: true
+                )
+        );
+        string quarantined = Directory
+            .EnumerateFiles(setup.MediaRoot, "*.bin", SearchOption.AllDirectories)
+            .Single();
+        File.Delete(quarantined);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () =>
+                new VideoVariantLooseCleanupApplyService(database).ApplyAsync(
+                    manifest,
+                    manifest.ApprovalHash,
+                    setup.Journal,
+                    setup.Receipt,
+                    resume: true,
+                    runtimeStoppedConfirmed: true
+                )
+        );
+    }
+
+    [Fact]
     public async Task Purge_PlansAndDeletesOnlySignedQuarantineFiles()
     {
         Setup setup = CreateSetup(direct: false);
@@ -696,6 +1123,26 @@ public sealed class VideoVariantLooseCleanupApplyServiceTests : IDisposable
         return manifest;
     }
 
+    private string WriteSourceJournal(VideoVariantLooseCleanupApplyManifest manifest)
+    {
+        string path = Path.Combine(_root, "source-journal.json");
+        File.WriteAllText(
+            path,
+            JsonSerializer.Serialize(
+                new
+                {
+                    manifest.ApprovalHash,
+                    manifest.OperationSetHash,
+                    RunId = Guid.NewGuid(),
+                    StartedUtc = DateTimeOffset.UtcNow,
+                    BatchSize = 1,
+                    Batches = new[] { new { Index = 0, State = "pending" } },
+                }
+            )
+        );
+        return path;
+    }
+
     private static VideoVariantLooseCleanupOperation Clone(
         VideoVariantLooseCleanupOperation value,
         int? removeIndex = null,
@@ -767,13 +1214,14 @@ public sealed class VideoVariantLooseCleanupApplyServiceTests : IDisposable
     private sealed class FakeDatabase(string primaryNamespace, params string[] rows)
         : IVideoVariantLooseCleanupDatabase
     {
-        public VideoVariantLooseCleanupNamespaces Namespaces { get; } =
+        public VideoVariantLooseCleanupNamespaces Namespaces { get; set; } =
             new(primaryNamespace, ["backup:media-cache:store:cache|incremental|one"]);
         public HashSet<string> Rows { get; } = rows.ToHashSet(StringComparer.OrdinalIgnoreCase);
         public VideoVariantLooseCleanupIndexStatus Indexes { get; set; } = new(true, true);
         public bool LockAvailable { get; set; } = true;
         public int DiscoverCalls { get; private set; }
         public int DeleteCalls { get; private set; }
+        public int DuplicateRows { get; set; }
         public Dictionary<string, int> PartitionIds { get; } =
             new(StringComparer.Ordinal) { [Keep] = 1 };
 
@@ -828,7 +1276,7 @@ public sealed class VideoVariantLooseCleanupApplyServiceTests : IDisposable
             token.ThrowIfCancellationRequested();
             DeleteCalls++;
             int deleted = normalizedPaths.Count(path => Rows.Remove(path));
-            return Task.FromResult(new VideoVariantLooseCleanupDeleteResult(deleted, deleted));
+            return Task.FromResult(new VideoVariantLooseCleanupDeleteResult(deleted, 0));
         }
 
         public Task<bool> AreRowsAbsentAsync(
@@ -837,6 +1285,20 @@ public sealed class VideoVariantLooseCleanupApplyServiceTests : IDisposable
             IReadOnlyList<string> normalizedPaths,
             CancellationToken token
         ) => Task.FromResult(normalizedPaths.All(path => !Rows.Contains(path)));
+
+        public Task<IReadOnlyDictionary<string, int>> LoadRowCountsAsync(
+            string primaryNamespace,
+            IReadOnlyList<string> incrementalNamespaces,
+            IReadOnlyList<string> normalizedPaths,
+            CancellationToken token
+        ) =>
+            Task.FromResult<IReadOnlyDictionary<string, int>>(
+                normalizedPaths.ToDictionary(
+                    path => path,
+                    path => Rows.Contains(path) ? 1 + DuplicateRows : 0,
+                    StringComparer.Ordinal
+                )
+            );
 
         private sealed class Lease : IAsyncDisposable
         {
