@@ -1,7 +1,9 @@
+using System.Collections.Concurrent;
 using System.Data;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using Npgsql;
 
@@ -134,6 +136,26 @@ public sealed class VideoVariantLooseCleanupPreviewService
         + ParsedVideoThumbCteSql
         + " SELECT path, stream_size, file_size, partition_id FROM parsed ORDER BY path";
 
+    internal const string ParsedPhotoCteSql = """
+        normalized AS (
+            SELECT replace(path, chr(92), '/') AS normalized_path,
+                   stream_size, file_size, partition_id
+            FROM media_cache_primary_entries
+            WHERE namespace = @namespace
+        ),
+        parsed AS (
+            SELECT n.normalized_path AS path,
+                   n.stream_size, n.file_size, n.partition_id
+            FROM normalized n
+            WHERE n.normalized_path ~* '^[^/]+/photo/[^/]+/[^/]+/'
+        )
+        """;
+
+    internal const string PhotoRowsSql =
+        "WITH "
+        + ParsedPhotoCteSql
+        + " SELECT path, stream_size, file_size, partition_id FROM parsed ORDER BY path";
+
     private static readonly Regex VideoPathPattern = new(
         @"^(?<post>[^/]+)/video/(?<media>[^/]+)/mp4/(?<video>[^/]+)/(?<width>[1-9]\d*)x(?<height>[1-9]\d*)\.mp4$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase
@@ -144,6 +166,10 @@ public sealed class VideoVariantLooseCleanupPreviewService
     );
     private static readonly Regex VideoThumbPathPattern = new(
         @"^(?<post>[^/]+)/video/(?<media>[^/]+)/thumb/(?<thumb>[^/]+)/(?<format>jpg|png)/(?<resolutionType>dimension|size)/(?<name>[^/.]+)\.(?<extension>jpg|png)$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase
+    );
+    private static readonly Regex PhotoPathPattern = new(
+        @"^(?<post>[^/]+)/photo/(?<media>[^/]+)/(?<source>[^/]+)/(?<format>jpg|png)/(?<resolutionType>dimension|size)/(?<name>[^/.]+)\.(?<extension>jpg|png)$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase
     );
 
@@ -191,11 +217,12 @@ public sealed class VideoVariantLooseCleanupPreviewService
         );
         long scanned;
         long videos;
-        bool thumbnailSelection = selectionKind is "gif-thumbs" or "video-thumbs";
+        bool groupedImageSelection = selectionKind is "gif-thumbs" or "video-thumbs" or "photo-variants";
         string parsedCte = selectionKind switch
         {
             "gif-thumbs" => ParsedGifThumbCteSql,
             "video-thumbs" => ParsedVideoThumbCteSql,
+            "photo-variants" => ParsedPhotoCteSql,
             _ => ParsedVideoCteSql,
         };
 
@@ -253,14 +280,18 @@ public sealed class VideoVariantLooseCleanupPreviewService
         List<VideoVariantLooseCacheRow>? thumbnailRows = null;
         long selectionsRead = 0;
 
-        if (thumbnailSelection)
+        if (groupedImageSelection)
         {
             thumbnailRows = [];
             await using NpgsqlCommand command = connection.CreateCommand();
             command.Transaction = transaction;
             command.CommandTimeout = dbCommandTimeoutSeconds;
-            command.CommandText =
-                selectionKind == "gif-thumbs" ? GifThumbRowsSql : VideoThumbRowsSql;
+            command.CommandText = selectionKind switch
+            {
+                "gif-thumbs" => GifThumbRowsSql,
+                "video-thumbs" => VideoThumbRowsSql,
+                _ => PhotoRowsSql,
+            };
             command.Parameters.AddWithValue("namespace", cacheNamespace);
             await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(
                 CommandBehavior.SequentialAccess,
@@ -278,10 +309,12 @@ public sealed class VideoVariantLooseCleanupPreviewService
                     )
                 );
             }
-            selections =
-                selectionKind == "gif-thumbs"
-                    ? SelectGifThumbCandidates(thumbnailRows, selectionIssues)
-                    : SelectVideoThumbCandidates(thumbnailRows, selectionIssues);
+            selections = selectionKind switch
+            {
+                "gif-thumbs" => SelectGifThumbCandidates(thumbnailRows, selectionIssues),
+                "video-thumbs" => SelectVideoThumbCandidates(thumbnailRows, selectionIssues),
+                _ => SelectPhotoCandidates(thumbnailRows, selectionIssues),
+            };
             selectionsRead = selections.Count;
             if (fileLimit.HasValue)
                 selections = selections.Take(fileLimit.Value).ToList();
@@ -348,6 +381,8 @@ public sealed class VideoVariantLooseCleanupPreviewService
         );
 
         await transaction.CommitAsync(token);
+        if (selectionKind == "photo-variants")
+            thumbnailRows = null;
         VideoVariantLooseCleanupManifest manifest = BuildManifest(
             config,
             cacheNamespace,
@@ -358,12 +393,12 @@ public sealed class VideoVariantLooseCleanupPreviewService
             videos,
             fileParallelism,
             fileLimit,
-            dbOnly: dbOnly || thumbnailSelection,
+            dbOnly: dbOnly || groupedImageSelection,
             progress: progress,
             elapsed: () => stopwatch.Elapsed,
             token: token
         );
-        if (thumbnailSelection && !dbOnly)
+        if (groupedImageSelection && selectionKind != "photo-variants" && !dbOnly)
         {
             Dictionary<string, VideoVariantLooseCacheRow> exactRows = thumbnailRows!
                 .GroupBy(row => row.Path.Replace('\\', '/'), StringComparer.Ordinal)
@@ -378,7 +413,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
             );
             if (!physical.IsValid || physical.PhysicalManifest is null)
                 throw new InvalidOperationException(
-                    $"GIF thumbnail physical preview failed: {string.Join("; ", physical.Errors.Take(10))}"
+                    $"Grouped image physical preview failed: {string.Join("; ", physical.Errors.Take(10))}"
                 );
             manifest = physical.PhysicalManifest;
         }
@@ -409,10 +444,8 @@ public sealed class VideoVariantLooseCleanupPreviewService
         string tempPath = $"{fullPath}.{Guid.NewGuid():N}.tmp";
         try
         {
-            File.WriteAllBytes(
-                tempPath,
-                JsonSerializer.SerializeToUtf8Bytes(manifest, JsonOptions)
-            );
+            using (FileStream stream = File.Create(tempPath))
+                JsonSerializer.Serialize(stream, manifest, JsonOptions);
             File.Move(tempPath, fullPath, overwrite: true);
         }
         finally
@@ -424,11 +457,10 @@ public sealed class VideoVariantLooseCleanupPreviewService
 
     public VideoVariantLooseCleanupManifest LoadManifest(string manifestPath)
     {
+        using FileStream stream = File.OpenRead(manifestPath);
         VideoVariantLooseCleanupManifest manifest =
-            JsonSerializer.Deserialize<VideoVariantLooseCleanupManifest>(
-                File.ReadAllBytes(manifestPath),
-                JsonOptions
-            ) ?? throw new InvalidOperationException("Invalid loose cleanup manifest.");
+            JsonSerializer.Deserialize<VideoVariantLooseCleanupManifest>(stream, JsonOptions)
+            ?? throw new InvalidOperationException("Invalid loose cleanup manifest.");
         ValidateManifest(manifest, verifyHash: true);
         return manifest;
     }
@@ -594,6 +626,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
         List<string> errors = [];
         List<VideoVariantLooseCleanupIssue> setupIssues = [];
         HashSet<(string Path, string Code)> fatalKeys = [];
+        HashSet<string> invalidSetupGroups = new(StringComparer.OrdinalIgnoreCase);
         Dictionary<string, RootWork> rootWork = new(PathComparer);
         Dictionary<string, KeepCheck> keeps = new(StringComparer.Ordinal);
         List<RemoveCheck> removes = [];
@@ -712,6 +745,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
                     remove.Path,
                     remove.Keep,
                     remove.Operation.PartitionId,
+                    dbRows[remove.Keep].PartitionId!.Value,
                     original.Size,
                     original.LastWriteUtcTicks,
                     directFile?.Exists == true,
@@ -722,14 +756,32 @@ public sealed class VideoVariantLooseCleanupPreviewService
         }
 
         physicalIssues.AddRange(setupIssues);
-        HashSet<string> invalidThumbGroups = physicalIssues
-            .Where(issue => IsThumbPath(issue.Path))
-            .Select(issue => GetGifThumbDirectory(issue.Path))
+        List<VideoVariantLooseCleanupIssue> ungroupedIssues = physicalIssues
+            .Where(issue => !IsPhotoPath(issue.Path))
+            .ToList();
+        ungroupedIssues.AddRange(
+            physicalIssues
+                .Where(issue => IsPhotoPath(issue.Path))
+                .GroupBy(
+                    issue => GetGroupedImageDirectory(issue.Path),
+                    StringComparer.OrdinalIgnoreCase
+                )
+                .OrderBy(group => group.Key, StringComparer.Ordinal)
+                .Select(group => new VideoVariantLooseCleanupIssue(
+                    group.Key,
+                    "keep-set-invalid",
+                    "Image group failed physical validation and was preserved."
+                ))
+        );
+        physicalIssues = ungroupedIssues;
+        HashSet<string> invalidImageGroups = physicalIssues
+            .Where(issue => IsGroupedImagePath(issue.Path))
+            .Select(issue => GetGroupedImageDirectory(issue.Path))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        if (invalidThumbGroups.Count > 0)
+        if (invalidImageGroups.Count > 0)
             pending.RemoveAll(operation =>
-                IsThumbPath(operation.Remove)
-                && invalidThumbGroups.Contains(GetGifThumbDirectory(operation.Remove))
+                IsGroupedImagePath(operation.Remove)
+                && invalidImageGroups.Contains(GetGroupedImageDirectory(operation.Remove))
             );
         VideoVariantLooseCleanupManifest physicalManifest = CreatePhysicalManifest(
             manifest,
@@ -768,6 +820,19 @@ public sealed class VideoVariantLooseCleanupPreviewService
         {
             if (!fatalKeys.Add((path, code)))
                 return;
+            if (IsPhotoPath(path))
+            {
+                string group = GetGroupedImageDirectory(path);
+                if (invalidSetupGroups.Add(group))
+                    setupIssues.Add(
+                        new(
+                            group,
+                            "keep-set-invalid",
+                            "Image group failed physical validation and was preserved."
+                        )
+                    );
+                return;
+            }
             setupIssues.Add(new(path, code, message));
             errors.Add($"{path}: {message}");
         }
@@ -781,10 +846,10 @@ public sealed class VideoVariantLooseCleanupPreviewService
     )
     {
         if (
-            work.Keeps.All(item => IsThumbPath(item.Path))
-            && work.Removes.All(item => IsThumbPath(item.Path))
+            work.Keeps.All(item => IsGroupedImagePath(item.Path))
+            && work.Removes.All(item => IsGroupedImagePath(item.Path))
         )
-            return CheckThumbRoot(work, manifest, progress, token);
+            return CheckGroupedImageRoot(work, manifest, progress, token);
 
         List<KeepFileCheck> keeps = [];
         List<FileCheck> removes = [];
@@ -835,7 +900,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
         }
     }
 
-    private static RootResult CheckThumbRoot(
+    private static RootResult CheckGroupedImageRoot(
         RootWork work,
         VideoVariantLooseCleanupManifest manifest,
         IProgress<VideoVariantLooseCleanupProgress>? progress,
@@ -844,7 +909,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
     {
         Dictionary<string, List<KeepCheck>> keepsByDirectory = work
             .Keeps.GroupBy(
-                item => GetGifThumbDirectory(item.Path),
+                item => GetGroupedImageDirectory(item.Path),
                 StringComparer.OrdinalIgnoreCase
             )
             .ToDictionary(
@@ -854,7 +919,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
             );
         Dictionary<string, List<RemoveCheck>> removesByDirectory = work
             .Removes.GroupBy(
-                item => GetGifThumbDirectory(item.Path),
+                item => GetGroupedImageDirectory(item.Path),
                 StringComparer.OrdinalIgnoreCase
             )
             .ToDictionary(
@@ -915,8 +980,8 @@ public sealed class VideoVariantLooseCleanupPreviewService
                         issues.Add(
                             new(
                                 unexpected,
-                                "unexpected-thumbnail-file",
-                                "Thumbnail directory contains an unexpected physical file."
+                                "unexpected-image-file",
+                                "Image variant directory contains an unexpected physical file."
                             )
                         );
 
@@ -965,18 +1030,34 @@ public sealed class VideoVariantLooseCleanupPreviewService
         }
     }
 
-    private static bool IsThumbPath(string path)
-    {
-        string normalized = path.Replace('\\', '/');
-        return (
-                normalized.Contains("/gif/", StringComparison.OrdinalIgnoreCase)
-                || normalized.Contains("/video/", StringComparison.OrdinalIgnoreCase)
-            ) && normalized.Contains("/thumb/", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static string GetGifThumbDirectory(string path)
+    private static bool IsGroupedImagePath(string path)
     {
         string[] parts = path.Replace('\\', '/').Split('/');
+        return parts.Length >= 4
+            && (
+                parts[1].Equals("photo", StringComparison.OrdinalIgnoreCase)
+                || (
+                    parts.Length >= 5
+                    && (
+                        parts[1].Equals("gif", StringComparison.OrdinalIgnoreCase)
+                        || parts[1].Equals("video", StringComparison.OrdinalIgnoreCase)
+                    )
+                    && parts[3].Equals("thumb", StringComparison.OrdinalIgnoreCase)
+                )
+            );
+    }
+
+    private static bool IsPhotoPath(string path)
+    {
+        string[] parts = path.Replace('\\', '/').Split('/');
+        return parts.Length >= 4 && parts[1].Equals("photo", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetGroupedImageDirectory(string path)
+    {
+        string[] parts = path.Replace('\\', '/').Split('/');
+        if (parts.Length >= 4 && parts[1].Equals("photo", StringComparison.OrdinalIgnoreCase))
+            return string.Join('/', parts.Take(4));
         if (
             parts.Length < 5
             || !(
@@ -985,7 +1066,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
             )
             || !parts[3].Equals("thumb", StringComparison.OrdinalIgnoreCase)
         )
-            throw new InvalidOperationException($"Invalid thumbnail path: {path}");
+            throw new InvalidOperationException($"Invalid grouped image path: {path}");
         return string.Join('/', parts.Take(5));
     }
 
@@ -1000,39 +1081,43 @@ public sealed class VideoVariantLooseCleanupPreviewService
             .Where(remove => remove.Operation.OriginalSize > DirectMinimumOriginalSize)
             .OrderBy(remove => remove.Index)
             .ToArray();
-        Dictionary<int, FileCheck> files = [];
+        ConcurrentDictionary<int, FileCheck> files = [];
+        int checkedItems = 0;
 
-        for (int index = 0; index < eligible.Length; index++)
-        {
-            token.ThrowIfCancellationRequested();
-            RemoveCheck remove = eligible[index];
-            FileInfo info = new(ResolveContainedPath(manifest.DirectRoot, remove.Path));
-            files.Add(
-                remove.Index,
-                new(
+        Parallel.ForEach(
+            eligible,
+            new ParallelOptions
+            {
+                MaxDegreeOfParallelism = manifest.FileParallelism,
+                CancellationToken = token,
+            },
+            remove =>
+            {
+                FileInfo info = new(ResolveContainedPath(manifest.DirectRoot, remove.Path));
+                files[remove.Index] = new(
                     remove.Index,
                     info.Exists,
                     info.Exists ? info.Length : 0,
                     info.Exists ? info.LastWriteTimeUtc.Ticks : 0
-                )
-            );
-            int completed = index + 1;
-            if (completed % 1_000 == 0 || completed == eligible.Length)
-                progress?.Report(
-                    new(
-                        "preflight-root",
-                        manifest.CacheRowsScanned,
-                        manifest.VideoEntries,
-                        completed,
-                        eligible.Length,
-                        0,
-                        RootLabel: "direct",
-                        RootChecked: completed,
-                        RootTotal: eligible.Length
-                    )
                 );
-        }
-        return new(files);
+                int completed = Interlocked.Increment(ref checkedItems);
+                if (completed % 1_000 == 0 || completed == eligible.Length)
+                    progress?.Report(
+                        new(
+                            "preflight-root",
+                            manifest.CacheRowsScanned,
+                            manifest.VideoEntries,
+                            completed,
+                            eligible.Length,
+                            0,
+                            RootLabel: "direct",
+                            RootChecked: completed,
+                            RootTotal: eligible.Length
+                        )
+                    );
+            }
+        );
+        return new(files.ToDictionary());
     }
 
     private static VideoVariantLooseCleanupManifest CreatePhysicalManifest(
@@ -1061,6 +1146,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
                     RemovePathIndex = indices[operation.Remove],
                     KeepPathIndex = indices[operation.Keep],
                     PartitionId = operation.PartitionId,
+                    KeepPartitionId = operation.KeepPartitionId,
                     OriginalSize = operation.OriginalSize,
                     OriginalLastWriteUtcTicks = operation.OriginalLastWriteUtcTicks,
                     DirectPresent = operation.DirectPresent,
@@ -1175,6 +1261,11 @@ public sealed class VideoVariantLooseCleanupPreviewService
         List<VideoVariantLooseCleanupIssue> issues
     ) => SelectThumbCandidates(rows, issues, VideoThumbPathPattern, "Video");
 
+    internal static List<VideoVariantLooseSelection> SelectPhotoCandidates(
+        IEnumerable<VideoVariantLooseCacheRow> rows,
+        List<VideoVariantLooseCleanupIssue> issues
+    ) => SelectThumbCandidates(rows, issues, PhotoPathPattern, "Photo");
+
     private static List<VideoVariantLooseSelection> SelectThumbCandidates(
         IEnumerable<VideoVariantLooseCacheRow> rows,
         List<VideoVariantLooseCleanupIssue> issues,
@@ -1191,14 +1282,16 @@ public sealed class VideoVariantLooseCleanupPreviewService
             Match match = pathPattern.Match(path);
             if (!match.Success)
             {
-                if (TryGetThumbGroup(path, out string? malformedGroup))
+                if (TryGetGroupedImageGroup(path, out string? malformedGroup))
                 {
                     malformedGroups.Add(malformedGroup!);
                     issues.Add(
                         new(
                             path,
-                            "unexpected-thumbnail-path",
-                            $"{mediaKind} thumbnail path has an unsupported shape."
+                            mediaKind == "Photo"
+                                ? "unexpected-image-path"
+                                : "unexpected-thumbnail-path",
+                            $"{mediaKind} image path has an unsupported shape."
                         )
                     );
                 }
@@ -1213,8 +1306,10 @@ public sealed class VideoVariantLooseCleanupPreviewService
                     )
             )
             {
+                if (TryGetGroupedImageGroup(path, out string? mismatchGroup))
+                    malformedGroups.Add(mismatchGroup!);
                 issues.Add(
-                    new(path, "format-extension-mismatch", "Thumbnail format and extension differ.")
+                    new(path, "format-extension-mismatch", "Image format and extension differ.")
                 );
                 continue;
             }
@@ -1225,7 +1320,9 @@ public sealed class VideoVariantLooseCleanupPreviewService
                     {
                         Path = path,
                     },
-                    $"{match.Groups["post"].Value}/{mediaKind.ToLowerInvariant()}/{match.Groups["media"].Value}/thumb/{match.Groups["thumb"].Value}",
+                    mediaKind == "Photo"
+                        ? $"{match.Groups["post"].Value}/photo/{match.Groups["media"].Value}/{match.Groups["source"].Value}"
+                        : $"{match.Groups["post"].Value}/{mediaKind.ToLowerInvariant()}/{match.Groups["media"].Value}/thumb/{match.Groups["thumb"].Value}",
                     match.Groups["format"].Value.ToLowerInvariant(),
                     match.Groups["resolutionType"].Value.ToLowerInvariant(),
                     match.Groups["name"].Value.ToLowerInvariant()
@@ -1237,6 +1334,8 @@ public sealed class VideoVariantLooseCleanupPreviewService
             parsed.Select(item => item.Row),
             issues
         );
+        foreach (ParsedThumbRow item in parsed.Where(item => invalidPaths.Contains(item.Row.Path)))
+            malformedGroups.Add(item.Group);
         List<VideoVariantLooseSelection> result = [];
 
         foreach (
@@ -1280,7 +1379,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
                             .First()
                             .Row.Path,
                         "keep-set-invalid",
-                        $"{mediaKind} thumbnail group lacks one unambiguous keep set."
+                        $"{mediaKind} image group lacks one unambiguous keep set."
                     )
                 );
                 continue;
@@ -1303,9 +1402,14 @@ public sealed class VideoVariantLooseCleanupPreviewService
         return result.OrderBy(item => item.Remove.Path, StringComparer.Ordinal).ToList();
     }
 
-    private static bool TryGetThumbGroup(string path, out string? group)
+    private static bool TryGetGroupedImageGroup(string path, out string? group)
     {
         string[] parts = path.Replace('\\', '/').Split('/');
+        if (parts.Length >= 4 && parts[1].Equals("photo", StringComparison.OrdinalIgnoreCase))
+        {
+            group = string.Join('/', parts.Take(4));
+            return true;
+        }
         if (parts.Length >= 5 && parts[1] is "gif" or "video" && parts[3] == "thumb")
         {
             group = string.Join('/', parts.Take(5));
@@ -1446,71 +1550,24 @@ public sealed class VideoVariantLooseCleanupPreviewService
             .ToList();
         if (fileLimit.HasValue)
             selections = selections.Take(fileLimit.Value).ToList();
+        if (dbOnly)
+            return BuildDatabaseManifest(
+                config,
+                cacheNamespace,
+                directRoot,
+                selections,
+                issues,
+                scanned,
+                videos,
+                fileParallelism,
+                fileLimit,
+                createdUtc,
+                token
+            );
         SelectionCheckResult?[] results = new SelectionCheckResult[selections.Count];
         int checkedSelections = 0;
         int issueCount = issues.Count;
 
-        if (dbOnly)
-        {
-            for (int index = 0; index < selections.Count; index++)
-            {
-                token.ThrowIfCancellationRequested();
-                VideoVariantLooseSelection selection = selections[index];
-                List<VideoVariantLooseCleanupIssue> localIssues = [];
-                PendingOperation? operation = null;
-                string remove = selection.Remove.Path;
-                if (
-                    selection.Remove.PartitionId is not int partitionId
-                    || !config.MediaRoots.ContainsKey(partitionId)
-                )
-                {
-                    localIssues.Add(
-                        new(
-                            remove,
-                            "partition-unresolved",
-                            "Candidate partition is null, unavailable, or unresolved."
-                        )
-                    );
-                }
-                else if (
-                    selection.Keep.PartitionId is not int keepPartitionId
-                    || !config.MediaRoots.ContainsKey(keepPartitionId)
-                )
-                {
-                    localIssues.Add(
-                        new(
-                            remove,
-                            "keep-partition-unresolved",
-                            "Keep path partition is null or unresolved."
-                        )
-                    );
-                }
-                else if (selection.Remove.FileSize is not long originalSize)
-                {
-                    localIssues.Add(
-                        new(remove, "cache-size-null", "Candidate cache file_size is null.")
-                    );
-                }
-                else
-                {
-                    operation = new(
-                        remove,
-                        selection.Keep.Path,
-                        partitionId,
-                        originalSize,
-                        0,
-                        false,
-                        0,
-                        0
-                    );
-                }
-
-                results[index] = new(operation, localIssues);
-                issueCount += localIssues.Count;
-                checkedSelections++;
-            }
-        }
-        else
         {
             progress?.Report(
                 new(
@@ -1597,6 +1654,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
                                     remove,
                                     selection.Keep.Path,
                                     partitionId,
+                                    keepPartitionId,
                                     originalInfo.Length,
                                     originalInfo.LastWriteTimeUtc.Ticks,
                                     directInfo.Exists,
@@ -1693,14 +1751,134 @@ public sealed class VideoVariantLooseCleanupPreviewService
         return manifest;
     }
 
+    private static VideoVariantLooseCleanupManifest BuildDatabaseManifest(
+        ResolvedConfig config,
+        string cacheNamespace,
+        string directRoot,
+        List<VideoVariantLooseSelection> selections,
+        List<VideoVariantLooseCleanupIssue> issues,
+        long scanned,
+        long videos,
+        int fileParallelism,
+        int? fileLimit,
+        DateTimeOffset? createdUtc,
+        CancellationToken token
+    )
+    {
+        HashSet<string> invalidGroups = selections
+            .Where(selection =>
+                IsGroupedImagePath(selection.Remove.Path)
+                && (
+                    selection.Remove.PartitionId is not int partitionId
+                    || !config.MediaRoots.ContainsKey(partitionId)
+                    || selection.Keep.PartitionId is not int keepPartitionId
+                    || !config.MediaRoots.ContainsKey(keepPartitionId)
+                    || selection.Remove.FileSize is null
+                )
+            )
+            .Select(selection => GetGroupedImageDirectory(selection.Remove.Path))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (string group in invalidGroups.Order(StringComparer.Ordinal))
+            issues.Add(
+                new(
+                    group,
+                    "keep-set-invalid",
+                    "Image group contains unresolved partition or file size metadata."
+                )
+            );
+        if (invalidGroups.Count > 0)
+            selections.RemoveAll(selection =>
+                invalidGroups.Contains(GetGroupedImageDirectory(selection.Remove.Path))
+            );
+
+        for (int index = selections.Count - 1; index >= 0; index--)
+        {
+            token.ThrowIfCancellationRequested();
+            VideoVariantLooseSelection selection = selections[index];
+            string remove = selection.Remove.Path;
+            string? code = null;
+            string? message = null;
+            if (
+                selection.Remove.PartitionId is not int partitionId
+                || !config.MediaRoots.ContainsKey(partitionId)
+            )
+            {
+                code = "partition-unresolved";
+                message = "Candidate partition is null, unavailable, or unresolved.";
+            }
+            else if (
+                selection.Keep.PartitionId is not int keepPartitionId
+                || !config.MediaRoots.ContainsKey(keepPartitionId)
+            )
+            {
+                code = "keep-partition-unresolved";
+                message = "Keep path partition is null or unresolved.";
+            }
+            else if (selection.Remove.FileSize is null)
+            {
+                code = "cache-size-null";
+                message = "Candidate cache file_size is null.";
+            }
+            if (code is null)
+                continue;
+            issues.Add(new(remove, code, message!));
+            selections.RemoveAt(index);
+        }
+
+        string[] paths = selections
+            .SelectMany(item => new[] { item.Remove.Path, item.Keep.Path })
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .ToArray();
+        Dictionary<string, int> indices = paths
+            .Select((path, index) => (path, index))
+            .ToDictionary(value => value.path, value => value.index, StringComparer.Ordinal);
+        List<VideoVariantLooseCleanupOperation> operations = selections
+            .Select(item => new VideoVariantLooseCleanupOperation
+            {
+                RemovePathIndex = indices[item.Remove.Path],
+                KeepPathIndex = indices[item.Keep.Path],
+                PartitionId = item.Remove.PartitionId!.Value,
+                OriginalSize = item.Remove.FileSize!.Value,
+            })
+            .ToList();
+        selections.Clear();
+
+        VideoVariantLooseCleanupManifest manifest = new()
+        {
+            Version = 1,
+            CreatedUtc = createdUtc ?? DateTimeOffset.UtcNow,
+            DataConfigPath = config.DataConfigPath,
+            DataConfigLength = config.DataConfigLength,
+            DataConfigLastWriteUtcTicks = config.DataConfigLastWriteUtcTicks,
+            MediaStoreId = config.MediaStoreId,
+            CacheId = config.CacheId,
+            CacheNamespace = cacheNamespace,
+            DirectRoot = directRoot,
+            CacheRowsScanned = scanned,
+            VideoEntries = videos,
+            FileParallelism = fileParallelism,
+            SelectionLimit = fileLimit,
+            PhysicalChecked = false,
+            Paths = [.. paths],
+            Operations = operations,
+            Issues = issues
+                .OrderBy(issue => issue.Path, StringComparer.Ordinal)
+                .ThenBy(issue => issue.Code, StringComparer.Ordinal)
+                .ToList(),
+        };
+        manifest.ApprovalHash = CalculateApprovalHash(manifest);
+        return manifest;
+    }
+
     internal static string CalculateApprovalHash(VideoVariantLooseCleanupManifest manifest)
     {
         VideoVariantLooseCleanupManifest canonical = manifest with { ApprovalHash = string.Empty };
-        return Convert
-            .ToHexString(
-                SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(canonical, JsonOptions))
-            )
-            .ToLowerInvariant();
+        using SHA256 sha256 = SHA256.Create();
+        using CryptoStream stream = new(Stream.Null, sha256, CryptoStreamMode.Write);
+        JsonSerializer.Serialize(stream, canonical, JsonOptions);
+        stream.FlushFinalBlock();
+        return Convert.ToHexString(sha256.Hash!).ToLowerInvariant();
     }
 
     internal static ResolvedConfig LoadConfig(string path, string mediaStoreId, string cacheId)
@@ -2172,7 +2350,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
 
     private static void ValidateSelectionKind(string value)
     {
-        if (value is not ("video-variants" or "gif-thumbs" or "video-thumbs"))
+        if (value is not ("video-variants" or "gif-thumbs" or "video-thumbs" or "photo-variants"))
             throw new ArgumentException($"Unknown loose cleanup selection: {value}");
     }
 
@@ -2198,6 +2376,11 @@ public sealed class VideoVariantLooseCleanupPreviewService
             && paths.All(path => VideoThumbPathPattern.IsMatch(path.Replace('\\', '/')))
         )
             return VideoThumbRowsSql;
+        if (
+            paths.Length > 0
+            && paths.All(path => PhotoPathPattern.IsMatch(path.Replace('\\', '/')))
+        )
+            return PhotoRowsSql;
         return PreflightRowsSql;
     }
 
@@ -2222,6 +2405,7 @@ public sealed class VideoVariantLooseCleanupPreviewService
         string Remove,
         string Keep,
         int PartitionId,
+        int KeepPartitionId,
         long OriginalSize,
         long OriginalLastWriteUtcTicks,
         bool DirectPresent,
@@ -2318,6 +2502,9 @@ public sealed class VideoVariantLooseCleanupOperation
     public int RemovePathIndex { get; init; }
     public int KeepPathIndex { get; init; }
     public int PartitionId { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public int? KeepPartitionId { get; init; }
     public long OriginalSize { get; init; }
     public long OriginalLastWriteUtcTicks { get; init; }
     public bool DirectPresent { get; init; }

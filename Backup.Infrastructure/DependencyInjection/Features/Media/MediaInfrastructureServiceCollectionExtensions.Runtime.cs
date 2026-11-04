@@ -6,6 +6,7 @@ using Backup.Application.Media.Ports;
 using Backup.Application.Media.Prune;
 using Backup.Infrastructure.Media.Abstractions.Services;
 using Backup.Infrastructure.Media.Data;
+using Backup.Infrastructure.Media.Maintenance;
 using Backup.Infrastructure.Media.Services;
 using Backup.Infrastructure.Models.Config;
 using Microsoft.Extensions.DependencyInjection;
@@ -181,6 +182,7 @@ public static partial class MediaInfrastructureServiceCollectionExtensions
         services.AddScoped<IMediaFilter, MediaFilter>();
         services.AddScoped<IMediaReplication, MediaReplication>();
         services.AddScoped<IMediaDownloadService, MediaDownloadService>();
+        services.AddScoped<AutomaticLooseMediaPruneService>();
         services.AddScoped<IMediaDownloadModelMapper, MediaDownloadModelMapper>();
         services.AddScoped<IMediaDownloadParallelRunner, MediaDownloadParallelRunnerAdapter>();
         services.AddScoped<IMediaDownloader, MediaDownloaderHttp>();

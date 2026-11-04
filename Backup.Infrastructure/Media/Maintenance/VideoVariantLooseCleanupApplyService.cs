@@ -60,15 +60,19 @@ public sealed class VideoVariantLooseCleanupApplyService
         if (!namespaces.PrimaryNamespace.Equals(source.CacheNamespace, StringComparison.Ordinal))
             throw new InvalidOperationException("Primary cache namespace changed.");
 
-        string[] keepPaths = source
-            .Operations.Select(operation => NormalizePath(source.Paths[operation.KeepPathIndex]))
-            .Distinct(StringComparer.Ordinal)
-            .ToArray();
-        IReadOnlyDictionary<string, int> keepPartitionIds = await database.LoadPartitionIdsAsync(
-            namespaces.PrimaryNamespace,
-            keepPaths,
-            token
-        );
+        IReadOnlyDictionary<string, int>? keepPartitionIds = null;
+        if (source.Operations.Any(operation => operation.KeepPartitionId is null))
+        {
+            string[] keepPaths = source
+                .Operations.Select(operation => NormalizePath(source.Paths[operation.KeepPathIndex]))
+                .Distinct(StringComparer.Ordinal)
+                .ToArray();
+            keepPartitionIds = await database.LoadPartitionIdsAsync(
+                namespaces.PrimaryNamespace,
+                keepPaths,
+                token
+            );
+        }
 
         byte[] configBytes = await File.ReadAllBytesAsync(config.DataConfigPath, token);
         VideoVariantLooseCleanupApplyManifest manifest = new()
@@ -87,29 +91,43 @@ public sealed class VideoVariantLooseCleanupApplyService
                 .IncrementalNamespaces.Order(StringComparer.Ordinal)
                 .ToList(),
             DirectRoot = Path.GetFullPath(source.DirectRoot),
-            Paths = [.. source.Paths.Order(StringComparer.Ordinal)],
+            Paths = source.Paths,
         };
-        Dictionary<string, int> pathIndices = manifest
-            .Paths.Select((path, index) => (path, index))
-            .ToDictionary(value => value.path, value => value.index, StringComparer.Ordinal);
-        manifest.Operations = source
-            .Operations.Select(operation => new VideoVariantLooseCleanupApplyOperation
-            {
-                RemovePathIndex = pathIndices[source.Paths[operation.RemovePathIndex]],
-                KeepPathIndex = pathIndices[source.Paths[operation.KeepPathIndex]],
-                PartitionId = operation.PartitionId,
-                KeepPartitionId = keepPartitionIds[
-                    NormalizePath(source.Paths[operation.KeepPathIndex])
-                ],
-                OriginalSize = operation.OriginalSize,
-                OriginalLastWriteUtcTicks = operation.OriginalLastWriteUtcTicks,
-                DirectPresent = operation.DirectPresent,
-                DirectSize = operation.DirectSize,
-                DirectLastWriteUtcTicks = operation.DirectLastWriteUtcTicks,
-            })
-            .OrderBy(operation => operation.PartitionId)
-            .ThenBy(operation => manifest.Paths[operation.RemovePathIndex], StringComparer.Ordinal)
-            .ToList();
+        manifest.Operations = new List<VideoVariantLooseCleanupApplyOperation>(
+            source.Operations.Count
+        );
+        for (int index = 0; index < source.Operations.Count; index++)
+        {
+            VideoVariantLooseCleanupOperation operation = source.Operations[index];
+            manifest.Operations.Add(
+                new VideoVariantLooseCleanupApplyOperation
+                {
+                    RemovePathIndex = operation.RemovePathIndex,
+                    KeepPathIndex = operation.KeepPathIndex,
+                    PartitionId = operation.PartitionId,
+                    KeepPartitionId =
+                        operation.KeepPartitionId
+                        ?? keepPartitionIds![NormalizePath(source.Paths[operation.KeepPathIndex])],
+                    OriginalSize = operation.OriginalSize,
+                    OriginalLastWriteUtcTicks = operation.OriginalLastWriteUtcTicks,
+                    DirectPresent = operation.DirectPresent,
+                    DirectSize = operation.DirectSize,
+                    DirectLastWriteUtcTicks = operation.DirectLastWriteUtcTicks,
+                }
+            );
+            source.Operations[index] = null!;
+        }
+        source.Operations.Clear();
+        manifest.Operations.Sort((left, right) =>
+        {
+            int partition = left.PartitionId.CompareTo(right.PartitionId);
+            return partition != 0
+                ? partition
+                : StringComparer.Ordinal.Compare(
+                    manifest.Paths[left.RemovePathIndex],
+                    manifest.Paths[right.RemovePathIndex]
+                );
+        });
         manifest.OperationSetHash = CalculateOperationSetHash(manifest);
         manifest.ApprovalHash = CalculateApprovalHash(manifest);
         ValidateManifest(manifest, config.MediaRoots, verifyHash: true);
@@ -1157,47 +1175,50 @@ public sealed class VideoVariantLooseCleanupApplyService
         if (source.Issues.Count == 0)
             return;
 
-        HashSet<string> operationGroups = source
-            .Operations.SelectMany(operation =>
-                new[]
-                {
-                    source.Paths[operation.RemovePathIndex],
-                    source.Paths[operation.KeepPathIndex],
-                }
-            )
-            .Where(IsThumbPath)
-            .Select(GetThumbGroup)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         HashSet<string> issueGroups = new(StringComparer.OrdinalIgnoreCase);
 
         foreach (VideoVariantLooseCleanupIssue issue in source.Issues)
         {
             if (issue.Code != "keep-set-invalid")
                 throw new InvalidOperationException("Source manifest contains a fatal issue.");
-            string group = GetThumbGroup(issue.Path);
+            string group = GetGroupedImageGroup(issue.Path);
             if (!issueGroups.Add(group))
                 throw new InvalidOperationException(
                     "Source manifest contains duplicate issue groups."
                 );
-            if (operationGroups.Contains(group))
+        }
+
+        foreach (VideoVariantLooseCleanupOperation operation in source.Operations)
+        {
+            string remove = source.Paths[operation.RemovePathIndex];
+            string keep = source.Paths[operation.KeepPathIndex];
+            if (
+                (IsGroupedImagePath(remove)
+                    && issueGroups.Contains(GetGroupedImageGroup(remove)))
+                || (IsGroupedImagePath(keep)
+                    && issueGroups.Contains(GetGroupedImageGroup(keep)))
+            )
                 throw new InvalidOperationException(
-                    "Source manifest operates on an invalid thumbnail group."
+                    "Source manifest operates on an invalid image group."
                 );
         }
     }
 
-    private static string GetThumbGroup(string path)
+    private static string GetGroupedImageGroup(string path)
     {
         string[] parts = NormalizePath(path).Split('/');
+        if (parts.Length >= 4 && parts[1] == "photo")
+            return string.Join('/', parts.Take(4));
         if (parts.Length < 5 || !(parts[1] is "gif" or "video") || parts[3] != "thumb")
-            throw new InvalidOperationException("Issue path is not a thumbnail path.");
+            throw new InvalidOperationException("Issue path is not a grouped image path.");
         return string.Join('/', parts.Take(5));
     }
 
-    private static bool IsThumbPath(string path)
+    private static bool IsGroupedImagePath(string path)
     {
         string[] parts = NormalizePath(path).Split('/');
-        return parts.Length >= 5 && parts[1] is "gif" or "video" && parts[3] == "thumb";
+        return (parts.Length >= 4 && parts[1] == "photo")
+            || (parts.Length >= 5 && parts[1] is "gif" or "video" && parts[3] == "thumb");
     }
 
     private static void ValidateManifestStructure(
@@ -1273,24 +1294,26 @@ public sealed class VideoVariantLooseCleanupApplyService
         IEnumerable<(int Remove, int Keep)> operations
     )
     {
-        List<(int Remove, int Keep)> values = operations.ToList();
-
-        foreach ((int remove, int keep) in values)
+        bool[] removes = new bool[paths.Count];
+        bool[] keeps = new bool[paths.Count];
+        foreach ((int remove, int keep) in operations)
+        {
             if (remove < 0 || remove >= paths.Count || keep < 0 || keep >= paths.Count)
                 throw new InvalidOperationException("Manifest path index is out of range.");
-        HashSet<string> removes = [];
-
-        foreach ((int remove, int keep) in values)
-        {
-            string removePath = NormalizePath(paths[remove]);
-            string keepPath = NormalizePath(paths[keep]);
-            if (removePath == keepPath)
+            string removePath = paths[remove];
+            string keepPath = paths[keep];
+            if (removePath.Contains('\\') || keepPath.Contains('\\'))
+                throw new InvalidOperationException("Manifest paths must use forward slashes.");
+            if (StringComparer.OrdinalIgnoreCase.Equals(removePath, keepPath))
                 throw new InvalidOperationException("Remove path equals keep path.");
-            if (!removes.Add(removePath))
+            if (removes[remove])
                 throw new InvalidOperationException("Duplicate remove path.");
+            removes[remove] = true;
+            keeps[keep] = true;
         }
-        if (values.Any(value => removes.Contains(NormalizePath(paths[value.Keep]))))
-            throw new InvalidOperationException("Keep path is also removed.");
+        for (int index = 0; index < paths.Count; index++)
+            if (removes[index] && keeps[index])
+                throw new InvalidOperationException("Keep path is also removed.");
     }
 
     private ResolvedConfig ValidateCurrentConfig(VideoVariantLooseCleanupApplyManifest manifest)
@@ -2506,6 +2529,15 @@ public sealed class VideoVariantLooseCleanupApplyService
     private static string Sha256(byte[] bytes) =>
         Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
 
+    private static string JsonSha256<T>(T value, JsonSerializerOptions? options = null)
+    {
+        using SHA256 sha256 = SHA256.Create();
+        using CryptoStream stream = new(Stream.Null, sha256, CryptoStreamMode.Write);
+        JsonSerializer.Serialize(stream, value, options);
+        stream.FlushFinalBlock();
+        return Convert.ToHexString(sha256.Hash!).ToLowerInvariant();
+    }
+
     private static string NormalizePath(string path) => path.Replace('\\', '/').ToLowerInvariant();
 
     private static void WriteJsonAtomic<T>(string path, T value)
@@ -2514,7 +2546,8 @@ public sealed class VideoVariantLooseCleanupApplyService
         string temp = $"{full}.{Guid.NewGuid():N}.tmp";
         try
         {
-            File.WriteAllBytes(temp, JsonSerializer.SerializeToUtf8Bytes(value, JsonOptions));
+            using (FileStream stream = File.Create(temp))
+                JsonSerializer.Serialize(stream, value, JsonOptions);
             File.Move(temp, full, overwrite: true);
         }
         finally

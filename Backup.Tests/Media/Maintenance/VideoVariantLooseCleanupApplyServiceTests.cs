@@ -1129,6 +1129,123 @@ public sealed class VideoVariantLooseCleanupApplyServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Purge_ReconcileEmptyRecordsAbsentFilesAndArchivesJournal()
+    {
+        Setup setup = CreateSetup(direct: false);
+        FakeDatabase database = new(setup.PrimaryNamespace, Remove);
+        VideoVariantLooseCleanupApplyManifest manifest = ApplyManifest(setup);
+        VideoVariantLooseCleanupReceipt applyReceipt =
+            await new VideoVariantLooseCleanupApplyService(database).ApplyAsync(
+                manifest,
+                manifest.ApprovalHash,
+                setup.Journal,
+                setup.Receipt,
+                runtimeStoppedConfirmed: true
+            );
+        string drive = Path.GetPathRoot(setup.MediaRoot)![0].ToString();
+        string purgeJournal = Path.Combine(_root, "purge-reconcile.run.json");
+        string purgeReceiptPath = Path.Combine(_root, "purge-reconcile.receipt.json");
+        VideoVariantLooseCleanupPurgeService crashing = new()
+        {
+            FaultInjection = value =>
+            {
+                if (value == "after-delete")
+                    throw new TestCrashException();
+            },
+        };
+
+        await Assert.ThrowsAsync<TestCrashException>(
+            () =>
+                crashing.PurgeAsync(
+                    manifest,
+                    setup.Receipt,
+                    drive,
+                    applyReceipt.ReceiptHash,
+                    purgeJournal,
+                    purgeReceiptPath,
+                    batchSize: 1,
+                    runtimeStoppedConfirmed: true
+                )
+        );
+
+        VideoVariantLooseCleanupPurgeReceipt receipt =
+            new VideoVariantLooseCleanupPurgeService().ReconcileEmpty(
+                manifest,
+                setup.Receipt,
+                drive,
+                applyReceipt.ReceiptHash,
+                purgeJournal,
+                purgeReceiptPath,
+                runtimeStoppedConfirmed: true
+            );
+
+        Assert.Equal(2, receipt.Version);
+        Assert.Equal(0, receipt.FilesDeleted);
+        Assert.Equal(0, receipt.BytesDeleted);
+        Assert.Equal(1, receipt.FilesAlreadyAbsent);
+        Assert.Equal(applyReceipt.BytesQuarantined, receipt.BytesAlreadyAbsent);
+        Assert.Equal(64, receipt.ReconciledJournalSha256.Length);
+        Assert.False(File.Exists(purgeJournal));
+        Assert.True(File.Exists(purgeJournal + ".reconciled"));
+    }
+
+    [Fact]
+    public async Task Purge_ReconcileEmptyRejectsNonemptyQuarantine()
+    {
+        Setup setup = CreateSetup(direct: false);
+        FakeDatabase database = new(setup.PrimaryNamespace, Remove);
+        VideoVariantLooseCleanupApplyManifest manifest = ApplyManifest(setup);
+        VideoVariantLooseCleanupReceipt applyReceipt =
+            await new VideoVariantLooseCleanupApplyService(database).ApplyAsync(
+                manifest,
+                manifest.ApprovalHash,
+                setup.Journal,
+                setup.Receipt,
+                runtimeStoppedConfirmed: true
+            );
+        string drive = Path.GetPathRoot(setup.MediaRoot)![0].ToString();
+        string purgeJournal = Path.Combine(_root, "purge-nonempty.run.json");
+        string purgeReceiptPath = Path.Combine(_root, "purge-nonempty.receipt.json");
+        VideoVariantLooseCleanupPurgeService service = new();
+
+        await Assert.ThrowsAsync<TestCrashException>(
+            () =>
+                new VideoVariantLooseCleanupPurgeService
+                {
+                    FaultInjection = _ => throw new TestCrashException(),
+                }.PurgeAsync(
+                    manifest,
+                    setup.Receipt,
+                    drive,
+                    applyReceipt.ReceiptHash,
+                    purgeJournal,
+                    purgeReceiptPath,
+                    batchSize: 1,
+                    runtimeStoppedConfirmed: true
+                )
+        );
+        File.WriteAllText(
+            Path.Combine(service.Plan(manifest, setup.Receipt, drive).QuarantineRoot, "unexpected"),
+            "x"
+        );
+
+        Assert.Throws<InvalidOperationException>(
+            () =>
+                service.ReconcileEmpty(
+                    manifest,
+                    setup.Receipt,
+                    drive,
+                    applyReceipt.ReceiptHash,
+                    purgeJournal,
+                    purgeReceiptPath,
+                    runtimeStoppedConfirmed: true
+                )
+        );
+        Assert.True(File.Exists(purgeJournal));
+        Assert.False(File.Exists(purgeReceiptPath));
+    }
+
+    [Fact]
     public void Sql_UsesConcurrentExactIndexesAndSharedAdvisoryKey()
     {
         Assert.Equal(

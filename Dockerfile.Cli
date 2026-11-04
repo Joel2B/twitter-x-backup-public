@@ -25,7 +25,9 @@ RUN dotnet test Backup.Tests/Backup.Tests.csproj -c Release --no-restore
 RUN dotnet test Backup.IntegrationTests/Backup.IntegrationTests.csproj -c Release --no-restore
 
 FROM test AS publish
-RUN dotnet publish Backup.Cli/Backup.Cli.csproj -c Release --no-build -o /app/publish
+RUN dotnet publish Backup.Cli/Backup.Cli.csproj -c Release --no-restore -o /app/publish
+RUN dotnet /app/publish/Backup.Cli.dll maintenance video-variants reconcile-empty-purge-loose-v2 2>&1 \
+    | grep -q "Missing required option --manifest"
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.1 AS final
 WORKDIR /app

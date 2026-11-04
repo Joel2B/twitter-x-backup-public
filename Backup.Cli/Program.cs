@@ -11,6 +11,8 @@ if (args.Length >= 3 && args[0] == "maintenance" && args[1] == "video-variants")
     return;
 }
 
+bool automaticMediaPrune = args.Length >= 3 && args[0] == "maintenance" && args[1] == "media-prune";
+
 ServiceCollection services = new();
 ConfigurationManager configuration = new();
 configuration.AddJsonFile("appsettings.json", optional: true, reloadOnChange: false);
@@ -34,6 +36,11 @@ Console.Error.WriteLine("[startup] running setup");
 await scope.ServiceProvider.RunBackupInfrastructureSetup();
 
 Console.Error.WriteLine("[startup] resolving app");
+if (automaticMediaPrune)
+{
+    await RunAutomaticMediaPrune(scope.ServiceProvider, args[2], args[3..]);
+    return;
+}
 BackupCliRunner cliRunner = scope.ServiceProvider.GetRequiredService<BackupCliRunner>();
 
 using CancellationTokenSource cts = new();
@@ -46,6 +53,91 @@ Console.CancelKeyPress += (_, eventArgs) =>
 
 Console.Error.WriteLine("[startup] running backup");
 await cliRunner.RunBackup(cts.Token);
+
+static async Task RunAutomaticMediaPrune(
+    IServiceProvider provider,
+    string operation,
+    string[] options
+)
+{
+    AutomaticLooseMediaPruneService service = provider.GetRequiredService<AutomaticLooseMediaPruneService>();
+    string dataConfig = GetRequiredOption(options, "--data-config");
+    string mediaStore = GetRequiredOption(options, "--media-store");
+    string cache = GetRequiredOption(options, "--cache");
+    int batchSize = int.Parse(GetOption(options, "--batch-size") ?? "1000");
+    using CancellationTokenSource cts = new();
+    void handler(object? _, ConsoleCancelEventArgs eventArgs)
+    {
+        eventArgs.Cancel = true;
+        cts.Cancel();
+    }
+    Console.CancelKeyPress += handler;
+    try
+    {
+        Progress<AutomaticLooseMediaPruneProgress> progress = new(value =>
+        {
+            Console.Error.WriteLine(
+                $"[{value.Phase}] operations: {value.Completed}/{value.Total}, bytes: {value.Bytes}"
+            );
+            Console.Error.Flush();
+        });
+        if (operation == "prune")
+        {
+            AutomaticLooseMediaPruneResult result = await service.PruneAsync(
+                dataConfig,
+                mediaStore,
+                cache,
+                HasFlag(options, "--runtime-stopped-confirmed"),
+                batchSize,
+                progress,
+                cts.Token
+            );
+            Console.WriteLine($"run: {result.RunId}");
+            Console.WriteLine($"state: {result.State}");
+            Console.WriteLine($"operations: {result.Operations}");
+            Console.WriteLine($"completed: {result.Completed}");
+            Console.WriteLine($"bytes quarantined: {result.BytesQuarantined}");
+            Console.WriteLine($"purge after: {result.PurgeAfterUtc:O}");
+            return;
+        }
+        if (operation == "status")
+        {
+            IReadOnlyList<AutomaticLooseMediaPruneStatus> statuses = await service.StatusAsync(
+                dataConfig,
+                mediaStore,
+                cache,
+                cts.Token
+            );
+            foreach (AutomaticLooseMediaPruneStatus status in statuses)
+            {
+                Console.WriteLine(
+                    $"{status.RunId}  {status.State}  {status.Completed}/{status.Operations}  {status.Bytes} bytes  purge-after={status.PurgeAfterUtc:O}"
+                );
+            }
+            return;
+        }
+        if (operation == "purge-expired")
+        {
+            AutomaticLooseMediaPurgeResult result = await service.PurgeExpiredAsync(
+                dataConfig,
+                mediaStore,
+                cache,
+                HasFlag(options, "--runtime-stopped-confirmed"),
+                batchSize,
+                progress,
+                cts.Token
+            );
+            Console.WriteLine($"files deleted: {result.FilesDeleted}");
+            Console.WriteLine($"bytes deleted: {result.BytesDeleted}");
+            return;
+        }
+        throw new ArgumentException($"Unknown media prune operation: {operation}");
+    }
+    finally
+    {
+        Console.CancelKeyPress -= handler;
+    }
+}
 
 static async Task RunVideoVariantMaintenance(string operation, string[] options)
 {
@@ -61,9 +153,11 @@ static async Task RunVideoVariantMaintenance(string operation, string[] options)
             or "prepare-direct-delete-loose-v1"
             or "apply-direct-delete-loose-v1"
             or "verify-direct-delete-loose-v1"
-            or "reconcile-apply-loose-v1"
+             or "reconcile-apply-loose-v1"
+            or "split-physical-loose-v1"
             or "plan-purge-loose-v2"
             or "purge-loose-v2"
+            or "reconcile-empty-purge-loose-v2"
     )
     {
         await RunVideoVariantLooseMaintenance(operation, options);
@@ -189,6 +283,21 @@ static async Task RunVideoVariantLooseMaintenance(string operation, string[] opt
             );
             Console.Error.Flush();
         });
+
+        if (operation == "split-physical-loose-v1")
+        {
+            VideoVariantLooseCleanupSplitIndex index = new VideoVariantLooseCleanupManifestSplitService().Split(
+                GetRequiredOption(options, "--manifest"),
+                GetRequiredOption(options, "--output-dir"),
+                int.Parse(GetOption(options, "--chunk-size") ?? "100000")
+            );
+            Console.WriteLine($"index: {Path.GetFullPath(Path.Combine(GetRequiredOption(options, "--output-dir"), "index.json"))}");
+            Console.WriteLine($"source approval: {index.SourceApprovalHash}");
+            Console.WriteLine($"chunks: {index.Total}");
+            Console.WriteLine($"operations: {index.Operations}");
+            Console.WriteLine($"bytes: {index.Bytes}");
+            return;
+        }
 
         if (operation == "preview-loose-v1")
         {
@@ -353,12 +462,13 @@ static async Task RunVideoVariantLooseMaintenance(string operation, string[] opt
                 or "verify-loose-v2"
                 or "plan-purge-loose-v2"
                 or "purge-loose-v2"
+                or "reconcile-empty-purge-loose-v2"
         )
         {
             VideoVariantLooseCleanupApplyManifest manifest = applyService.LoadManifest(
                 GetRequiredOption(options, "--manifest")
             );
-            if (operation is "plan-purge-loose-v2" or "purge-loose-v2")
+            if (operation is "plan-purge-loose-v2" or "purge-loose-v2" or "reconcile-empty-purge-loose-v2")
             {
                 string applyReceipt = GetRequiredOption(options, "--receipt");
                 string drive = GetRequiredOption(options, "--drive");
@@ -374,6 +484,25 @@ static async Task RunVideoVariantLooseMaintenance(string operation, string[] opt
                 Console.WriteLine($"apply receipt hash: {plan.ApplyReceiptHash}");
                 if (operation == "plan-purge-loose-v2")
                     return;
+                if (operation == "reconcile-empty-purge-loose-v2")
+                {
+                    VideoVariantLooseCleanupPurgeReceipt reconciled =
+                        purgeService.ReconcileEmpty(
+                            manifest,
+                            applyReceipt,
+                            drive,
+                            GetRequiredOption(options, "--approval"),
+                            GetRequiredOption(options, "--journal"),
+                            GetRequiredOption(options, "--purge-receipt"),
+                            HasFlag(options, "--runtime-stopped-confirmed")
+                        );
+                    Console.WriteLine($"files deleted: {reconciled.FilesDeleted}");
+                    Console.WriteLine($"bytes deleted: {reconciled.BytesDeleted}");
+                    Console.WriteLine($"files already absent: {reconciled.FilesAlreadyAbsent}");
+                    Console.WriteLine($"bytes already absent: {reconciled.BytesAlreadyAbsent}");
+                    Console.WriteLine($"purge receipt hash: {reconciled.ReceiptHash}");
+                    return;
+                }
                 Progress<VideoVariantLooseCleanupPurgeProgress> purgeProgress = new(value =>
                 {
                     double percent =

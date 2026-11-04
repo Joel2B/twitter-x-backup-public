@@ -280,6 +280,103 @@ public sealed class VideoVariantLooseCleanupPreviewServiceTests : IDisposable
     }
 
     [Fact]
+    public void SelectPhotoCandidates_JpgKeepsOnlyOrigAndSeparatesSources()
+    {
+        const string first = "post/photo/media/source-1";
+        const string second = "post/photo/media/source-2";
+        List<VideoVariantLooseCleanupIssue> issues = [];
+
+        List<VideoVariantLooseSelection> result =
+            VideoVariantLooseCleanupPreviewService.SelectPhotoCandidates(
+                [
+                    Row($"{first}/jpg/dimension/4096x4096.jpg"),
+                    Row($"{first}/jpg/size/orig.jpg"),
+                    Row($"{first}/jpg/size/small.jpg"),
+                    Row($"{second}/jpg/size/orig.jpg"),
+                    Row($"{second}/jpg/size/thumb.jpg"),
+                ],
+                issues
+            );
+
+        Assert.Equal(3, result.Count);
+        Assert.All(
+            result.Where(item => item.Remove.Path.StartsWith(first, StringComparison.Ordinal)),
+            item => Assert.Equal($"{first}/jpg/size/orig.jpg", item.Keep.Path)
+        );
+        Assert.Contains(
+            result,
+            item =>
+                item.Remove.Path == $"{second}/jpg/size/thumb.jpg"
+                && item.Keep.Path == $"{second}/jpg/size/orig.jpg"
+        );
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void SelectPhotoCandidates_PngKeepsPngOrigAndJpgLarge()
+    {
+        const string root = "post/photo/media/source";
+        List<VideoVariantLooseCleanupIssue> issues = [];
+
+        List<VideoVariantLooseSelection> result =
+            VideoVariantLooseCleanupPreviewService.SelectPhotoCandidates(
+                [
+                    Row($"{root}/png/size/orig.png"),
+                    Row($"{root}/png/size/large.png"),
+                    Row($"{root}/jpg/size/orig.jpg"),
+                    Row($"{root}/jpg/size/large.jpg"),
+                    Row($"{root}/jpg/dimension/4096x4096.jpg"),
+                ],
+                issues
+            );
+
+        Assert.Equal(3, result.Count);
+        Assert.DoesNotContain(result, item => item.Remove.Path == $"{root}/png/size/orig.png");
+        Assert.DoesNotContain(result, item => item.Remove.Path == $"{root}/jpg/size/large.jpg");
+        Assert.Contains(result, item => item.Keep.Path == $"{root}/png/size/orig.png");
+        Assert.Contains(result, item => item.Keep.Path == $"{root}/jpg/size/large.jpg");
+        Assert.Empty(issues);
+    }
+
+    [Fact]
+    public void SelectPhotoCandidates_InvalidMemberOrCollisionBlocksWholeGroup()
+    {
+        const string malformed = "post/photo/media/source-1";
+        const string collision = "post/photo/media/source-2";
+        List<VideoVariantLooseCleanupIssue> issues = [];
+
+        List<VideoVariantLooseSelection> result =
+            VideoVariantLooseCleanupPreviewService.SelectPhotoCandidates(
+                [
+                    Row($"{malformed}/jpg/size/orig.jpg"),
+                    Row($"{malformed}/jpg/size/small.jpg"),
+                    Row($"{malformed}/png/size/orig.jpeg"),
+                    Row($"{collision}/jpg/size/orig.jpg"),
+                    Row($"{collision}/jpg/size/small.jpg"),
+                    Row($"{collision}/JPG/size/SMALL.jpg"),
+                ],
+                issues
+            );
+
+        Assert.Empty(result);
+        Assert.Contains(issues, issue => issue.Code == "unexpected-image-path");
+        Assert.Contains(issues, issue => issue.Code == "case-collision");
+    }
+
+    [Fact]
+    public void PhotoRowsSql_IsReadOnlyAndNamespaceScoped()
+    {
+        string sql = VideoVariantLooseCleanupPreviewService.PhotoRowsSql;
+
+        Assert.Contains("/photo/", sql, StringComparison.Ordinal);
+        Assert.Contains("namespace = @namespace", sql, StringComparison.Ordinal);
+        Assert.DoesNotContain("DELETE", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("UPDATE", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("INSERT", sql, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("CREATE", sql, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void PartitionAliasAndContainment_ResolveWithoutGuessing()
     {
         string aliasRoot = OperatingSystem.IsWindows() ? "L:" : "/mnt/l";
@@ -829,6 +926,71 @@ public sealed class VideoVariantLooseCleanupPreviewServiceTests : IDisposable
         Assert.True(result.IsValid);
         Assert.Single(result.PhysicalManifest!.Operations);
         Assert.Empty(result.PhysicalManifest.Issues);
+    }
+
+    [Fact]
+    public async Task PhysicalBuilder_PhotosEnumeratesWholeGroupAndSkipsSmallDirectProbe()
+    {
+        const string keep = "post/photo/media/source/jpg/size/orig.jpg";
+        const string remove = "post/photo/media/source/jpg/size/small.jpg";
+        const string unexpected = "post/photo/media/source/jpg/size/unexpected.jpg";
+        Directory.CreateDirectory(_root);
+        string mediaRoot = Path.Combine(_root, "media");
+        string directRoot = Path.Combine(_root, "direct");
+        WriteMedia(mediaRoot, keep, 5);
+        WriteMedia(mediaRoot, remove, 3);
+        WriteMedia(mediaRoot, unexpected, 2);
+        WriteMedia(directRoot, remove, 3);
+        VideoVariantLooseCleanupManifest source = SourceManifest(
+            directRoot,
+            [(remove, keep, 1, 3)]
+        );
+
+        VideoVariantLooseCleanupPreflightResult result =
+            await VideoVariantLooseCleanupPreviewService.BuildPhysicalManifestAsync(
+                source,
+                new Dictionary<int, string> { [1] = mediaRoot },
+                Rows((keep, 1))
+            );
+
+        Assert.True(result.IsValid);
+        Assert.Empty(result.PhysicalManifest!.Operations);
+        Assert.Equal(0, result.DirectFiles);
+        Assert.Contains(
+            result.PhysicalManifest.Issues,
+            issue =>
+                issue.Path == "post/photo/media/source" && issue.Code == "keep-set-invalid"
+        );
+    }
+
+    [Fact]
+    public async Task PhysicalBuilder_PhotoMissingKeepPreservesWholeGroup()
+    {
+        const string keep = "post/photo/media/source/jpg/size/orig.jpg";
+        const string remove = "post/photo/media/source/jpg/size/small.jpg";
+        Directory.CreateDirectory(_root);
+        string mediaRoot = Path.Combine(_root, "media");
+        WriteMedia(mediaRoot, remove, 3);
+        VideoVariantLooseCleanupManifest source = SourceManifest(
+            Path.Combine(_root, "direct"),
+            [(remove, keep, 1, 3)]
+        );
+
+        VideoVariantLooseCleanupPreflightResult result =
+            await VideoVariantLooseCleanupPreviewService.BuildPhysicalManifestAsync(
+                source,
+                new Dictionary<int, string> { [1] = mediaRoot },
+                Rows((keep, 1))
+            );
+
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+        Assert.Empty(result.PhysicalManifest!.Operations);
+        Assert.Single(
+            result.PhysicalManifest.Issues,
+            issue =>
+                issue.Path == "post/photo/media/source" && issue.Code == "keep-set-invalid"
+        );
     }
 
     private VideoVariantLooseCleanupManifest Build(

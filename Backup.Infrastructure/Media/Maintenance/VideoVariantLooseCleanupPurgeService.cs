@@ -168,6 +168,135 @@ public sealed class VideoVariantLooseCleanupPurgeService
         return purgeReceipt;
     }
 
+    public VideoVariantLooseCleanupPurgeReceipt ReconcileEmpty(
+        VideoVariantLooseCleanupApplyManifest manifest,
+        string applyReceiptPath,
+        string drive,
+        string approval,
+        string journalPath,
+        string receiptPath,
+        bool runtimeStoppedConfirmed = false
+    )
+    {
+        if (!runtimeStoppedConfirmed)
+            throw new InvalidOperationException("Runtime stopped confirmation is required.");
+        (
+            VideoVariantLooseCleanupReceipt applyReceipt,
+            List<PurgeWork> work,
+            string root,
+            string mediaRoot
+        ) = ValidateAndBuild(manifest, applyReceiptPath, drive);
+        string selector = NormalizeSelector(drive);
+        if (!approval.Equals(applyReceipt.ReceiptHash, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Approval hash does not match apply receipt.");
+
+        string fullJournalPath = RequireLocalOutputPath(journalPath, nameof(journalPath));
+        string fullReceiptPath = RequireLocalOutputPath(receiptPath, nameof(receiptPath));
+        if (!File.Exists(fullJournalPath))
+            throw new InvalidOperationException("Purge journal does not exist.");
+
+        byte[] journalBytes = File.ReadAllBytes(fullJournalPath);
+        VideoVariantLooseCleanupPurgeJournal parsedJournal =
+            JsonSerializer.Deserialize<VideoVariantLooseCleanupPurgeJournal>(
+                journalBytes,
+                JsonOptions
+            ) ?? throw new InvalidOperationException("Invalid purge journal.");
+        VideoVariantLooseCleanupPurgeJournal journal = LoadOrCreateJournal(
+            manifest,
+            applyReceipt,
+            selector,
+            fullJournalPath,
+            parsedJournal.BatchSize,
+            parsedJournal.Batches.Count,
+            resume: true
+        );
+        for (int batchIndex = 0; batchIndex < journal.Batches.Count; batchIndex++)
+        {
+            VideoVariantLooseCleanupPurgeJournalBatch batch = journal.Batches[batchIndex];
+            PurgeWork[] batchWork = work
+                .Skip(batchIndex * journal.BatchSize)
+                .Take(journal.BatchSize)
+                .ToArray();
+            bool verified = batch.State == "verified";
+            if (
+                batch.Index != batchIndex
+                || batch.State is not ("pending" or "deleting" or "verified")
+                || batch.FilesDeleted != (verified ? batchWork.Length : 0)
+                || batch.BytesDeleted != (verified ? batchWork.Sum(value => value.Size) : 0)
+            )
+                throw new InvalidOperationException("Purge journal batch state is invalid.");
+        }
+
+        using FileStream fileLock = new(
+            Path.Combine(mediaRoot, LockFileName),
+            FileMode.OpenOrCreate,
+            FileAccess.ReadWrite,
+            FileShare.None
+        );
+        if (Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories).Any())
+            throw new InvalidOperationException("Quarantine root is not empty; reconciliation refused.");
+
+        int filesDeleted = journal.Batches.Sum(batch => batch.FilesDeleted);
+        long bytesDeleted = journal.Batches.Sum(batch => batch.BytesDeleted);
+        if (filesDeleted < 0 || filesDeleted > work.Count || bytesDeleted < 0 || bytesDeleted > work.Sum(value => value.Size))
+            throw new InvalidOperationException("Purge journal counters are invalid.");
+
+        string journalSha256 = Sha256(journalBytes);
+        if (File.Exists(fullReceiptPath))
+        {
+            VideoVariantLooseCleanupPurgeReceipt completed = LoadPurgeReceipt(fullReceiptPath);
+            if (
+                completed.Version != 2
+                || completed.ApplyReceiptHash != applyReceipt.ReceiptHash
+                || !PhysicalPathSemantics.Comparer.Equals(completed.Drive, selector)
+                || completed.ReconciledJournalSha256 != journalSha256
+            )
+                throw new InvalidOperationException(
+                    "Purge receipt path already contains a different receipt."
+                );
+            PreserveReconciledJournal(fullJournalPath, journalBytes);
+            File.Delete(fullJournalPath);
+            return completed;
+        }
+
+        VideoVariantLooseCleanupPurgeReceipt purgeReceipt = new()
+        {
+            Version = 2,
+            ApplyReceiptHash = applyReceipt.ReceiptHash,
+            OperationSetHash = manifest.OperationSetHash,
+            Drive = selector,
+            QuarantineRoot = root,
+            Host = Environment.MachineName,
+            ProcessId = Environment.ProcessId,
+            RunId = journal.RunId,
+            StartedUtc = journal.StartedUtc,
+            CompletedUtc = DateTimeOffset.UtcNow,
+            FilesDeleted = filesDeleted,
+            BytesDeleted = bytesDeleted,
+            FilesAlreadyAbsent = work.Count - filesDeleted,
+            BytesAlreadyAbsent = work.Sum(value => value.Size) - bytesDeleted,
+            Batches = journal.Batches.Count,
+            ReconciledJournalSha256 = journalSha256,
+        };
+        purgeReceipt.ReceiptHash = CalculatePurgeReceiptHash(purgeReceipt);
+        PreserveReconciledJournal(fullJournalPath, journalBytes);
+        WriteJsonAtomic(fullReceiptPath, purgeReceipt);
+        File.Delete(fullJournalPath);
+        return purgeReceipt;
+    }
+
+    private static void PreserveReconciledJournal(string journalPath, byte[] journalBytes)
+    {
+        string reconciledJournalPath = journalPath + ".reconciled";
+        if (File.Exists(reconciledJournalPath))
+        {
+            if (Sha256(File.ReadAllBytes(reconciledJournalPath)) != Sha256(journalBytes))
+                throw new InvalidOperationException("Reconciled purge journal changed.");
+            return;
+        }
+        File.Copy(journalPath, reconciledJournalPath);
+    }
+
     private static (
         VideoVariantLooseCleanupReceipt Receipt,
         List<PurgeWork> Work,
@@ -427,13 +556,32 @@ public sealed class VideoVariantLooseCleanupPurgeService
 
     internal static string CalculatePurgeReceiptHash(
         VideoVariantLooseCleanupPurgeReceipt receipt
-    ) =>
-        Sha256(
+    ) => receipt.Version == 1
+        ? Sha256(
             JsonSerializer.SerializeToUtf8Bytes(
-                receipt with
+                new VideoVariantLooseCleanupPurgeReceiptV1
                 {
+                    Version = receipt.Version,
+                    ApplyReceiptHash = receipt.ApplyReceiptHash,
+                    OperationSetHash = receipt.OperationSetHash,
+                    Drive = receipt.Drive,
+                    QuarantineRoot = receipt.QuarantineRoot,
+                    Host = receipt.Host,
+                    ProcessId = receipt.ProcessId,
+                    RunId = receipt.RunId,
+                    StartedUtc = receipt.StartedUtc,
+                    CompletedUtc = receipt.CompletedUtc,
+                    FilesDeleted = receipt.FilesDeleted,
+                    BytesDeleted = receipt.BytesDeleted,
+                    Batches = receipt.Batches,
                     ReceiptHash = string.Empty,
                 },
+                JsonOptions
+            )
+        )
+        : Sha256(
+            JsonSerializer.SerializeToUtf8Bytes(
+                receipt with { ReceiptHash = string.Empty },
                 JsonOptions
             )
         );
@@ -465,6 +613,24 @@ public sealed class VideoVariantLooseCleanupPurgeService
     }
 
     private sealed record PurgeWork(string Path, long Size, long LastWriteUtcTicks);
+
+    private sealed record VideoVariantLooseCleanupPurgeReceiptV1
+    {
+        public int Version { get; init; }
+        public string ApplyReceiptHash { get; init; } = string.Empty;
+        public string OperationSetHash { get; init; } = string.Empty;
+        public string Drive { get; init; } = string.Empty;
+        public string QuarantineRoot { get; init; } = string.Empty;
+        public string Host { get; init; } = string.Empty;
+        public int ProcessId { get; init; }
+        public Guid RunId { get; init; }
+        public DateTimeOffset StartedUtc { get; init; }
+        public DateTimeOffset CompletedUtc { get; init; }
+        public int FilesDeleted { get; init; }
+        public long BytesDeleted { get; init; }
+        public int Batches { get; init; }
+        public string ReceiptHash { get; init; } = string.Empty;
+    }
 }
 
 public sealed record VideoVariantLooseCleanupPurgePlan(
@@ -498,7 +664,10 @@ public sealed record VideoVariantLooseCleanupPurgeReceipt
     public DateTimeOffset CompletedUtc { get; init; }
     public int FilesDeleted { get; init; }
     public long BytesDeleted { get; init; }
+    public int FilesAlreadyAbsent { get; init; }
+    public long BytesAlreadyAbsent { get; init; }
     public int Batches { get; init; }
+    public string ReconciledJournalSha256 { get; init; } = string.Empty;
     public string ReceiptHash { get; set; } = string.Empty;
 }
 
