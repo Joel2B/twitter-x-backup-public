@@ -17,6 +17,8 @@ public sealed class AutomaticLooseMediaPruneService(
 {
     private const int RetentionDays = 7;
     private const string QuarantineDirectory = ".media-prune-quarantine";
+    private const string RunSelect =
+        "SELECT run_id, media_store_id, cache_id, cache_namespace, policy_hash, projection_hash, approval_hash, state, created_utc, operation_count, planned_bytes FROM media_loose_prune_runs";
     private static readonly Regex SupportedPath = new(
         @"^(?:[^/]+/photo/[^/]+/[^/]+/(?:jpg|png)/(?:dimension|size)/[^/]+\.(?:jpg|png)|[^/]+/(?:gif|video)/[^/]+/thumb/[^/]+/(?:jpg|png)/(?:dimension|size)/[^/]+\.(?:jpg|png)|[^/]+/video/[^/]+/mp4/[^/]+/[^/]+\.mp4)$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase
@@ -24,22 +26,24 @@ public sealed class AutomaticLooseMediaPruneService(
     private readonly AppConfig _appConfig = appConfig;
     private readonly IMediaOrchestrationCommand _mediaCommand = mediaCommand;
 
-    public async Task<AutomaticLooseMediaPruneResult> PruneAsync(
+    public Task<AutomaticLooseMediaPrunePreviewResult> PruneAsync(
         string dataConfigPath,
         string mediaStoreId,
         string cacheId,
-        bool runtimeStoppedConfirmed,
-        int batchSize = 1000,
+        IProgress<AutomaticLooseMediaPruneProgress>? progress = null,
+        CancellationToken token = default
+    ) => PreviewAsync(dataConfigPath, mediaStoreId, cacheId, progress, token);
+
+    public async Task<AutomaticLooseMediaPrunePreviewResult> PreviewAsync(
+        string dataConfigPath,
+        string mediaStoreId,
+        string cacheId,
         IProgress<AutomaticLooseMediaPruneProgress>? progress = null,
         CancellationToken token = default
     )
     {
-        if (!runtimeStoppedConfirmed)
-            throw new InvalidOperationException("Runtime stopped confirmation is required.");
         if (!_appConfig.Medias.Enabled)
             throw new InvalidOperationException("Media processing is disabled; prune will not treat that as an empty policy.");
-        if (batchSize <= 0)
-            throw new ArgumentOutOfRangeException(nameof(batchSize));
 
         ResolvedConfig config = VideoVariantLooseCleanupPreviewService.LoadConfig(
             dataConfigPath,
@@ -62,27 +66,21 @@ public sealed class AutomaticLooseMediaPruneService(
             );
             if (active is not null)
             {
+                if (
+                    active.State == "planned"
+                    && active.PolicyHash.Equals(policyHash, StringComparison.OrdinalIgnoreCase)
+                )
+                    return ToPreviewResult(active);
                 if (!active.PolicyHash.Equals(policyHash, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidOperationException(
-                        $"Active prune run {active.RunId} uses a different Medias.json policy. Resume with the original policy before creating another run."
+                        $"Active prune run {active.RunId} uses a different Medias.json policy. Cancel the planned run or finish the applying run first."
                     );
-                return await ApplyAsync(connection, config, active, batchSize, progress, token);
+                throw new InvalidOperationException(
+                    $"Prune run {active.RunId} is already applying; resume it with the apply command."
+                );
             }
 
-            IReadOnlyList<Backup.Domain.Posts.MediaInput> inputs = await _mediaCommand.GetMediaInputs(token);
-            Backup.Application.Media.Models.MediaProcessingResult projection = await _mediaCommand.Process(
-                inputs,
-                token
-            );
-            HashSet<string> desired = projection
-                .Filtered.SelectMany(download => download.Data)
-                .Select(data => Normalize(data.Path))
-                .Where(path => SupportedPath.IsMatch(path))
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-            if (desired.Count == 0)
-                throw new InvalidOperationException(
-                    "Active policy projected zero supported loose media paths; destructive empty-policy prune is refused."
-                );
+            (HashSet<string> desired, string projectionHash) = await ProjectDesiredAsync(token);
 
             string cacheNamespace = await DiscoverNamespaceAsync(
                 connection,
@@ -96,12 +94,90 @@ public sealed class AutomaticLooseMediaPruneService(
                 config,
                 cacheNamespace,
                 policyHash,
+                projectionHash,
                 desired,
                 rows,
                 token
             );
-            progress?.Report(new("planned", 0, run.OperationCount, 0));
-            return await ApplyAsync(connection, config, run, batchSize, progress, token);
+            progress?.Report(new("planned", 0, run.OperationCount, run.PlannedBytes));
+            return ToPreviewResult(run);
+        }
+        finally
+        {
+            await ReleaseLockAsync(connection, mediaStoreId, cacheId, CancellationToken.None);
+        }
+    }
+
+    public async Task<AutomaticLooseMediaPruneResult> ApplyAsync(
+        string dataConfigPath,
+        string mediaStoreId,
+        string cacheId,
+        Guid runId,
+        string approval,
+        bool runtimeStoppedConfirmed,
+        int batchSize = 1000,
+        IProgress<AutomaticLooseMediaPruneProgress>? progress = null,
+        CancellationToken token = default
+    )
+    {
+        if (!runtimeStoppedConfirmed)
+            throw new InvalidOperationException("Runtime stopped confirmation is required.");
+        if (batchSize <= 0)
+            throw new ArgumentOutOfRangeException(nameof(batchSize));
+        if (!_appConfig.Medias.Enabled)
+            throw new InvalidOperationException("Media processing is disabled; apply is refused.");
+
+        ResolvedConfig config = VideoVariantLooseCleanupPreviewService.LoadConfig(
+            dataConfigPath,
+            mediaStoreId,
+            cacheId
+        );
+        string policyHash = Hash(JsonSerializer.SerializeToUtf8Bytes(_appConfig.Medias));
+        await using NpgsqlConnection connection = new(config.ConnectionString);
+        await connection.OpenAsync(token);
+        await EnsureSchemaAsync(connection, token);
+        await AcquireLockAsync(connection, mediaStoreId, cacheId, token);
+        try
+        {
+            AutomaticLooseMediaPruneRun run = await LoadRunAsync(connection, runId, token)
+                ?? throw new InvalidOperationException($"Prune run was not found: {runId}");
+            if (run.MediaStoreId != mediaStoreId || run.CacheId != cacheId)
+                throw new InvalidOperationException("Prune run belongs to a different media store or cache.");
+            if (!FixedEquals(run.ApprovalHash, approval))
+                throw new InvalidOperationException("Approval hash does not match prune plan.");
+            if (!run.PolicyHash.Equals(policyHash, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Medias.json changed after preview; create a new preview.");
+            if (run.State is not ("planned" or "applying"))
+                throw new InvalidOperationException($"Prune run cannot be applied from state '{run.State}'.");
+
+            (HashSet<string> desired, string projectionHash) = await ProjectDesiredAsync(token);
+            if (!run.ProjectionHash.Equals(projectionHash, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Projected media paths changed after preview; create a new preview.");
+            string currentNamespace = await DiscoverNamespaceAsync(
+                connection,
+                mediaStoreId,
+                cacheId,
+                token
+            );
+            if (!run.CacheNamespace.Equals(currentNamespace, StringComparison.Ordinal))
+                throw new InvalidOperationException("Primary cache namespace changed after preview.");
+            (string currentApproval, HashSet<string> plannedGroups) =
+                await CalculateStoredApprovalHashAsync(
+                    connection,
+                    run,
+                    token
+                );
+            if (!FixedEquals(run.ApprovalHash, currentApproval))
+                throw new InvalidOperationException("Stored prune operations no longer match approval hash.");
+            await ValidateDesiredForPlannedGroupsAsync(
+                connection,
+                config,
+                run,
+                desired,
+                plannedGroups,
+                token
+            );
+            return await ApplyPlannedAsync(connection, config, run, batchSize, progress, token);
         }
         finally
         {
@@ -124,7 +200,8 @@ public sealed class AutomaticLooseMediaPruneService(
         command.CommandText = """
             SELECT r.run_id, r.state, r.created_utc, r.purge_after_utc, r.operation_count,
                    count(o.*) FILTER (WHERE o.state IN ('verified', 'purged')),
-                   coalesce(sum(o.file_size) FILTER (WHERE o.state IN ('verified', 'purged')), 0)
+                   coalesce(sum(o.file_size) FILTER (WHERE o.state IN ('verified', 'purged')), 0),
+                   r.approval_hash, r.planned_bytes
             FROM media_loose_prune_runs r
             LEFT JOIN media_loose_prune_operations o ON o.run_id = r.run_id
             WHERE r.media_store_id = @store AND r.cache_id = @cache
@@ -141,10 +218,41 @@ public sealed class AutomaticLooseMediaPruneService(
             result.Add(new(
                 reader.GetGuid(0), reader.GetString(1), Utc(reader.GetDateTime(2)),
                 reader.IsDBNull(3) ? null : Utc(reader.GetDateTime(3)),
-                reader.GetInt64(4), reader.GetInt64(5), reader.GetInt64(6)
+                reader.GetInt64(4), reader.GetInt64(5), reader.GetInt64(6),
+                reader.GetString(7), reader.GetInt64(8)
             ));
         }
         return result;
+    }
+
+    public async Task CancelAsync(
+        string dataConfigPath,
+        string mediaStoreId,
+        string cacheId,
+        Guid runId,
+        CancellationToken token = default
+    )
+    {
+        ResolvedConfig config = VideoVariantLooseCleanupPreviewService.LoadConfig(
+            dataConfigPath,
+            mediaStoreId,
+            cacheId
+        );
+        await using NpgsqlConnection connection = new(config.ConnectionString);
+        await connection.OpenAsync(token);
+        await EnsureSchemaAsync(connection, token);
+        await using NpgsqlCommand command = connection.CreateCommand();
+        command.CommandText = """
+            UPDATE media_loose_prune_runs
+            SET state = 'cancelled', completed_utc = CURRENT_TIMESTAMP
+            WHERE run_id = @run AND media_store_id = @store AND cache_id = @cache
+              AND state = 'planned'
+            """;
+        command.Parameters.AddWithValue("run", runId);
+        command.Parameters.AddWithValue("store", mediaStoreId);
+        command.Parameters.AddWithValue("cache", cacheId);
+        if (await command.ExecuteNonQueryAsync(token) != 1)
+            throw new InvalidOperationException("Only an existing planned prune run can be cancelled.");
     }
 
     public async Task<AutomaticLooseMediaPurgeResult> PurgeExpiredAsync(
@@ -209,6 +317,7 @@ public sealed class AutomaticLooseMediaPruneService(
         ResolvedConfig config,
         string cacheNamespace,
         string policyHash,
+        string projectionHash,
         HashSet<string> desired,
         List<CacheRow> rows,
         CancellationToken token
@@ -287,33 +396,49 @@ public sealed class AutomaticLooseMediaPruneService(
             RejectReparsePath(keepFile, config.MediaRoots[keep.PartitionId.Value]);
             operations.Add(new(
                 runId, operations.Count, path, row.PartitionId.Value, sourceInfo.Length,
-                sourceInfo.LastWriteTimeUtc.Ticks, Normalize(keep.Path), keep.PartitionId.Value, "pending"
+                sourceInfo.LastWriteTimeUtc.Ticks, Normalize(keep.Path), keep.PartitionId.Value,
+                keepInfo.Length, keepInfo.LastWriteTimeUtc.Ticks, "pending"
             ));
         }
 
         DateTimeOffset created = DateTimeOffset.UtcNow;
+        long plannedBytes = operations.Sum(operation => operation.FileSize);
+        string approvalHash = CalculateApprovalHash(
+            runId,
+            config.MediaStoreId,
+            config.CacheId,
+            cacheNamespace,
+            policyHash,
+            projectionHash,
+            operations
+        );
         await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(token);
         await using (NpgsqlCommand command = connection.CreateCommand())
         {
             command.Transaction = transaction;
             command.CommandText = """
                 INSERT INTO media_loose_prune_runs
-                    (run_id, media_store_id, cache_id, cache_namespace, policy_hash, state, created_utc, operation_count)
-                VALUES (@id, @store, @cache, @namespace, @policy, 'planned', @created, @count)
+                    (run_id, media_store_id, cache_id, cache_namespace, policy_hash,
+                     projection_hash, approval_hash, state, created_utc, operation_count, planned_bytes)
+                VALUES (@id, @store, @cache, @namespace, @policy,
+                        @projection, @approval, 'planned', @created, @count, @bytes)
                 """;
             command.Parameters.AddWithValue("id", runId);
             command.Parameters.AddWithValue("store", config.MediaStoreId);
             command.Parameters.AddWithValue("cache", config.CacheId);
             command.Parameters.AddWithValue("namespace", cacheNamespace);
             command.Parameters.AddWithValue("policy", policyHash);
+            command.Parameters.AddWithValue("projection", projectionHash);
+            command.Parameters.AddWithValue("approval", approvalHash);
             command.Parameters.AddWithValue("created", created);
             command.Parameters.AddWithValue("count", operations.Count);
+            command.Parameters.AddWithValue("bytes", plannedBytes);
             await command.ExecuteNonQueryAsync(token);
         }
         if (operations.Count > 0)
         {
             await using NpgsqlBinaryImporter importer = await connection.BeginBinaryImportAsync(
-                "COPY media_loose_prune_operations (run_id, operation_index, path, partition_id, file_size, last_write_utc_ticks, keep_path, keep_partition_id, state) FROM STDIN (FORMAT BINARY)", token
+                "COPY media_loose_prune_operations (run_id, operation_index, path, partition_id, file_size, last_write_utc_ticks, keep_path, keep_partition_id, keep_file_size, keep_last_write_utc_ticks, state) FROM STDIN (FORMAT BINARY)", token
             );
             foreach (PruneOperation operation in operations)
             {
@@ -326,15 +451,29 @@ public sealed class AutomaticLooseMediaPruneService(
                 await importer.WriteAsync(operation.LastWriteUtcTicks, NpgsqlDbType.Bigint, token);
                 await importer.WriteAsync(operation.KeepPath, NpgsqlDbType.Text, token);
                 await importer.WriteAsync(operation.KeepPartitionId, NpgsqlDbType.Integer, token);
+                await importer.WriteAsync(operation.KeepFileSize, NpgsqlDbType.Bigint, token);
+                await importer.WriteAsync(operation.KeepLastWriteUtcTicks, NpgsqlDbType.Bigint, token);
                 await importer.WriteAsync(operation.State, NpgsqlDbType.Text, token);
             }
             await importer.CompleteAsync(token);
         }
         await transaction.CommitAsync(token);
-        return new(runId, config.MediaStoreId, config.CacheId, cacheNamespace, policyHash, "planned", created, operations.Count);
+        return new(
+            runId,
+            config.MediaStoreId,
+            config.CacheId,
+            cacheNamespace,
+            policyHash,
+            projectionHash,
+            approvalHash,
+            "planned",
+            created,
+            operations.Count,
+            plannedBytes
+        );
     }
 
-    private static async Task<AutomaticLooseMediaPruneResult> ApplyAsync(
+    private static async Task<AutomaticLooseMediaPruneResult> ApplyPlannedAsync(
         NpgsqlConnection connection,
         ResolvedConfig config,
         AutomaticLooseMediaPruneRun run,
@@ -369,6 +508,11 @@ public sealed class AutomaticLooseMediaPruneService(
                 FileInfo keepInfo = new(keep);
                 if (!keepInfo.Exists)
                     throw new InvalidOperationException($"Keep file is absent: {keep}");
+                if (
+                    keepInfo.Length != operation.KeepFileSize
+                    || keepInfo.LastWriteTimeUtc.Ticks != operation.KeepLastWriteUtcTicks
+                )
+                    throw new InvalidOperationException($"Keep file changed after planning: {keep}");
                 FileInfo sourceInfo = new(source);
                 FileInfo quarantineInfo = new(quarantine);
                 if (sourceInfo.Exists)
@@ -423,12 +567,21 @@ public sealed class AutomaticLooseMediaPruneService(
                 cache_id text NOT NULL,
                 cache_namespace text NOT NULL,
                 policy_hash text NOT NULL,
+                projection_hash text NOT NULL DEFAULT '',
+                approval_hash text NOT NULL DEFAULT '',
                 state text NOT NULL,
                 created_utc timestamptz NOT NULL,
                 purge_after_utc timestamptz NULL,
                 completed_utc timestamptz NULL,
-                operation_count bigint NOT NULL
+                operation_count bigint NOT NULL,
+                planned_bytes bigint NOT NULL DEFAULT 0
             );
+            ALTER TABLE media_loose_prune_runs
+                ADD COLUMN IF NOT EXISTS projection_hash text NOT NULL DEFAULT '';
+            ALTER TABLE media_loose_prune_runs
+                ADD COLUMN IF NOT EXISTS approval_hash text NOT NULL DEFAULT '';
+            ALTER TABLE media_loose_prune_runs
+                ADD COLUMN IF NOT EXISTS planned_bytes bigint NOT NULL DEFAULT 0;
             CREATE UNIQUE INDEX IF NOT EXISTS ux_media_loose_prune_active_run
                 ON media_loose_prune_runs (media_store_id, cache_id)
                 WHERE state IN ('planned', 'applying');
@@ -441,12 +594,18 @@ public sealed class AutomaticLooseMediaPruneService(
                 last_write_utc_ticks bigint NOT NULL,
                 keep_path text NOT NULL,
                 keep_partition_id integer NOT NULL,
+                keep_file_size bigint NOT NULL DEFAULT 0,
+                keep_last_write_utc_ticks bigint NOT NULL DEFAULT 0,
                 state text NOT NULL,
                 updated_utc timestamptz NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (run_id, operation_index)
             );
             CREATE INDEX IF NOT EXISTS ix_media_loose_prune_operations_state
                 ON media_loose_prune_operations (run_id, state, operation_index);
+            ALTER TABLE media_loose_prune_operations
+                ADD COLUMN IF NOT EXISTS keep_file_size bigint NOT NULL DEFAULT 0;
+            ALTER TABLE media_loose_prune_operations
+                ADD COLUMN IF NOT EXISTS keep_last_write_utc_ticks bigint NOT NULL DEFAULT 0;
             """;
         await command.ExecuteNonQueryAsync(token);
     }
@@ -484,13 +643,80 @@ public sealed class AutomaticLooseMediaPruneService(
     private static async Task<AutomaticLooseMediaPruneRun?> LoadActiveRunAsync(NpgsqlConnection connection, string store, string cache, CancellationToken token)
     {
         await using NpgsqlCommand command = connection.CreateCommand();
-        command.CommandText = "SELECT run_id, media_store_id, cache_id, cache_namespace, policy_hash, state, created_utc, operation_count FROM media_loose_prune_runs WHERE media_store_id = @store AND cache_id = @cache AND state IN ('planned', 'applying') ORDER BY created_utc LIMIT 1";
+        command.CommandText = RunSelect + " WHERE media_store_id = @store AND cache_id = @cache AND state IN ('planned', 'applying') ORDER BY created_utc LIMIT 1";
         command.Parameters.AddWithValue("store", store);
         command.Parameters.AddWithValue("cache", cache);
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(token);
-        return await reader.ReadAsync(token)
-            ? new(reader.GetGuid(0), reader.GetString(1), reader.GetString(2), reader.GetString(3), reader.GetString(4), reader.GetString(5), Utc(reader.GetDateTime(6)), reader.GetInt64(7))
-            : null;
+        return await reader.ReadAsync(token) ? ReadRun(reader) : null;
+    }
+
+    private static async Task<AutomaticLooseMediaPruneRun?> LoadRunAsync(
+        NpgsqlConnection connection,
+        Guid runId,
+        CancellationToken token
+    )
+    {
+        await using NpgsqlCommand command = connection.CreateCommand();
+        command.CommandText = RunSelect + " WHERE run_id = @run";
+        command.Parameters.AddWithValue("run", runId);
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(token);
+        return await reader.ReadAsync(token) ? ReadRun(reader) : null;
+    }
+
+    private async Task<(HashSet<string> Desired, string ProjectionHash)> ProjectDesiredAsync(
+        CancellationToken token
+    )
+    {
+        IReadOnlyList<Backup.Domain.Posts.MediaInput> inputs = await _mediaCommand.GetMediaInputs(token);
+        Backup.Application.Media.Models.MediaProcessingResult projection = await _mediaCommand.Process(
+            inputs,
+            token
+        );
+        HashSet<string> desired = projection
+            .Filtered.SelectMany(download => download.Data)
+            .Select(data => Normalize(data.Path))
+            .Where(path => SupportedPath.IsMatch(path))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (desired.Count == 0)
+            throw new InvalidOperationException(
+                "Active policy projected zero supported loose media paths; destructive empty-policy prune is refused."
+            );
+        string projectionHash = Hash(
+            Encoding.UTF8.GetBytes(
+                string.Join('\n', desired.Order(StringComparer.OrdinalIgnoreCase))
+            )
+        );
+        return (desired, projectionHash);
+    }
+
+    private static async Task ValidateDesiredForPlannedGroupsAsync(
+        NpgsqlConnection connection,
+        ResolvedConfig config,
+        AutomaticLooseMediaPruneRun run,
+        HashSet<string> desired,
+        HashSet<string> groups,
+        CancellationToken token
+    )
+    {
+        List<CacheRow> rows = await LoadSupportedRowsAsync(connection, run.CacheNamespace, token);
+        Dictionary<string, List<CacheRow>> byPath = rows
+            .GroupBy(row => Normalize(row.Path), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.ToList(), StringComparer.OrdinalIgnoreCase);
+        foreach (string desiredPath in desired.Where(path => groups.Contains(Group(path))))
+        {
+            if (!byPath.TryGetValue(desiredPath, out List<CacheRow>? matches) || matches.Count != 1)
+                throw new InvalidOperationException(
+                    $"Desired path is missing or ambiguous after preview: {desiredPath}"
+                );
+            CacheRow row = matches[0];
+            if (row.PartitionId is null || row.FileSize is null)
+                throw new InvalidOperationException($"Desired path has incomplete cache data: {desiredPath}");
+            string fullPath = ResolveActivePath(config, row.PartitionId.Value, desiredPath);
+            FileInfo info = new(fullPath);
+            if (!info.Exists || info.Length != row.FileSize.Value)
+                throw new InvalidOperationException($"Desired file changed after preview: {fullPath}");
+            RejectReparsePath(fullPath, config.MediaRoots[row.PartitionId.Value]);
+        }
     }
 
     private static async Task<List<PruneOperation>> LoadApplyBatchAsync(NpgsqlConnection connection, Guid runId, int limit, CancellationToken token) =>
@@ -502,7 +728,7 @@ public sealed class AutomaticLooseMediaPruneService(
     private static async Task<List<PruneOperation>> LoadOperationsAsync(NpgsqlConnection connection, string predicate, Guid? runId, int limit, CancellationToken token, string? store = null, string? cache = null)
     {
         await using NpgsqlCommand command = connection.CreateCommand();
-        command.CommandText = $"SELECT o.run_id, o.operation_index, o.path, o.partition_id, o.file_size, o.last_write_utc_ticks, o.keep_path, o.keep_partition_id, o.state FROM media_loose_prune_operations o JOIN media_loose_prune_runs r ON r.run_id = o.run_id WHERE {predicate} ORDER BY r.created_utc, o.operation_index LIMIT @limit";
+        command.CommandText = $"SELECT o.run_id, o.operation_index, o.path, o.partition_id, o.file_size, o.last_write_utc_ticks, o.keep_path, o.keep_partition_id, o.keep_file_size, o.keep_last_write_utc_ticks, o.state FROM media_loose_prune_operations o JOIN media_loose_prune_runs r ON r.run_id = o.run_id WHERE {predicate} ORDER BY r.created_utc, o.operation_index LIMIT @limit";
         if (runId.HasValue) command.Parameters.AddWithValue("run", runId.Value);
         if (store is not null) command.Parameters.AddWithValue("store", store);
         if (cache is not null) command.Parameters.AddWithValue("cache", cache);
@@ -510,9 +736,24 @@ public sealed class AutomaticLooseMediaPruneService(
         List<PruneOperation> result = [];
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(token);
         while (await reader.ReadAsync(token))
-            result.Add(new(reader.GetGuid(0), reader.GetInt32(1), reader.GetString(2), reader.GetInt32(3), reader.GetInt64(4), reader.GetInt64(5), reader.GetString(6), reader.GetInt32(7), reader.GetString(8)));
+            result.Add(ReadOperation(reader));
         return result;
     }
+
+    private static PruneOperation ReadOperation(NpgsqlDataReader reader) =>
+        new(
+            reader.GetGuid(0),
+            reader.GetInt32(1),
+            reader.GetString(2),
+            reader.GetInt32(3),
+            reader.GetInt64(4),
+            reader.GetInt64(5),
+            reader.GetString(6),
+            reader.GetInt32(7),
+            reader.GetInt64(8),
+            reader.GetInt64(9),
+            reader.GetString(10)
+        );
 
     private static async Task DeleteCacheRowsAsync(
         NpgsqlConnection connection,
@@ -565,7 +806,12 @@ public sealed class AutomaticLooseMediaPruneService(
         command.CommandText = "UPDATE media_loose_prune_runs SET state = 'quarantined', completed_utc = CURRENT_TIMESTAMP, purge_after_utc = CURRENT_TIMESTAMP + INTERVAL '7 days' WHERE run_id = @run AND NOT EXISTS (SELECT 1 FROM media_loose_prune_operations WHERE run_id = @run AND state <> 'verified') RETURNING purge_after_utc";
         command.Parameters.AddWithValue("run", runId);
         object? value = await command.ExecuteScalarAsync(token);
-        return value is DateTimeOffset result ? result : throw new InvalidOperationException("Prune run is not fully verified.");
+        return value switch
+        {
+            DateTimeOffset result => result,
+            DateTime result => Utc(result),
+            _ => throw new InvalidOperationException("Prune run is not fully verified."),
+        };
     }
 
     private static async Task<long> LoadCompletedBytesAsync(
@@ -585,6 +831,156 @@ public sealed class AutomaticLooseMediaPruneService(
         await using NpgsqlCommand command = connection.CreateCommand();
         command.CommandText = "UPDATE media_loose_prune_runs r SET state = 'purged' WHERE r.state IN ('quarantined', 'purging') AND r.purge_after_utc <= CURRENT_TIMESTAMP AND NOT EXISTS (SELECT 1 FROM media_loose_prune_operations o WHERE o.run_id = r.run_id AND o.state <> 'purged')";
         await command.ExecuteNonQueryAsync(token);
+    }
+
+    private static AutomaticLooseMediaPruneRun ReadRun(NpgsqlDataReader reader) =>
+        new(
+            reader.GetGuid(0),
+            reader.GetString(1),
+            reader.GetString(2),
+            reader.GetString(3),
+            reader.GetString(4),
+            reader.GetString(5),
+            reader.GetString(6),
+            reader.GetString(7),
+            Utc(reader.GetDateTime(8)),
+            reader.GetInt64(9),
+            reader.GetInt64(10)
+        );
+
+    private static AutomaticLooseMediaPrunePreviewResult ToPreviewResult(
+        AutomaticLooseMediaPruneRun run
+    ) =>
+        new(
+            run.RunId,
+            run.ApprovalHash,
+            run.PolicyHash,
+            run.ProjectionHash,
+            run.OperationCount,
+            run.PlannedBytes,
+            run.State
+        );
+
+    internal static string CalculateApprovalHash(
+        Guid runId,
+        string mediaStoreId,
+        string cacheId,
+        string cacheNamespace,
+        string policyHash,
+        string projectionHash,
+        IEnumerable<PruneOperation> operations
+    )
+    {
+        using IncrementalHash hash = CreateApprovalHash(
+            runId,
+            mediaStoreId,
+            cacheId,
+            cacheNamespace,
+            policyHash,
+            projectionHash
+        );
+        foreach (PruneOperation operation in operations.OrderBy(value => value.Index))
+            AppendOperation(hash, operation);
+        return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+    }
+
+    private static async Task<(string Hash, HashSet<string> Groups)> CalculateStoredApprovalHashAsync(
+        NpgsqlConnection connection,
+        AutomaticLooseMediaPruneRun run,
+        CancellationToken token
+    )
+    {
+        using IncrementalHash hash = CreateApprovalHash(
+            run.RunId,
+            run.MediaStoreId,
+            run.CacheId,
+            run.CacheNamespace,
+            run.PolicyHash,
+            run.ProjectionHash
+        );
+        HashSet<string> groups = new(StringComparer.OrdinalIgnoreCase);
+        await using NpgsqlCommand command = connection.CreateCommand();
+        command.CommandTimeout = 600;
+        command.CommandText = """
+            SELECT run_id, operation_index, path, partition_id, file_size,
+                   last_write_utc_ticks, keep_path, keep_partition_id,
+                   keep_file_size, keep_last_write_utc_ticks, state
+            FROM media_loose_prune_operations
+            WHERE run_id = @run
+            ORDER BY operation_index
+            """;
+        command.Parameters.AddWithValue("run", run.RunId);
+        long count = 0;
+        await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(
+            CommandBehavior.SequentialAccess,
+            token
+        );
+        while (await reader.ReadAsync(token))
+        {
+            PruneOperation operation = ReadOperation(reader);
+            AppendOperation(hash, operation);
+            groups.Add(Group(operation.Path));
+            count++;
+        }
+        if (count != run.OperationCount)
+            throw new InvalidOperationException("Stored prune operation count changed after preview.");
+        return (Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant(), groups);
+    }
+
+    private static IncrementalHash CreateApprovalHash(
+        Guid runId,
+        string mediaStoreId,
+        string cacheId,
+        string cacheNamespace,
+        string policyHash,
+        string projectionHash
+    )
+    {
+        IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        Append(hash, runId.ToString("N"));
+        Append(hash, mediaStoreId);
+        Append(hash, cacheId);
+        Append(hash, cacheNamespace);
+        Append(hash, policyHash);
+        Append(hash, projectionHash);
+        return hash;
+    }
+
+    private static void AppendOperation(IncrementalHash hash, PruneOperation operation)
+    {
+        Append(hash, operation.Index.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Append(hash, Normalize(operation.Path));
+        Append(hash, operation.PartitionId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Append(hash, operation.FileSize.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Append(hash, operation.LastWriteUtcTicks.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Append(hash, Normalize(operation.KeepPath));
+        Append(hash, operation.KeepPartitionId.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Append(hash, operation.KeepFileSize.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        Append(hash, operation.KeepLastWriteUtcTicks.ToString(System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    private static void Append(IncrementalHash hash, string value)
+    {
+        byte[] bytes = Encoding.UTF8.GetBytes(value);
+        hash.AppendData(BitConverter.GetBytes(bytes.Length));
+        hash.AppendData(bytes);
+    }
+
+    internal static bool FixedEquals(string expected, string actual)
+    {
+        if (expected.Length != 64 || actual.Length != 64)
+            return false;
+        try
+        {
+            return CryptographicOperations.FixedTimeEquals(
+                Convert.FromHexString(expected),
+                Convert.FromHexString(actual)
+            );
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
     }
 
     private static async Task AcquireLockAsync(NpgsqlConnection connection, string store, string cache, CancellationToken token)
@@ -657,11 +1053,12 @@ public sealed class AutomaticLooseMediaPruneService(
     private static string EscapeLike(string value) => value.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal);
 
     private sealed record CacheRow(string Path, long? FileSize, int? PartitionId);
-    private sealed record PruneOperation(Guid RunId, int Index, string Path, int PartitionId, long FileSize, long LastWriteUtcTicks, string KeepPath, int KeepPartitionId, string State);
-    private sealed record AutomaticLooseMediaPruneRun(Guid RunId, string MediaStoreId, string CacheId, string CacheNamespace, string PolicyHash, string State, DateTimeOffset CreatedUtc, long OperationCount);
+    internal sealed record PruneOperation(Guid RunId, int Index, string Path, int PartitionId, long FileSize, long LastWriteUtcTicks, string KeepPath, int KeepPartitionId, long KeepFileSize, long KeepLastWriteUtcTicks, string State);
+    private sealed record AutomaticLooseMediaPruneRun(Guid RunId, string MediaStoreId, string CacheId, string CacheNamespace, string PolicyHash, string ProjectionHash, string ApprovalHash, string State, DateTimeOffset CreatedUtc, long OperationCount, long PlannedBytes);
 }
 
+public sealed record AutomaticLooseMediaPrunePreviewResult(Guid RunId, string ApprovalHash, string PolicyHash, string ProjectionHash, long Operations, long PlannedBytes, string State);
 public sealed record AutomaticLooseMediaPruneResult(Guid RunId, long Operations, long Completed, long BytesQuarantined, string State, DateTimeOffset PurgeAfterUtc);
 public sealed record AutomaticLooseMediaPurgeResult(long FilesDeleted, long BytesDeleted);
 public sealed record AutomaticLooseMediaPruneProgress(string Phase, long Completed, long Total, long Bytes);
-public sealed record AutomaticLooseMediaPruneStatus(Guid RunId, string State, DateTimeOffset CreatedUtc, DateTimeOffset? PurgeAfterUtc, long Operations, long Completed, long Bytes);
+public sealed record AutomaticLooseMediaPruneStatus(Guid RunId, string State, DateTimeOffset CreatedUtc, DateTimeOffset? PurgeAfterUtc, long Operations, long Completed, long Bytes, string ApprovalHash, long PlannedBytes);

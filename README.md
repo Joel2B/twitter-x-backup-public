@@ -70,6 +70,10 @@ dotnet build Backup.Api/Backup.Api.csproj -c Release
 dotnet test Backup.Tests/Backup.Tests.csproj -c Release
 ```
 
+## Experimental features
+
+- [Preview and prune unused media variants](docs/experimental-media-prune.md)
+
 ## Run with Docker
 
 Build CLI image:

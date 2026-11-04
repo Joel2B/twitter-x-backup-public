@@ -24,4 +24,48 @@ public sealed class AutomaticLooseMediaPruneServiceTests
             )
         );
     }
+
+    [Fact]
+    public void Approval_hash_is_deterministic_and_covers_operations()
+    {
+        Guid runId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        AutomaticLooseMediaPruneService.PruneOperation operation = new(
+            runId,
+            0,
+            "1/photo/2/source/jpg/size/large.jpg",
+            7,
+            123,
+            456,
+            "1/photo/2/source/jpg/size/orig.jpg",
+            7,
+            789,
+            101112,
+            "pending"
+        );
+
+        string first = AutomaticLooseMediaPruneService.CalculateApprovalHash(
+            runId,
+            "nas media",
+            "postgres",
+            "namespace",
+            new('a', 64),
+            new('b', 64),
+            [operation]
+        );
+        string second = AutomaticLooseMediaPruneService.CalculateApprovalHash(
+            runId,
+            "nas media",
+            "postgres",
+            "namespace",
+            new('a', 64),
+            new('b', 64),
+            [operation with { FileSize = 124 }]
+        );
+
+        Assert.Equal(64, first.Length);
+        Assert.NotEqual(first, second);
+        Assert.True(AutomaticLooseMediaPruneService.FixedEquals(first, first));
+        Assert.False(AutomaticLooseMediaPruneService.FixedEquals(first, second));
+        Assert.False(AutomaticLooseMediaPruneService.FixedEquals(first, "invalid"));
+    }
 }

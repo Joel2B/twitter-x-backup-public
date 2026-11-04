@@ -81,12 +81,40 @@ static async Task RunAutomaticMediaPrune(
             );
             Console.Error.Flush();
         });
-        if (operation == "prune")
+        if (operation is "preview" or "prune")
         {
-            AutomaticLooseMediaPruneResult result = await service.PruneAsync(
+            AutomaticLooseMediaPrunePreviewResult result = operation == "prune"
+                ? await service.PruneAsync(
+                    dataConfig,
+                    mediaStore,
+                    cache,
+                    progress,
+                    cts.Token
+                )
+                : await service.PreviewAsync(
+                    dataConfig,
+                    mediaStore,
+                    cache,
+                    progress,
+                    cts.Token
+                );
+            Console.WriteLine($"run: {result.RunId}");
+            Console.WriteLine($"state: {result.State}");
+            Console.WriteLine($"approval: {result.ApprovalHash}");
+            Console.WriteLine($"policy hash: {result.PolicyHash}");
+            Console.WriteLine($"projection hash: {result.ProjectionHash}");
+            Console.WriteLine($"operations: {result.Operations}");
+            Console.WriteLine($"planned bytes: {result.PlannedBytes}");
+            return;
+        }
+        if (operation == "apply")
+        {
+            AutomaticLooseMediaPruneResult result = await service.ApplyAsync(
                 dataConfig,
                 mediaStore,
                 cache,
+                Guid.Parse(GetRequiredOption(options, "--run-id")),
+                GetRequiredOption(options, "--approval"),
                 HasFlag(options, "--runtime-stopped-confirmed"),
                 batchSize,
                 progress,
@@ -111,9 +139,23 @@ static async Task RunAutomaticMediaPrune(
             foreach (AutomaticLooseMediaPruneStatus status in statuses)
             {
                 Console.WriteLine(
-                    $"{status.RunId}  {status.State}  {status.Completed}/{status.Operations}  {status.Bytes} bytes  purge-after={status.PurgeAfterUtc:O}"
+                    $"{status.RunId}  {status.State}  {status.Completed}/{status.Operations}  {status.Bytes}/{status.PlannedBytes} bytes  approval={status.ApprovalHash}  purge-after={status.PurgeAfterUtc:O}"
                 );
             }
+            return;
+        }
+        if (operation == "cancel")
+        {
+            Guid runId = Guid.Parse(GetRequiredOption(options, "--run-id"));
+            await service.CancelAsync(
+                dataConfig,
+                mediaStore,
+                cache,
+                runId,
+                cts.Token
+            );
+            Console.WriteLine($"run: {runId}");
+            Console.WriteLine("state: cancelled");
             return;
         }
         if (operation == "purge-expired")
