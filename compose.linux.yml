@@ -7,7 +7,6 @@ services:
       # - /mnt/q:/mnt/q
       # - /mnt/r:/mnt/r
       - /mnt/s:/mnt/s
-      - /mnt/j:/mnt/j
 
       - "/home/j/twitter-x-backup/data:/app/data"
       - "/home/j/twitter-x-backup/debug:/app/debug"

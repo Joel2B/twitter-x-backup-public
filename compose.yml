@@ -12,4 +12,3 @@ services:
       # BACKUP__Aliases__Q: /mnt/q
       # BACKUP__Aliases__R: /mnt/r
       BACKUP__Aliases__S: /mnt/s
-      BACKUP__Aliases__J: /mnt/j
