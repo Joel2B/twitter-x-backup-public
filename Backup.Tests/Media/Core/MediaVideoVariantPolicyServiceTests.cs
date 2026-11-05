@@ -11,6 +11,7 @@ public class MediaVideoVariantPolicyServiceTests
     {
         Assert.Equal("m3u8", _sut.GetFormatType("application/x-mpegURL"));
         Assert.Equal("mp4", _sut.GetFormatType("video/mp4"));
+        Assert.Equal("mp4", _sut.GetFormatType("VIDEO/MP4"));
         Assert.Null(_sut.GetFormatType("video/unknown"));
     }
 

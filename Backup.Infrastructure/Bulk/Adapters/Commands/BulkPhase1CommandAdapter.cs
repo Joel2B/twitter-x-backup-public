@@ -68,12 +68,24 @@ internal sealed class BulkPhase1CommandAdapter(
     public Task<bool> VerifyApi() => _bulkApiClient.Verify();
 
     public Task<ParseResult?> GetUserMedia(
+        MediaTimelineType timeline,
         string userId,
+        string userName,
         string origin,
         int count,
         string? cursor,
         CancellationToken cancellationToken
-    ) => _bulkApiClient.GetUserMedia(_api, userId, origin, count, cursor, cancellationToken);
+    ) =>
+        _bulkApiClient.GetUserMedia(
+            _api,
+            timeline,
+            userId,
+            userName,
+            origin,
+            count,
+            cursor,
+            cancellationToken
+        );
 
     public Task AddPosts(string userId, string origin, List<Post> posts) =>
         _postData.AddPosts(userId, origin, posts);

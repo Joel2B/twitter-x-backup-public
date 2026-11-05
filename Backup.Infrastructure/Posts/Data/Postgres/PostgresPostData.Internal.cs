@@ -53,18 +53,6 @@ public partial class PostgresPostData
             .ThenInclude(o => o.Fields)
             .Include(o => o.IndexEntries);
 
-    private static IQueryable<PostEntity> IncludePostMediaGraph(IQueryable<PostEntity> query) =>
-        query
-            .Include(o => o.Profile)
-            .Include(o => o.Medias)
-            .ThenInclude(o => o.Variants)
-            .Include(o =>
-                o.Changes.Where(change =>
-                    change.ChangeType == "data_update" || change.ChangeType == "data_index_update"
-                )
-            )
-            .ThenInclude(o => o.Fields);
-
     private static async Task<List<PostEntity>> LoadPostGraphByIds(
         PostsDbContext db,
         IReadOnlyCollection<string> ids

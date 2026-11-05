@@ -7,7 +7,7 @@ Local Chrome MV3 extension to capture X GraphQL requests and generate a JSON pat
 - Captures requests from `https://x.com/i/api/graphql/*`.
 - Per-endpoint checklist.
 - `Open` button per endpoint to navigate to the page that triggers that API.
-- Configurable `X username` field in popup for user-specific Open links (posts/likes/media).
+- Configurable `X username` field in popup for user-specific Open links (posts/likes/photo/video timelines).
 - Configurable `Search hashtag` field in popup for `Api.SearchTimeline` Open link.
 - Auto-detects username from intercepted referers and can auto-fill when empty.
 - Username is persisted in `chrome.storage.local` (`captureSettingsV1`).
@@ -55,10 +55,11 @@ Local Chrome MV3 extension to capture X GraphQL requests and generate a JSON pat
 
 ## Endpoints and Trigger Pages
 
-- `Api.posts (UserTweets)` -> `https://x.com/{username}`
+- `Api.posts (UserOriginalsTimeline)` -> `https://x.com/{username}`
 - `Api.likes (Likes)` -> `https://x.com/{username}/likes`
 - `Api.bookmarks (Bookmarks)` -> `https://x.com/i/bookmarks`
-- `Api.media (UserMedia)` -> `https://x.com/{username}/media`
+- `Api.UserVideoTimeline` -> `https://x.com/{username}/media`
+- `Api.UserPhotoTimeline` -> `https://x.com/{username}/media?filter=photo`
 - `Api.SearchTimeline` -> `https://x.com/hashtag/{hashtag}?f=media`
 - `Api.UserByScreenName` -> `https://x.com/{username}/media`
 - `Api.TweetDetail` -> `https://x.com/AmeDollVT/status/2047352297571725658`

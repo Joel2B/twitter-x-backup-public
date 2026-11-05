@@ -12,12 +12,12 @@ This project is under active personal development. Structure and configuration f
 
 - .NET SDK 10 (`net10.0`)
 - Docker and Docker Compose (optional)
-- Valid split configuration files in `config/` (or an explicit config directory)
+- Valid split configuration files in `Config/` (or an explicit config directory)
 
 ## Configuration
 
-1. Use files in `config.example/` as a starting point.
-2. Copy them to your runtime config directory (recommended: `./config/`) and replace all fields marked as `{REPLACE_THIS}`.
+1. Use files in `Config.example/` as a starting point.
+2. Copy them to your runtime config directory (recommended: `./Config/`) and replace all fields marked as `{REPLACE_THIS}`.
 3. Adjust data/debug paths and download settings for your environment.
 4. Optional host-level override:
    - Copy `Backup.Api/appsettings.example.json` to `Backup.Api/appsettings.json`
@@ -28,8 +28,10 @@ Configuration directory resolution order:
 - `RuntimeConfigurationOptions.ConfigDirectory` (when provided in host wiring)
 - `Backup:Configuration:ConfigDirectory` from host configuration (`appsettings*.json`/env/providers)
 - env var `BACKUP__CONFIG__DIRECTORY`
-- `./config`
-- `./config.example`
+- `./Config`
+- `./Config.example`
+- `./config` (legacy compatibility)
+- `./config.example` (legacy compatibility)
 - `<app-base>/config`
 
 Note: runtime config files are intended for local/deployment use and should not be committed.
@@ -79,35 +81,66 @@ dotnet test Backup.Tests/Backup.Tests.csproj -c Release
 Build CLI image:
 
 ```bash
-docker build -f Dockerfile.Cli -t twitter-x-backup:latest .
+docker build -f Dockerfile --target cli -t twitter-x-backup-cli:latest .
 ```
 
 Build API image:
 
 ```bash
-docker build -f Dockerfile.Api -t twitter-x-backup-api:latest .
+docker build -f Dockerfile --target api -t twitter-x-backup-api:latest .
 ```
 
 Deploy with scripts (PowerShell):
 
 ```powershell
-.\deploy-cli.ps1
-.\deploy-api.ps1
+Copy-Item .env.example .env
+# Set DOCKER_REGISTRY in .env
+.\release.ps1
+.\release.ps1 all
+.\release.ps1 cli
+.\release.ps1 api
 ```
 
-Linux override:
+Create local Compose files for Linux:
 
 ```bash
+cp compose.example.yml compose.yml
+cp compose.linux.example.yml compose.linux.yml
+cp .env.example .env
+cp deploy.example.sh deploy.sh
+chmod +x deploy.sh
 docker compose -f compose.yml -f compose.linux.yml up -d
 ```
 
-Windows override:
+Create local Compose files for Windows:
 
-```bash
+```powershell
+Copy-Item compose.example.yml compose.yml
+Copy-Item compose.windows.example.yml compose.windows.yml
+Copy-Item .env.example .env
 docker compose -f compose.yml -f compose.windows.yml up -d
 ```
 
-For Windows CIFS volumes, create `.env` from `.env.example` and set your credentials/paths.
+Edit `.env` before starting or releasing. `DOCKER_REGISTRY` controls release destination,
+Linux uses `BACKUP_DATA_ROOT`, and Windows CIFS uses `SMB_DATA_DEVICE`, `SMB_DATA_USER`,
+and `SMB_DATA_PASS`. Local Compose files and `.env` are ignored by Git.
+
+CLI and API share one deployment directory, configuration, data, and debug mounts. API is
+published on `API_PORT` (default `8081`). On Linux, use the deployment helper:
+
+```bash
+./deploy.sh                  # deploy CLI and API
+./deploy.sh all deploy       # deploy CLI and API
+./deploy.sh cli deploy       # deploy only CLI
+./deploy.sh api deploy       # deploy only API
+./deploy.sh all start
+./deploy.sh cli stop
+./deploy.sh api restart
+./deploy.sh all logs
+```
+
+`stop` sends `SIGINT`, waits up to `STOP_TIMEOUT_SECONDS` (default `120`), and never sends
+`SIGKILL`.
 
 ## Architecture
 
@@ -126,8 +159,8 @@ For Windows CIFS volumes, create `.env` from `.env.example` and set your credent
 ## Security
 
 - Do not commit real tokens/cookies/sessions.
-- Keep runtime `config/*.json` out of version control.
-- Keep only sanitized sample values in `config.example/*.json`.
+- Keep runtime `Config/*.json` out of version control.
+- Keep only sanitized sample values in `Config.example/*.json`.
 
 ## License
 

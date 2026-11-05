@@ -1,0 +1,16 @@
+services:
+  twitter-x-backup-cli:
+    volumes:
+      - backup_data:/mnt/data
+
+  twitter-x-backup-api:
+    volumes:
+      - backup_data:/mnt/data
+
+volumes:
+  backup_data:
+    driver: local
+    driver_opts:
+      type: cifs
+      device: "${SMB_DATA_DEVICE:-//server/share}"
+      o: "username=${SMB_DATA_USER},password=${SMB_DATA_PASS},vers=3.1.1,uid=0,gid=0,file_mode=0777,dir_mode=0777"

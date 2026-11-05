@@ -1,0 +1,22 @@
+services:
+  twitter-x-backup-cli:
+    image: ${DOCKER_REGISTRY:-registry.example.com:5000}/twitter-x-backup-cli:latest
+    container_name: twitter-x-backup-cli
+    environment:
+      BACKUP__Aliases__L: /mnt/data
+    volumes:
+      - "./Config:/app/config:ro"
+      - "./data:/app/data"
+      - "./debug:/app/debug"
+
+  twitter-x-backup-api:
+    image: ${DOCKER_REGISTRY:-registry.example.com:5000}/twitter-x-backup-api:latest
+    container_name: twitter-x-backup-api
+    environment:
+      BACKUP__Aliases__L: /mnt/data
+    ports:
+      - "${API_PORT:-8081}:8081"
+    volumes:
+      - "./Config:/app/config:ro"
+      - "./data:/app/data"
+      - "./debug:/app/debug"

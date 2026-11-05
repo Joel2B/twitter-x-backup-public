@@ -13,6 +13,66 @@ namespace Backup.Tests;
 public class SqlitePostDataTests
 {
     [Fact]
+    public async Task GetMediaInputs_ProjectsProfilesPhotosAndVideoVariantsFromRelationalTables()
+    {
+        (SqlitePostData sut, string root) = CreateSut();
+
+        try
+        {
+            await sut.Setup();
+            Post photo = CreatePost("photo-post", "photo-profile", "photo", "user-1", "likes");
+            photo.Profile.ImageUrl = "https://pbs.twimg.com/profile_images/1/avatar_normal.jpg";
+            photo.Medias =
+            [
+                new PostMedia
+                {
+                    Id = "photo-media",
+                    Type = "photo",
+                    Url = "https://pbs.twimg.com/media/photo.jpg",
+                },
+            ];
+            Post video = CreatePost("video-post", "video-profile", "video", "user-1", "bookmarks");
+            video.Medias =
+            [
+                new PostMedia
+                {
+                    Id = "video-media",
+                    Type = "video",
+                    Url = "https://pbs.twimg.com/amplify_video_thumb/video.jpg",
+                    VideoInfo = new PostVideoInfo
+                    {
+                        Variants =
+                        [
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Bitrate = 2176000,
+                                Url = "https://video.twimg.com/vid/1280x720/video.mp4",
+                            },
+                        ],
+                    },
+                },
+            ];
+            await sut.UpsertPosts([photo, video]);
+            await sut.Save();
+
+            List<MediaInput> inputs = (await sut.GetMediaInputs())!;
+            List<PostMedia> medias = inputs.SelectMany(input => input.Medias ?? []).ToList();
+
+            Assert.Contains(inputs, input => input.Profile.Id == "photo-profile");
+            Assert.Contains(medias, media => media.Id == "photo-media" && media.Type == "photo");
+            PostMedia videoMedia = Assert.Single(medias, media => media.Id == "video-media");
+            PostVariant variant = Assert.Single(videoMedia.VideoInfo!.Variants!);
+            Assert.Equal("video/mp4", variant.ContentType);
+        }
+        finally
+        {
+            await sut.DisposeAsync();
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
     public async Task DeletePosts_RemovesOnlyOrphanProfiles()
     {
         (SqlitePostData sut, string root) = CreateSut();
@@ -466,7 +526,6 @@ public class SqlitePostDataTests
                 new PostSoftDeleteSelectionService()
             ),
             new PostSnapshotNormalizationService(),
-            new PostMediaInputsCompositionService(),
             postHashingService,
             new PostChangeComputationService(),
             new PostChangeReadModelProjectionService(),

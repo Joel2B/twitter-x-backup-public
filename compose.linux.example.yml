@@ -1,0 +1,8 @@
+services:
+  twitter-x-backup-cli:
+    volumes:
+      - "${BACKUP_DATA_ROOT:-./storage}:/mnt/data"
+
+  twitter-x-backup-api:
+    volumes:
+      - "${BACKUP_DATA_ROOT:-./storage}:/mnt/data"

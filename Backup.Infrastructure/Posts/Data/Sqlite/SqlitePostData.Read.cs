@@ -52,38 +52,6 @@ public partial class SqlitePostData
         };
     }
 
-    public async Task<List<MediaInput>?> GetMediaInputs()
-    {
-        PostsDbContext db = await GetDbContext();
-
-        List<PostEntity> entities = await IncludePostMediaGraph(db.Posts)
-            .AsNoTracking()
-            .AsSplitQuery()
-            .OrderBy(o => o.CreatedAt)
-            .ToListAsync();
-
-        if (entities.Count == 0)
-            return null;
-
-        Dictionary<string, bool> deletedById = await LoadDeletedByIds(
-            db,
-            entities.Select(entity => entity.Id)
-        );
-
-        List<Post> posts = entities
-            .Select(entity => ToModel(entity, GetDeleted(deletedById, entity.Id)))
-            .ToList();
-
-        List<Backup.Domain.Posts.Post> domainPosts = posts
-            .Select(PostReplicationMapper.ToDomain)
-            .ToList();
-
-        IReadOnlyList<Backup.Domain.Posts.MediaInput> composed =
-            _postMediaInputsCompositionService.Compose(domainPosts);
-
-        return composed.Select(PostReplicationMapper.ToApp).ToList();
-    }
-
     public async Task<Dictionary<string, string>> GetHashesById()
     {
         PostsDbContext db = await GetDbContext();

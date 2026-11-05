@@ -24,7 +24,7 @@ public static class ProfileMapper
         bool? following =
             result.Legacy?.Following ?? userResults?.RelationshipPerspectives?.Following;
 
-        int? mediaCount = userResults?.Legacy?.MediaCount;
+        int? mediaCount = userResults?.Legacy?.MediaCount ?? userResults?.TweetCounts?.MediaTweets;
 
         return new ParsedPostProfileProjection
         {

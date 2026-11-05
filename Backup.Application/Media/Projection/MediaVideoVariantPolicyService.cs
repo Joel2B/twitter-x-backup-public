@@ -5,9 +5,9 @@ namespace Backup.Application.Media;
 public sealed class MediaVideoVariantPolicyService : IMediaVideoVariantPolicyService
 {
     public string? GetFormatType(string contentType) =>
-        contentType switch
+        contentType.ToLowerInvariant() switch
         {
-            "application/x-mpegURL" => "m3u8",
+            "application/x-mpegurl" => "m3u8",
             "video/mp4" => "mp4",
             _ => null,
         };

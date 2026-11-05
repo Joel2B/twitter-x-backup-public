@@ -29,6 +29,8 @@ internal static class RuntimeConfigurationDirectoryResolver
             candidates.Add(fromEnvironment);
 
         string currentDirectory = Directory.GetCurrentDirectory();
+        candidates.Add(Path.Combine(currentDirectory, "Config"));
+        candidates.Add(Path.Combine(currentDirectory, "Config.example"));
         candidates.Add(Path.Combine(currentDirectory, "config"));
         candidates.Add(Path.Combine(currentDirectory, "config.example"));
         candidates.Add(Path.Combine(AppContext.BaseDirectory, "config"));

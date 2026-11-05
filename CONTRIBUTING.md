@@ -16,8 +16,8 @@ This project is maintained for personal use, but contributions are welcome if th
 dotnet restore
 ```
 3. Create local runtime config from samples:
-   - Source: `config.example/`
-   - Local target: `config/`
+   - Source: `Config.example/`
+   - Local target: `Config/`
 
 Do not commit real config values.
 
@@ -58,9 +58,9 @@ If your change affects only one area, still run the full suite before merge.
 
 - Never commit credentials, tokens, cookies, or live session data.
 - Never commit local runtime config files:
-  - `config/*.json`
-  - `config/**/*.json`
-- Keep only sanitized sample values in `config.example/`.
+   - `Config/*.json`
+   - `Config/**/*.json`
+- Keep only sanitized sample values in `Config.example/`.
 
 ## Pull Request Checklist
 

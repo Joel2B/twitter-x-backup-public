@@ -8,9 +8,11 @@ export const UPLOAD_NOTIFICATION_EXPIRE_AFTER_MS = UPLOAD_REQUEST_TIMEOUT_MS + 5
 
 export const OPERATION_TO_ENDPOINT = {
   UserTweets: "posts",
+  UserOriginalsTimeline: "posts",
   Likes: "likes",
   Bookmarks: "bookmarks",
-  UserMedia: "media",
+  UserVideoTimeline: "UserVideoTimeline",
+  UserPhotoTimeline: "UserPhotoTimeline",
   SearchTimeline: "SearchTimeline",
   UserByScreenName: "UserByScreenName",
   TweetDetail: "TweetDetail",

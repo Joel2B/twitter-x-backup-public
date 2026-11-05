@@ -66,18 +66,25 @@ public sealed class BulkApiClient(
 
     public async Task<ParseResult?> GetUserMedia(
         IReadOnlyDictionary<string, ApiConfig> api,
+        MediaTimelineType timeline,
         string id,
+        string userName,
         string origin,
         int count,
         string? cursor,
         CancellationToken cancellationToken
     )
     {
-        Request? request = _bulkRequestFactory.BuildUserMedia(api);
+        Request? request = timeline switch
+        {
+            MediaTimelineType.Video => _bulkRequestFactory.BuildUserVideoTimeline(api),
+            MediaTimelineType.Photo => _bulkRequestFactory.BuildUserPhotoTimeline(api),
+            _ => null,
+        };
 
         if (request is null)
         {
-            _logger.LogWarning("api 'UserMedia' is disabled or not configured");
+            _logger.LogWarning("api '{timeline}' is disabled or not configured", timeline);
             return null;
         }
 
@@ -85,7 +92,8 @@ public sealed class BulkApiClient(
         request.Query.Variables["count"] = count;
         request.Query.Variables["cursor"] = cursor;
         request.Headers["Referer"] = _bulkSourceRouteService.GetReferer(
-            BulkSourceType.Notifications
+            BulkSourceType.Media,
+            userName
         );
 
         string response = "";

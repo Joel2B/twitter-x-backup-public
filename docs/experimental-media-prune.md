@@ -52,7 +52,7 @@ Preview rejects multiple incremental namespaces because their historical order i
 Run preview through Docker Compose:
 
 ```bash
-docker compose -f compose.yml -f compose.linux.yml run --rm \
+docker compose -f compose.example.yml -f compose.linux.example.yml run --rm \
   twitter-x-backup-cli \
   maintenance media-prune preview \
   --data-config /app/config/Data.json \
@@ -65,7 +65,7 @@ Run preview from a local build:
 ```bash
 dotnet run --project Backup.Cli -- \
   maintenance media-prune preview \
-  --data-config ./config/Data.json \
+  --data-config ./Config/Data.json \
   --media-store "nas media" \
   --cache postgres
 ```
@@ -73,7 +73,7 @@ dotnet run --project Backup.Cli -- \
 `prune` is a non-destructive alias for `preview`:
 
 ```bash
-docker compose -f compose.yml -f compose.linux.yml run --rm \
+docker compose -f compose.example.yml -f compose.linux.example.yml run --rm \
   twitter-x-backup-cli \
   maintenance media-prune prune \
   --data-config /app/config/Data.json \
@@ -97,7 +97,7 @@ Save `run` and `approval`. Apply, verify, and purge require both values.
 Status displays up to 20 recent runs:
 
 ```bash
-docker compose -f compose.yml -f compose.linux.yml run --rm \
+docker compose -f compose.example.yml -f compose.linux.example.yml run --rm \
   twitter-x-backup-cli \
   maintenance media-prune status \
   --data-config /app/config/Data.json \
@@ -126,7 +126,7 @@ docker stop twitter-x-backup-cli
 Apply reviewed plan:
 
 ```bash
-docker compose -f compose.yml -f compose.linux.yml run --rm \
+docker compose -f compose.example.yml -f compose.linux.example.yml run --rm \
   twitter-x-backup-cli \
   maintenance media-prune apply \
   --data-config /app/config/Data.json \
@@ -158,7 +158,7 @@ If validation fails, no new operation starts. Cancel planned run and create a ne
 Apply records each completed operation in PostgreSQL. If process stops, rerun same command with same run ID and approval:
 
 ```bash
-docker compose -f compose.yml -f compose.linux.yml run --rm \
+docker compose -f compose.example.yml -f compose.linux.example.yml run --rm \
   twitter-x-backup-cli \
   maintenance media-prune apply \
   --data-config /app/config/Data.json \
@@ -183,7 +183,7 @@ Resume rejects ambiguous state where active and quarantine copies both exist or 
 Verify checks every quarantined file against its approved size and timestamp. Run it after apply and before restarting normal runtime:
 
 ```bash
-docker compose -f compose.yml -f compose.linux.yml run --rm \
+docker compose -f compose.example.yml -f compose.linux.example.yml run --rm \
   twitter-x-backup-cli \
   maintenance media-prune verify \
   --data-config /app/config/Data.json \
@@ -198,7 +198,7 @@ docker compose -f compose.yml -f compose.linux.yml run --rm \
 Cancel marks a `planned` run as `cancelled`. It does not touch files or cache rows:
 
 ```bash
-docker compose -f compose.yml -f compose.linux.yml run --rm \
+docker compose -f compose.example.yml -f compose.linux.example.yml run --rm \
   twitter-x-backup-cli \
   maintenance media-prune cancel \
   --data-config /app/config/Data.json \
@@ -226,7 +226,7 @@ Do not run `purge-expired` until you have checked backup runtime and retained me
 Purge permanently deletes quarantine files whose seven-day retention expired. This operation is irreversible. Stop normal runtime first.
 
 ```bash
-docker compose -f compose.yml -f compose.linux.yml run --rm \
+docker compose -f compose.example.yml -f compose.linux.example.yml run --rm \
   twitter-x-backup-cli \
   maintenance media-prune purge-expired \
   --data-config /app/config/Data.json \

@@ -58,12 +58,12 @@ public class InfrastructureCompositionSmokeTests
         public static TestConfigScope Create()
         {
             string baseDir = AppContext.BaseDirectory;
-            string configPath = Path.Combine(baseDir, "config");
+            string configPath = Path.Combine(baseDir, "Config");
             bool createdByTest = false;
 
             string repoRoot = FindRepoRoot(baseDir);
             string source = ResolveConfigExampleDirectory(repoRoot);
-            if (!Directory.Exists(configPath))
+            if (!File.Exists(Path.Combine(configPath, "Services.json")))
             {
                 CopyDirectory(source, configPath);
                 createdByTest = true;
@@ -98,12 +98,12 @@ public class InfrastructureCompositionSmokeTests
 
         private static string ResolveConfigExampleDirectory(string repoRoot)
         {
-            string primary = Path.Combine(repoRoot, "config.example");
+            string primary = Path.Combine(repoRoot, "Config.example");
             if (Directory.Exists(primary))
                 return primary;
 
             throw new DirectoryNotFoundException(
-                "Could not locate config example directory. Expected 'config.example'."
+                "Could not locate config example directory. Expected 'Config.example'."
             );
         }
 

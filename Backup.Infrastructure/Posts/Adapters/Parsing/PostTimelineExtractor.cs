@@ -114,9 +114,24 @@ public sealed class PostTimelineExtractor : IPostTimelineExtractionService
         return entries.Count == 0 ? null : entries;
     }
 
-    private static JArray GetEntriesArray(JObject root) =>
-        root.SelectToken("..entries") as JArray
-        ?? throw new FormatException("Timeline payload is missing '..entries'.");
+    private static JArray GetEntriesArray(JObject root)
+    {
+        if (root.SelectToken("..entries") is JArray entries)
+            return entries;
+
+        bool terminated = root.SelectTokens("$..instructions[*].type")
+            .Any(token =>
+                string.Equals(
+                    token.Value<string>(),
+                    "TimelineTerminateTimeline",
+                    StringComparison.Ordinal
+                )
+            );
+
+        return terminated
+            ? []
+            : throw new FormatException("Timeline payload is missing '..entries'.");
+    }
 
     private static bool HasTimelineTweet(JObject entry) =>
         entry.SelectToken("content.itemContent.tweet_results.result.core") is not null

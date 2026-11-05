@@ -5,8 +5,7 @@ using Backup.Infrastructure.Media.Maintenance;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-bool automaticMediaPrune =
-    args.Length >= 3 && args[0] == "maintenance" && args[1] == "media-prune";
+bool automaticMediaPrune = args.Length >= 3 && args[0] == "maintenance" && args[1] == "media-prune";
 bool maintenanceRequested = args.Length > 0 && args[0] == "maintenance";
 
 if (maintenanceRequested && !automaticMediaPrune)
@@ -53,7 +52,14 @@ Console.CancelKeyPress += (_, eventArgs) =>
 };
 
 Console.Error.WriteLine("[startup] running backup");
-await cliRunner.RunBackup(cts.Token);
+try
+{
+    await cliRunner.RunBackup(cts.Token);
+}
+catch (OperationCanceledException) when (cts.IsCancellationRequested)
+{
+    Console.Error.WriteLine("[shutdown] backup cancelled cleanly");
+}
 
 static async Task RunAutomaticMediaPrune(
     IServiceProvider provider,
@@ -85,9 +91,16 @@ static async Task RunAutomaticMediaPrune(
         });
         if (operation is "preview" or "prune")
         {
-            AutomaticLooseMediaPrunePreviewResult result = operation == "prune"
-                ? await service.PruneAsync(dataConfig, mediaStore, cache, progress, cts.Token)
-                : await service.PreviewAsync(dataConfig, mediaStore, cache, progress, cts.Token);
+            AutomaticLooseMediaPrunePreviewResult result =
+                operation == "prune"
+                    ? await service.PruneAsync(dataConfig, mediaStore, cache, progress, cts.Token)
+                    : await service.PreviewAsync(
+                        dataConfig,
+                        mediaStore,
+                        cache,
+                        progress,
+                        cts.Token
+                    );
             Console.WriteLine($"run: {result.RunId}");
             Console.WriteLine($"state: {result.State}");
             Console.WriteLine($"approval: {result.ApprovalHash}");

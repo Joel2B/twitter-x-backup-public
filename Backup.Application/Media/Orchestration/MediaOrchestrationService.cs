@@ -38,7 +38,6 @@ public sealed class MediaOrchestrationService(ILogger<MediaOrchestrationService>
         List<MediaDownload> filtered = result
             .Filtered.Select(download => download.Clone())
             .ToList();
-
         _logger.LogInformation(
             "media orchestration: processing completed with {AllCount} total downloads and {FilteredCount} filtered downloads",
             all.Count,
@@ -55,7 +54,6 @@ public sealed class MediaOrchestrationService(ILogger<MediaOrchestrationService>
             filtered.Count
         );
         await command.Filter(filtered, cancellationToken);
-
         IReadOnlyList<string> storageIds = command.GetStorageIds();
 
         _logger.LogInformation(
@@ -105,7 +103,6 @@ public sealed class MediaOrchestrationService(ILogger<MediaOrchestrationService>
 
             await command.CheckStorageIntegrity(storageId, filteredIntegrity, cancellationToken);
             filteredCloned.AddRange(filteredIntegrity);
-
             cancellationToken.ThrowIfCancellationRequested();
 
             _logger.LogInformation(
@@ -115,6 +112,7 @@ public sealed class MediaOrchestrationService(ILogger<MediaOrchestrationService>
             );
 
             await command.DownloadToStorage(storageId, filteredCloned, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             _logger.LogInformation(
                 "media orchestration: {StorageId} filter post-download set",
                 storageId

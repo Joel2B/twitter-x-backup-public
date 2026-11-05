@@ -6,6 +6,11 @@ obj
 .git
 .vs
 .vscode
+.env
+Config
+compose.yml
+compose.linux.yml
+compose.windows.yml
 *.user
 *.suo
 *.log

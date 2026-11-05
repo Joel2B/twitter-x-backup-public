@@ -58,47 +58,72 @@ public sealed class BulkPhase1Service(ILogger<BulkPhase1Service> logger) : IBulk
                 if (!valid)
                     break;
 
-                ParseResult? result = null;
-                int attempt = 0;
+                List<Post> posts = [];
+                bool failed = false;
 
-                while (attempt < options.ApiRetryCount)
+                foreach (MediaTimelineType timeline in Enum.GetValues<MediaTimelineType>())
                 {
-                    result = await command.GetUserMedia(
-                        bulk.UserId,
-                        origin,
-                        options.MediaPerApi,
-                        bulk.Cursor,
-                        cancellationToken
-                    );
+                    if (IsCompleted(bulk, timeline))
+                        continue;
 
-                    if (result is not null)
+                    ParseResult? result = null;
+
+                    for (int attempt = 0; attempt < options.ApiRetryCount; attempt++)
+                    {
+                        result = await command.GetUserMedia(
+                            timeline,
+                            bulk.UserId,
+                            bulk.UserName,
+                            origin,
+                            options.MediaPerApi,
+                            GetCursor(bulk, timeline),
+                            cancellationToken
+                        );
+
+                        if (result is not null)
+                            break;
+                    }
+
+                    if (result is null)
+                    {
+                        failed = true;
                         break;
+                    }
 
-                    attempt++;
+                    posts.AddRange(result.Posts);
+                    SetCursor(bulk, timeline, result.NextCursor);
+                    SetCompleted(
+                        bulk,
+                        timeline,
+                        result.Posts.Count == 0 || result.NextCursor is null
+                    );
                 }
 
-                if (result is null)
-                {
-                    bulk.UserStatus = BulkUserStatus.Inactive;
+                List<Post> uniquePosts = posts
+                    .GroupBy(post => post.Id, StringComparer.Ordinal)
+                    .Select(group => group.Last())
+                    .OrderByDescending(post => post.Id, StringComparer.Ordinal)
+                    .ToList();
+                ApplyIndex(uniquePosts, bulk.UserId, origin);
+
+                if (uniquePosts.Count > 0)
+                    await command.AddPosts(bulk.UserId, origin, uniquePosts);
+
+                if (failed)
                     break;
-                }
 
-                await command.AddPosts(bulk.UserId, origin, result.Posts);
-
-                if (result.Posts.Count == 0 || result.NextCursor is null)
+                if (bulk.VideoCompleted && bulk.PhotoCompleted)
                 {
                     bulk.Phase1Order = null;
-                    bulk.Cursor = null;
+                    ResetTimelines(bulk);
                 }
                 else
                 {
                     bulk.Phase1Order = (bulk.Phase1Order ?? 0) + 1;
                 }
 
-                bulk.Cursor = result.NextCursor;
-
                 index++;
-                count += result.Posts.Count;
+                count += uniquePosts.Count;
 
                 if (bulk.Phase1Order is null || count >= options.MaxCountPost)
                     break;
@@ -115,5 +140,49 @@ public sealed class BulkPhase1Service(ILogger<BulkPhase1Service> logger) : IBulk
 
         await command.SavePosts();
         await command.SaveBulks(bulks);
+    }
+
+    private static string? GetCursor(BulkItem bulk, MediaTimelineType timeline) =>
+        timeline == MediaTimelineType.Video ? bulk.VideoCursor : bulk.PhotoCursor;
+
+    private static bool IsCompleted(BulkItem bulk, MediaTimelineType timeline) =>
+        timeline == MediaTimelineType.Video ? bulk.VideoCompleted : bulk.PhotoCompleted;
+
+    private static void SetCursor(BulkItem bulk, MediaTimelineType timeline, string? cursor)
+    {
+        if (timeline == MediaTimelineType.Video)
+            bulk.VideoCursor = cursor;
+        else
+            bulk.PhotoCursor = cursor;
+    }
+
+    private static void SetCompleted(BulkItem bulk, MediaTimelineType timeline, bool completed)
+    {
+        if (timeline == MediaTimelineType.Video)
+            bulk.VideoCompleted = completed;
+        else
+            bulk.PhotoCompleted = completed;
+    }
+
+    private static void ResetTimelines(BulkItem bulk)
+    {
+        bulk.Cursor = null;
+        bulk.VideoCursor = null;
+        bulk.VideoCompleted = false;
+        bulk.PhotoCursor = null;
+        bulk.PhotoCompleted = false;
+    }
+
+    private static void ApplyIndex(List<Post> posts, string userId, string origin)
+    {
+        for (int i = 0; i < posts.Count; i++)
+        {
+            posts[i].Index[userId] = posts[i].Index.GetValueOrDefault(userId) ?? [];
+            posts[i].Index[userId][origin] = new IndexData
+            {
+                Previous = i == 0 ? null : posts[i - 1].Id,
+                Next = i == posts.Count - 1 ? null : posts[i + 1].Id,
+            };
+        }
     }
 }

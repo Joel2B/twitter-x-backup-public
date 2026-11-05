@@ -14,8 +14,11 @@ public sealed class BulkRequestFactory(IApiRequestBuildService apiRequestBuildSe
     public Request? BuildUserByScreenName(IReadOnlyDictionary<string, ApiConfig> api) =>
         Build(api, "UserByScreenName");
 
-    public Request? BuildUserMedia(IReadOnlyDictionary<string, ApiConfig> api) =>
-        Build(api, "UserMedia");
+    public Request? BuildUserVideoTimeline(IReadOnlyDictionary<string, ApiConfig> api) =>
+        Build(api, "UserVideoTimeline");
+
+    public Request? BuildUserPhotoTimeline(IReadOnlyDictionary<string, ApiConfig> api) =>
+        Build(api, "UserPhotoTimeline");
 
     private Request? Build(IReadOnlyDictionary<string, ApiConfig> api, string key)
     {

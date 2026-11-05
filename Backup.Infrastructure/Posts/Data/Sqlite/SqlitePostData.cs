@@ -19,7 +19,6 @@ public partial class SqlitePostData(
     IPostStoreMergeMutationService postStoreMergeMutationService,
     IPostSoftDeleteExecutionService postSoftDeleteExecutionService,
     IPostSnapshotNormalizationService postSnapshotNormalizationService,
-    IPostMediaInputsCompositionService postMediaInputsCompositionService,
     IPostHashingService postHashingService,
     IPostChangeComputationService postChangeComputationService,
     IPostChangeReadModelProjectionService postChangeReadModelProjectionService,
@@ -39,8 +38,6 @@ public partial class SqlitePostData(
         postSoftDeleteExecutionService;
     private readonly IPostSnapshotNormalizationService _postSnapshotNormalizationService =
         postSnapshotNormalizationService;
-    private readonly IPostMediaInputsCompositionService _postMediaInputsCompositionService =
-        postMediaInputsCompositionService;
     private readonly IPostHashingService _postHashingService = postHashingService;
     private readonly IPostChangeComputationService _postChangeComputationService =
         postChangeComputationService;

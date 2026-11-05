@@ -20,7 +20,13 @@ public sealed class BulkPhase2ResetService : IBulkPhase2ResetService
             return;
 
         foreach (BulkItem bulk in data)
+        {
             bulk.Phase2Order = 0;
+            bulk.Phase2VideoCursor = null;
+            bulk.Phase2VideoCompleted = false;
+            bulk.Phase2PhotoCursor = null;
+            bulk.Phase2PhotoCompleted = false;
+        }
 
         cancellationToken.ThrowIfCancellationRequested();
         await command.SaveBulks(data, cancellationToken);

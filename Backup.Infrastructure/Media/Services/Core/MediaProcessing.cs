@@ -19,7 +19,6 @@ public class MediaProcessing(
     private readonly IMediaDownloadProjectionService _mediaDownloadProjectionService =
         mediaDownloadProjectionService;
     private readonly IMediaDownloadModelMapper _mediaDownloadModelMapper = mediaDownloadModelMapper;
-
     private readonly List<Download> _all = [];
     private readonly List<Download> _filtered = [];
 

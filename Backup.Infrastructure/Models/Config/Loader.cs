@@ -20,7 +20,7 @@ public static class ConfigLoader
     private static readonly IConfigApiCompositionService _apiComposition =
         new ConfigApiCompositionService(_normalization);
 
-    public static string GetConfigDirectory() => Path.Combine(AppContext.BaseDirectory, "config");
+    public static string GetConfigDirectory() => Path.Combine(AppContext.BaseDirectory, "Config");
 
     public static AppConfig Load(string? configDirectory = null) =>
         LoadSplit(configDirectory ?? GetConfigDirectory());

@@ -58,9 +58,26 @@ public class LocalMediaData(
         );
 
         Directory.CreateDirectory(directoryName);
+        string tempPath = Path.Combine(
+            directoryName,
+            $".{Path.GetFileName(fullPath)}.{Guid.NewGuid():N}.tmp"
+        );
 
-        using FileStream fs = File.Create(fullPath);
-        await stream.CopyToAsync(fs, token);
+        try
+        {
+            await using (FileStream fs = File.Create(tempPath))
+            {
+                await stream.CopyToAsync(fs, token);
+                await fs.FlushAsync(token);
+            }
+
+            File.Move(tempPath, fullPath, true);
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+                File.Delete(tempPath);
+        }
     }
 
     public async Task<bool> Exists(string path) => File.Exists(await _mediaCache.GetPath(path));

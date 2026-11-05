@@ -226,6 +226,123 @@ public sealed class MediaDownloadProjectionServiceTests
     }
 
     [Fact]
+    public void Project_BuildsRealBookmarkVideo()
+    {
+        MediaInput post = CreatePost(
+            "2117639865374515612",
+            medias:
+            [
+                new PostMedia
+                {
+                    Id = "2117639805680947200",
+                    Type = "video",
+                    Url =
+                        "https://pbs.twimg.com/amplify_video_thumb/2117639805680947200/img/377yWa_SdlfZWHAt.jpg",
+                    VideoInfo = new PostVideoInfo
+                    {
+                        Variants =
+                        [
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Bitrate = 632000,
+                                Url =
+                                    "https://video.twimg.com/amplify_video/2117639805680947200/vid/avc1/320x466/30YMZVV06Dcq-R0w.mp4?tag=14",
+                            },
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Bitrate = 950000,
+                                Url =
+                                    "https://video.twimg.com/amplify_video/2117639805680947200/vid/avc1/480x700/95pqgElkwsmIrzOn.mp4?tag=14",
+                            },
+                            new PostVariant
+                            {
+                                ContentType = "video/mp4",
+                                Bitrate = 2176000,
+                                Url =
+                                    "https://video.twimg.com/amplify_video/2117639805680947200/vid/avc1/720x1050/Z9Xk_IECdg4wWlND.mp4?tag=14",
+                            },
+                        ],
+                    },
+                },
+            ]
+        );
+
+        MediaProcessingResult result = _sut.Project(
+            [post],
+            CreateConfig(
+                video: new MediaDownloadProjectionVariantConfig
+                {
+                    Thumb = new MediaDownloadProjectionRuleConfig
+                    {
+                        Types = ["jpg", "png"],
+                        Dimensions = [],
+                        Sizes = ["orig", "large"],
+                        Filters = ["jpg:png:*", "jpg:jpg:large", "png:jpg:orig", "png:png:large"],
+                    },
+                    Types = ["video/mp4"],
+                    VariantSelection = "highest-resolution",
+                }
+            )
+        );
+
+        MediaDownload filtered = Assert.Single(result.Filtered);
+        Assert.Contains(filtered.Data, item => item.Path.EndsWith("720x1050.mp4"));
+        Assert.Contains(
+            filtered.Data,
+            item =>
+                item.Path.Contains(Path.Combine("video", "2117639805680947200", "thumb"))
+                && item.Path.EndsWith(Path.Combine("size", "orig.jpg"))
+        );
+    }
+
+    [Fact]
+    public void Project_BuildsRealLikedPhoto()
+    {
+        MediaInput post = CreatePost(
+            "2118129052951392614",
+            medias:
+            [
+                new PostMedia
+                {
+                    Id = "2118129040980848640",
+                    Type = "photo",
+                    Url = "https://pbs.twimg.com/media/HWUbI_QaMAAsU7h.jpg",
+                },
+            ]
+        );
+
+        MediaProcessingResult result = _sut.Project(
+            [post],
+            CreateConfig(
+                photo: new MediaDownloadProjectionRuleConfig
+                {
+                    Types = ["jpg", "png"],
+                    Dimensions = [],
+                    Sizes = ["orig", "large"],
+                    Filters = ["jpg:png:*", "jpg:jpg:large", "png:jpg:orig", "png:png:large"],
+                }
+            )
+        );
+
+        MediaDownload filtered = Assert.Single(result.Filtered);
+        MediaDownloadData photo = Assert.Single(filtered.Data);
+        Assert.Equal(
+            Path.Combine(
+                "2118129052951392614",
+                "photo",
+                "2118129040980848640",
+                "HWUbI_QaMAAsU7h",
+                "jpg",
+                "size",
+                "orig.jpg"
+            ),
+            photo.Path
+        );
+    }
+
+    [Fact]
     public void Project_SelectsHighestResolutionMp4_AndKeepsHls()
     {
         MediaInput post = CreatePost(
@@ -487,6 +604,42 @@ public sealed class MediaDownloadProjectionServiceTests
         Assert.Equal(2, Assert.Single(result.All).Data.Count);
     }
 
+    [Theory]
+    [InlineData("video", "video")]
+    [InlineData("animated_gif", "gif")]
+    public void Project_BuildsThumbnail_WhenVideoInfoIsMissing(string type, string pathType)
+    {
+        MediaInput post = CreatePost(
+            "p1",
+            medias:
+            [
+                new PostMedia
+                {
+                    Id = "media-1",
+                    Type = type,
+                    Url = "https://pbs.twimg.com/media/thumb.jpg",
+                    VideoInfo = null,
+                },
+            ]
+        );
+
+        MediaDownloadProjectionVariantConfig rule = new()
+        {
+            Thumb = CreateMediaRule(),
+            Types = ["video/mp4"],
+        };
+        MediaProcessingResult result = _sut.Project(
+            [post],
+            CreateConfig(
+                video: type == "video" ? rule : null,
+                gif: type == "animated_gif" ? rule : null
+            )
+        );
+
+        MediaDownloadData thumbnail = Assert.Single(Assert.Single(result.Filtered).Data);
+        Assert.Contains(Path.Combine(pathType, "media-1", "thumb"), thumbnail.Path);
+    }
+
     [Fact]
     public void Project_BuildsProfileImage_AndBanner()
     {
@@ -623,6 +776,16 @@ public sealed class MediaDownloadProjectionServiceTests
             Types = [],
             Dimensions = [],
             Sizes = [],
+            Filters = [],
+        };
+
+    private static MediaDownloadProjectionRuleConfig CreateMediaRule() =>
+        new()
+        {
+            Types = ["jpg"],
+            // Microsoft.Extensions.Configuration binds an empty JSON array as null.
+            Dimensions = null,
+            Sizes = ["orig"],
             Filters = [],
         };
 

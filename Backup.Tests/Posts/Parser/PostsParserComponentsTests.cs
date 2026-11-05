@@ -1,6 +1,7 @@
 using Backup.Application.Posts;
 using Backup.Infrastructure.Posts.Abstractions.Services;
 using Backup.Infrastructure.Posts.Adapters;
+using Backup.Infrastructure.Posts.Adapters.ProjectionMapping;
 using Backup.Infrastructure.Posts.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Newtonsoft.Json.Linq;
@@ -9,6 +10,38 @@ namespace Backup.Tests;
 
 public class PostsParserComponentsTests
 {
+    [Fact]
+    public void ProfileMapper_ReadsMediaCount_FromTweetCounts()
+    {
+        Result result = new()
+        {
+            Legacy = CreateLegacy(id: "tweet-id", userId: "u1"),
+            Core = new CoreUser
+            {
+                Name = "name",
+                ScreenName = "user",
+                UserResults = new UserResults
+                {
+                    Result = new Result
+                    {
+                        RestId = "u1",
+                        Core = new CoreUser
+                        {
+                            Name = "name",
+                            ScreenName = "user",
+                            UserResults = new UserResults { Result = null },
+                        },
+                        TweetCounts = new TweetCounts { MediaTweets = 42 },
+                    },
+                },
+            },
+        };
+
+        var profile = ProfileMapper.Map(result);
+
+        Assert.Equal(42, profile.MediaCount);
+    }
+
     [Theory]
     [InlineData("\"legacy\": { \"media_count\": 14 }")]
     [InlineData("\"tweet_counts\": { \"media_tweets\": 14 }")]
@@ -177,6 +210,52 @@ public class PostsParserComponentsTests
         Assert.Single(entries);
         Assert.Equal("tweet-1", entries[0].EntryId);
         Assert.Equal("CURSOR_ABC", cursor);
+    }
+
+    [Fact]
+    public void TimelineEntryExtractor_ReturnsEmpty_WhenTimelineTerminatesWithoutEntries()
+    {
+        IPostTimelineExtractionService service = new PostTimelineExtractor();
+        JObject root = JObject.Parse(
+            """
+            {
+              "data": {
+                "user": {
+                  "result": {
+                    "timeline": {
+                      "timeline": {
+                        "instructions": [
+                          { "type": "TimelineClearCache" },
+                          {
+                            "direction": "Top",
+                            "type": "TimelineTerminateTimeline"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+            """
+        );
+
+        IReadOnlyList<JObject> entries = service.ExtractEntries(root);
+        string? cursor = service.ExtractCursor(root);
+
+        Assert.Empty(entries);
+        Assert.Null(cursor);
+    }
+
+    [Fact]
+    public void TimelineEntryExtractor_RejectsPayloadWithoutEntriesOrTermination()
+    {
+        IPostTimelineExtractionService service = new PostTimelineExtractor();
+        JObject root = JObject.Parse("""{ "data": { "user": { "result": {} } } }""");
+
+        FormatException error = Assert.Throws<FormatException>(() => service.ExtractEntries(root));
+
+        Assert.Equal("Timeline payload is missing '..entries'.", error.Message);
     }
 
     [Fact]

@@ -45,6 +45,8 @@ public sealed class JsonAppConfigStore(string? configDirectory = null) : IAppCon
 
     private static void AddCandidates(List<string> candidates, string basePath)
     {
+        candidates.Add(Path.Combine(basePath, "Config"));
+        candidates.Add(Path.Combine(basePath, "Config.example"));
         candidates.Add(Path.Combine(basePath, "config"));
         candidates.Add(Path.Combine(basePath, "config.example"));
     }

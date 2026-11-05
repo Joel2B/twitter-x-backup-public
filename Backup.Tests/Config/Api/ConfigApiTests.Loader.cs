@@ -226,5 +226,5 @@ public partial class ConfigApiTests
     }
 
     private static string[] GetConfigDirectories(string root) =>
-        [Path.Combine(root, "config"), Path.Combine(root, "config.example")];
+        [Path.Combine(root, "Config"), Path.Combine(root, "Config.example")];
 }

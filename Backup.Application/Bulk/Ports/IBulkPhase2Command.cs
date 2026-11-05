@@ -9,7 +9,9 @@ public interface IBulkPhase2Command
     Task SaveBulks(IReadOnlyList<BulkItem> bulks);
     Task<bool> VerifyApi();
     Task<ParseResult?> GetUserMedia(
+        MediaTimelineType timeline,
         string userId,
+        string userName,
         string origin,
         int count,
         string? cursor,

@@ -400,11 +400,9 @@ FodyWeavers.xsd
 
 **/Config.json
 .env
+/compose.yml
+/compose.linux.yml
+/compose.windows.yml
 
 # Local split runtime config
-App/Config/*.json
-App/Config/**/*.json
-Backup.Infrastructure/App/Config/*.json
-Backup.Infrastructure/App/Config/**/*.json
-/config/
-/config.ps1
+/Config/

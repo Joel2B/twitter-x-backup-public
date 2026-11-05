@@ -203,7 +203,9 @@ public class MediaDownloaderHttp(
                 return stream;
             }
             catch (Exception ex)
-                when (_mediaDownloadExceptionPolicyService.ShouldRetryWithNextProxy(ex))
+                when (!token.IsCancellationRequested
+                    && _mediaDownloadExceptionPolicyService.ShouldRetryWithNextProxy(ex)
+                )
             {
                 stream?.Dispose();
 

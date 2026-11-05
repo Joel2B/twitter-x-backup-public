@@ -11,8 +11,8 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.OpenApi" Version="2.3.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.3.1" />
   </ItemGroup>
 
   <ItemGroup>

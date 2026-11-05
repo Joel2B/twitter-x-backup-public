@@ -1,3 +1,4 @@
+using Backup.Application.Bulk.Models;
 using Backup.Infrastructure.Models.Config.Api;
 using ParseResult = Backup.Domain.Posts.ParseResult;
 using ParseUser = Backup.Domain.Posts.ParseUser;
@@ -16,7 +17,9 @@ public interface IBulkApiClient
 
     Task<ParseResult?> GetUserMedia(
         IReadOnlyDictionary<string, ApiConfig> api,
+        MediaTimelineType timeline,
         string id,
+        string userName,
         string origin,
         int count,
         string? cursor,

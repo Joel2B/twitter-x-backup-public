@@ -3,7 +3,7 @@ import type { EndpointDefinition, RequiredHeaderKey } from "./models.js";
 export const ENDPOINTS: EndpointDefinition[] = [
   {
     id: "posts",
-    title: "Api.posts (UserTweets)",
+    title: "Api.posts (UserOriginalsTimeline)",
     type: "api",
     jsonKey: "posts",
     pageUrlTemplate: "https://x.com/{username}",
@@ -26,11 +26,19 @@ export const ENDPOINTS: EndpointDefinition[] = [
     enabledByDefault: true
   },
   {
-    id: "media",
-    title: "Api.media (UserMedia)",
+    id: "UserVideoTimeline",
+    title: "Api.UserVideoTimeline",
     type: "api",
-    jsonKey: "UserMedia",
+    jsonKey: "UserVideoTimeline",
     pageUrlTemplate: "https://x.com/{username}/media",
+    enabledByDefault: true
+  },
+  {
+    id: "UserPhotoTimeline",
+    title: "Api.UserPhotoTimeline",
+    type: "api",
+    jsonKey: "UserPhotoTimeline",
+    pageUrlTemplate: "https://x.com/{username}/media?filter=photo",
     enabledByDefault: true
   },
   {

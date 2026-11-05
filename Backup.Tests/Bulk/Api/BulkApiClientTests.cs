@@ -112,11 +112,11 @@ public class BulkApiClientTests
     public async Task GetUserMedia_SetsVariablesAndReferer_AndParsesResponse()
     {
         FakeBulkApiResultPolicyService resultPolicy = new();
-        Request request = CreateRequest("https://x.com/graphql/media");
-        FakeBulkRequestFactory requestFactory = new() { UserMediaRequest = request };
+        Request request = CreateRequest("https://x.com/graphql/video");
+        FakeBulkRequestFactory requestFactory = new() { UserVideoTimelineRequest = request };
         FakeBulkSourceRouteProvider routeProvider = new()
         {
-            RefererValue = "https://x.com/notifications",
+            RefererValue = "https://x.com/alice/media",
         };
         FakePostDownloader downloader = new() { DownloadResponse = "{\"media\":[]}" };
         ParseResult expected = new([], "CURSOR-1");
@@ -133,7 +133,9 @@ public class BulkApiClientTests
 
         ParseResult? result = await sut.GetUserMedia(
             new Dictionary<string, ApiConfig>(),
+            MediaTimelineType.Video,
             "uid-1",
+            "alice",
             "media",
             33,
             "CURSOR-0",
@@ -144,7 +146,7 @@ public class BulkApiClientTests
         Assert.Equal("uid-1", request.Query.Variables["userId"]?.ToString());
         Assert.Equal(33, Convert.ToInt32(request.Query.Variables["count"]));
         Assert.Equal("CURSOR-0", request.Query.Variables["cursor"]?.ToString());
-        Assert.Equal("https://x.com/notifications", request.Headers["Referer"]);
+        Assert.Equal("https://x.com/alice/media", request.Headers["Referer"]);
         Assert.Equal(1, parser.ParseCalls);
         Assert.Equal("uid-1", parser.LastParseUserId);
         Assert.Equal("media", parser.LastParseOrigin);
@@ -155,8 +157,8 @@ public class BulkApiClientTests
     public async Task GetUserMedia_WhenDownloaderThrows_ReturnsNull()
     {
         FakeBulkApiResultPolicyService resultPolicy = new();
-        Request request = CreateRequest("https://x.com/graphql/media");
-        FakeBulkRequestFactory requestFactory = new() { UserMediaRequest = request };
+        Request request = CreateRequest("https://x.com/graphql/photo");
+        FakeBulkRequestFactory requestFactory = new() { UserPhotoTimelineRequest = request };
         FakeBulkSourceRouteProvider routeProvider = new();
         FakePostDownloader downloader = new() { ThrowOnDownload = true };
         FakePostDomainParser parser = new();
@@ -172,7 +174,9 @@ public class BulkApiClientTests
 
         ParseResult? result = await sut.GetUserMedia(
             new Dictionary<string, ApiConfig>(),
+            MediaTimelineType.Photo,
             "uid-1",
+            "alice",
             "media",
             20,
             null,
@@ -199,13 +203,17 @@ public class BulkApiClientTests
     private sealed class FakeBulkRequestFactory : IBulkRequestFactory
     {
         public Request? UserByScreenNameRequest { get; init; } = null;
-        public Request? UserMediaRequest { get; init; } = null;
+        public Request? UserVideoTimelineRequest { get; init; } = null;
+        public Request? UserPhotoTimelineRequest { get; init; } = null;
 
         public Request? BuildUserByScreenName(IReadOnlyDictionary<string, ApiConfig> api) =>
             UserByScreenNameRequest;
 
-        public Request? BuildUserMedia(IReadOnlyDictionary<string, ApiConfig> api) =>
-            UserMediaRequest;
+        public Request? BuildUserVideoTimeline(IReadOnlyDictionary<string, ApiConfig> api) =>
+            UserVideoTimelineRequest;
+
+        public Request? BuildUserPhotoTimeline(IReadOnlyDictionary<string, ApiConfig> api) =>
+            UserPhotoTimelineRequest;
     }
 
     private sealed class FakeBulkSourceRouteProvider : IBulkSourceRouteService

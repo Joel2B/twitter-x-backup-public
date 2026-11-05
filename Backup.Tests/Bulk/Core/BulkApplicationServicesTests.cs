@@ -20,11 +20,13 @@ public class BulkApplicationServicesTests
                 UserId = "u1",
                 UserStatus = BulkUserStatus.Active,
                 Phase1Order = 0,
-                Cursor = "CURSOR_1",
+                VideoCursor = "VIDEO_CURSOR_1",
+                PhotoCursor = "PHOTO_CURSOR_1",
             }
         );
         command.Verify.Enqueue(true);
         command.Results.Enqueue(new ParseResult([CreatePost("p1", mediaCount: 2)], null));
+        command.Results.Enqueue(new ParseResult([CreatePost("p2", mediaCount: 2)], null));
 
         await sut.Run(
             command,
@@ -44,10 +46,46 @@ public class BulkApplicationServicesTests
         Assert.Single(command.AddCalls);
         Assert.Equal("u1", command.AddCalls[0].UserId);
         Assert.Equal("origin-1", command.AddCalls[0].Origin);
+        Assert.Equal(2, command.AddCalls[0].Posts.Count);
         Assert.Equal(1, command.SavePostsCalls);
         Assert.Equal(1, command.SaveBulksCalls);
         Assert.Null(command.Bulks[0].Phase1Order);
         Assert.Null(command.Bulks[0].Cursor);
+    }
+
+    [Fact]
+    public async Task Phase1Service_DeduplicatesPostsReturnedByBothTimelines()
+    {
+        BulkPhase1Service sut = new(NullLogger<BulkPhase1Service>.Instance);
+        FakeBulkPhase1Command command = new();
+        command.Bulks.Add(
+            new BulkItem
+            {
+                UserName = "user1",
+                UserId = "u1",
+                UserStatus = BulkUserStatus.Active,
+                Phase1Order = 0,
+            }
+        );
+        command.Results.Enqueue(new ParseResult([CreatePost("same", mediaCount: 1)], null));
+        command.Results.Enqueue(new ParseResult([CreatePost("same", mediaCount: 1)], null));
+
+        await sut.Run(
+            command,
+            new BulkPhase1Options
+            {
+                UsersPerCycle = 0,
+                SavePerAction = 100,
+                ApiPerCycle = 1,
+                MediaPerApi = 20,
+                MaxCountPost = 100,
+                ApiRetryCount = 1,
+            },
+            origin: "media",
+            CancellationToken.None
+        );
+
+        Assert.Single(Assert.Single(command.AddCalls).Posts);
     }
 
     [Fact]
@@ -63,16 +101,20 @@ public class BulkApplicationServicesTests
                 UserStatus = BulkUserStatus.Active,
                 Phase2Order = 0,
                 Total = 1,
-                Cursor = "CURSOR_1",
+                VideoCursor = "VIDEO_CURSOR_1",
+                PhotoCursor = "PHOTO_CURSOR_1",
             }
         );
 
-        command.Verify.Enqueue(true); // initial
-        command.Verify.Enqueue(true); // loop #1
-        command.Verify.Enqueue(true); // loop #2
+        command.Verify.Enqueue(true);
+        command.Verify.Enqueue(true);
+        command.Verify.Enqueue(true);
+        command.Verify.Enqueue(true);
 
         command.Results.Enqueue(new ParseResult([CreatePost("p1", mediaCount: 3)], "NEXT_1"));
+        command.Results.Enqueue(new ParseResult([CreatePost("p3", mediaCount: 3)], "NEXT_3"));
         command.Results.Enqueue(new ParseResult([CreatePost("p2", mediaCount: 3)], null));
+        command.Results.Enqueue(new ParseResult([CreatePost("p4", mediaCount: 3)], null));
 
         await sut.Run(
             command,
@@ -88,11 +130,14 @@ public class BulkApplicationServicesTests
             CancellationToken.None
         );
 
-        Assert.Equal(2, command.AddCalls.Count);
+        Assert.Single(command.AddCalls);
+        Assert.Equal(4, command.AddCalls[0].Posts.Count);
         Assert.Equal(1, command.SavePostsCalls);
         Assert.Equal(1, command.SaveBulksCalls);
         Assert.Null(command.Bulks[0].Phase2Order);
         Assert.Equal(3, command.Bulks[0].Total);
+        Assert.Equal("VIDEO_CURSOR_1", command.Bulks[0].VideoCursor);
+        Assert.Equal("PHOTO_CURSOR_1", command.Bulks[0].PhotoCursor);
     }
 
     [Fact]
@@ -210,7 +255,9 @@ public class BulkApplicationServicesTests
         public Task<bool> VerifyApi() => Task.FromResult(Verify.Count == 0 || Verify.Dequeue());
 
         public Task<ParseResult?> GetUserMedia(
+            MediaTimelineType timeline,
             string userId,
+            string userName,
             string origin,
             int count,
             string? cursor,
@@ -251,7 +298,9 @@ public class BulkApplicationServicesTests
         public Task<bool> VerifyApi() => Task.FromResult(Verify.Count == 0 || Verify.Dequeue());
 
         public Task<ParseResult?> GetUserMedia(
+            MediaTimelineType timeline,
             string userId,
+            string userName,
             string origin,
             int count,
             string? cursor,

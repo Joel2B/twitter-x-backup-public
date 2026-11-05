@@ -47,6 +47,32 @@ public class MediaOrchestrationServiceTests
         Assert.Equal(1, command.BackupCalls);
     }
 
+    [Fact]
+    public async Task Run_WhenDownloadIsCancelled_StopsBeforePostDownloadPipeline()
+    {
+        using CancellationTokenSource cts = new();
+        MediaOrchestrationService sut = new(NullLogger<MediaOrchestrationService>.Instance);
+        FakeMediaCommand command = new()
+        {
+            MediaInputs = [CreateMediaInput("p1")],
+            ProcessingResult = new MediaProcessingResult
+            {
+                All = [CreateDownload("p1", "https://a/1.jpg", "m/1.jpg")],
+                Filtered = [CreateDownload("p1", "https://a/1.jpg", "m/1.jpg")],
+            },
+            StorageIds = ["local"],
+            MaintenanceByStorage = new Dictionary<string, bool> { ["local"] = true },
+            CancelAfterDownload = cts,
+        };
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() => sut.Run(command, cts.Token));
+
+        Assert.Equal(1, command.DownloadCalls);
+        Assert.Equal(1, command.FilterCalls);
+        Assert.Equal(0, command.VerifyCacheParityCalls);
+        Assert.Equal(0, command.BackupCalls);
+    }
+
     private static MediaInput CreateMediaInput(string id) =>
         new()
         {
@@ -74,6 +100,7 @@ public class MediaOrchestrationServiceTests
             new() { All = [], Filtered = [] };
         public List<string> StorageIds { get; set; } = [];
         public Dictionary<string, bool> MaintenanceByStorage { get; set; } = [];
+        public CancellationTokenSource? CancelAfterDownload { get; set; }
 
         public int ProcessCalls { get; private set; }
         public int PruneCalls { get; private set; }
@@ -144,6 +171,7 @@ public class MediaOrchestrationServiceTests
         )
         {
             DownloadCalls++;
+            CancelAfterDownload?.Cancel();
             return Task.CompletedTask;
         }
 

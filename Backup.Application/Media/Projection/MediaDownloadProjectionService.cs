@@ -85,29 +85,27 @@ public sealed class MediaDownloadProjectionService(
     {
         RuleProjectionContext? context = CreateRuleProjectionContext(config.Thumb);
 
-        if (context is null || config.Types is null)
-            return;
-
         foreach ((MediaInput post, PostMedia media) in EnumerateTypedMedias(posts, "animated_gif"))
         {
-            if (media.VideoInfo?.Variants is null)
-                continue;
-
             string id = GetFileIdWithoutExtension(media.Url);
 
-            AddRuleBasedDownloads(
-                resultId: post.Id,
-                postId: post.Id,
-                mediaType: "gif",
-                id: media.Id,
-                midPath: ["thumb", id],
-                sourceUrl: media.Url,
-                context,
-                all,
-                filtered
-            );
+            if (context is not null)
+            {
+                AddRuleBasedDownloads(
+                    resultId: post.Id,
+                    postId: post.Id,
+                    mediaType: "gif",
+                    id: media.Id,
+                    midPath: ["thumb", id],
+                    sourceUrl: media.Url,
+                    context,
+                    all,
+                    filtered
+                );
+            }
 
-            AddGifVariantDownloads(post, media, config.Types, all, filtered);
+            if (config.Types is not null)
+                AddGifVariantDownloads(post, media, config.Types, all, filtered);
         }
     }
 
@@ -120,36 +118,36 @@ public sealed class MediaDownloadProjectionService(
     {
         RuleProjectionContext? context = CreateRuleProjectionContext(config.Thumb);
 
-        if (context is null || config.Types is null)
-            return;
-
         foreach ((MediaInput post, PostMedia media) in EnumerateTypedMedias(posts, "video"))
         {
-            if (media.VideoInfo?.Variants is null)
-                continue;
-
             string id = GetFileIdWithoutExtension(media.Url);
 
-            AddRuleBasedDownloads(
-                resultId: post.Id,
-                postId: post.Id,
-                mediaType: "video",
-                id: media.Id,
-                midPath: ["thumb", id],
-                sourceUrl: media.Url,
-                context,
-                all,
-                filtered
-            );
+            if (context is not null)
+            {
+                AddRuleBasedDownloads(
+                    resultId: post.Id,
+                    postId: post.Id,
+                    mediaType: "video",
+                    id: media.Id,
+                    midPath: ["thumb", id],
+                    sourceUrl: media.Url,
+                    context,
+                    all,
+                    filtered
+                );
+            }
 
-            AddVideoVariantDownloads(
-                post,
-                media,
-                config.Types,
-                config.VariantSelection,
-                all,
-                filtered
-            );
+            if (config.Types is not null)
+            {
+                AddVideoVariantDownloads(
+                    post,
+                    media,
+                    config.Types,
+                    config.VariantSelection,
+                    all,
+                    filtered
+                );
+            }
         }
     }
 
@@ -299,7 +297,7 @@ public sealed class MediaDownloadProjectionService(
     {
         foreach (PostVariant variant in media.VideoInfo?.Variants ?? [])
         {
-            if (!allowedTypes.Contains(variant.ContentType))
+            if (!allowedTypes.Contains(variant.ContentType, StringComparer.OrdinalIgnoreCase))
                 continue;
 
             string url = StripQuery(variant.Url);
@@ -343,7 +341,12 @@ public sealed class MediaDownloadProjectionService(
         {
             List<PostVariant> allowedMp4 = variants
                 .Where(variant =>
-                    variant.ContentType == "video/mp4" && allowedTypes.Contains(variant.ContentType)
+                    string.Equals(
+                        variant.ContentType,
+                        "video/mp4",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                    && allowedTypes.Contains(variant.ContentType, StringComparer.OrdinalIgnoreCase)
                 )
                 .ToList();
 
@@ -373,13 +376,19 @@ public sealed class MediaDownloadProjectionService(
                 .FirstOrDefault();
 
             variants = variants
-                .Where(variant => variant.ContentType != "video/mp4")
+                .Where(variant =>
+                    !string.Equals(
+                        variant.ContentType,
+                        "video/mp4",
+                        StringComparison.OrdinalIgnoreCase
+                    )
+                )
                 .Concat(bestMp4 is null ? [] : [bestMp4]);
         }
 
         foreach (PostVariant variant in variants)
         {
-            if (!allowedTypes.Contains(variant.ContentType))
+            if (!allowedTypes.Contains(variant.ContentType, StringComparer.OrdinalIgnoreCase))
                 continue;
 
             string? formatType = _mediaVideoVariantPolicyService.GetFormatType(variant.ContentType);
@@ -479,14 +488,13 @@ public sealed class MediaDownloadProjectionService(
         MediaDownloadProjectionRuleConfig config
     )
     {
-        if (config.Dimensions is null || config.Sizes is null)
-            return null;
-
-        return
+        List<Resolution> resolutions =
         [
-            .. config.Dimensions.Select(value => new Resolution(value, "dimension")),
-            .. config.Sizes.Select(value => new Resolution(value, "size")),
+            .. (config.Dimensions ?? []).Select(value => new Resolution(value, "dimension")),
+            .. (config.Sizes ?? []).Select(value => new Resolution(value, "size")),
         ];
+
+        return resolutions.Count == 0 ? null : resolutions;
     }
 
     private static IEnumerable<(MediaInput Post, PostMedia Media)> EnumerateTypedMedias(
@@ -498,7 +506,7 @@ public sealed class MediaDownloadProjectionService(
         {
             foreach (PostMedia media in post.Medias ?? [])
             {
-                if (media.Type == type)
+                if (string.Equals(media.Type.Trim(), type, StringComparison.OrdinalIgnoreCase))
                     yield return (post, media);
             }
         }

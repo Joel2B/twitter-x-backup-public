@@ -84,7 +84,7 @@ export function getUsernameHint(settings: PopupSettings, detectedUsername: strin
     return `Auto-detected @${detectedUsername}. You can edit it.`;
   }
 
-  return "Used for posts/likes/media Open links";
+  return "Used for posts/likes/photo/video timeline Open links";
 }
 
 export function getHashtagHint(settings: PopupSettings): string {

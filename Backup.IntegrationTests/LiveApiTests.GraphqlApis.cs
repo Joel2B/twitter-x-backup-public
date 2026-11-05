@@ -12,9 +12,16 @@ public partial class LiveApiTests
 {
     [LiveApiFact]
     [Trait("Category", "LiveApi")]
-    public async Task Api_UserMedia_Request_Works()
+    public async Task Api_UserVideoTimeline_Request_Works()
     {
-        await AssertApiRequestWorks("UserMedia");
+        await AssertApiRequestWorks("UserVideoTimeline");
+    }
+
+    [LiveApiFact]
+    [Trait("Category", "LiveApi")]
+    public async Task Api_UserPhotoTimeline_Request_Works()
+    {
+        await AssertApiRequestWorks("UserPhotoTimeline");
     }
 
     [LiveApiFact]
