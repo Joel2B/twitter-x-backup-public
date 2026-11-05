@@ -26,13 +26,10 @@ RUN dotnet test Backup.IntegrationTests/Backup.IntegrationTests.csproj -c Releas
 
 FROM test AS publish
 RUN dotnet publish Backup.Cli/Backup.Cli.csproj -c Release --no-restore -o /app/publish
-RUN dotnet /app/publish/Backup.Cli.dll maintenance video-variants reconcile-empty-purge-loose-v2 2>&1 \
-    | grep -q "Missing required option --manifest"
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0.1 AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
-COPY config.maintenance.linux /app/maintenance-config
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends tzdata libgssapi-krb5-2 \

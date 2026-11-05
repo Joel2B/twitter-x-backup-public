@@ -48,6 +48,9 @@ public sealed class AutomaticLooseMediaPruneServiceTests
             "nas media",
             "postgres",
             "namespace",
+            ["incremental-1", "incremental-2"],
+            new('c', 64),
+            new('d', 64),
             new('a', 64),
             new('b', 64),
             [operation]
@@ -57,6 +60,9 @@ public sealed class AutomaticLooseMediaPruneServiceTests
             "nas media",
             "postgres",
             "namespace",
+            ["incremental-1", "incremental-2"],
+            new('c', 64),
+            new('d', 64),
             new('a', 64),
             new('b', 64),
             [operation with { FileSize = 124 }]
@@ -67,5 +73,184 @@ public sealed class AutomaticLooseMediaPruneServiceTests
         Assert.True(AutomaticLooseMediaPruneService.FixedEquals(first, first));
         Assert.False(AutomaticLooseMediaPruneService.FixedEquals(first, second));
         Assert.False(AutomaticLooseMediaPruneService.FixedEquals(first, "invalid"));
+    }
+
+    [Fact]
+    public void Approval_hash_covers_config_roots_and_exact_incremental_namespaces()
+    {
+        Guid runId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+        string first = AutomaticLooseMediaPruneService.CalculateApprovalHash(
+            runId, "store", "cache", "primary", ["incremental-a", "incremental-b"],
+            new('a', 64), new('b', 64), new('c', 64), new('d', 64), []
+        );
+        string reordered = AutomaticLooseMediaPruneService.CalculateApprovalHash(
+            runId, "store", "cache", "primary", ["incremental-b", "incremental-a"],
+            new('a', 64), new('b', 64), new('c', 64), new('d', 64), []
+        );
+        string changed = AutomaticLooseMediaPruneService.CalculateApprovalHash(
+            runId, "store", "cache", "primary", ["incremental-a", "incremental-c"],
+            new('a', 64), new('b', 64), new('c', 64), new('d', 64), []
+        );
+
+        Assert.Equal(first, reordered);
+        Assert.NotEqual(first, changed);
+    }
+
+    [Fact]
+    public void Roots_hash_is_order_independent_and_covers_resolved_paths()
+    {
+        Dictionary<int, string> first = new() { [2] = Path.Combine("root", "two"), [1] = Path.Combine("root", "one") };
+        Dictionary<int, string> reordered = new() { [1] = Path.Combine("root", "one"), [2] = Path.Combine("root", "two") };
+        Dictionary<int, string> changed = new() { [1] = Path.Combine("root", "one"), [2] = Path.Combine("root", "other") };
+
+        Assert.Equal(
+            AutomaticLooseMediaPruneService.CalculateRootsHash(first),
+            AutomaticLooseMediaPruneService.CalculateRootsHash(reordered)
+        );
+        Assert.NotEqual(
+            AutomaticLooseMediaPruneService.CalculateRootsHash(first),
+            AutomaticLooseMediaPruneService.CalculateRootsHash(changed)
+        );
+    }
+
+    [Fact]
+    public void Quarantine_name_is_fixed_length_and_path_sensitive()
+    {
+        string first = AutomaticLooseMediaPruneService.CalculateQuarantineName(new string('a', 1000) + "/file.jpg");
+        string second = AutomaticLooseMediaPruneService.CalculateQuarantineName(new string('a', 1000) + "/other.jpg");
+
+        Assert.Equal(68, first.Length);
+        Assert.EndsWith(".bin", first);
+        Assert.NotEqual(first, second);
+    }
+
+    [Fact]
+    public void Config_loader_resolves_env_aliases_partitions_and_ignores_irrelevant_sections()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"prune-config-{Guid.NewGuid():N}");
+        string variable = $"PRUNE_TEST_{Guid.NewGuid():N}";
+        string connectionString = "Host=localhost;Database=prune";
+        Directory.CreateDirectory(root);
+        Environment.SetEnvironmentVariable(variable, connectionString);
+        try
+        {
+            string configPath = Path.Combine(root, "Data.json");
+            File.WriteAllText(
+                configPath,
+                $$"""
+                {
+                  "Aliases": { "ROOT": {{System.Text.Json.JsonSerializer.Serialize(root)}} },
+                  "Partitions": [
+                    { "Id": 7, "Paths": ["@ROOT", "partition"] }
+                  ],
+                  "Post": [{}],
+                  "Dump": [{ "Paths": {} }],
+                  "Media": [{
+                    "Id": "store",
+                    "Cache": [{
+                      "Id": "cache",
+                      "Type": "POSTGRES",
+                      "ConnectionString": "ENV:{{variable}}"
+                    }],
+                    "Paths": { "Media": { "Paths": ["content"] } },
+                    "Partitions": [7, 7]
+                  }]
+                }
+                """
+            );
+
+            MediaPruneConfig config = MediaPruneConfigLoader.Load(configPath, "store", "cache");
+
+            Assert.Equal(connectionString, config.ConnectionString);
+            Assert.Equal("store", config.MediaStoreId);
+            Assert.Equal("cache", config.CacheId);
+            KeyValuePair<int, string> resolved = Assert.Single(config.MediaRoots);
+            Assert.Equal(7, resolved.Key);
+            Assert.Equal(Path.GetFullPath(Path.Combine(root, "partition", "content")), resolved.Value);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(variable, null);
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Config_loader_rejects_unresolved_store_partition()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"prune-config-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            string configPath = Path.Combine(root, "Data.json");
+            File.WriteAllText(
+                configPath,
+                $$"""
+                {
+                  "Aliases": { "ROOT": {{System.Text.Json.JsonSerializer.Serialize(root)}} },
+                  "Partitions": [{ "Id": 1, "Enabled": false, "Paths": ["@ROOT"] }],
+                  "Media": [{
+                    "Id": "store",
+                    "Cache": [{
+                      "Id": "cache",
+                      "Type": "postgres",
+                      "ConnectionString": "Host=localhost"
+                    }],
+                    "Paths": { "Media": { "Paths": ["content"] } },
+                    "Partitions": [1]
+                  }]
+                }
+                """
+            );
+
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+                () => MediaPruneConfigLoader.Load(configPath, "store", "cache")
+            );
+            Assert.Contains("Partition 1", exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Config_loader_requires_exact_case_sensitive_ids()
+    {
+        string root = Path.Combine(Path.GetTempPath(), $"prune-config-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(root);
+        try
+        {
+            string configPath = Path.Combine(root, "Data.json");
+            File.WriteAllText(
+                configPath,
+                $$"""
+                {
+                  "Aliases": { "ROOT": {{System.Text.Json.JsonSerializer.Serialize(root)}} },
+                  "Partitions": [{ "Id": 1, "Paths": ["@ROOT"] }],
+                  "Media": [{
+                    "Id": "Store",
+                    "Cache": [{
+                      "Id": "cache",
+                      "Type": "postgres",
+                      "ConnectionString": "Host=localhost"
+                    }],
+                    "Paths": { "Media": { "Paths": ["content"] } },
+                    "Partitions": [1]
+                  }]
+                }
+                """
+            );
+
+            InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+                () => MediaPruneConfigLoader.Load(configPath, "store", "cache")
+            );
+            Assert.Contains("found 0", exception.Message, StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
     }
 }

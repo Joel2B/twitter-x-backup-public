@@ -88,7 +88,7 @@ Both commands return these values:
 - `operations`: number of files selected for quarantine
 - `planned bytes`: total candidate bytes
 
-Save `run` and `approval`. Apply requires both values.
+Save `run` and `approval`. Apply, verify, and purge require both values.
 
 ## Review plan status
 
@@ -176,6 +176,21 @@ Resume accepts these recoverable states:
 
 Resume rejects ambiguous state where active and quarantine copies both exist or both copies are absent.
 
+## Verify quarantined files
+
+Verify checks every quarantined file against its approved size and timestamp. Run it after apply and before restarting normal runtime:
+
+```bash
+docker compose -f compose.yml -f compose.linux.yml run --rm \
+  twitter-x-backup-cli \
+  maintenance media-prune verify \
+  --data-config /app/config/Data.json \
+  --media-store "nas media" \
+  --cache postgres \
+  --run-id your_run_uuid_here \
+  --approval your_64_character_sha256_here
+```
+
 ## Cancel an unused plan
 
 Cancel marks a `planned` run as `cancelled`. It does not touch files or cache rows:
@@ -197,10 +212,10 @@ Cancel rejects `applying`, `quarantined`, and `purged` runs.
 Successful apply changes run state to `quarantined`. Files remain under each partition media root:
 
 ```text
-.media-prune-quarantine/run_id/original_logical_path
+.media-prune-quarantine/run_id/sha256.bin
 ```
 
-Each file stays on its original volume, so movement into quarantine remains an atomic rename. PostgreSQL records purge eligibility seven days after apply.
+Each file stays on its original volume, so movement into quarantine remains an atomic rename. PostgreSQL stores its original logical path. PostgreSQL records purge eligibility seven days after apply.
 
 Do not run `purge-expired` until you have checked backup runtime and retained media.
 
@@ -215,11 +230,13 @@ docker compose -f compose.yml -f compose.linux.yml run --rm \
   --data-config /app/config/Data.json \
   --media-store "nas media" \
   --cache postgres \
+  --run-id your_run_uuid_here \
+  --approval your_64_character_sha256_here \
   --batch-size 1000 \
   --runtime-stopped-confirmed
 ```
 
-Purge verifies quarantine file size and timestamp before deletion. It skips runs whose retention deadline has not elapsed.
+Purge verifies quarantine file size and timestamp before deletion. It rejects runs whose retention deadline has not elapsed.
 
 ## Restore before purge
 
@@ -238,7 +255,8 @@ Do not restore files without their cache rows. Do not recreate cache rows withou
 | --- | --- | --- |
 | `planned` | Preview stored; no files changed | Apply or cancel |
 | `applying` | One or more operations may be in progress | Resume apply |
-| `quarantined` | Apply verified; retention active | Wait or purge after deadline |
+| `quarantined` | Apply finished; retention active | Verify, then wait or purge after deadline |
+| `deleting` | Approved purge started | Resume same purge command |
 | `cancelled` | Unused plan cancelled | Create another preview |
 | `purged` | Eligible quarantine permanently deleted | No action |
 
@@ -258,6 +276,9 @@ Schema updates use idempotent `CREATE TABLE IF NOT EXISTS` and `ALTER TABLE ... 
 - Preview may use substantial memory when millions of candidates qualify
 - Apply hashes operations through a streaming PostgreSQL reader
 - Only one planned or applying run may exist per media store and cache
+- Apply and purge require PostgreSQL and filesystem root locks
+- Apply validates exact primary and incremental cache namespaces
+- Purge targets one approved run at a time
 - Changed policy or projection invalidates apply
 - Missing desired files preserve affected groups during preview
 - Duplicate normalized paths preserve affected groups during preview
