@@ -253,4 +253,18 @@ public sealed class AutomaticLooseMediaPruneServiceTests
             Directory.Delete(root, recursive: true);
         }
     }
+
+    [Theory]
+    [InlineData("store:ambiguous", "cache")]
+    [InlineData("store", "cache:ambiguous")]
+    public void Config_loader_rejects_ambiguous_postgres_namespace_ids(
+        string store,
+        string cache
+    )
+    {
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => MediaPruneConfigLoader.Load("unused.json", store, cache)
+        );
+        Assert.Contains("cannot contain ':'", exception.Message, StringComparison.Ordinal);
+    }
 }

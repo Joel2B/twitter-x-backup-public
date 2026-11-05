@@ -48,7 +48,7 @@ internal sealed class LocalMediaCacheSnapshotCoordinator(
             await primaryTarget.Persistence.LoadIncrementalSnapshots(directory, cancellationToken);
 
         foreach (MediaCacheEntry entry in snapshots)
-            cache.TryAdd(entry.Path, entry);
+            cache[entry.Path] = entry;
 
         string legacyDirectory = _pathLayout.GetLegacyIncrementalCacheDirectory(
             primaryTarget.PrimaryPartition
@@ -59,14 +59,17 @@ internal sealed class LocalMediaCacheSnapshotCoordinator(
         if (legacySnapshots.Count == 0)
             return;
 
+        HashSet<string> currentIncrementalPaths = snapshots
+            .Select(entry => entry.Path)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (MediaCacheEntry entry in legacySnapshots)
-            cache.TryAdd(entry.Path, entry);
+            if (!currentIncrementalPaths.Contains(entry.Path))
+                cache[entry.Path] = entry;
 
-        foreach (
-            string path in legacySnapshots
-                .Select(entry => entry.Path)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-        )
+        foreach (string path in legacySnapshots
+            .Select(entry => entry.Path)
+            .Where(path => !currentIncrementalPaths.Contains(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase))
             await SaveIncrementalSnapshot(cache[path], cancellationToken);
 
         foreach (string path in Directory.EnumerateFiles(legacyDirectory, "*.cache"))

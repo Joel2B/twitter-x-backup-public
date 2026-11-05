@@ -10,12 +10,15 @@ public sealed class MediaCachePartitionSelectionService : IMediaCachePartitionSe
         int? cachedPartitionId
     )
     {
-        bool useHeavyPartition = streamSizeBytes > 0 && streamSizeBytes >= heavyThresholdBytes;
+        bool useHeavyPartition =
+            !cachedPartitionId.HasValue
+            && streamSizeBytes > 0
+            && streamSizeBytes >= heavyThresholdBytes;
 
         return new MediaCachePartitionSelection
         {
             UseHeavyPartition = useHeavyPartition,
-            PreferredPartitionId = useHeavyPartition ? null : cachedPartitionId,
+            PreferredPartitionId = cachedPartitionId,
             RequestedSizeBytes = streamSizeBytes,
         };
     }

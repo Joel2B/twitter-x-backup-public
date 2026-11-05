@@ -154,6 +154,43 @@ public sealed class LocalMediaCacheLoadCoordinatorTests
         Assert.Equal(0, populatedSecondaryPersistence.SavePrimarySnapshotCalls);
     }
 
+    [Fact]
+    public async Task Incremental_snapshot_overrides_primary_partition_for_same_path()
+    {
+        PartitionConfig partition = new()
+        {
+            Id = 1,
+            Type = "primary",
+            Size = 0,
+            UsableSpace = 0,
+            Paths = [Path.GetTempPath()],
+        };
+        MediaCacheEntry primaryEntry = new() { Path = "item.jpg", PartitionId = 1 };
+        MediaCacheEntry incrementalEntry = new() { Path = "item.jpg", PartitionId = 4 };
+        FakePersistence persistence = new()
+        {
+            PrimaryEntries = [primaryEntry],
+            IncrementalEntries = [incrementalEntry],
+        };
+        MediaCacheTargetRuntime target = CreateTarget("primary", true, partition, persistence);
+        LocalMediaCachePathLayout pathLayout = CreatePathLayout(partition, [target]);
+        LocalMediaCacheSnapshotCoordinator sut = new(
+            [target],
+            new Backup.Application.Core.PrimarySelectionService(),
+            new MediaCacheEntryPathPolicyService(),
+            new MediaCacheReplicationPathService(),
+            new MediaCacheJsonSnapshotService(),
+            pathLayout,
+            NullLogger<LocalMediaCacheSnapshotCoordinator>.Instance
+        );
+        Dictionary<string, MediaCacheEntry> cache = new(StringComparer.OrdinalIgnoreCase);
+
+        await sut.LoadPrimarySnapshotInto(cache);
+        await sut.LoadIncrementalSnapshotsInto(cache);
+
+        Assert.Equal(4, Assert.Single(cache).Value.PartitionId);
+    }
+
     private static MediaCacheTargetRuntime CreateTarget(
         string key,
         bool isDefault,
@@ -227,6 +264,8 @@ public sealed class LocalMediaCacheLoadCoordinatorTests
         public int SavePrimarySnapshotCalls { get; private set; }
         public int ApplyRecheckChangesCalls { get; private set; }
         public IReadOnlyCollection<MediaCacheEntry> SavedEntries { get; private set; } = [];
+        public IReadOnlyList<MediaCacheEntry> PrimaryEntries { get; init; } = [];
+        public IReadOnlyList<MediaCacheEntry> IncrementalEntries { get; init; } = [];
 
         public Task<bool> PrimarySnapshotExists(
             string file,
@@ -236,12 +275,12 @@ public sealed class LocalMediaCacheLoadCoordinatorTests
         public Task<IReadOnlyList<MediaCacheEntry>> LoadIncrementalSnapshots(
             string directory,
             CancellationToken cancellationToken = default
-        ) => Task.FromResult<IReadOnlyList<MediaCacheEntry>>([]);
+        ) => Task.FromResult(IncrementalEntries);
 
         public Task<IReadOnlyList<MediaCacheEntry>> LoadPrimarySnapshot(
             string file,
             CancellationToken cancellationToken = default
-        ) => Task.FromResult<IReadOnlyList<MediaCacheEntry>>([]);
+        ) => Task.FromResult(PrimaryEntries);
 
         public Task SavePrimarySnapshot(
             string file,

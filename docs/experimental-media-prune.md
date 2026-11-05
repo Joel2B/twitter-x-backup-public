@@ -45,7 +45,9 @@ Replace paths and IDs when your configuration differs.
 
 ## Preview a prune plan
 
-Preview creates PostgreSQL run and operation records. It does not move files, delete files, or remove cache rows. Runtime may remain active, but stable input produces easier-to-review totals.
+Preview first consolidates one active PostgreSQL incremental cache namespace into the primary namespace under the media-cache lock. This changes cache metadata but not its logical contents. Preview then creates run and operation records. It does not move or delete media files. Runtime may remain active, but stable input produces easier-to-review totals.
+
+Preview rejects multiple incremental namespaces because their historical order is ambiguous. It also rejects duplicate normalized paths. Resolve either condition before creating a plan.
 
 Run preview through Docker Compose:
 
@@ -274,6 +276,10 @@ Schema updates use idempotent `CREATE TABLE IF NOT EXISTS` and `ALTER TABLE ... 
 ## Safety limits
 
 - Preview may use substantial memory when millions of candidates qualify
+- `SizeHeavy` is inclusive for new paths: `size >= SizeHeavy` selects heavy storage
+- Existing paths keep their recorded partition when downloaded again
+- Preview consolidates the single active incremental PostgreSQL namespace
+- Apply rejects incremental cache rows created after preview
 - Apply hashes operations through a streaming PostgreSQL reader
 - Only one planned or applying run may exist per media store and cache
 - Apply and purge require PostgreSQL and filesystem root locks

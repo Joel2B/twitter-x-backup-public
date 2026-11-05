@@ -104,6 +104,23 @@ public sealed class AutomaticLooseMediaPruneService(
                 cacheId,
                 token
             );
+            await ConsolidateIncrementalCacheAsync(
+                connection,
+                cacheNamespace,
+                incrementalNamespaces,
+                config.MediaRoots.Keys,
+                token
+            );
+            incrementalNamespaces = await DiscoverIncrementalNamespacesAsync(
+                connection,
+                mediaStoreId,
+                cacheId,
+                token
+            );
+            if (incrementalNamespaces.Length != 0)
+                throw new InvalidOperationException(
+                    "Incremental media cache remained after consolidation."
+                );
             List<CacheRow> rows = await LoadSupportedRowsAsync(connection, cacheNamespace, token);
             AutomaticLooseMediaPruneRun run = await PlanAsync(
                 connection,
@@ -819,6 +836,111 @@ public sealed class AutomaticLooseMediaPruneService(
         await using NpgsqlDataReader reader = await command.ExecuteReaderAsync(token);
         while (await reader.ReadAsync(token)) values.Add(reader.GetString(0));
         return [.. values];
+    }
+
+    private static async Task ConsolidateIncrementalCacheAsync(
+        NpgsqlConnection connection,
+        string primaryNamespace,
+        string[] incrementalNamespaces,
+        IEnumerable<int> configuredPartitionIds,
+        CancellationToken token
+    )
+    {
+        if (incrementalNamespaces.Length == 0)
+            return;
+        if (incrementalNamespaces.Length != 1)
+            throw new InvalidOperationException(
+                $"Expected at most one active incremental cache namespace; found {incrementalNamespaces.Length}."
+            );
+
+        string incrementalNamespace = incrementalNamespaces[0];
+        await using NpgsqlTransaction transaction = await connection.BeginTransactionAsync(token);
+        await RequireNoNormalizedDuplicatesAsync(
+            connection,
+            transaction,
+            "media_cache_primary_entries",
+            primaryNamespace,
+            "Primary",
+            token
+        );
+        await RequireNoNormalizedDuplicatesAsync(
+            connection,
+            transaction,
+            "media_cache_incremental_entries",
+            incrementalNamespace,
+            "Incremental",
+            token
+        );
+        await using (NpgsqlCommand validate = connection.CreateCommand())
+        {
+            validate.Transaction = transaction;
+            validate.CommandText = """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM media_cache_incremental_entries
+                    WHERE namespace = @namespace
+                      AND (partition_id IS NULL OR NOT (partition_id = ANY(@partitions)))
+                )
+                """;
+            validate.Parameters.AddWithValue("namespace", incrementalNamespace);
+            validate.Parameters.AddWithValue("partitions", configuredPartitionIds.ToArray());
+            if (Convert.ToBoolean(await validate.ExecuteScalarAsync(token)))
+                throw new InvalidOperationException(
+                    "Incremental media cache contains an unresolved partition."
+                );
+        }
+        await using NpgsqlCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandTimeout = 600;
+        command.CommandText = """
+            DELETE FROM media_cache_primary_entries AS target
+            USING media_cache_incremental_entries AS source
+            WHERE target.namespace = @primary
+              AND source.namespace = @incremental
+              AND lower(replace(target.path, chr(92), '/')) =
+                  lower(replace(source.path, chr(92), '/'));
+
+            INSERT INTO media_cache_primary_entries (
+                namespace, path, stream_size, file_size, partition_id
+            )
+            SELECT @primary, path, stream_size, file_size, partition_id
+            FROM media_cache_incremental_entries
+            WHERE namespace = @incremental;
+
+            DELETE FROM media_cache_incremental_entries
+            WHERE namespace = @incremental;
+            """;
+        command.Parameters.AddWithValue("primary", primaryNamespace);
+        command.Parameters.AddWithValue("incremental", incrementalNamespace);
+        await command.ExecuteNonQueryAsync(token);
+        await transaction.CommitAsync(token);
+    }
+
+    private static async Task RequireNoNormalizedDuplicatesAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        string table,
+        string cacheNamespace,
+        string label,
+        CancellationToken token
+    )
+    {
+        await using NpgsqlCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = $"""
+            SELECT EXISTS (
+                SELECT 1
+                FROM {table}
+                WHERE namespace = @namespace
+                GROUP BY lower(replace(path, chr(92), '/'))
+                HAVING count(*) > 1
+            )
+            """;
+        command.Parameters.AddWithValue("namespace", cacheNamespace);
+        if (Convert.ToBoolean(await command.ExecuteScalarAsync(token)))
+            throw new InvalidOperationException(
+                $"{label} media cache contains duplicate normalized paths."
+            );
     }
 
     private static async Task<List<CacheRow>> LoadSupportedRowsAsync(NpgsqlConnection connection, string cacheNamespace, CancellationToken token)

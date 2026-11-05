@@ -7,6 +7,10 @@ internal static class MediaPruneConfigLoader
 {
     internal static MediaPruneConfig Load(string path, string mediaStoreId, string cacheId)
     {
+        if (mediaStoreId.Contains(':') || cacheId.Contains(':'))
+            throw new InvalidOperationException(
+                "Media store and cache IDs cannot contain ':' for PostgreSQL prune namespaces."
+            );
         string fullPath = Path.GetFullPath(path);
         if (!File.Exists(fullPath))
             throw new FileNotFoundException("Data config not found.", fullPath);
