@@ -80,7 +80,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                     requestExample: ParseJson(
                         """
                         {
-                          "userId": "44196397",
+                          "userId": "1000000000000000000",
                           "sourceId": "tweets"
                         }
                         """
@@ -88,7 +88,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                     okExample: OperationCompleted(
                         "post-download",
                         "completed",
-                        "user=44196397, source=tweets"
+                        "user=1000000000000000000, source=tweets"
                     ),
                     badRequestExample: ValidationProblem(
                         "sourceId",
@@ -104,11 +104,11 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                     requestExample: ParseJson(
                         """
                         {
-                          "userId": "44196397"
+                          "userId": "1000000000000000000"
                         }
                         """
                     ),
-                    okExample: OperationCompleted("post-recovery", "completed", "user=44196397"),
+                    okExample: OperationCompleted("post-recovery", "completed", "user=1000000000000000000"),
                     badRequestExample: ValidationProblem("userId", "The UserId field is required.")
                 );
                 break;
@@ -124,7 +124,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                           "storeCount": 3,
                           "snapshots": [
                             {
-                              "label": "nas post json",
+                              "label": "local post json",
                               "posts": 125000,
                               "profiles": 640,
                               "hashtags": 9410,
@@ -138,7 +138,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                           ],
                           "statuses": [
                             {
-                              "primaryLabel": "nas post json",
+                              "primaryLabel": "local post json",
                               "secondaryLabel": "nas post sqlite",
                               "isMismatch": false,
                               "diffsText": ""
@@ -160,7 +160,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                           "primaryCount": 125000,
                           "stores": [
                             {
-                              "id": "nas post json",
+                              "id": "local post json",
                               "isDefault": true,
                               "posts": 125000,
                               "profiles": 640,
@@ -187,7 +187,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                         """
                         [
                           {
-                            "id": "nas post json",
+                            "id": "local post json",
                             "isDefault": true,
                             "storeType": "LocalPostData"
                           },
@@ -218,9 +218,9 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                           "items": [
                             {
                               "id": "1926001234567890000",
-                              "profileId": "44196397",
-                              "userName": "elonmusk",
-                              "displayName": "Elon Musk",
+                              "profileId": "1000000000000000000",
+                              "userName": "sample_user",
+                              "displayName": "Sample User",
                               "description": "Sample stored post.",
                               "createdAt": "Sat May 24 00:10:12 +0000 2026",
                               "deleted": false,
@@ -237,14 +237,14 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                 );
                 SetParameterExample(operation, "page", 1, "1-based page number.");
                 SetParameterExample(operation, "pageSize", 50, "Items per page. Range: 1-250.");
-                SetParameterExample(operation, "profileId", "44196397", "Exact profile id.");
-                SetParameterExample(operation, "userName", "elonmusk", "Exact X username.");
+                SetParameterExample(operation, "profileId", "1000000000000000000", "Exact profile id.");
+                SetParameterExample(operation, "userName", "sample_user", "Exact X username.");
                 SetParameterExample(operation, "deleted", false, "Filter deleted or active posts.");
                 SetParameterExample(operation, "hasMedia", true, "Require posts with media.");
                 SetParameterExample(
                     operation,
                     "textContains",
-                    "bitcoin",
+                    "sample text",
                     "Case-insensitive substring search in description."
                 );
                 SetParameterExample(
@@ -264,9 +264,9 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                         {
                           "id": "1926001234567890000",
                           "profile": {
-                            "id": "44196397",
-                            "userName": "elonmusk",
-                            "displayName": "Elon Musk",
+                            "id": "1000000000000000000",
+                            "userName": "sample_user",
+                            "displayName": "Sample User",
                             "bannerUrl": "https://pbs.twimg.com/profile_banners/example",
                             "imageUrl": "https://pbs.twimg.com/profile_images/example.jpg",
                             "following": false,
@@ -312,9 +312,9 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                           {
                             "id": "1926001234567890000",
                             "profile": {
-                              "id": "44196397",
-                              "userName": "elonmusk",
-                              "name": "Elon Musk",
+                              "id": "1000000000000000000",
+                              "userName": "sample_user",
+                              "name": "Sample User",
                               "imageUrl": "https://pbs.twimg.com/profile_images/example.jpg",
                               "following": false
                             },
@@ -346,9 +346,9 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                           {
                             "id": "1926001234567890000",
                             "profile": {
-                              "id": "44196397",
-                              "userName": "elonmusk",
-                              "name": "Elon Musk",
+                              "id": "1000000000000000000",
+                              "userName": "sample_user",
+                              "name": "Sample User",
                               "imageUrl": "https://pbs.twimg.com/profile_images/example.jpg",
                               "following": false
                             },
@@ -408,7 +408,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                         """
                         [
                           {
-                            "storageId": "nas media",
+                            "storageId": "local media",
                             "hasMaintenance": true
                           },
                           {
@@ -433,7 +433,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                           "downloadCount": 843995,
                           "fileCount": 1274000,
                           "storageCount": 2,
-                          "storages": [ "local media", "nas media" ]
+                          "storages": [ "local media", "archive media" ]
                         }
                         """
                     )
@@ -462,9 +462,9 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                           "items": [
                             {
                               "postId": "1926001234567890000",
-                              "profileId": "44196397",
-                              "userName": "elonmusk",
-                              "displayName": "Elon Musk",
+                              "profileId": "1000000000000000000",
+                              "userName": "sample_user",
+                              "displayName": "Sample User",
                               "deleted": false,
                               "mediaCount": 2,
                               "mediaTypes": [ "photo", "video" ],
@@ -479,7 +479,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                 SetParameterExample(operation, "page", 1, "1-based page number.");
                 SetParameterExample(operation, "pageSize", 50, "Items per page. Range: 1-250.");
                 SetParameterExample(operation, "postId", "1926001234567890000", "Exact post id.");
-                SetParameterExample(operation, "profileId", "44196397", "Exact profile id.");
+                SetParameterExample(operation, "profileId", "1000000000000000000", "Exact profile id.");
                 SetParameterExample(operation, "deleted", false, "Filter deleted or active rows.");
                 break;
             case ("GET", "api/v1/media/downloads"):
@@ -499,9 +499,9 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                           "items": [
                             {
                               "postId": "1926001234567890000",
-                              "profileId": "44196397",
-                              "userName": "elonmusk",
-                              "displayName": "Elon Musk",
+                              "profileId": "1000000000000000000",
+                              "userName": "sample_user",
+                              "displayName": "Sample User",
                               "deleted": false,
                               "fileCount": 2,
                               "items": []
@@ -520,7 +520,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                 SetParameterExample(operation, "page", 1, "1-based page number.");
                 SetParameterExample(operation, "pageSize", 25, "Items per page. Range: 1-250.");
                 SetParameterExample(operation, "postId", "1926001234567890000", "Exact post id.");
-                SetParameterExample(operation, "profileId", "44196397", "Exact profile id.");
+                SetParameterExample(operation, "profileId", "1000000000000000000", "Exact profile id.");
                 break;
             case ("GET", "api/v1/media/downloads/{downloadId}"):
                 Apply(
@@ -531,21 +531,21 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                         """
                         {
                           "postId": "1926001234567890000",
-                          "profileId": "44196397",
-                          "userName": "elonmusk",
-                          "displayName": "Elon Musk",
+                          "profileId": "1000000000000000000",
+                          "userName": "sample_user",
+                          "displayName": "Sample User",
                           "deleted": false,
                           "fileCount": 2,
                           "items": [
                             {
                               "postId": "1926001234567890000",
-                              "profileId": "44196397",
-                              "userName": "elonmusk",
+                              "profileId": "1000000000000000000",
+                              "userName": "sample_user",
                               "url": "https://pbs.twimg.com/media/example.jpg",
                               "path": "posts/photo/m1/orig/example.jpg",
                               "storages": [
                                 {
-                                  "storageId": "nas media",
+                                  "storageId": "local media",
                                   "exists": true,
                                   "partitionId": 4,
                                   "streamSize": 123456,
@@ -588,13 +588,13 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                           "items": [
                             {
                               "postId": "1926001234567890000",
-                              "profileId": "44196397",
-                              "userName": "elonmusk",
+                              "profileId": "1000000000000000000",
+                              "userName": "sample_user",
                               "url": "https://pbs.twimg.com/media/example.jpg",
                               "path": "posts/photo/m1/orig/example.jpg",
                               "storages": [
                                 {
-                                  "storageId": "nas media",
+                                  "storageId": "local media",
                                   "exists": true,
                                   "partitionId": 4,
                                   "streamSize": 123456,
@@ -616,7 +616,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                 SetParameterExample(operation, "page", 1, "1-based page number.");
                 SetParameterExample(operation, "pageSize", 50, "Items per page. Range: 1-250.");
                 SetParameterExample(operation, "postId", "1926001234567890000", "Exact post id.");
-                SetParameterExample(operation, "profileId", "44196397", "Exact profile id.");
+                SetParameterExample(operation, "profileId", "1000000000000000000", "Exact profile id.");
                 SetParameterExample(
                     operation,
                     "pathContains",
@@ -638,7 +638,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                     okExample: OperationCompleted(
                         "media-storage-pipeline",
                         "completed",
-                        "storage=nas media, downloads=843995"
+                        "storage=local media, downloads=120"
                     )
                 );
                 break;
@@ -650,7 +650,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                     okExample: OperationCompleted(
                         "media-storage-prune",
                         "completed",
-                        "storage=nas media, downloads=843995"
+                        "storage=local media, downloads=120"
                     )
                 );
                 break;
@@ -662,7 +662,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                     okExample: OperationCompleted(
                         "media-storage-check-data",
                         "completed",
-                        "storage=nas media, downloads=843995"
+                        "storage=local media, downloads=120"
                     )
                 );
                 break;
@@ -674,7 +674,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                     okExample: OperationCompleted(
                         "media-storage-check-integrity",
                         "completed",
-                        "storage=nas media, downloads=843995"
+                        "storage=local media, downloads=120"
                     )
                 );
                 break;
@@ -686,7 +686,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                     okExample: OperationCompleted(
                         "media-storage-download",
                         "completed",
-                        "storage=nas media, downloads=843995"
+                        "storage=local media, downloads=120"
                     )
                 );
                 break;
@@ -698,7 +698,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                     okExample: OperationCompleted(
                         "media-storage-replicate",
                         "completed",
-                        "storage=nas media, downloads=843995"
+                        "storage=local media, downloads=120"
                     )
                 );
                 break;
@@ -722,11 +722,11 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                     requestExample: ParseJson(
                         """
                         {
-                          "userId": "44196397"
+                          "userId": "1000000000000000000"
                         }
                         """
                     ),
-                    okExample: OperationCompleted("bulk-run", "completed", "user=44196397"),
+                    okExample: OperationCompleted("bulk-run", "completed", "user=1000000000000000000"),
                     badRequestExample: ValidationProblem("userId", "The UserId field is required.")
                 );
                 break;
@@ -738,11 +738,11 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                     requestExample: ParseJson(
                         """
                         {
-                          "userId": "44196397"
+                          "userId": "1000000000000000000"
                         }
                         """
                     ),
-                    okExample: OperationCompleted("bulk-import", "completed", "user=44196397"),
+                    okExample: OperationCompleted("bulk-import", "completed", "user=1000000000000000000"),
                     badRequestExample: ValidationProblem("userId", "The UserId field is required.")
                 );
                 break;
@@ -762,11 +762,11 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                     requestExample: ParseJson(
                         """
                         {
-                          "userId": "44196397"
+                          "userId": "1000000000000000000"
                         }
                         """
                     ),
-                    okExample: OperationCompleted("bulk-phase1", "completed", "user=44196397"),
+                    okExample: OperationCompleted("bulk-phase1", "completed", "user=1000000000000000000"),
                     badRequestExample: ValidationProblem("userId", "The UserId field is required.")
                 );
                 break;
@@ -778,11 +778,11 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                     requestExample: ParseJson(
                         """
                         {
-                          "userId": "44196397"
+                          "userId": "1000000000000000000"
                         }
                         """
                     ),
-                    okExample: OperationCompleted("bulk-phase2", "completed", "user=44196397"),
+                    okExample: OperationCompleted("bulk-phase2", "completed", "user=1000000000000000000"),
                     badRequestExample: ValidationProblem("userId", "The UserId field is required.")
                 );
                 break;
@@ -827,7 +827,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                         """
                         [
                           {
-                            "userId": "44196397",
+                            "userId": "1000000000000000000",
                             "sources": [
                               {
                                 "sourceId": "tweets",
@@ -866,7 +866,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                         {
                           "postStores": [
                             {
-                              "id": "nas post json",
+                              "id": "local post json",
                               "type": "local",
                               "enabled": true,
                               "isDefault": true,
@@ -877,7 +877,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                           "bulkStores": [],
                           "mediaStores": [
                             {
-                              "id": "nas media",
+                              "id": "local media",
                               "type": "local",
                               "enabled": true,
                               "isDefault": true,
@@ -888,12 +888,12 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                           "partitions": [
                             {
                               "id": 0,
-                              "name": "nas L:",
-                              "type": "nas",
+                              "name": "primary data",
+                              "type": "local",
                               "enabled": true,
-                              "size": 2650000000000,
-                              "usableSpace": 1400000000000,
-                              "paths": [ "/mnt/l/apps/twitter-x-backup" ],
+                              "size": 100000000000,
+                              "usableSpace": 50000000000,
+                              "paths": [ "/data/primary" ],
                               "tags": [ "primary" ]
                             }
                           ]
@@ -1060,12 +1060,12 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
         ParseJson(
             """
             {
-              "generatedAt": "2026-06-07T21:35:14.0000000+00:00",
+              "generatedAt": "2025-01-01T00:00:00.0000000+00:00",
               "isBulkEnabled": true,
               "isMediaEnabled": true,
               "users": [
                 {
-                  "userId": "44196397",
+                  "userId": "1000000000000000000",
                   "runRecovery": true,
                   "runBulk": true,
                   "api": {
@@ -1075,7 +1075,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                       "request": {
                         "url": "https://x.com/i/api/graphql/example/SearchTimeline",
                         "variables": {
-                          "rawQuery": "from:elonmusk include:nativeretweets"
+                          "rawQuery": "from:sample_user include:nativeretweets"
                         },
                         "features": {
                           "responsive_web_graphql_exclude_directive_enabled": true
@@ -1096,7 +1096,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
                       "request": {
                         "url": "https://x.com/i/api/graphql/example/SearchTimeline",
                         "variables": {
-                          "rawQuery": "from:elonmusk include:nativeretweets"
+                          "rawQuery": "from:sample_user include:nativeretweets"
                         },
                         "features": {
                           "responsive_web_graphql_exclude_directive_enabled": true
@@ -1120,10 +1120,10 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
             """
             {
               "version": 18,
-              "loadedAt": "2026-06-07T21:35:14.0000000+00:00",
+              "loadedAt": "2025-01-01T00:00:00.0000000+00:00",
               "users": [
                 {
-                  "userId": "44196397",
+                  "userId": "1000000000000000000",
                   "sources": [
                     {
                       "sourceId": "tweets",
@@ -1135,7 +1135,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
               ],
               "postStores": [
                 {
-                  "id": "nas post json",
+                  "id": "local post json",
                   "type": "local",
                   "enabled": true,
                   "isDefault": true,
@@ -1146,7 +1146,7 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
               "bulkStores": [],
               "mediaStores": [
                 {
-                  "id": "nas media",
+                  "id": "local media",
                   "type": "local",
                   "enabled": true,
                   "isDefault": true,
@@ -1157,12 +1157,12 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
               "partitions": [
                 {
                   "id": 0,
-                  "name": "nas L:",
-                  "type": "nas",
+                  "name": "primary data",
+                  "type": "local",
                   "enabled": true,
-                  "size": 2650000000000,
-                  "usableSpace": 1400000000000,
-                  "paths": [ "/mnt/l/apps/twitter-x-backup" ],
+                  "size": 100000000000,
+                  "usableSpace": 50000000000,
+                  "paths": [ "/data/primary" ],
                   "tags": [ "primary" ]
                 }
               ],
@@ -1181,22 +1181,22 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
             [
               {
                 "id": 0,
-                "name": "nas L:",
-                "type": "nas",
+                "name": "primary data",
+                "type": "local",
                 "enabled": true,
-                "size": 2650000000000,
-                "usableSpace": 1400000000000,
-                "paths": [ "/mnt/l/apps/twitter-x-backup" ],
+                "size": 100000000000,
+                "usableSpace": 50000000000,
+                "paths": [ "/data/primary" ],
                 "tags": [ "primary" ]
               },
               {
                 "id": 4,
-                "name": "nas I:",
-                "type": "nas",
+                "name": "media data",
+                "type": "local",
                 "enabled": true,
-                "size": 8460000000000,
-                "usableSpace": 4100000000000,
-                "paths": [ "/mnt/i" ],
+                "size": 200000000000,
+                "usableSpace": 100000000000,
+                "paths": [ "/data/media" ],
                 "tags": [ "media" ]
               }
             ]
@@ -1208,12 +1208,12 @@ public sealed class OperationsApiExamplesOperationFilter : IOperationFilter
             """
             {
               "id": 0,
-              "name": "nas L:",
-              "type": "nas",
+              "name": "primary data",
+              "type": "local",
               "enabled": true,
-              "size": 2650000000000,
-              "usableSpace": 1400000000000,
-              "paths": [ "/mnt/l/apps/twitter-x-backup" ],
+              "size": 100000000000,
+              "usableSpace": 50000000000,
+              "paths": [ "/data/primary" ],
               "tags": [ "primary" ]
             }
             """

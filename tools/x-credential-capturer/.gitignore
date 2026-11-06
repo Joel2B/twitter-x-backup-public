@@ -6,3 +6,4 @@ npm-debug.log*
 pnpm-debug.log*
 yarn-error.log*
 .DS_Store
+popup-react/generated/build-info.ts

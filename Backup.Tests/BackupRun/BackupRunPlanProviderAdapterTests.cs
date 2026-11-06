@@ -363,6 +363,11 @@ public class BackupRunPlanProviderAdapterTests
                 Proxy = new PathConfig { Paths = ["./proxy/data"] },
             },
             Threshold = new Threshold { ErrorsToInactive = 1, ErrorsToStop = 1 },
+            HealthCheck = new HealthCheck
+            {
+                Url = "https://example.com/proxy-health.jpg",
+                TimeoutSeconds = 10,
+            },
             Providers = [],
         };
 

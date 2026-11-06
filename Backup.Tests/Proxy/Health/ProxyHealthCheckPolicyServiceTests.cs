@@ -4,20 +4,36 @@ namespace Backup.Tests;
 
 public class ProxyHealthCheckPolicyServiceTests
 {
-    private readonly IProxyHealthCheckPolicyService _sut = new ProxyHealthCheckPolicyService();
+    private readonly IProxyHealthCheckPolicyService _sut =
+        new ProxyHealthCheckPolicyService("https://example.com/proxy-health.jpg", 12);
 
     [Fact]
     public void GetHealthCheckUrl_ReturnsExpectedUrl()
     {
         string url = _sut.GetHealthCheckUrl();
-        Assert.Contains("pbs.twimg.com/media/", url);
+        Assert.Equal("https://example.com/proxy-health.jpg", url);
     }
 
     [Fact]
-    public void GetHealthCheckTimeout_Returns10Seconds()
+    public void GetHealthCheckTimeout_ReturnsConfiguredTimeout()
     {
-        Assert.Equal(TimeSpan.FromSeconds(10), _sut.GetHealthCheckTimeout());
+        Assert.Equal(TimeSpan.FromSeconds(12), _sut.GetHealthCheckTimeout());
     }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("not-a-url")]
+    [InlineData("file:///tmp/probe")]
+    public void Constructor_RejectsInvalidUrl(string url) =>
+        Assert.Throws<ArgumentException>(() => new ProxyHealthCheckPolicyService(url, 10));
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void Constructor_RejectsInvalidTimeout(int timeoutSeconds) =>
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new ProxyHealthCheckPolicyService("https://example.com/probe", timeoutSeconds)
+        );
 
     [Fact]
     public void ShouldFallbackToHttp_ReturnsTrue_ForSslConnectionMessage()

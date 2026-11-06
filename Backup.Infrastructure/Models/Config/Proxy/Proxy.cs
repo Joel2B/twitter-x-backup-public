@@ -9,7 +9,14 @@ public class ProxyConfig
     public required List<int> Partitions { get; set; }
     public required Data Data { get; set; }
     public required Threshold Threshold { get; set; }
+    public required HealthCheck HealthCheck { get; set; }
     public required List<Provider> Providers { get; set; }
+}
+
+public class HealthCheck
+{
+    public required string Url { get; set; }
+    public required int TimeoutSeconds { get; set; }
 }
 
 public class Threshold

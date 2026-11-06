@@ -13,6 +13,10 @@
     "ErrorsToInactive": 1,
     "ErrorsToStop": 50
   },
+  "HealthCheck": {
+    "Url": "https://example.com/proxy-health.jpg",
+    "TimeoutSeconds": 10
+  },
   "Providers": [
     {
       "Type": "config",

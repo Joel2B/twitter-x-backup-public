@@ -25,6 +25,8 @@ Local Chrome MV3 extension to capture X GraphQL requests and generate a JSON pat
 - Shows endpoint `MissingFields` only in the UI (not exported).
 - Patch export includes only complete endpoints.
 - Button to copy a JSON `Api` patch.
+- Captured post uploads default to `http://127.0.0.1:8081`, matching Docker's default `API_PORT`.
+- Change `API URL` in the popup when Docker publishes a different `API_PORT`.
 - Temporary storage in `chrome.storage.session`.
 
 ## Native CSS Modules
@@ -62,7 +64,7 @@ Local Chrome MV3 extension to capture X GraphQL requests and generate a JSON pat
 - `Api.UserPhotoTimeline` -> `https://x.com/{username}/media?filter=photo`
 - `Api.SearchTimeline` -> `https://x.com/hashtag/{hashtag}?f=media`
 - `Api.UserByScreenName` -> `https://x.com/{username}/media`
-- `Api.TweetDetail` -> `https://x.com/AmeDollVT/status/2047352297571725658`
+- `Api.TweetDetail` -> open any X post manually, then capture its request
 - `Api.UsersByRestIds` -> currently unused (no button)
 
 ## How to Load

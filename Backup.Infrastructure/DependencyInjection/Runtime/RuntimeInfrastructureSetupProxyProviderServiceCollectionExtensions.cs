@@ -79,7 +79,14 @@ public static class RuntimeInfrastructureSetupProxyProviderServiceCollectionExte
 
     private static IServiceCollection AddProxyHealthChecks(this IServiceCollection services)
     {
-        services.AddScoped<IProxyHealthCheckPolicyService, ProxyHealthCheckPolicyService>();
+        services.AddScoped<IProxyHealthCheckPolicyService>(sp =>
+        {
+            AppConfig config = sp.GetRequiredService<AppConfig>();
+            return new ProxyHealthCheckPolicyService(
+                config.Proxy.HealthCheck.Url,
+                config.Proxy.HealthCheck.TimeoutSeconds
+            );
+        });
         services.AddScoped<IProxyHealthProbeService, ProxyHealthProbeService>();
         services.AddScoped<IProxyHealthAcceptanceService, ProxyHealthAcceptanceService>();
         services.AddScoped<IProxyCheckExecutionService, ProxyCheckExecutionService>();

@@ -73,7 +73,7 @@ public class PostsApiExamplesOperationFilter : IOperationFilter
         foreach (OpenApiParameter parameter in operation.Parameters.Cast<OpenApiParameter>())
         {
             if (string.Equals(parameter.Name, "userId", StringComparison.OrdinalIgnoreCase))
-                parameter.Example = JsonValue.Create("44196397");
+                parameter.Example = JsonValue.Create("1000000000000000000");
 
             if (string.Equals(parameter.Name, "origin", StringComparison.OrdinalIgnoreCase))
                 parameter.Example = JsonValue.Create("extension-search-timeline");
@@ -118,9 +118,9 @@ public class PostsApiExamplesOperationFilter : IOperationFilter
               {
                 "id": "1926001234567890000",
                 "profile": {
-                  "id": "44196397",
-                  "userName": "elonmusk",
-                  "name": "Elon Musk",
+                  "id": "1000000000000000000",
+                  "userName": "sample_user",
+                  "name": "Sample User",
                   "imageUrl": "https://pbs.twimg.com/profile_images/example.jpg",
                   "following": false
                 },

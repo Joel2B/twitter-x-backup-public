@@ -35,8 +35,6 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends tzdata libgssapi-krb5-2 \
     && rm -rf /var/lib/apt/lists/*
 
-ENV TZ=America/Mazatlan
-
 FROM runtime AS cli
 COPY --from=cli-publish /app/publish .
 ENTRYPOINT ["dotnet", "Backup.Cli.dll"]

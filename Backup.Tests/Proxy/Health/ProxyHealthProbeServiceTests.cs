@@ -10,7 +10,7 @@ public class ProxyHealthProbeServiceTests
     [Fact]
     public async Task Probe_ReturnsSuccess_WhenStatusIsOk()
     {
-        ProxyHealthProbeService sut = new(new ProxyHealthCheckPolicyService());
+        ProxyHealthProbeService sut = CreateService();
         FakeProbePort port = new() { StatusToReturn = HttpStatusCode.OK };
         ProxyCandidate candidate = new()
         {
@@ -30,7 +30,7 @@ public class ProxyHealthProbeServiceTests
     [Fact]
     public async Task Probe_FallsBackToHttp_WhenPolicyAllows()
     {
-        ProxyHealthProbeService sut = new(new ProxyHealthCheckPolicyService());
+        ProxyHealthProbeService sut = CreateService();
         FakeProbePort port = new()
         {
             ThrowOnFirst = new InvalidOperationException(
@@ -55,7 +55,7 @@ public class ProxyHealthProbeServiceTests
     [Fact]
     public async Task Probe_ReturnsFailure_WhenProbeThrowsWithoutFallback()
     {
-        ProxyHealthProbeService sut = new(new ProxyHealthCheckPolicyService());
+        ProxyHealthProbeService sut = CreateService();
         FakeProbePort port = new() { ThrowOnFirst = new Exception("boom") };
         ProxyCandidate candidate = new()
         {
@@ -94,4 +94,7 @@ public class ProxyHealthProbeServiceTests
             return Task.FromResult(StatusToReturn);
         }
     }
+
+    private static ProxyHealthProbeService CreateService() =>
+        new(new ProxyHealthCheckPolicyService("https://example.com/proxy-health.jpg", 10));
 }

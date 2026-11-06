@@ -62,8 +62,8 @@ export const ENDPOINTS: EndpointDefinition[] = [
     title: "Api.TweetDetail",
     type: "api",
     jsonKey: "TweetDetail",
-    pageUrl: "https://x.com/AmeDollVT/status/2047352297571725658",
-    enabledByDefault: true
+    pageUrl: null,
+    enabledByDefault: false
   },
   {
     id: "UsersByRestIds",

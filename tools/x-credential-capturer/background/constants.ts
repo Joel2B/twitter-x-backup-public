@@ -1,7 +1,7 @@
 export const STORAGE_KEY = "captureStateV1";
 export const CAPTURED_POSTS_UPDATE_SIGNAL_STORAGE_KEY = "capturedPostsSignal";
 export const UPLOAD_NOTIFICATIONS_STORAGE_KEY = "uploadNotificationsV1";
-export const DEFAULT_UPLOAD_API_BASE_URL = "http://127.0.0.1:5085";
+export const DEFAULT_UPLOAD_API_BASE_URL = "http://127.0.0.1:8081";
 export const DEFAULT_UPLOAD_ORIGIN = "extension-search-timeline";
 export const UPLOAD_REQUEST_TIMEOUT_MS = 60_000;
 export const UPLOAD_NOTIFICATION_EXPIRE_AFTER_MS = UPLOAD_REQUEST_TIMEOUT_MS + 5_000;

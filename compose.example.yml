@@ -4,6 +4,7 @@ services:
     container_name: twitter-x-backup-cli
     environment:
       BACKUP__Aliases__L: /mnt/data
+      TZ: ${TZ:-UTC}
     volumes:
       - "./Config:/app/config:ro"
       - "./data:/app/data"
@@ -14,6 +15,7 @@ services:
     container_name: twitter-x-backup-api
     environment:
       BACKUP__Aliases__L: /mnt/data
+      TZ: ${TZ:-UTC}
     ports:
       - "${API_PORT:-8081}:8081"
     volumes:
