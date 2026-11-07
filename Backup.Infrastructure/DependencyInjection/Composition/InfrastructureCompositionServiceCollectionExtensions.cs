@@ -5,10 +5,14 @@ namespace Backup.Infrastructure.DependencyInjection.Composition;
 
 public static partial class InfrastructureCompositionServiceCollectionExtensions
 {
-    public static IServiceCollection AddInfrastructureBase(this IServiceCollection services)
+    public static IServiceCollection AddInfrastructureBase(
+        this IServiceCollection services,
+        string logPrefix,
+        int retainedLogCount
+    )
     {
         services.AddCoreInfrastructure();
-        services.AddStructuredLoggingInfrastructure();
+        services.AddStructuredLoggingInfrastructure(logPrefix, retainedLogCount);
         return services;
     }
 

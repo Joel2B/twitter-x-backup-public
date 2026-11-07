@@ -75,10 +75,12 @@ public static class CoreInfrastructureServiceCollectionExtensions
     }
 
     public static IServiceCollection AddStructuredLoggingInfrastructure(
-        this IServiceCollection services
+        this IServiceCollection services,
+        string logPrefix,
+        int retainedLogCount
     )
     {
-        services.AddStructuredSerilogInfrastructure();
+        services.AddStructuredSerilogInfrastructure(logPrefix, retainedLogCount);
         return services;
     }
 

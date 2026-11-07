@@ -7,7 +7,7 @@ public static class BackupCliInfrastructureServiceCollectionExtensions
 {
     public static IServiceCollection AddBackupCliInfrastructure(this IServiceCollection services)
     {
-        services.AddInfrastructureBase();
+        services.AddInfrastructureBase("cli", 30);
         services.AddBackupCliFeatureSet();
         services.AddScoped<BackupCliRunner>();
 

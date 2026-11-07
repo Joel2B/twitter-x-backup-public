@@ -12,7 +12,9 @@ namespace Backup.Infrastructure.DependencyInjection.Base;
 public static class StructuredLoggingInfrastructureServiceCollectionExtensions
 {
     public static IServiceCollection AddStructuredSerilogInfrastructure(
-        this IServiceCollection services
+        this IServiceCollection services,
+        string logPrefix,
+        int retainedLogCount
     )
     {
         string outputTemplate =
@@ -44,13 +46,31 @@ public static class StructuredLoggingInfrastructureServiceCollectionExtensions
 
             Directory.CreateDirectory(directory);
 
-            string fileName = "app-.log";
+            foreach (
+                string oldLog in ExecutionLogFilePolicy.GetPathsToRemove(
+                    directory,
+                    logPrefix,
+                    retainedLogCount
+                )
+            )
+            {
+                try
+                {
+                    File.Delete(oldLog);
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                    Console.Error.WriteLine(
+                        $"[logger] old log retained: {oldLog}. reason: {ex.GetType().Name}: {ex.Message}"
+                    );
+                }
+            }
+
+            string fileName = ExecutionLogFilePolicy.BuildFileName(logPrefix, DateTimeOffset.Now);
             string path = Path.Combine(directory, fileName);
 
             loggerConfiguration = loggerConfiguration.WriteTo.File(
                 path,
-                rollingInterval: RollingInterval.Day,
-                retainedFileCountLimit: 10,
                 outputTemplate: outputTemplate
             );
 
@@ -88,6 +108,27 @@ public static class StructuredLoggingInfrastructureServiceCollectionExtensions
         throw new InvalidOperationException(
             $"{nameof(AppConfig)} is not registered as an implementation instance."
         );
+    }
+}
+
+internal static class ExecutionLogFilePolicy
+{
+    public static string BuildFileName(string prefix, DateTimeOffset startedAt) =>
+        $"{prefix}-{startedAt:yyyyMMdd-HHmmss-fff}.log";
+
+    public static IReadOnlyList<string> GetPathsToRemove(
+        string directory,
+        string prefix,
+        int retainedCount
+    )
+    {
+        int existingFilesToKeep = Math.Max(0, retainedCount - 1);
+
+        return Directory
+            .EnumerateFiles(directory, $"{prefix}-*.log", SearchOption.TopDirectoryOnly)
+            .OrderByDescending(Path.GetFileName, StringComparer.Ordinal)
+            .Skip(existingFilesToKeep)
+            .ToList();
     }
 }
 
