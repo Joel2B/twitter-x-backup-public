@@ -44,6 +44,22 @@ public sealed class PostTimelineExtractor : IPostTimelineExtractionService
             ?.Value<string>();
     }
 
+    public bool IsBottomTerminated(JObject root) =>
+        root.SelectTokens("$..instructions[*]")
+            .OfType<JObject>()
+            .Any(instruction =>
+                string.Equals(
+                    instruction["type"]?.Value<string>(),
+                    "TimelineTerminateTimeline",
+                    StringComparison.Ordinal
+                )
+                && string.Equals(
+                    instruction["direction"]?.Value<string>(),
+                    "Bottom",
+                    StringComparison.Ordinal
+                )
+            );
+
     private static IReadOnlyList<JObject>? GetTimelineItems(JObject root)
     {
         JArray entries = GetEntriesArray(root);

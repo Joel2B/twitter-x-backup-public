@@ -49,8 +49,9 @@ public class PostParser(
             _logger.LogError("Error: {error}", error);
 
         string? cursor = _postTimelineExtractionService.ExtractCursor(root);
+        bool isTerminal = _postTimelineExtractionService.IsBottomTerminated(root);
 
-        return new ParseResult(batch.Posts.ToList(), cursor);
+        return new ParseResult(batch.Posts.ToList(), cursor, isTerminal);
     }
 
     public ParseUser ParseUser(string response)

@@ -1,3 +1,7 @@
 namespace Backup.Application.Posts.Models;
 
-public record ParsedPostBatch(List<ParsedPostProjection> Posts, string? NextCursor);
+public record ParsedPostBatch(
+    List<ParsedPostProjection> Posts,
+    string? NextCursor,
+    bool IsTerminal = false
+);

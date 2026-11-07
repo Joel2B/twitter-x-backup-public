@@ -6,4 +6,5 @@ public interface IPostTimelineExtractionService
 {
     IReadOnlyList<JObject> ExtractEntries(JObject root);
     string? ExtractCursor(JObject root);
+    bool IsBottomTerminated(JObject root);
 }

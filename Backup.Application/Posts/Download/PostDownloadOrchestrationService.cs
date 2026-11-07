@@ -67,6 +67,9 @@ public class PostDownloadOrchestrationService(IPostDownloadFlowService postDownl
 
             await session.AddPosts(pageResult.Posts);
 
+            if (pageResult.IsTerminal)
+                return;
+
             _postDownloadFlowService.ApplySuccess(plan, pageResult.NextCursor!);
             session.SetCursor(plan.Cursor!);
 

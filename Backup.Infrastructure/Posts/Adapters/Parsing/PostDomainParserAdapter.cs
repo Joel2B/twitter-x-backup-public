@@ -23,7 +23,7 @@ public sealed class PostDomainParserAdapter(
         );
         List<Post> posts = _projectionComposer.ComposeMany(parsed.Posts);
         _postIndexingService.ApplySequenceIndex(posts, userId, origin);
-        return new ParseResult(posts, parsed.NextCursor);
+        return new ParseResult(posts, parsed.NextCursor, parsed.IsTerminal);
     }
 
     public ParseUser ParseUser(string response) => _parser.ParseUser(response);

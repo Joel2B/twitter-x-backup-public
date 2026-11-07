@@ -102,6 +102,7 @@ public sealed class PostDownloadSessionAdapter(
             Posts = result.Posts,
             NextCursor = result.NextCursor,
             RawResponse = response,
+            IsTerminal = result.IsTerminal,
         };
     }
 

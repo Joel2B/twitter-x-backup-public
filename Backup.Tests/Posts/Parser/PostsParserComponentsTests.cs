@@ -245,6 +245,31 @@ public class PostsParserComponentsTests
 
         Assert.Empty(entries);
         Assert.Null(cursor);
+        Assert.False(service.IsBottomTerminated(root));
+    }
+
+    [Fact]
+    public void TimelineEntryExtractor_DetectsBottomTermination()
+    {
+        IPostTimelineExtractionService service = new PostTimelineExtractor();
+        JObject root = JObject.Parse(
+            """
+            {
+              "data": {
+                "timeline": {
+                  "instructions": [
+                    {
+                      "direction": "Bottom",
+                      "type": "TimelineTerminateTimeline"
+                    }
+                  ]
+                }
+              }
+            }
+            """
+        );
+
+        Assert.True(service.IsBottomTerminated(root));
     }
 
     [Fact]
