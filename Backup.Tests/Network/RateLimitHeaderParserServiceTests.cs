@@ -9,35 +9,39 @@ public class RateLimitHeaderParserServiceTests
     [Fact]
     public void Parse_ReturnsParsedValues_WhenInputsValid()
     {
-        var headers = _sut.Parse("150", "23", "1748592000");
+        bool parsed = _sut.TryParse("150", "23", "1748592000", out var headers);
 
+        Assert.True(parsed);
+        Assert.NotNull(headers);
         Assert.Equal(150, headers.Limit);
         Assert.Equal(23, headers.Remaining);
         Assert.Equal(1748592000, headers.ResetUnixSeconds);
     }
 
     [Fact]
-    public void Parse_ThrowsNoLimit_WhenLimitInvalid()
+    public void TryParse_ReturnsFalse_WhenLimitInvalid()
     {
-        FormatException ex = Assert.Throws<FormatException>(
-            () => _sut.Parse("x", "23", "1748592000")
-        );
-        Assert.Equal("Invalid x-rate-limit-limit header value.", ex.Message);
+        bool parsed = _sut.TryParse("x", "23", "1748592000", out var headers);
+
+        Assert.False(parsed);
+        Assert.Null(headers);
     }
 
     [Fact]
-    public void Parse_ThrowsNoRemaining_WhenRemainingInvalid()
+    public void TryParse_ReturnsFalse_WhenRemainingInvalid()
     {
-        FormatException ex = Assert.Throws<FormatException>(
-            () => _sut.Parse("150", "x", "1748592000")
-        );
-        Assert.Equal("Invalid x-rate-limit-remaining header value.", ex.Message);
+        bool parsed = _sut.TryParse("150", "x", "1748592000", out var headers);
+
+        Assert.False(parsed);
+        Assert.Null(headers);
     }
 
     [Fact]
-    public void Parse_ThrowsNoReset_WhenResetInvalid()
+    public void TryParse_ReturnsFalse_WhenResetMissing()
     {
-        FormatException ex = Assert.Throws<FormatException>(() => _sut.Parse("150", "23", "x"));
-        Assert.Equal("Invalid x-rate-limit-reset header value.", ex.Message);
+        bool parsed = _sut.TryParse("150", "23", null, out var headers);
+
+        Assert.False(parsed);
+        Assert.Null(headers);
     }
 }

@@ -3,11 +3,15 @@ using Microsoft.Extensions.Logging;
 
 namespace Backup.Application.Posts;
 
-public class PostReplicationService(ILogger<PostReplicationService> logger)
+public class PostReplicationService(
+    ILogger<PostReplicationService> logger,
+    IPostHashingService postHashingService
+)
     : IPostReplicationService
 {
     private const int ReplicationChunkSize = 10000;
     private readonly ILogger<PostReplicationService> _logger = logger;
+    private readonly IPostHashingService _postHashingService = postHashingService;
 
     public async Task Replicate(IEnumerable<IPostReplicationStore> stores)
     {
@@ -118,6 +122,31 @@ public class PostReplicationService(ILogger<PostReplicationService> logger)
 
                 List<Backup.Domain.Posts.Post> changedPosts = await source.GetByIds(chunk);
                 ValidateSourceChunk(chunk, changedPosts);
+
+                List<Backup.Domain.Posts.Post> staleSourcePosts = changedPosts
+                    .Where(post =>
+                        !string.Equals(
+                            sourceHashes[post.Id],
+                            _postHashingService.Compute(post),
+                            StringComparison.Ordinal
+                        )
+                    )
+                    .ToList();
+
+                if (staleSourcePosts.Count > 0)
+                {
+                    await source.UpsertPosts(staleSourcePosts);
+                    await source.Save();
+
+                    foreach (Backup.Domain.Posts.Post post in staleSourcePosts)
+                        sourceHashes[post.Id] = _postHashingService.Compute(post);
+
+                    _logger.LogWarning(
+                        "post replication repaired stale source metadata: source={sourceId}, posts={postCount}",
+                        source.Id,
+                        staleSourcePosts.Count
+                    );
+                }
 
                 await target.UpsertPosts(changedPosts);
                 await target.Save();

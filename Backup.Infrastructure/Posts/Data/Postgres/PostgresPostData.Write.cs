@@ -15,13 +15,14 @@ public partial class PostgresPostData
 
         PostsDbContext db = await GetDbContext();
 
-        List<string> ids = normalizedPosts.Select(post => post.Id).ToList();
-        DetachTrackedPostGraphByIds(db, ids);
-
         await using var tx = await db.Database.BeginTransactionAsync();
 
         try
         {
+            normalizedPosts = await ExpandSharedProfileUpdates(db, normalizedPosts);
+            List<string> ids = normalizedPosts.Select(post => post.Id).ToList();
+            DetachTrackedPostGraphByIds(db, ids);
+
             await DeletePostGraphByIds(db, ids);
 
             Dictionary<string, PostProfileEntity> profilesById = await LoadProfilesForPosts(
@@ -54,6 +55,7 @@ public partial class PostgresPostData
         }
         catch (Exception ex)
         {
+            List<string> ids = normalizedPosts.Select(post => post.Id).ToList();
             string incomingIdsSample = JoinSample(ids);
             string trackedSummary = BuildTrackedGraphSummary(db, ids);
 
@@ -69,4 +71,71 @@ public partial class PostgresPostData
             throw;
         }
     }
+
+    private async Task<IReadOnlyList<Post>> ExpandSharedProfileUpdates(
+        PostsDbContext db,
+        IReadOnlyList<Post> posts
+    )
+    {
+        Dictionary<string, PostProfile> profiles = new(StringComparer.Ordinal);
+
+        foreach (Post post in posts)
+            profiles[post.Profile.Id] = post.Profile.Clone();
+
+        List<Post> normalized = posts
+            .Select(post =>
+            {
+                Post clone = post.Clone();
+                clone.Profile = profiles[post.Profile.Id].Clone();
+                return clone;
+            })
+            .ToList();
+
+        Dictionary<string, PostProfileEntity> existing = await LoadProfilesByIds(
+            db,
+            [.. profiles.Keys]
+        );
+        HashSet<string> changedProfileIds = profiles
+            .Where(entry =>
+                existing.TryGetValue(entry.Key, out PostProfileEntity? stored)
+                && !ProfileEquals(stored, entry.Value)
+            )
+            .Select(entry => entry.Key)
+            .ToHashSet(StringComparer.Ordinal);
+
+        if (changedProfileIds.Count == 0)
+            return normalized;
+
+        HashSet<string> incomingIds = normalized
+            .Select(post => post.Id)
+            .ToHashSet(StringComparer.Ordinal);
+        List<PostEntity> siblingEntities = await IncludePostGraph(db.Posts)
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Where(post =>
+                changedProfileIds.Contains(post.ProfileId) && !incomingIds.Contains(post.Id)
+            )
+            .ToListAsync();
+        Dictionary<string, bool> deletedById = await LoadDeletedByIds(
+            db,
+            siblingEntities.Select(entity => entity.Id)
+        );
+
+        foreach (PostEntity entity in siblingEntities)
+        {
+            Post sibling = ToModel(entity, GetDeleted(deletedById, entity.Id));
+            sibling.Profile = profiles[entity.ProfileId].Clone();
+            normalized.Add(sibling);
+        }
+
+        return normalized;
+    }
+
+    private static bool ProfileEquals(PostProfileEntity entity, PostProfile profile) =>
+        entity.UserName == profile.UserName
+        && entity.Name == profile.Name
+        && entity.BannerUrl == profile.BannerUrl
+        && entity.ImageUrl == profile.ImageUrl
+        && entity.Following == profile.Following
+        && entity.CountMedia == profile.Count?.Media;
 }

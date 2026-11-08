@@ -12,7 +12,7 @@ public sealed class PostReplicationServiceTests
     {
         FakeStore source = new("source", true, [Post("1"), Post("2")]);
         FakeStore target = new("target", false, [Post("1"), Post("extra")]);
-        PostReplicationService sut = new(NullLogger<PostReplicationService>.Instance);
+        PostReplicationService sut = CreateSut();
 
         await sut.Replicate([source, target]);
 
@@ -28,12 +28,36 @@ public sealed class PostReplicationServiceTests
     {
         FakeStore source = new("source", true, [Post("1"), Post("2")]) { OmitRequestedId = "2" };
         FakeStore target = new("target", false, [Post("1"), Post("extra")]);
-        PostReplicationService sut = new(NullLogger<PostReplicationService>.Instance);
+        PostReplicationService sut = CreateSut();
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => sut.Replicate([source, target]));
 
         Assert.Contains("extra", target.Posts.Keys);
         Assert.Empty(target.DeletedIds);
+    }
+
+    [Fact]
+    public async Task Replicate_RewritesSource_WhenStoredHashIsStale()
+    {
+        FakeStore source = new("source", true, [Post("1")]);
+        FakeStore target = new("target", false, [Post("1")]);
+        source.HashOverrides["1"] = "stale";
+        target.HashOverrides["1"] = "different";
+
+        await CreateSut().Replicate([source, target]);
+
+        Assert.Equal(1, source.UpsertCalls);
+        Assert.Equal(1, source.SaveCalls);
+        Assert.Equal(1, target.UpsertCalls);
+    }
+
+    private static PostReplicationService CreateSut()
+    {
+        PostChangeComputationService changes = new();
+        return new PostReplicationService(
+            NullLogger<PostReplicationService>.Instance,
+            new PostHashingService(changes)
+        );
     }
 
     private static Post Post(string id) =>
@@ -63,11 +87,21 @@ public sealed class PostReplicationServiceTests
         public int GetAllCalls { get; private set; }
         public int ResetCalls { get; private set; }
         public int SaveCalls { get; private set; }
+        public int UpsertCalls { get; private set; }
         public string? OmitRequestedId { get; init; }
+        public Dictionary<string, string> HashOverrides { get; } = [];
 
         public Task<Dictionary<string, string>> GetHashesById() =>
             Task.FromResult(
-                Posts.ToDictionary(entry => entry.Key, entry => entry.Value.Description)
+                Posts.ToDictionary(
+                    entry => entry.Key,
+                    entry =>
+                        HashOverrides.TryGetValue(entry.Key, out string? hash)
+                            ? hash
+                            : new PostHashingService(new PostChangeComputationService()).Compute(
+                                entry.Value
+                            )
+                )
             );
 
         public Task<List<Post>?> GetAll()
@@ -96,8 +130,13 @@ public sealed class PostReplicationServiceTests
 
         public Task UpsertPosts(List<Post> postsToUpsert)
         {
+            UpsertCalls++;
+
             foreach (Post post in postsToUpsert)
+            {
                 Posts[post.Id] = post;
+                HashOverrides.Remove(post.Id);
+            }
 
             return Task.CompletedTask;
         }

@@ -161,6 +161,73 @@ public class SqlitePostDataTests
     }
 
     [Fact]
+    public async Task UpsertPosts_ProfileUpdate_RewritesSharedProfileSiblingHistory()
+    {
+        (SqlitePostData sut, string root) = CreateSut();
+
+        try
+        {
+            await sut.Setup();
+
+            Post first = CreatePost("p1", "shared", "first", "user-1", "posts");
+            Post sibling = CreatePost("p2", "shared", "second", "user-1", "posts");
+            first.Profile.Name = sibling.Profile.Name = "current";
+            first.Profile.Count = sibling.Profile.Count = new PostCount { Media = 60 };
+
+            PostData oldest = sibling.Clone();
+            oldest.Profile.Name = "oldest";
+            oldest.Profile.Count = null;
+            PostData previous = sibling.Clone();
+            previous.Profile.Name = "previous";
+            previous.Profile.Count = null;
+            sibling.Changes =
+            [
+                new Change
+                {
+                    UserId = "user-1",
+                    Date = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+                    Data = oldest,
+                },
+                new Change
+                {
+                    UserId = "user-1",
+                    Date = new DateTime(2026, 1, 2, 0, 0, 0, DateTimeKind.Utc),
+                    Data = previous,
+                },
+            ];
+
+            await sut.UpsertPosts([first, sibling]);
+            await sut.Save();
+            Assert.Equal(3, (await sut.GetStoreCounts()).ChangeFields);
+            string siblingHash = (await sut.GetHashesById())["p2"];
+
+            Post updated = first.Clone();
+            updated.Profile.Name = "final";
+            updated.Profile.Count = null;
+            await sut.UpsertPosts([updated]);
+            await sut.Save();
+
+            Post storedSibling = Assert.Single(await sut.GetByIds(["p2"]));
+            Assert.Equal("final", storedSibling.Profile.Name);
+            Assert.Null(storedSibling.Profile.Count);
+            Assert.Equal(2, (await sut.GetStoreCounts()).ChangeFields);
+            string updatedSiblingHash = (await sut.GetHashesById())["p2"];
+            Assert.NotEqual(siblingHash, updatedSiblingHash);
+
+            await sut.UpsertPosts([updated]);
+            await sut.Save();
+
+            Assert.Equal(2, (await sut.GetStoreCounts()).ChangeFields);
+            Assert.Equal(updatedSiblingHash, (await sut.GetHashesById())["p2"]);
+        }
+        finally
+        {
+            await sut.DisposeAsync();
+            DeleteDirectory(root);
+        }
+    }
+
+    [Fact]
     public async Task MarkDeletedExcept_OnlyMarksScopeIds()
     {
         (SqlitePostData sut, string root) = CreateSut();

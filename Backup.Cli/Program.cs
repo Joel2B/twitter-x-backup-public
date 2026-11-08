@@ -4,6 +4,7 @@ using Backup.Infrastructure.Hosting;
 using Backup.Infrastructure.Media.Maintenance;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 bool automaticMediaPrune = args.Length >= 3 && args[0] == "maintenance" && args[1] == "media-prune";
 bool maintenanceRequested = args.Length > 0 && args[0] == "maintenance";
@@ -59,6 +60,14 @@ try
 catch (OperationCanceledException) when (cts.IsCancellationRequested)
 {
     Console.Error.WriteLine("[shutdown] backup cancelled cleanly");
+}
+catch (Exception ex)
+{
+    scope.ServiceProvider
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("Program")
+        .LogCritical(ex, "backup terminated unexpectedly");
+    throw;
 }
 
 static async Task RunAutomaticMediaPrune(

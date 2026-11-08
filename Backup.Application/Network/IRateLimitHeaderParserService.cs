@@ -4,5 +4,10 @@ namespace Backup.Application.Network;
 
 public interface IRateLimitHeaderParserService
 {
-    RateLimitHeaders Parse(string? rawLimit, string? rawRemaining, string? rawReset);
+    bool TryParse(
+        string? rawLimit,
+        string? rawRemaining,
+        string? rawReset,
+        out RateLimitHeaders? headers
+    );
 }

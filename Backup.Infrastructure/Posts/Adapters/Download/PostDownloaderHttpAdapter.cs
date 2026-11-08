@@ -108,11 +108,22 @@ public class PostDownloaderHttp(
         _headers.TryGetValues("x-rate-limit-remaining", out var rawRemaining);
         _headers.TryGetValues("x-rate-limit-reset", out var rawReset);
 
-        RateLimitHeaders parsedHeaders = _rateLimitHeaderParserService.Parse(
-            rawLimit?.FirstOrDefault(),
-            rawRemaining?.FirstOrDefault(),
-            rawReset?.FirstOrDefault()
-        );
+        if (
+            !_rateLimitHeaderParserService.TryParse(
+                rawLimit?.FirstOrDefault(),
+                rawRemaining?.FirstOrDefault(),
+                rawReset?.FirstOrDefault(),
+                out RateLimitHeaders? parsedHeaders
+            )
+            || parsedHeaders is null
+        )
+        {
+            _logger.LogWarning(
+                "rate-limit headers unavailable or invalid; using configured fallback delay"
+            );
+            await Delay();
+            return true;
+        }
 
         int limit = parsedHeaders.Limit;
         int remaining = parsedHeaders.Remaining;
