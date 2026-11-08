@@ -5,6 +5,18 @@ namespace Backup.Tests;
 public class ExecutionLogFilePolicyTests
 {
     [Fact]
+    public void BuildDirectory_UsesApplicationDebugMount()
+    {
+        string directory = ExecutionLogFilePolicy.BuildDirectory(
+            "/app",
+            ["debug"],
+            ["log"]
+        );
+
+        Assert.Equal(Path.Combine("/app", "debug", "log"), directory);
+    }
+
+    [Fact]
     public void BuildFileName_UsesServiceAndExecutionTimestamp()
     {
         DateTimeOffset startedAt = new(2026, 11, 7, 0, 31, 57, 428, TimeSpan.FromHours(-7));

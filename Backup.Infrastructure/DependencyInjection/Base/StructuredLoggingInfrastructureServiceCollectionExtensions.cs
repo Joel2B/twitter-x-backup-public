@@ -1,6 +1,4 @@
-using Backup.Application.IO;
 using Backup.Infrastructure.Models.Config;
-using Backup.Infrastructure.Models.Config.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
@@ -29,19 +27,10 @@ public static class StructuredLoggingInfrastructureServiceCollectionExtensions
         try
         {
             AppConfig config = GetAppConfig(services);
-            int partitionId = config.Debug.Partitions.First();
-            PartitionConfig partition = config.Data.Partitions.First(o => o.Id == partitionId);
-            IReadOnlyList<string> resolvedPaths = PathAliasResolutionPolicy.ResolveAliases(
-                partition.Paths,
-                config.Data.Aliases
-            );
-            string basePath = PathCompositionPolicy.ComposePath(
-                resolvedPaths,
-                AppDomain.CurrentDomain.BaseDirectory
-            );
-
-            string directory = Path.Combine(
-                [basePath, .. config.Debug.Paths, .. config.Debug.Log.Paths]
+            string directory = ExecutionLogFilePolicy.BuildDirectory(
+                AppContext.BaseDirectory,
+                config.Debug.Paths,
+                config.Debug.Log.Paths
             );
 
             Directory.CreateDirectory(directory);
@@ -113,6 +102,12 @@ public static class StructuredLoggingInfrastructureServiceCollectionExtensions
 
 internal static class ExecutionLogFilePolicy
 {
+    public static string BuildDirectory(
+        string baseDirectory,
+        IReadOnlyList<string> debugPaths,
+        IReadOnlyList<string> logPaths
+    ) => Path.Combine([baseDirectory, .. debugPaths, .. logPaths]);
+
     public static string BuildFileName(string prefix, DateTimeOffset startedAt) =>
         $"{prefix}-{startedAt:yyyyMMdd-HHmmss-fff}.log";
 

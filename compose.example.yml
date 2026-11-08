@@ -3,6 +3,7 @@ services:
     image: ${DOCKER_REGISTRY:-registry.example.com:5000}/twitter-x-backup-cli:latest
     container_name: twitter-x-backup-cli
     environment:
+      BACKUP__CONFIG__DIRECTORY: /app/config
       BACKUP__Aliases__L: /mnt/data
       TZ: ${TZ:-UTC}
     volumes:
@@ -14,6 +15,7 @@ services:
     image: ${DOCKER_REGISTRY:-registry.example.com:5000}/twitter-x-backup-api:latest
     container_name: twitter-x-backup-api
     environment:
+      BACKUP__CONFIG__DIRECTORY: /app/config
       BACKUP__Aliases__L: /mnt/data
       TZ: ${TZ:-UTC}
     ports:
